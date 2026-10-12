@@ -1,381 +1,476 @@
 import * as THREE from 'three';
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { createDazSkinTexture } from '../textures/skinTextureGenerator.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
-import { createRealisticHairGroup } from './hairBuilder.js';
 
-const objCache = new Map();
-const objLoader = new OBJLoader();
 const gltfLoader = new GLTFLoader();
+const objLoader = new OBJLoader();
 
-const PRESET_PATHS = {
-  linxi: '/models/daz_asian_female_linxi.obj',
-  suwan: '/models/daz_asian_female_suwan.obj',
-  qianxue: '/models/daz_asian_female_qianxue.obj'
+// Cache ArrayBuffers so loading or cloning heads & 3D hair GLBs is instant
+const arrayBufferCache = new Map();
+
+// Converts 0.24m real-world MakeHuman/Daz head height to 27.6cm scene units
+const BUST_WORLD_SCALE = 115.0;
+
+function base64ToArrayBuffer(b64) {
+  const binaryString = window.atob(b64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+async function fetchGlbArrayBuffer(url) {
+  if (arrayBufferCache.has(url)) {
+    return arrayBufferCache.get(url);
+  }
+  if (typeof window !== 'undefined' && window.__EMBEDDED_GLBS__ && window.__EMBEDDED_GLBS__[url]) {
+    const buf = base64ToArrayBuffer(window.__EMBEDDED_GLBS__[url]);
+    arrayBufferCache.set(url, buf);
+    return buf;
+  }
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch GLB ${url}: ${resp.status}`);
+  }
+  const buf = await resp.arrayBuffer();
+  arrayBufferCache.set(url, buf);
+  return buf;
+}
+
+function parseGlbBuffer(buffer) {
+  return new Promise((resolve, reject) => {
+    gltfLoader.parse(buffer.slice(0), '', (gltf) => resolve(gltf), (err) => reject(err));
+  });
+}
+
+// Preset baseline morph offsets so Lin Xi, Su Wan, Qian Xue, and Shen Zhiwei each have distinct East Asian facial bone structure
+const PRESET_MORPH_BIASES = {
+  linxi: { jawVLine: 0.12, cheekSoftness: 0.10, noseBridge: 0.12, eyeAlmond: 0.14, lipFullness: 0.15 },
+  suwan: { jawVLine: 0.28, cheekSoftness: 0.04, noseBridge: 0.25, eyeAlmond: 0.28, lipFullness: 0.05 },
+  qianxue: { jawVLine: 0.22, cheekSoftness: 0.18, noseBridge: 0.20, eyeAlmond: 0.20, lipFullness: 0.22 },
+  shenzhiwei: { jawVLine: 0.06, cheekSoftness: 0.24, noseBridge: 0.08, eyeAlmond: 0.18, lipFullness: 0.28 },
 };
 
-export async function loadPresetObjGeometry(preset = 'linxi') {
-  const key = PRESET_PATHS[preset] ? preset : 'linxi';
-  if (objCache.has(key)) {
-    return objCache.get(key).clone(true);
-  }
-
-  // Support offline file:// standalone HTML execution via inline embedded OBJ strings!
-  if (typeof window !== 'undefined' && window.__EMBEDDED_MODELS__ && window.__EMBEDDED_MODELS__[key]) {
-    const parsed = objLoader.parse(window.__EMBEDDED_MODELS__[key]);
-    objCache.set(key, parsed);
-    return parsed.clone(true);
-  }
-
-  const url = PRESET_PATHS[key];
-  const loadedGroup = await new Promise((resolve, reject) => {
-    objLoader.load(url, resolve, undefined, reject);
-  });
-  objCache.set(key, loadedGroup);
-  return loadedGroup.clone(true);
-}
-
 /**
- * Builds a position-welded vertex map for unindexed BufferGeometry (from OBJLoader)
- * so we can compute 100% seamless Phong/PBR smooth vertex normals with zero polygon facets!
+ * Applies facial morph sliders to all morph-enabled meshes inside `rootGroup`
+ * (including HeadSkin, Eyebrows, Eyelashes, Eyes, and the attached 3D Hair GLB).
  */
-function buildPositionWeldData(posArray) {
-  const numVerts = posArray.length / 3;
-  const vertToUnique = new Int32Array(numVerts);
-  const map = new Map();
-  let uniqueCount = 0;
+export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
+  if (!rootGroup) return;
+  rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), ...morphs };
+  const m = rootGroup.userData.currentMorphs;
+  const presetKey = rootGroup.userData.basePreset || 'linxi';
+  const bias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.linxi;
 
-  for (let i = 0; i < numVerts; i++) {
-    const x = Math.round(posArray[i * 3] * 2000);
-    const y = Math.round(posArray[i * 3 + 1] * 2000);
-    const z = Math.round(posArray[i * 3 + 2] * 2000);
-    const key = `${x},${y},${z}`;
-    let uid = map.get(key);
-    if (uid === undefined) {
-      uid = uniqueCount++;
-      map.set(key, uid);
-    }
-    vertToUnique[i] = uid;
-  }
+  // Support both Studio UI slider names (jawVLine, cheekSoftness, noseBridge, eyeAlmond, lipFullness)
+  // and detailed morph keys (jawWidth, chinLength, etc.)
+  const jawV = (m.jawVLine ?? -(m.jawWidth ?? 0)) + bias.jawVLine * 0.5;
+  const cheek = (m.cheekSoftness ?? m.cheekboneFullness ?? 0) + bias.cheekSoftness * 0.5;
+  const nose = (m.noseBridge ?? m.noseBridgeHeight ?? 0) + bias.noseBridge * 0.5;
+  const eye = (m.eyeAlmond ?? m.eyeSize ?? 0) + bias.eyeAlmond * 0.5;
+  const lip = (m.lipFullness ?? 0) + bias.lipFullness * 0.5;
+  const forehead = Number(m.foreheadHeight ?? 0);
+  const ear = Number(m.earSize ?? 0);
 
-  return {
-    vertToUnique,
-    uniqueCount,
-    accumNormals: new Float32Array(uniqueCount * 3)
+  const targetWeights = {
+    face_jaw_width_decr: jawV > 0 ? Math.min(1.25, jawV * 1.45) : 0,
+    face_jaw_width_incr: jawV < 0 ? Math.min(1.15, -jawV * 1.35) : 0,
+    face_chin_decr: jawV > 0 ? Math.min(1.0, jawV * 0.85) : 0,
+    face_chin_incr: jawV < 0 ? Math.min(1.0, -jawV * 0.85) : 0,
+    face_cheekbones_incr: cheek > 0 ? Math.min(1.2, cheek * 1.4) : 0,
+    face_cheekbones_decr: cheek < 0 ? Math.min(1.2, -cheek * 1.4) : 0,
+    face_nose_height_incr: nose > 0 ? Math.min(1.2, nose * 1.35) : 0,
+    face_nose_height_decr: nose < 0 ? Math.min(1.2, -nose * 1.35) : 0,
+    face_nose_width_decr: nose > 0 ? Math.min(1.1, nose * 0.95) : 0,
+    face_nose_width_incr: nose < 0 ? Math.min(1.1, -nose * 0.95) : 0,
+    face_eye_size_incr: eye > 0 ? Math.min(0.95, eye * 1.15) : 0,
+    face_eye_size_decr: eye < 0 ? Math.min(0.95, -eye * 1.15) : 0,
+    face_eye_tilt_incr: eye > 0 ? Math.min(1.1, eye * 1.25) : 0,
+    face_eye_tilt_decr: eye < 0 ? Math.min(1.1, -eye * 1.25) : 0,
+    face_lips_incr: lip > 0 ? Math.min(1.25, lip * 1.45) : 0,
+    face_lips_decr: lip < 0 ? Math.min(1.15, -lip * 1.35) : 0,
+    face_mouth_width_decr: lip > 0 ? Math.min(0.85, lip * 0.65) : 0,
+    face_forehead_incr: forehead > 0 ? Math.min(1.0, forehead * 1.3) : 0,
+    face_forehead_decr: forehead < 0 ? Math.min(1.0, -forehead * 1.3) : 0,
+    face_ear_size_incr: ear > 0 ? Math.min(1.0, ear * 1.3) : 0,
+    face_ear_size_decr: ear < 0 ? Math.min(1.0, -ear * 1.3) : 0,
   };
-}
 
-/**
- * Computes true welded smooth vertex normals across all triangles sharing the same 3D position
- */
-export function computeWeldedSmoothNormals(geom, weldData) {
-  const pos = geom.attributes.position.array;
-  let normAttr = geom.attributes.normal;
-  if (!normAttr || normAttr.array.length !== pos.length) {
-    normAttr = new THREE.BufferAttribute(new Float32Array(pos.length), 3);
-    geom.setAttribute('normal', normAttr);
-  }
-  const norm = normAttr.array;
-  const { vertToUnique, uniqueCount, accumNormals } = weldData;
-  accumNormals.fill(0);
-
-  const numTris = pos.length / 9;
-  for (let t = 0; t < numTris; t++) {
-    const i0 = t * 3;
-    const i1 = i0 + 1;
-    const i2 = i0 + 2;
-
-    const p0x = pos[i0 * 3], p0y = pos[i0 * 3 + 1], p0z = pos[i0 * 3 + 2];
-    const ux = pos[i1 * 3] - p0x, uy = pos[i1 * 3 + 1] - p0y, uz = pos[i1 * 3 + 2] - p0z;
-    const vx = pos[i2 * 3] - p0x, vy = pos[i2 * 3 + 1] - p0y, vz = pos[i2 * 3 + 2] - p0z;
-
-    const nx = uy * vz - uz * vy;
-    const ny = uz * vx - ux * vz;
-    const nz = ux * vy - uy * vx;
-
-    const u0 = vertToUnique[i0] * 3;
-    const u1 = vertToUnique[i1] * 3;
-    const u2 = vertToUnique[i2] * 3;
-
-    accumNormals[u0] += nx; accumNormals[u0 + 1] += ny; accumNormals[u0 + 2] += nz;
-    accumNormals[u1] += nx; accumNormals[u1 + 1] += ny; accumNormals[u1 + 2] += nz;
-    accumNormals[u2] += nx; accumNormals[u2 + 1] += ny; accumNormals[u2 + 2] += nz;
-  }
-
-  for (let u = 0; u < uniqueCount; u++) {
-    const idx = u * 3;
-    const nx = accumNormals[idx], ny = accumNormals[idx + 1], nz = accumNormals[idx + 2];
-    const len = Math.hypot(nx, ny, nz) || 1.0;
-    accumNormals[idx] = nx / len;
-    accumNormals[idx + 1] = ny / len;
-    accumNormals[idx + 2] = nz / len;
-  }
-
-  const numVerts = pos.length / 3;
-  for (let i = 0; i < numVerts; i++) {
-    const uid = vertToUnique[i] * 3;
-    norm[i * 3] = accumNormals[uid];
-    norm[i * 3 + 1] = accumNormals[uid + 1];
-    norm[i * 3 + 2] = accumNormals[uid + 2];
-  }
-
-  normAttr.needsUpdate = true;
-}
-
-/**
- * Applies real-time Daz-style facial bone morphs & neck cross-section cut adjustments to the head geometry
- */
-export function applyHeadMorphsToGeometry(geom, basePositions, morphs = {}, isCap = false, weldData = null) {
-  const posAttr = geom.attributes.position;
-  const arr = posAttr.array;
-
-  const {
-    jawVLine = 0.0,
-    cheekSoftness = 0.0,
-    noseBridge = 0.0,
-    eyeAlmond = 0.0,
-    lipFullness = 0.0,
-    neckDiameter = 1.0,
-    cutHeightOffset = 0.0,
-    cutTiltPitch = 0.0,
-    cutTiltRoll = 0.0
-  } = morphs;
-
-  const pitchRad = (cutTiltPitch * Math.PI) / 180;
-  const rollRad = (cutTiltRoll * Math.PI) / 180;
-  const neckCz = -1.85;
-
-  for (let i = 0; i < arr.length; i += 3) {
-    let x = basePositions[i];
-    let y = basePositions[i + 1];
-    let z = basePositions[i + 2];
-
-    if (!isCap) {
-      if (y < -0.5 && y > -7.2 && z > -3.0) {
-        const w = Math.max(0, Math.min(1, (-0.5 - y) / 6.4));
-        x *= (1.0 - jawVLine * 0.24 * w);
-      }
-      if (y > -2.5 && y < 2.8 && z > -2.0) {
-        const w = Math.exp(-Math.pow(y / 2.0, 2));
-        x *= (1.0 + cheekSoftness * 0.14 * w);
-        z += cheekSoftness * 0.28 * w * Math.exp(-Math.pow((Math.abs(x) - 3.0) / 2.0, 2));
-      }
-      if (Math.abs(x) < 2.2 && y > -2.2 && y < 4.2 && z > 4.0) {
-        const nw = Math.exp(-Math.pow(x / 1.4, 2)) * Math.exp(-Math.pow((y - 0.8) / 2.6, 2));
-        z += noseBridge * 0.65 * nw;
-      }
-      if (y > 1.0 && y < 4.0 && z > 2.4) {
-        for (const ex of [-3.18, 3.18]) {
-          const ew = Math.exp(-Math.pow((x - ex) / 1.5, 2)) * Math.exp(-Math.pow((y - 2.4) / 0.9, 2));
-          if (ew > 0.02) {
-            const outer = (Math.abs(x) - 3.18) / 1.4;
-            y += eyeAlmond * 0.36 * outer * ew;
-          }
-        }
-      }
-      if (Math.abs(x) < 2.4 && y > -5.2 && y < -2.4 && z > 3.8) {
-        const lw = Math.exp(-Math.pow(x / 1.8, 2)) * Math.exp(-Math.pow((y + 3.8) / 0.9, 2));
-        z += lipFullness * 0.55 * lw;
+  rootGroup.traverse((child) => {
+    if (!child.isMesh || !child.morphTargetDictionary || !child.morphTargetInfluences) return;
+    const dict = child.morphTargetDictionary;
+    const infl = child.morphTargetInfluences;
+    for (const [tName, weight] of Object.entries(targetWeights)) {
+      if (tName in dict) {
+        infl[dict[tName]] = weight;
       }
     }
+  });
 
-    // Neck diameter & Anatomical Cross-Section Cut Plane height/tilt (below y = -7.2)
-    if (isCap || y < -7.2) {
-      const neckWeight = isCap ? 1.0 : Math.max(0, Math.min(1, (-7.2 - y) / 5.2));
-      const scaleR = 1.0 + (neckDiameter - 1.0) * neckWeight;
-      x *= scaleR;
-      z = neckCz + (z - neckCz) * scaleR;
-
-      const planeShift = cutHeightOffset + (z - neckCz) * Math.tan(pitchRad) + x * Math.tan(rollRad);
-      if (isCap) {
-        y += planeShift;
-      } else {
-        y += planeShift * (neckWeight * neckWeight);
-      }
-    }
-
-    arr[i] = x;
-    arr[i + 1] = y;
-    arr[i + 2] = z;
+  // Apply neck cross-section cut height offset or tilt if adjusted
+  const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
+  if (capMesh) {
+    const cutOffsetCm = Number(m.cutHeightOffset ?? 0);
+    capMesh.position.y = (cutOffsetCm / BUST_WORLD_SCALE) * 0.35;
   }
+}
 
-  posAttr.needsUpdate = true;
-  if (weldData) {
-    computeWeldedSmoothNormals(geom, weldData);
-  } else {
-    geom.computeVertexNormals();
+export function applyHeadMorphsToGeometry(geometryOrMesh, basePositions, morphs = {}) {
+  if (!geometryOrMesh) return;
+  const parentGroup = geometryOrMesh?.userData?.parentHeadGroup;
+  if (parentGroup) {
+    applyHeadMorphsToGroup(parentGroup, morphs);
   }
 }
 
 /**
- * Builds a complete interactive 3D Collectible Head Group (Head + Anatomical Cross-Section Base + Realistic Hair + Rotation Gimbal)
+ * Updates real-time blinking (`blink_left`, `blink_right`) and 3D eyeball cursor tracking
+ * (`look_left`, `look_right`, `look_up`, `look_down`) on the head collectible!
  */
-export async function buildCollectibleHeadNode(config = {}) {
-  const {
-    basePreset = 'linxi',
-    customModelUrl = null,
-    customModelType = 'glb',
-    skinTone = '#f7d9cc',
-    blushIntensity = 0.52,
-    lipColor = '#d45868',
-    irisColor = '#362015',
-    hairStyle = 'long_straight',
-    hairColor = '#131015',
-    hairSheen = 0.88,
-    neckClearance = 0.38,
-    morphs = {},
-    anatomyOptions = {},
-    photoElement = null,
-    photoBlend = 0.0
-  } = config;
+export function updateHeadLifeAnimation(rootGroup, dt = 0.016, targetGazeX = 0, targetGazeY = 0) {
+  if (!rootGroup) return;
+  if (!rootGroup.userData.eyeLife) {
+    rootGroup.userData.eyeLife = {
+      timer: 1.0 + Math.random() * 2.4,
+      blinkPhase: -1,
+      blinkDuration: 0.16,
+      gazeX: 0,
+      gazeY: 0,
+    };
+  }
+  const life = rootGroup.userData.eyeLife;
+  life.timer -= dt;
+  if (life.timer <= 0 && life.blinkPhase < 0) {
+    life.blinkPhase = 0;
+    life.timer = 2.4 + Math.random() * 3.0;
+  }
 
-  const root = new THREE.Group();
-  root.name = 'CollectibleHeadRoot';
-
-  const { texture: skinTex, canvas: skinCanvas } = createDazSkinTexture({
-    skinTone,
-    blushIntensity,
-    lipColor,
-    irisColor,
-    photoElement,
-    photoBlend
-  });
-
-  const { colorTex: anatomyColorTex, bumpTex: anatomyBumpTex, colorCanvas: anatomyCanvas } = createAnatomyTextures({
-    skinColor: skinTone,
-    vascularContrast: anatomyOptions.vascularContrast ?? 1.0,
-    dermisRimScale: anatomyOptions.dermisRimScale ?? 1.0,
-    showLabels: anatomyOptions.showLabels ?? false
-  });
-
-  const wetness = anatomyOptions.wetness ?? 0.82;
-
-  const skinMaterial = new THREE.MeshPhysicalMaterial({
-    map: skinTex,
-    roughness: 0.44,
-    metalness: 0.01,
-    clearcoat: 0.14,
-    clearcoatRoughness: 0.42,
-    sheen: 0.32,
-    sheenRoughness: 0.68,
-    sheenColor: new THREE.Color('#ffd5c8'),
-    reflectivity: 0.42
-  });
-
-  const anatomyMaterial = new THREE.MeshPhysicalMaterial({
-    map: anatomyColorTex,
-    bumpMap: anatomyBumpTex,
-    bumpScale: 0.16,
-    roughness: 0.52 - wetness * 0.32,
-    metalness: 0.04,
-    clearcoat: wetness * 0.85,
-    clearcoatRoughness: 0.16,
-    side: THREE.DoubleSide
-  });
-
-  if (customModelUrl) {
-    let extObj;
-    if (customModelType === 'obj') {
-      extObj = await new Promise((res, rej) => objLoader.load(customModelUrl, res, undefined, rej));
+  let blinkWeight = 0;
+  if (life.blinkPhase >= 0) {
+    life.blinkPhase += dt / life.blinkDuration;
+    if (life.blinkPhase >= 1.0) {
+      life.blinkPhase = -1;
+      blinkWeight = 0;
     } else {
-      const gltf = await new Promise((res, rej) => gltfLoader.load(customModelUrl, res, undefined, rej));
-      extObj = gltf.scene;
+      const t = life.blinkPhase;
+      blinkWeight = t < 0.36 ? (t / 0.36) : (1.0 - (t - 0.36) / 0.64);
+      blinkWeight = Math.max(0, Math.min(1, blinkWeight));
     }
-
-    const box = new THREE.Box3().setFromObject(extObj);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
-    const scale = 22.5 / Math.max(0.001, size.y);
-    extObj.scale.setScalar(scale);
-    extObj.position.set(-center.x * scale, -center.y * scale - 1.2, -center.z * scale);
-
-    const cutY = -10.5 + (morphs.cutHeightOffset || 0);
-    const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -cutY);
-
-    extObj.traverse((child) => {
-      if (child.isMesh && child.material) {
-        child.material = child.material.clone();
-        child.material.clippingPlanes = [clipPlane];
-        child.material.clipShadows = true;
-      }
-    });
-    root.add(extObj);
-
-    const capGeom = new THREE.CircleGeometry(3.4 * (morphs.neckDiameter || 1.0), 64);
-    capGeom.rotateX(Math.PI / 2);
-    capGeom.translate(0, cutY, -1.2);
-    const capMesh = new THREE.Mesh(capGeom, anatomyMaterial);
-    capMesh.name = 'neck_cross_section';
-    root.add(capMesh);
-  } else {
-    const objGroup = await loadPresetObjGeometry(basePreset);
-    let headMesh = null;
-    let capMesh = null;
-
-    objGroup.traverse((child) => {
-      if (child.isMesh) {
-        const geom = child.geometry.clone();
-        const basePos = new Float32Array(geom.attributes.position.array);
-        const weldData = buildPositionWeldData(basePos);
-        child.userData.basePositions = basePos;
-        child.userData.weldData = weldData;
-        child.geometry = geom;
-
-        if (child.name.includes('neck_cross_section')) {
-          child.material = anatomyMaterial;
-          applyHeadMorphsToGeometry(geom, basePos, morphs, true, weldData);
-          capMesh = child;
-        } else {
-          child.material = skinMaterial;
-          applyHeadMorphsToGeometry(geom, basePos, morphs, false, weldData);
-          headMesh = child;
-        }
-      }
-    });
-
-    root.add(objGroup);
-
-    if (hairStyle !== 'none') {
-      const hairGroup = createRealisticHairGroup({
-        style: hairStyle,
-        hairColor,
-        sheenIntensity: hairSheen,
-        neckClearance
-      });
-      root.add(hairGroup);
-    }
-
-    root.userData.headMesh = headMesh;
-    root.userData.capMesh = capMesh;
   }
 
-  // 3D Rotation Mode Gimbal Rings
+  const damp = Math.min(1, dt * 8.5);
+  life.gazeX += (targetGazeX - life.gazeX) * damp;
+  life.gazeY += (targetGazeY - life.gazeY) * damp;
+
+  const gx = Math.max(-0.85, Math.min(0.85, life.gazeX));
+  const gy = Math.max(-0.75, Math.min(0.75, life.gazeY));
+
+  rootGroup.traverse((child) => {
+    if (!child.isMesh || !child.morphTargetDictionary || !child.morphTargetInfluences) return;
+    const dict = child.morphTargetDictionary;
+    const infl = child.morphTargetInfluences;
+
+    if ('blink_left' in dict) infl[dict.blink_left] = blinkWeight * 0.88;
+    if ('blink_right' in dict) infl[dict.blink_right] = blinkWeight * 0.88;
+
+    if ('look_right' in dict) infl[dict.look_right] = gx > 0 ? gx : 0;
+    if ('look_left' in dict) infl[dict.look_left] = gx < 0 ? -gx : 0;
+    if ('look_up' in dict) infl[dict.look_up] = gy > 0 ? gy : 0;
+    if ('look_down' in dict) infl[dict.look_down] = gy < 0 ? -gy : 0;
+  });
+}
+
+export function triggerCollectibleBlink(rootGroup) {
+  if (!rootGroup || !rootGroup.userData.eyeLife) return;
+  rootGroup.userData.eyeLife.blinkPhase = 0;
+}
+
+function computeSkinTintColor(skinToneHex = '#ffe8df') {
+  const c = new THREE.Color(skinToneHex || '#ffe8df');
+  const r = Math.min(1.08, Math.max(0.80, 0.74 + c.r * 0.28));
+  const g = Math.min(1.06, Math.max(0.77, 0.74 + c.g * 0.29));
+  const b = Math.min(1.06, Math.max(0.76, 0.74 + c.b * 0.30));
+  return new THREE.Color(r, g, b);
+}
+
+/**
+ * Resolves any hair style ID (including legacy names) to one of the 7 real 3D hair GLBs
+ */
+export function resolveRealHairStyle(styleName = 'hair_long01') {
+  if (styleName === 'none') return 'none';
+  const legacyMap = {
+    long_straight: 'hair_long01',
+    long_waves: 'hair_long01',
+    hime_cut: 'hair_bob01',
+    sleek_bob: 'hair_bob02',
+    short_bob: 'hair_bob02',
+    low_chignon: 'hair_ponytail01',
+    high_ponytail: 'hair_ponytail01',
+    soft_waves: 'hair_braid01',
+  };
+  const mapped = legacyMap[styleName] || styleName;
+  const valid = new Set([
+    'hair_long01',
+    'hair_bob01',
+    'hair_bob02',
+    'hair_ponytail01',
+    'hair_braid01',
+    'hair_short02',
+    'hair_short04',
+  ]);
+  return valid.has(mapped) ? mapped : 'hair_long01';
+}
+
+export async function attachRealHairModel(rootGroup, config = {}) {
+  const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
+  if (!modelContainer) return null;
+
+  const oldHair = modelContainer.getObjectByName('HairGroup');
+  if (oldHair) {
+    modelContainer.remove(oldHair);
+  }
+
+  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_long01';
+  const resolvedStyle = resolveRealHairStyle(rawStyle);
+  if (resolvedStyle === 'none') {
+    rootGroup.userData.currentHairStyle = 'none';
+    return null;
+  }
+
+  const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
+
+  try {
+    const buf = await fetchGlbArrayBuffer(hairUrl);
+    const gltf = await parseGlbBuffer(buf);
+    const hairGroup = new THREE.Group();
+    hairGroup.name = 'HairGroup';
+
+    const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#1c1624';
+    const baseColor = new THREE.Color(hairColorHex);
+    const displayColor = new THREE.Color(
+      Math.max(0.14, baseColor.r * 1.25),
+      Math.max(0.11, baseColor.g * 1.25),
+      Math.max(0.15, baseColor.b * 1.25)
+    );
+    const sheenIntensity = Number(config.hairSheen ?? 0.90);
+
+    gltf.scene.traverse((child) => {
+      if (child.isMesh) {
+        const origMat = child.material;
+        const mapTex = origMat?.map || null;
+        if (mapTex) {
+          mapTex.colorSpace = THREE.SRGBColorSpace;
+          mapTex.anisotropy = 8;
+        }
+        child.material = new THREE.MeshPhysicalMaterial({
+          map: mapTex,
+          color: displayColor,
+          roughness: Math.max(0.22, 0.55 - sheenIntensity * 0.25),
+          metalness: 0.04,
+          sheen: sheenIntensity * 0.55,
+          sheenRoughness: 0.32,
+          sheenColor: displayColor.clone().multiplyScalar(1.65),
+          transparent: true,
+          alphaTest: 0.16,
+          side: THREE.DoubleSide,
+        });
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    hairGroup.add(gltf.scene);
+    modelContainer.add(hairGroup);
+    rootGroup.userData.currentHairStyle = resolvedStyle;
+
+    if (rootGroup.userData.currentMorphs) {
+      applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
+    }
+    return hairGroup;
+  } catch (err) {
+    console.warn('Failed to load real 3D hair GLB:', hairUrl, err);
+    return null;
+  }
+}
+
+function buildGimbalOverlayGroup() {
   const gimbalGroup = new THREE.Group();
-  gimbalGroup.name = 'RotationGimbal';
+  gimbalGroup.name = 'RotationGimbalGroup';
   gimbalGroup.visible = false;
 
-  const ringGeo1 = new THREE.TorusGeometry(11.2, 0.08, 12, 72);
+  const ringGeo1 = new THREE.TorusGeometry(13.2, 0.16, 12, 64);
   const ringMat1 = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.65 });
   const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
-  ring1.rotation.x = Math.PI / 2;
-  ring1.position.y = -1.5;
+  gimbalGroup.add(ring1);
 
-  const ringGeo2 = new THREE.TorusGeometry(11.8, 0.06, 12, 72);
-  const ringMat2 = new THREE.MeshBasicMaterial({ color: '#f43f5e', transparent: true, opacity: 0.45 });
+  const ringGeo2 = new THREE.TorusGeometry(12.4, 0.12, 12, 64);
+  ringGeo2.rotateY(Math.PI / 2);
+  const ringMat2 = new THREE.MeshBasicMaterial({ color: '#f43f5e', transparent: true, opacity: 0.52 });
   const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
-  ring2.position.y = -1.5;
+  gimbalGroup.add(ring2);
 
-  gimbalGroup.add(ring1, ring2);
-  root.add(gimbalGroup);
-
-  root.userData.gimbalGroup = gimbalGroup;
-  root.userData.skinCanvas = skinCanvas;
-  root.userData.anatomyCanvas = anatomyCanvas;
-  root.userData.skinMaterial = skinMaterial;
-  root.userData.anatomyMaterial = anatomyMaterial;
-
-  return root;
+  return gimbalGroup;
 }
+
+/**
+ * Builds the complete High-Precision Collectible Head Bust Node (`只有头 + C4/C5 解剖断面 + 真实3D头发`)
+ */
+export async function buildCollectibleHeadNode(config = {}) {
+  const rootGroup = new THREE.Group();
+  rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
+  rootGroup.userData.collectibleId = config.id || 'StudioDraft';
+  rootGroup.userData.basePreset = config.basePreset || 'linxi';
+
+  const morphs = config.morphs || {};
+  const materials = config.materials || {};
+  rootGroup.userData.currentMorphs = { ...morphs };
+
+  const modelContainer = new THREE.Group();
+  modelContainer.name = 'RealDazHeadContainer';
+  modelContainer.scale.setScalar(BUST_WORLD_SCALE);
+  rootGroup.add(modelContainer);
+
+  const skinToneHex = config.skinTone || materials.skinToneHex || '#ffe8df';
+  const wetness = Number(config.anatomyOptions?.wetness ?? materials.crossSectionWetness ?? 0.86);
+  const vascularContrast = Number(config.anatomyOptions?.vascularContrast ?? materials.crossSectionVeinContrast ?? 1.15);
+  const showLabels = Boolean(config.anatomyOptions?.showLabels);
+
+  const { colorTex, bumpTex } = createAnatomyTextures({
+    skinColor: skinToneHex,
+    vascularContrast,
+    dermisRimScale: 1.0,
+    showLabels,
+  });
+
+  // Determine model URL (defaulting to our real compiled East Asian Female Head GLB)
+  const customUrl = config.customModelUrl || config.modelUrl;
+  const isCustomObj = customUrl && (config.customModelType === 'obj' || customUrl.endsWith('.obj'));
+  const targetGlbUrl = (!customUrl || isCustomObj || customUrl.includes('daz_asian_female_'))
+    ? '/models/daz_asian_head_base.glb'
+    : customUrl;
+
+  const buf = await fetchGlbArrayBuffer(targetGlbUrl);
+  const gltf = await parseGlbBuffer(buf);
+
+  let headSkinMesh = null;
+  let neckCapMesh = null;
+
+  gltf.scene.traverse((child) => {
+    if (!child.isMesh) return;
+    child.castShadow = true;
+    child.receiveShadow = true;
+
+    const matName = child.material?.name || child.name;
+    if (matName === 'Skin' || child.name === 'HeadSkin') {
+      child.name = 'HeadSkinMesh';
+      headSkinMesh = child;
+      child.geometry.userData = child.geometry.userData || {};
+      child.geometry.userData.parentHeadGroup = rootGroup;
+      child.userData.basePositions = true;
+
+      const skinMap = child.material?.map || null;
+      const skinNorm = child.material?.normalMap || null;
+      if (skinMap) {
+        skinMap.colorSpace = THREE.SRGBColorSpace;
+        skinMap.anisotropy = 8;
+      }
+      child.material = new THREE.MeshPhysicalMaterial({
+        map: skinMap,
+        normalMap: skinNorm,
+        normalScale: new THREE.Vector2(0.28, 0.28),
+        color: computeSkinTintColor(skinToneHex),
+        roughness: Number(materials.skinRoughness ?? 0.36),
+        metalness: 0.0,
+        sheen: 0.28,
+        sheenRoughness: 0.62,
+        sheenColor: new THREE.Color('#ff9d8f'),
+        clearcoat: 0.08,
+        clearcoatRoughness: 0.40,
+      });
+    } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
+      child.name = 'NeckCrossSectionCap';
+      neckCapMesh = child;
+      child.geometry.userData = child.geometry.userData || {};
+      child.geometry.userData.parentHeadGroup = rootGroup;
+      child.userData.basePositions = true;
+
+      child.material = new THREE.MeshPhysicalMaterial({
+        map: colorTex,
+        bumpMap: bumpTex,
+        bumpScale: 0.0035,
+        roughness: Math.max(0.08, 1.0 - wetness * 0.88),
+        metalness: 0.02,
+        clearcoat: wetness * 0.95,
+        clearcoatRoughness: 0.10,
+        side: THREE.DoubleSide,
+      });
+    } else if (matName === 'Eye') {
+      const eyeMap = child.material?.map || null;
+      if (eyeMap) {
+        eyeMap.colorSpace = THREE.SRGBColorSpace;
+        eyeMap.anisotropy = 8;
+      }
+      child.material = new THREE.MeshPhysicalMaterial({
+        map: eyeMap,
+        roughness: 0.06,
+        metalness: 0.0,
+        clearcoat: 0.95,
+        clearcoatRoughness: 0.03,
+      });
+    } else if (matName === 'Cornea') {
+      child.material = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#ffffff'),
+        transparent: true,
+        opacity: 0.16,
+        roughness: 0.02,
+        metalness: 0.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.01,
+        depthWrite: false,
+      });
+    } else if (matName === 'Eyebrow') {
+      const browMap = child.material?.map || null;
+      child.material = new THREE.MeshStandardMaterial({
+        map: browMap,
+        color: new THREE.Color('#2a1f1d'),
+        transparent: true,
+        alphaTest: 0.06,
+        depthWrite: false,
+        roughness: 0.65,
+        side: THREE.DoubleSide,
+      });
+    } else if (matName === 'Eyelash') {
+      const lashMap = child.material?.map || null;
+      child.material = new THREE.MeshStandardMaterial({
+        map: lashMap,
+        color: new THREE.Color('#100c0d'),
+        transparent: true,
+        alphaTest: 0.10,
+        roughness: 0.40,
+        side: THREE.DoubleSide,
+      });
+    }
+  });
+
+  modelContainer.add(gltf.scene);
+
+  // Attach real 3D Hair GLB
+  await attachRealHairModel(rootGroup, config);
+
+  // Apply initial facial morphs
+  applyHeadMorphsToGroup(rootGroup, morphs);
+
+  // Attach 360° Rotation Gimbal Rings
+  const gimbalGroup = buildGimbalOverlayGroup();
+  rootGroup.add(gimbalGroup);
+  rootGroup.userData.gimbalGroup = gimbalGroup;
+  rootGroup.userData.headMesh = headSkinMesh;
+  rootGroup.userData.capMesh = neckCapMesh;
+
+  return rootGroup;
+}
+
+export const assembleCollectibleHead = buildCollectibleHeadNode;

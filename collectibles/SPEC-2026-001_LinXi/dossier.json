@@ -1,0 +1,48 @@
+{
+  "id": "SPEC-2026-001",
+  "name": "林汐 · Lin Xi",
+  "codename": "CERVIX-AF-01 · 江南骨相温柔御姐",
+  "subjectAge": "22岁",
+  "originRegion": "中国 · 苏州 (East Asian Female G9/MH High-Poly)",
+  "acquisitionDate": "2026-10-12",
+  "cervicalLevel": "C4–C5 颈椎横断面 (第4/5颈椎间盘水平)",
+  "preservationState": "A+ 级 · 恒温光学次表面散射活性保存",
+  "dazBaseFigure": "Real MakeHuman/Daz Asian Female Head GLB (4,494v + 3D眼/睫/眉 + 32 Morphs)",
+  "modelUrl": "/models/daz_asian_head_base.glb",
+  "notes": "基于真实高精亚洲女性三维头模与2048级东方女性冷白皮贴图精修。鹅蛋微V下颌线，双侧3D多层羽状眼睫毛与琥珀深棕虹膜，支持实时眨眼与鼠标视线追踪；底部搭载无缝缝合的C4/C5医学解剖横断面。",
+  "summoned": true,
+  "boxPosition": {
+    "x": -2.15,
+    "y": 0.22,
+    "z": 0
+  },
+  "morphs": {
+    "jawWidth": -0.15,
+    "chinLength": -0.1,
+    "cheekboneFullness": 0.12,
+    "noseBridgeHeight": 0.15,
+    "noseWingWidth": -0.18,
+    "noseLength": 0,
+    "eyeSize": 0.18,
+    "eyeTilt": 0.14,
+    "eyeSpacing": 0,
+    "lipFullness": 0.18,
+    "mouthWidth": -0.15,
+    "foreheadHeight": 0.05,
+    "earSize": -0.08,
+    "neckSlimness": 0.15
+  },
+  "materials": {
+    "skinToneHex": "#ffe8df",
+    "blushIntensity": 0.35,
+    "lipTintHex": "#d45266",
+    "skinRoughness": 0.38,
+    "subsurfaceScatter": 0.72,
+    "hairStyle": "hair_long01",
+    "hairColorHex": "#1c1624",
+    "hairHighlightHex": "#3e2d4a",
+    "irisColorHex": "#5c3422",
+    "crossSectionWetness": 0.86,
+    "crossSectionVeinContrast": 0.85
+  }
+}

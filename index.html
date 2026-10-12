@@ -54,37 +54,37 @@
 
     <!-- FULL-SCREEN 3D DESKTOP PET CANVAS (True Screen-Space 3D Perspective Box Space) -->
     <canvas id="desktop-pet-canvas"></canvas>
+  </div>
 
-    <!-- HOVER DOSSIER FLOATING WINDOW (Appears when mouse hovers over a 3D Head Desktop Pet) -->
-    <div id="pet-hover-dossier" class="hidden">
-      <div class="dossier-header">
-        <div>
-          <span class="dossier-serial" id="hud-serial">SPEC-2026-001</span>
-          <span class="dossier-grade" id="hud-grade">SSR · 原初典藏</span>
-        </div>
-        <span class="dossier-mode-badge" id="hud-mode-badge">👁️ 3D追随中</span>
+  <!-- HOVER DOSSIER FLOATING WINDOW (Outside #desktop-environment at z-index: 9999 so NEVER blocked by any window!) -->
+  <div id="pet-hover-dossier" class="hidden">
+    <div class="dossier-header">
+      <div>
+        <span class="dossier-serial" id="hud-serial">SPEC-2026-001</span>
+        <span class="dossier-grade" id="hud-grade">SSR · 原初典藏</span>
       </div>
-      <div class="dossier-title" id="hud-name">林汐 · Lin Xi</div>
-      <div class="dossier-subtitle" id="hud-subtitle">江南古典鹅蛋脸骨相 · 首号典藏标本</div>
-      <div class="dossier-coords-bar">
-        <span>盒空间 X: <strong id="hud-pos-x">0</strong>cm</span>
-        <span>Y: <strong id="hud-pos-y">0</strong>cm</span>
-        <span>景深 Z: <strong id="hud-pos-z">-120</strong>mm</span>
-      </div>
-      <div class="dossier-section">
-        <div class="dossier-label">🔬 颈部解剖断面规格</div>
-        <div class="dossier-text" id="hud-anatomy-level">C4 颈椎标准横断面</div>
-        <div class="dossier-subtext" id="hud-anatomy-notes"></div>
-      </div>
-      <div class="dossier-section">
-        <div class="dossier-label">📋 角色与骨相档案</div>
-        <div class="dossier-subtext" id="hud-origin-notes"></div>
-      </div>
-      <div class="dossier-tags" id="hud-tags"></div>
-      <div class="dossier-footer-hint">
-        <span>🖱️ 单击桌宠：<strong>切换360°旋转模式</strong></span>
-        <span>滚轮：<strong>推拉远近3D深度</strong></span>
-      </div>
+      <span class="dossier-mode-badge" id="hud-mode-badge">👁️ 3D追随中</span>
+    </div>
+    <div class="dossier-title" id="hud-name">林汐 · Lin Xi</div>
+    <div class="dossier-subtitle" id="hud-subtitle">江南古典鹅蛋脸骨相 · 首号典藏标本</div>
+    <div class="dossier-coords-bar">
+      <span>盒空间 X: <strong id="hud-pos-x">0</strong>cm</span>
+      <span>Y: <strong id="hud-pos-y">0</strong>cm</span>
+      <span>景深 Z: <strong id="hud-pos-z">-120</strong>mm</span>
+    </div>
+    <div class="dossier-section">
+      <div class="dossier-label">🔬 颈部解剖断面规格</div>
+      <div class="dossier-text" id="hud-anatomy-level">C4 颈椎标准横断面</div>
+      <div class="dossier-subtext" id="hud-anatomy-notes"></div>
+    </div>
+    <div class="dossier-section">
+      <div class="dossier-label">📋 角色与骨相档案</div>
+      <div class="dossier-subtext" id="hud-origin-notes"></div>
+    </div>
+    <div class="dossier-tags" id="hud-tags"></div>
+    <div class="dossier-footer-hint">
+      <span>🖱️ 单击桌宠：<strong>切换360°旋转模式</strong></span>
+      <span>滚轮：<strong>推拉远近3D深度</strong></span>
     </div>
   </div>
 
@@ -95,11 +95,17 @@
     <div class="overlay-brand">
       <span class="pulse-dot"></span>
       <strong>CERVIX-3D 屏幕桌宠层</strong>
-      <span class="badge-count" id="active-pet-count-badge">2 在屏</span>
+      <span class="badge-count" id="active-pet-count-badge">3 在屏</span>
     </div>
     <div class="overlay-actions">
       <button id="btn-toggle-window" class="overlay-btn primary" title="隐藏或展开软件主窗口，直接欣赏电脑屏幕上的3D头部桌宠">
         🗕 隐藏软件窗口 (纯看屏幕桌宠)
+      </button>
+      <button id="btn-quick-dock-window" class="overlay-btn" title="将窗口停靠在右侧，左半屏完整操作3D桌宠">
+        ◧ 窗口: 右侧紧凑停靠
+      </button>
+      <button id="btn-quick-pets-top" class="overlay-btn active-top" title="切换3D桌宠是否置顶显示在所有窗口最前方，防止DAZ窗口遮挡桌宠">
+        📌 3D桌宠: 置顶最前
       </button>
       <button id="btn-quick-box-grid" class="overlay-btn" title="切换屏幕中心透视消失点与3D盒型空间辅助网格">
         📦 盒型透视网格: 常显
@@ -122,19 +128,21 @@
   <!-- =========================================================================
        LAYER 3: FLOATING SOFTWARE WINDOW (CERVIX-3D Management & Creation Suite)
        ========================================================================= -->
-  <div id="software-window">
+  <div id="software-window" class="window-dock-right">
     <!-- Draggable Window Titlebar -->
     <div id="window-titlebar">
       <div class="win-brand">
         <span class="win-logo">◈</span>
         <div>
-          <div class="win-title">CERVIX-3D · 颅相典藏馆 <span class="win-ver">PRO v2.6</span></div>
-          <div class="win-desc">高精度3D解剖断面头部收藏品 · 半自动建模装配 · 盒型透视空间桌宠管理系统</div>
+          <div class="win-title">CERVIX-3D · 颅相典藏馆 <span class="win-ver">PRO v4.0 · REAL GLB</span></div>
+          <div class="win-desc">真实高精亚洲女性3D头模(.glb) · 7款真实3D发模 · C4/C5无缝医学解剖断面 · 非遮挡多模式窗口</div>
         </div>
       </div>
       <div class="win-controls">
+        <button id="win-btn-dock" class="win-ctrl-btn" title="切换右侧紧凑停靠/宽屏展开模式，绝不遮挡左侧屏幕桌宠">◧ 紧凑/宽屏切换</button>
+        <button id="win-btn-glass" class="win-ctrl-btn" title="切换窗口半透明毛玻璃透视">🌓 半透</button>
+        <button id="win-btn-center" class="win-ctrl-btn" title="重置窗口位置">⊡ 归位</button>
         <button id="win-btn-minimize" class="win-ctrl-btn" title="最小化软件窗口至屏幕右上角，全屏把玩3D桌宠">─ 最小化看桌宠</button>
-        <button id="win-btn-center" class="win-ctrl-btn" title="重置窗口位置">⊡ 居中</button>
       </div>
     </div>
 
@@ -257,11 +265,11 @@
                   📂 导入 .GLB / .OBJ
                   <input type="file" id="input-model-upload" accept=".glb,.gltf,.obj" hidden />
                 </label>
-                <button id="btn-test-scan-glb" class="btn ghost" title="载入内置真实高精度人头扫描模型测试自动颈部截断与解剖断面封口">
-                  🧪 测试高精扫描头模(.glb)
+                <button id="btn-test-scan-glb" class="btn ghost" title="一键轮播测试内置7款真实3D发型GLB模型">
+                  💇‍♀️ 轮播7款真实3D发模(.glb)
                 </button>
               </div>
-              <div id="custom-model-status" class="status-pill">当前使用：内置 Daz 东亚女性高精细分头模 (9,160面)</div>
+              <div id="custom-model-status" class="status-pill">当前使用：真实高精亚洲女性3D头模 (daz_asian_head_base.glb · 4,494v + 32 Morphs)</div>
             </div>
           </div>
 
@@ -325,9 +333,10 @@
                 <div class="field-row">
                   <label>亚洲女性基底模型</label>
                   <select id="sel-base-preset">
-                    <option value="linxi">Daz G8.1 亚洲女性 · 林汐 (古典鹅蛋脸)</option>
-                    <option value="suwan">Daz G9 亚洲女性 · 苏婉 (精致V脸少女)</option>
-                    <option value="qianxue">东亚高智感骨相 · 千雪 (清冷直鼻骨相)</option>
+                    <option value="linxi">真实3D亚洲女头 · 林汐 (江南鹅蛋微V脸 · 4,494v)</option>
+                    <option value="suwan">真实3D亚洲女头 · 苏晚 (清冷丹凤直鼻 · 4,494v)</option>
+                    <option value="qianxue">真实3D亚洲女头 · 千雪 (冷艳高颅顶骨相 · 4,494v)</option>
+                    <option value="shenzhiwei">真实3D亚洲女头 · 沈知微 (温婉书卷杏眼 · 4,494v)</option>
                   </select>
                 </div>
 
@@ -371,13 +380,15 @@
               <h3>💇‍♀️ 步骤 3：写实发丝与颈部解剖断面调节</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>高拟真亚洲女性发型</label>
+                  <label>7款真实3D发型 (.GLB)</label>
                   <select id="sel-hair-style">
-                    <option value="long_straight">东方乌木黑长直 (含450+微米级游离发丝)</option>
-                    <option value="hime_cut">日式姬发公主切 (齐腮侧发束 + 空气刘海)</option>
-                    <option value="low_chignon">江南温婉低盘发 (360°全露修长颈部与解剖断面)</option>
-                    <option value="soft_waves">韩系八字刘海微卷发 (蓬松高颅顶)</option>
-                    <option value="sleek_bob">清冷高智感内扣短波波头 (全露下颈断面)</option>
+                    <option value="hair_long01">浪漫中分瀑布长卷发 (hair_long01.glb · 3,312顶点)</option>
+                    <option value="hair_bob02">法式侧分修颜内扣波波头 (hair_bob02.glb · 1,688顶点)</option>
+                    <option value="hair_bob01">知性层次感锁骨波波发 (hair_bob01.glb · 5,432顶点)</option>
+                    <option value="hair_ponytail01">冷感干练高颅顶束马尾 (hair_ponytail01.glb · 3,902顶点)</option>
+                    <option value="hair_braid01">温婉侧分立体粗麻花辫 (hair_braid01.glb · 4,663顶点)</option>
+                    <option value="hair_short02">空气感碎发精灵短发 (hair_short02.glb · 1,794顶点)</option>
+                    <option value="hair_short04">极简干练齐耳短发 (hair_short04.glb · 983顶点)</option>
                     <option value="none">无发模式 (纯医学头颈骨相标本展示)</option>
                   </select>
                 </div>

@@ -16,34 +16,27 @@ const jsFile = assetFiles.find(f => f.endsWith('.js'));
 const cssContent = cssFile ? fs.readFileSync(path.join(assetsDir, cssFile), 'utf8') : '';
 const jsContent = jsFile ? fs.readFileSync(path.join(assetsDir, jsFile), 'utf8') : '';
 
-// Compress OBJ strings by omitting vn lines (since computeWeldedSmoothNormals computes smooth normals on load!)
-function loadCompactObj(filePath) {
-  const raw = fs.readFileSync(filePath, 'utf8');
-  return raw
-    .split('\n')
-    .filter(line => !line.startsWith('vn '))
-    .map(line => {
-      if (line.startsWith('f ')) {
-        // convert f v/vt/vn to f v/vt
-        return 'f ' + line.slice(2).split(' ').map(tok => {
-          const parts = tok.split('/');
-          return `${parts[0]}/${parts[1] || parts[0]}`;
-        }).join(' ');
-      }
-      return line;
-    })
-    .join('\n');
+const glbFiles = [
+  'daz_asian_head_base.glb',
+  'hair_long01.glb',
+  'hair_bob01.glb',
+  'hair_bob02.glb',
+  'hair_ponytail01.glb',
+  'hair_braid01.glb',
+  'hair_short02.glb',
+  'hair_short04.glb'
+];
+
+const embeddedGlbs = {};
+for (const fname of glbFiles) {
+  const fpath = path.join('/home/user/public/models', fname);
+  if (fs.existsSync(fpath)) {
+    embeddedGlbs[`/models/${fname}`] = fs.readFileSync(fpath).toString('base64');
+  }
 }
 
-const embeddedModels = {
-  linxi: loadCompactObj('/home/user/public/models/daz_asian_female_linxi.obj'),
-  suwan: loadCompactObj('/home/user/public/models/daz_asian_female_suwan.obj'),
-  qianxue: loadCompactObj('/home/user/public/models/daz_asian_female_qianxue.obj')
-};
+const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)};</script>`;
 
-const embeddedModelsScript = `<script>window.__EMBEDDED_MODELS__ = ${JSON.stringify(embeddedModels)};</script>`;
-
-// Replace external <link rel="stylesheet"> and <script type="module" src="..."> with inline tags
 let standaloneHtml = htmlRaw
   .replace(/<link rel="stylesheet"[^>]*>/g, `<style>\n${cssContent}\n</style>`)
   .replace(/<script type="module"[^>]*src="[^"]+"[^>]*><\/script>/g, () => {

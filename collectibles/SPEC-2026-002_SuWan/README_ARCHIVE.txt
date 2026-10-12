@@ -1,0 +1,4 @@
+CERVIX-3D ARCHIVE SPECIMEN: SPEC-2026-002 (苏晚 · Su Wan)
+MODEL: /models/daz_asian_head_base.glb
+HAIR: hair_bob02.glb
+CERVICAL LEVEL: C4 颈椎体下缘标准解剖断面

@@ -1,0 +1,48 @@
+{
+  "id": "SPEC-2026-004",
+  "name": "沈知微 · Shen Zhiwei",
+  "codename": "CERVIX-AF-04 · 温婉书香侧分麻花辫",
+  "subjectAge": "20岁",
+  "originRegion": "中国 · 南京 (East Asian Female G9/MH High-Poly)",
+  "acquisitionDate": "2026-10-12",
+  "cervicalLevel": "C4–C5 椎间盘横断面",
+  "preservationState": "A+ 级 · 柔光次表面活性封存",
+  "dazBaseFigure": "Real MakeHuman/Daz Asian Female Head GLB (4,494v + hair_braid01.glb)",
+  "modelUrl": "/models/daz_asian_head_base.glb",
+  "notes": "搭载4,663顶点高密度侧分粗麻花辫模型(hair_braid01.glb)，杏仁大眼配温婉鹅蛋脸与饱满花瓣唇，支持一键召唤至桌面盒型透视空间。",
+  "summoned": false,
+  "boxPosition": {
+    "x": 0.85,
+    "y": -0.35,
+    "z": 0.15
+  },
+  "morphs": {
+    "jawWidth": -0.1,
+    "chinLength": -0.08,
+    "cheekboneFullness": 0.22,
+    "noseBridgeHeight": 0.12,
+    "noseWingWidth": -0.15,
+    "noseLength": -0.04,
+    "eyeSize": 0.28,
+    "eyeTilt": 0.06,
+    "eyeSpacing": 0.02,
+    "lipFullness": 0.28,
+    "mouthWidth": -0.14,
+    "foreheadHeight": 0.02,
+    "earSize": -0.05,
+    "neckSlimness": 0.12
+  },
+  "materials": {
+    "skinToneHex": "#ffede6",
+    "blushIntensity": 0.45,
+    "lipTintHex": "#db586c",
+    "skinRoughness": 0.37,
+    "subsurfaceScatter": 0.74,
+    "hairStyle": "hair_braid01",
+    "hairColorHex": "#2b1d18",
+    "hairHighlightHex": "#52382e",
+    "irisColorHex": "#5e3622",
+    "crossSectionWetness": 0.85,
+    "crossSectionVeinContrast": 0.86
+  }
+}

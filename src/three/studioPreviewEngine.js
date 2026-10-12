@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { buildCollectibleHeadNode, applyHeadMorphsToGeometry } from './collectibleHeadAssembler.js';
+import {
+  buildCollectibleHeadNode,
+  applyHeadMorphsToGroup,
+  updateHeadLifeAnimation,
+  triggerCollectibleBlink
+} from './collectibleHeadAssembler.js';
 
 export class StudioPreviewEngine {
   constructor(canvas) {
@@ -9,8 +14,10 @@ export class StudioPreviewEngine {
     this.autoRotate = false;
     this.currentConfig = null;
     this.clock = new THREE.Clock();
+    this.pointerNdc = { x: 0, y: 0 };
 
     this.initScene();
+    this.bindPointerTracking();
     this.animate = this.animate.bind(this);
     this.animId = requestAnimationFrame(this.animate);
   }
@@ -20,8 +27,8 @@ export class StudioPreviewEngine {
 
     const w = this.canvas.clientWidth || 540;
     const h = this.canvas.clientHeight || 480;
-    this.camera = new THREE.PerspectiveCamera(36, w / h, 1, 300);
-    this.camera.position.set(0, -1.0, 44);
+    this.camera = new THREE.PerspectiveCamera(34, w / h, 1, 300);
+    this.camera.position.set(0, 0.5, 42);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -33,10 +40,10 @@ export class StudioPreviewEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.14;
+    this.renderer.toneMappingExposure = 1.12;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.target.set(0, -1.8, -1.0);
+    this.controls.target.set(0, -0.8, 0.5);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.minDistance = 16;
@@ -44,10 +51,10 @@ export class StudioPreviewEngine {
     this.controls.update();
 
     // Studio 4-point lighting + bottom anatomical inspection light
-    const hemi = new THREE.HemisphereLight('#fff7f2', '#1e293b', 1.25);
+    const hemi = new THREE.HemisphereLight('#fff7f2', '#1e293b', 1.30);
     this.scene.add(hemi);
 
-    const key = new THREE.DirectionalLight('#fff8f4', 2.15);
+    const key = new THREE.DirectionalLight('#fff8f4', 2.05);
     key.position.set(28, 32, 48);
     this.scene.add(key);
 
@@ -55,7 +62,7 @@ export class StudioPreviewEngine {
     fill.position.set(-34, 10, 35);
     this.scene.add(fill);
 
-    const bottomAnatomyLight = new THREE.DirectionalLight('#ffe4e6', 1.55);
+    const bottomAnatomyLight = new THREE.DirectionalLight('#ffe4e6', 1.65);
     bottomAnatomyLight.position.set(0, -48, 22);
     this.scene.add(bottomAnatomyLight);
 
@@ -63,10 +70,10 @@ export class StudioPreviewEngine {
     backRim.position.set(0, 26, -42);
     this.scene.add(backRim);
 
-    // Subtle circular specimen studio reference ring below the neck cross-section
-    const gridGeo = new THREE.RingGeometry(5.6, 5.75, 64);
+    // Subtle circular specimen studio reference ring below the C4/C5 neck cross-section
+    const gridGeo = new THREE.RingGeometry(5.2, 5.38, 64);
     gridGeo.rotateX(-Math.PI / 2);
-    gridGeo.translate(0, -14.3, -2.35);
+    gridGeo.translate(0, -12.75, -0.8);
     const gridMat = new THREE.MeshBasicMaterial({
       color: '#38bdf8',
       transparent: true,
@@ -75,6 +82,19 @@ export class StudioPreviewEngine {
     });
     this.cutPlaneHelper = new THREE.Mesh(gridGeo, gridMat);
     this.scene.add(this.cutPlaneHelper);
+  }
+
+  bindPointerTracking() {
+    this.canvas.addEventListener('pointermove', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        this.pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        this.pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      }
+    });
+    this.canvas.addEventListener('pointerdown', () => {
+      if (this.headNode) triggerCollectibleBlink(this.headNode);
+    });
   }
 
   resize() {
@@ -89,7 +109,6 @@ export class StudioPreviewEngine {
 
   async loadOrRebuild(config) {
     this.currentConfig = JSON.parse(JSON.stringify(config));
-    // Preserve photoElement reference if present
     if (config.photoElement) {
       this.currentConfig.photoElement = config.photoElement;
     }
@@ -105,24 +124,17 @@ export class StudioPreviewEngine {
   }
 
   /**
-   * Fast path for morph sliders without rebuilding textures or hair
+   * Real-time 32-channel morph slider update on the GLB meshes
    */
   updateMorphsFast(morphs = {}) {
     if (!this.headNode) return;
-    const headMesh = this.headNode.userData.headMesh;
-    const capMesh = this.headNode.userData.capMesh;
-    if (headMesh && headMesh.userData.basePositions) {
-      applyHeadMorphsToGeometry(headMesh.geometry, headMesh.userData.basePositions, morphs, false, headMesh.userData.weldData);
-    }
-    if (capMesh && capMesh.userData.basePositions) {
-      applyHeadMorphsToGeometry(capMesh.geometry, capMesh.userData.basePositions, morphs, true, capMesh.userData.weldData);
-    }
+    applyHeadMorphsToGroup(this.headNode, morphs);
     this.updateCutHelperPosition(morphs);
   }
 
   updateCutHelperPosition(morphs = {}) {
     if (!this.cutPlaneHelper) return;
-    this.cutPlaneHelper.position.y = morphs.cutHeightOffset || 0;
+    this.cutPlaneHelper.position.y = (morphs.cutHeightOffset || 0) * 0.35;
     this.cutPlaneHelper.rotation.x = ((morphs.cutTiltPitch || 0) * Math.PI) / 180;
     this.cutPlaneHelper.rotation.z = -((morphs.cutTiltRoll || 0) * Math.PI) / 180;
   }
@@ -130,21 +142,21 @@ export class StudioPreviewEngine {
   setCameraPreset(preset) {
     this.autoRotate = false;
     if (preset === 'front') {
-      this.camera.position.set(0, -0.5, 42);
-      this.controls.target.set(0, -0.8, 0);
+      this.camera.position.set(0, 0.5, 42);
+      this.controls.target.set(0, -0.6, 0.5);
     } else if (preset === 'three_quarter') {
-      this.camera.position.set(22, 1.5, 36);
-      this.controls.target.set(0, -1.8, -1.0);
+      this.camera.position.set(20, 2.0, 36);
+      this.controls.target.set(0, -0.8, 0.5);
     } else if (preset === 'anatomy_bottom') {
       // Dramatic upward inspection view directly looking at the C4/C5 Medical Anatomical Neck Cross-Section!
-      this.camera.position.set(0, -34, 14);
-      this.controls.target.set(0, -12.5, -2.3);
+      this.camera.position.set(0, -34, 15);
+      this.controls.target.set(0, -12.2, -0.8);
     } else if (preset === 'profile') {
-      this.camera.position.set(42, -1.0, -1.0);
-      this.controls.target.set(0, -1.5, -1.5);
+      this.camera.position.set(42, 0.0, 0.5);
+      this.controls.target.set(0, -0.8, 0.5);
     } else if (preset === 'turntable') {
-      this.camera.position.set(16, -2.5, 38);
-      this.controls.target.set(0, -2.0, -1.2);
+      this.camera.position.set(16, -1.5, 38);
+      this.controls.target.set(0, -1.0, 0.5);
       this.autoRotate = true;
     }
     this.controls.update();
@@ -152,11 +164,14 @@ export class StudioPreviewEngine {
 
   animate() {
     this.animId = requestAnimationFrame(this.animate);
-    const dt = this.clock.getDelta();
-    if (this.autoRotate && this.headNode) {
-      this.headNode.rotation.y += dt * 0.65;
-    } else if (this.headNode) {
-      this.headNode.rotation.y *= 0.92;
+    const dt = Math.min(0.05, this.clock.getDelta());
+    if (this.headNode) {
+      if (this.autoRotate) {
+        this.headNode.rotation.y += dt * 0.65;
+      } else {
+        this.headNode.rotation.y *= 0.92;
+      }
+      updateHeadLifeAnimation(this.headNode, dt, this.pointerNdc.x * 0.65, this.pointerNdc.y * 0.55);
     }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);

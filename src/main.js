@@ -18,32 +18,32 @@ const state = {
     basePreset: 'linxi',
     customModelUrl: null,
     customModelType: 'glb',
-    skinTone: '#f7d9cc',
-    blushIntensity: 0.52,
-    lipColor: '#d45868',
-    irisColor: '#362015',
-    hairStyle: 'long_straight',
-    hairColor: '#131015',
-    hairSheen: 0.90,
-    neckClearance: 0.38,
+    skinTone: '#ffe8df',
+    blushIntensity: 0.45,
+    lipColor: '#d45266',
+    irisColor: '#5c3422',
+    hairStyle: 'hair_long01',
+    hairColor: '#1c1624',
+    hairSheen: 0.92,
+    neckClearance: 0.42,
     photoElement: null,
     photoBlend: 0.0,
     morphs: {
-      jawVLine: 0.08,
-      cheekSoftness: 0.12,
-      noseBridge: 0.06,
-      eyeAlmond: 0.10,
-      lipFullness: 0.12,
-      neckDiameter: 0.98,
+      jawVLine: 0.16,
+      cheekSoftness: 0.14,
+      noseBridge: 0.15,
+      eyeAlmond: 0.18,
+      lipFullness: 0.18,
+      neckDiameter: 0.96,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4 颈椎标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)',
+      cutLevel: 'C4–C5 颈椎间盘标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)',
       vascularContrast: 1.15,
       dermisRimScale: 1.0,
-      wetness: 0.82,
+      wetness: 0.86,
       showLabels: false
     }
   }
@@ -559,10 +559,51 @@ function initWindowDragging() {
   });
 
   document.getElementById('win-btn-center').addEventListener('click', () => {
-    win.style.left = '50%';
+    win.style.left = '';
+    win.style.right = '16px';
     win.style.top = '58px';
-    win.style.transform = 'translateX(-50%)';
+    win.style.transform = '';
+    if (studioEngine) setTimeout(() => studioEngine.resize(), 60);
   });
+
+  const toggleDockMode = () => {
+    win.classList.toggle('window-dock-right');
+    const isDocked = win.classList.contains('window-dock-right');
+    const quickDockBtn = document.getElementById('btn-quick-dock-window');
+    if (quickDockBtn) {
+      quickDockBtn.textContent = isDocked ? '◧ 窗口: 右侧紧凑停靠' : '🗖 窗口: 宽屏工作台';
+    }
+    if (studioEngine) setTimeout(() => studioEngine.resize(), 180);
+  };
+  const winBtnDock = document.getElementById('win-btn-dock');
+  if (winBtnDock) winBtnDock.addEventListener('click', toggleDockMode);
+  const quickDockBtn = document.getElementById('btn-quick-dock-window');
+  if (quickDockBtn) quickDockBtn.addEventListener('click', toggleDockMode);
+
+  const winBtnGlass = document.getElementById('win-btn-glass');
+  if (winBtnGlass) {
+    winBtnGlass.addEventListener('click', () => {
+      win.classList.toggle('window-glass');
+      showToast(win.classList.contains('window-glass')
+        ? '🌓 已开启半透明毛玻璃窗口模式，可直接透视后方3D盒型空间'
+        : '已恢复标准不透明窗口模式');
+    });
+  }
+
+  const quickPetsTopBtn = document.getElementById('btn-quick-pets-top');
+  if (quickPetsTopBtn) {
+    quickPetsTopBtn.addEventListener('click', () => {
+      const nextTop = !desktopEngine.settings.petsAlwaysOnTop;
+      desktopEngine.updateSettings({ petsAlwaysOnTop: nextTop });
+      const canvas = document.getElementById('desktop-pet-canvas');
+      if (canvas) canvas.classList.toggle('pets-behind-window', !nextTop);
+      quickPetsTopBtn.classList.toggle('active-top', nextTop);
+      quickPetsTopBtn.textContent = nextTop ? '📌 3D桌宠: 置顶最前' : '🖥️ 3D桌宠: 桌面背景层';
+      showToast(nextTop
+        ? '📌 3D桌宠已设为【置顶最前】：绝不被DAZ窗口遮挡，且可直接穿透拖拽/旋转！'
+        : '🖥️ 3D桌宠已设为【桌面背景层】：位于软件窗口后方');
+    });
+  }
 }
 
 // ============================================================================
@@ -782,18 +823,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     showToast(`📥 已成功导入外部模型「${file.name}」并完成颈部医学解剖断面自动封口！`);
   });
 
+  const REAL_HAIRS = [
+    { id: 'hair_long01', name: '浪漫中分瀑布长卷发 (3,312v)' },
+    { id: 'hair_bob02', name: '法式侧分修颜内扣波波头 (1,688v)' },
+    { id: 'hair_bob01', name: '知性层次感锁骨波波发 (5,432v)' },
+    { id: 'hair_ponytail01', name: '冷感干练高颅顶束马尾 (3,902v)' },
+    { id: 'hair_braid01', name: '温婉侧分立体粗麻花辫 (4,663v)' },
+    { id: 'hair_short02', name: '空气感碎发精灵短发 (1,794v)' },
+    { id: 'hair_short04', name: '极简干练齐耳短发 (983v)' }
+  ];
+  let hairCycleIdx = 0;
+
   document.getElementById('btn-test-scan-glb').addEventListener('click', async () => {
-    if (state.studioDraft.customModelUrl === '/models/LeePerrySmith.glb') {
-      state.studioDraft.customModelUrl = null;
-      document.getElementById('custom-model-status').textContent = '当前使用：内置 Daz 东亚女性高精细分头模 (9,160面)';
-      showToast('已切换回内置 Daz 东亚女性高精细分头模');
-    } else {
-      state.studioDraft.customModelUrl = '/models/LeePerrySmith.glb';
-      state.studioDraft.customModelType = 'glb';
-      document.getElementById('custom-model-status').textContent = '当前使用：外部高精三维人头扫描模型 (LeePerrySmith.glb + 自动颈部解剖封口)';
-      showToast('🧪 已载入真实 3D 扫描头模 (.glb)，演示自动颈部截断与 C4 医学解剖断面封口！');
-    }
+    hairCycleIdx = (hairCycleIdx + 1) % REAL_HAIRS.length;
+    const picked = REAL_HAIRS[hairCycleIdx];
+    state.studioDraft.hairStyle = picked.id;
+    document.getElementById('sel-hair-style').value = picked.id;
+    document.getElementById('custom-model-status').textContent = `当前使用：真实3D头模(daz_asian_head_base.glb) + ${picked.name}`;
     await refreshStudio3DModel();
+    soundEngine.playSummon(true);
+    showToast(`💇‍♀️ 已切换真实 3D 发型模型：${picked.name} (${picked.id}.glb)`);
   });
 
   // 9. Studio Camera Preset Buttons & Anatomy Labels Checkbox
@@ -814,7 +863,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('sel-base-preset').addEventListener('change', async (e) => {
     state.studioDraft.customModelUrl = null;
     state.studioDraft.basePreset = e.target.value;
-    document.getElementById('custom-model-status').textContent = `当前使用：内置 Daz 东亚女性高精细分头模 (${e.target.value})`;
+    const presetHairMap = {
+      linxi: 'hair_long01',
+      suwan: 'hair_bob02',
+      qianxue: 'hair_ponytail01',
+      shenzhiwei: 'hair_braid01'
+    };
+    if (presetHairMap[e.target.value]) {
+      state.studioDraft.hairStyle = presetHairMap[e.target.value];
+      document.getElementById('sel-hair-style').value = state.studioDraft.hairStyle;
+    }
+    document.getElementById('custom-model-status').textContent = `当前使用：真实3D亚洲女性高精头模 (${e.target.value} + ${state.studioDraft.hairStyle}.glb)`;
     await refreshStudio3DModel();
   });
 

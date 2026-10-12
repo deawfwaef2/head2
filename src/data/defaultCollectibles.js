@@ -1,184 +1,280 @@
+// Pre-registered high-precision Asian female collectible heads & Daz3D -> CERVIX-3D modeling tutorial data
+
+export const REAL_HAIR_CATALOG = [
+  {
+    id: 'hair_long01',
+    label: '浪漫中分瀑布长卷发 (hair_long01.glb · 3,312顶点)',
+    url: '/models/hair_long01.glb',
+    verts: 3312,
+    desc: '真实3D多层垂顺长卷发网格，自动避让天鹅颈与C4/C5解剖断面'
+  },
+  {
+    id: 'hair_bob02',
+    label: '法式侧分修颜内扣波波头 (hair_bob02.glb · 1,688顶点)',
+    url: '/models/hair_bob02.glb',
+    verts: 1688,
+    desc: '经典不对称侧分波波短发，自然贴合单侧下颌线，完全展露修长颈部'
+  },
+  {
+    id: 'hair_bob01',
+    label: '知性层次感锁骨波波发 (hair_bob01.glb · 5,432顶点)',
+    url: '/models/hair_bob01.glb',
+    verts: 5432,
+    desc: '高密度5432顶点蓬松层次长款波波头，斜刘海修饰面部轮廓'
+  },
+  {
+    id: 'hair_ponytail01',
+    label: '冷感干练高颅顶束马尾 (hair_ponytail01.glb · 3,902顶点)',
+    url: '/models/hair_ponytail01.glb',
+    verts: 3902,
+    desc: '完整展露饱满额头、双耳与精致下颌折角，脑后垂落高束马尾'
+  },
+  {
+    id: 'hair_braid01',
+    label: '温婉侧分立体粗麻花辫 (hair_braid01.glb · 4,663顶点)',
+    url: '/models/hair_braid01.glb',
+    verts: 4663,
+    desc: '温婉斜分前额发流搭配立体缠绕肩侧麻花长辫，极具东方书卷气韵'
+  },
+  {
+    id: 'hair_short02',
+    label: '空气感碎发精灵短发 (hair_short02.glb · 1,794顶点)',
+    url: '/models/hair_short02.glb',
+    verts: 1794,
+    desc: '清爽蓬松碎刘海精灵短发，360°无遮挡展示五官与颈部解剖断面'
+  },
+  {
+    id: 'hair_short04',
+    label: '极简干练齐耳短发 (hair_short04.glb · 983顶点)',
+    url: '/models/hair_short04.glb',
+    verts: 983,
+    desc: '利落贴合颅骨轮廓的极简短发，适合观察骨骼解剖比例与微表情'
+  },
+  {
+    id: 'none',
+    label: '无发型 · 纯净颅面骨相检视模式 (Bare Cranium)',
+    url: null,
+    verts: 0,
+    desc: '隐藏发丝网格，完整检视颅骨顶部、耳廓结构与面部32通道Morph形变'
+  }
+];
+
 export const DEFAULT_COLLECTIBLES = [
   {
     id: 'SPEC-2026-001',
     folderName: 'SPEC-2026-001_LinXi',
     name: '林汐 · Lin Xi',
-    subtitle: '江南古典鹅蛋脸骨相 · 首号典藏标本',
+    subtitle: '江南古典鹅蛋脸骨相 · 浪漫瀑布长卷发首号典藏',
     grade: 'SSR · 原初典藏',
-    createdAt: '2026-10-12 09:30',
     basePreset: 'linxi',
-    customModelUrl: null,
-    customModelType: 'glb',
-    skinTone: '#f7d9cc',
-    blushIntensity: 0.52,
-    lipColor: '#d45868',
-    irisColor: '#362015',
-    hairStyle: 'long_straight',
-    hairColor: '#131015',
-    hairSheen: 0.90,
-    neckClearance: 0.38,
+    modelUrl: '/models/daz_asian_head_base.glb',
+    skinTone: '#ffe8df',
+    blushIntensity: 0.45,
+    lipColor: '#d45266',
+    irisColor: '#5c3422',
+    hairStyle: 'hair_long01',
+    hairColor: '#1c1624',
+    hairSheen: 0.92,
+    neckClearance: 0.42,
+    summoned: true,
+    boxPosition: { x: -23, y: 2, z: -120 },
     morphs: {
-      jawVLine: 0.08,
-      cheekSoftness: 0.12,
-      noseBridge: 0.06,
-      eyeAlmond: 0.10,
-      lipFullness: 0.12,
-      neckDiameter: 0.98,
+      jawVLine: 0.16,
+      cheekSoftness: 0.14,
+      noseBridge: 0.15,
+      eyeAlmond: 0.18,
+      lipFullness: 0.18,
+      neckDiameter: 0.96,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4 颈椎标准横断面 (Standard C4 Transverse)',
+      cutLevel: 'C4–C5 颈椎间盘标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)',
       vascularContrast: 1.15,
       dermisRimScale: 1.0,
-      wetness: 0.82,
+      wetness: 0.86,
       showLabels: false
     },
     dossier: {
-      origin: '基于 Daz Genesis 8.1 Asian Female 高精拓扑采集，对齐东方古典温婉鹅蛋脸骨相。',
-      anatomyNotes: '于第4颈椎（C4）椎体中段水平作微前倾4°精密横切。切面清晰呈现透明软骨C形气管环、星状闭合食管黏膜、双侧颈动脉鞘（颈总动脉、颈内静脉、迷走神经）及椎管内蝴蝶形脊髓灰质前后角。',
-      hairNotes: '采用三层式东方乌木黑长直丝感发束（含450+微米级游离飞发与Kajiya-Kay双峰天使光圈），后发束作断面避让处理。',
-      tags: ['Daz G8.1 亚洲女性', 'C4 标准解剖切面', '黑长直写实发丝', '温婉鹅蛋脸']
-    },
-    summoned: true,
-    boxPosition: { x: -24, y: 5, z: -120 }
+      origin: '基于真实高精东方女性三维头模(daz_asian_head_base.glb · 4,494v)与2K冷白皮贴图精修，搭配3,312顶点真实瀑布长卷发(hair_long01.glb)。支持实时眨眼与眼球3D鼠标视线追踪。',
+      anatomyNotes: '颈部于C4–C5椎间盘水平精准横切，无缝封口网格清晰呈现表皮真皮环、胸锁乳突肌束、气管C形软骨、食管腔、双侧颈动脉鞘与C4椎管内脊髓灰质。',
+      tags: ['真实3D头模.GLB', '瀑布长卷发(3312v)', 'C4/C5无缝解剖断面', '实时眨眼与视线追踪']
+    }
   },
   {
     id: 'SPEC-2026-002',
     folderName: 'SPEC-2026-002_SuWan',
-    name: '苏婉 · Su Wan',
-    subtitle: '日式姬发公主切 · 精致V脸骨相标本',
+    name: '苏晚 · Su Wan',
+    subtitle: '清冷丹凤侧分波波 · 高智感东方骨相标本',
     grade: 'SSR · 特级典藏',
-    createdAt: '2026-10-12 10:15',
     basePreset: 'suwan',
-    customModelUrl: null,
-    customModelType: 'glb',
-    skinTone: '#f9dfd4',
-    blushIntensity: 0.62,
-    lipColor: '#de5466',
-    irisColor: '#422618',
-    hairStyle: 'hime_cut',
-    hairColor: '#18131a',
-    hairSheen: 0.92,
-    neckClearance: 0.45,
+    modelUrl: '/models/daz_asian_head_base.glb',
+    skinTone: '#fff0ea',
+    blushIntensity: 0.32,
+    lipColor: '#c84a5e',
+    irisColor: '#4a2a1c',
+    hairStyle: 'hair_bob02',
+    hairColor: '#151824',
+    hairSheen: 0.94,
+    neckClearance: 0.50,
+    summoned: true,
+    boxPosition: { x: 0, y: 1, z: -240 },
     morphs: {
       jawVLine: 0.28,
-      cheekSoftness: 0.18,
-      noseBridge: 0.12,
-      eyeAlmond: 0.22,
-      lipFullness: 0.20,
-      neckDiameter: 0.93,
-      cutHeightOffset: 0.35,
-      cutTiltPitch: 7.5,
-      cutTiltRoll: -2.0
+      cheekSoftness: 0.08,
+      noseBridge: 0.24,
+      eyeAlmond: 0.26,
+      lipFullness: 0.10,
+      neckDiameter: 0.94,
+      cutHeightOffset: 0.0,
+      cutTiltPitch: 4.0,
+      cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4/C5 椎间盘微斜横断面 (Oblique C4-C5 Section)',
-      vascularContrast: 1.25,
-      dermisRimScale: 0.95,
-      wetness: 0.88,
+      cutLevel: 'C4 颈椎体下缘标准解剖断面 (原位血管充盈态)',
+      vascularContrast: 1.22,
+      dermisRimScale: 1.0,
+      wetness: 0.90,
       showLabels: false
     },
     dossier: {
-      origin: '基于 Daz Genesis 9 Asian Female 高精度少女骨相基底，强化下颌V线收窄与卧蚕杏眼曲率。',
-      anatomyNotes: '于C4-C5椎间水平作7.5°前倾解剖切面，颈部纤细，双侧胸锁乳突肌肌束纹理与皮下浅筋膜黄色脂肪小叶对比鲜明，切面具有高湿润浆膜光泽。',
-      hairNotes: '日式姬发公主切（齐腮阶梯切齐侧发束 + 空气感轻薄齐刘海），低头或仰视旋转时可无遮挡观赏颈部断面。',
-      tags: ['Daz G9 少女骨相', '姬发式公主切', 'C4/C5 斜切面', '高湿润光泽']
-    },
-    summoned: true,
-    boxPosition: { x: 26, y: 7, z: -260 }
+      origin: '清冷高级感东方女性骨相，搭配法式不对称侧分修颜内扣波波头(hair_bob02.glb · 1,688v)。外眼角微挑丹凤眼型，鼻梁挺拔秀气。',
+      anatomyNotes: '短发造型360°无遮挡展露修长天鹅颈与底部C4颈椎骨松质、双侧颈总动脉及颈内静脉横切面。',
+      tags: ['法式侧分波波(1688v)', '丹凤微挑眼型', 'C4血管充盈断面', '360°全露修长颈部']
+    }
   },
   {
     id: 'SPEC-2026-003',
     folderName: 'SPEC-2026-003_QianXue',
     name: '千雪 · Qian Xue',
-    subtitle: '清冷高智感骨相 · 江南低盘发全露颈标本',
-    grade: 'UR · 博物馆级孤品',
-    createdAt: '2026-10-12 11:00',
+    subtitle: '冷艳高束马尾 · 财阀千金立体骨相典藏',
+    grade: 'UR · 殿堂孤品',
     basePreset: 'qianxue',
-    customModelUrl: null,
-    customModelType: 'glb',
-    skinTone: '#f5d5c8',
-    blushIntensity: 0.34,
-    lipColor: '#b84656',
-    irisColor: '#251814',
-    hairStyle: 'low_chignon',
-    hairColor: '#110f14',
-    hairSheen: 0.86,
-    neckClearance: 0.85,
+    modelUrl: '/models/daz_asian_head_base.glb',
+    skinTone: '#ffece5',
+    blushIntensity: 0.42,
+    lipColor: '#d94b62',
+    irisColor: '#633824',
+    hairStyle: 'hair_ponytail01',
+    hairColor: '#26181d',
+    hairSheen: 0.90,
+    neckClearance: 0.65,
+    summoned: true,
+    boxPosition: { x: 23, y: 2, z: -150 },
     morphs: {
-      jawVLine: 0.16,
-      cheekSoftness: -0.05,
-      noseBridge: 0.24,
-      eyeAlmond: 0.06,
-      lipFullness: -0.04,
-      neckDiameter: 0.96,
-      cutHeightOffset: -0.25,
-      cutTiltPitch: 2.0,
+      jawVLine: 0.22,
+      cheekSoftness: 0.18,
+      noseBridge: 0.20,
+      eyeAlmond: 0.22,
+      lipFullness: 0.24,
+      neckDiameter: 0.95,
+      cutHeightOffset: 0.0,
+      cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C5 颈椎水平全露式横断面 (Full-Exposure C5 Section)',
-      vascularContrast: 1.30,
-      dermisRimScale: 1.05,
+      cutLevel: 'C5 颈椎上关节面标准横切面 (高清微距封存)',
+      vascularContrast: 1.18,
+      dermisRimScale: 1.0,
+      wetness: 0.88,
+      showLabels: false
+    },
+    dossier: {
+      origin: '搭载3,902顶点干练高颅顶束马尾模型(hair_ponytail01.glb)，完整展露饱满额头、双耳与精致V型下颌折角。',
+      anatomyNotes: '高束马尾与后颈自然分离，进入360°旋转检视模式可完整观察后颈斜方肌群、高马尾发束与C5横断面解剖细节。',
+      tags: ['高颅顶马尾(3902v)', '全露下颌折角', 'C5关节面横切面', '3D眼动追随']
+    }
+  },
+  {
+    id: 'SPEC-2026-004',
+    folderName: 'SPEC-2026-004_ShenZhiwei',
+    name: '沈知微 · Shen Zhiwei',
+    subtitle: '温婉书香侧分粗麻花辫 · 杏眼花瓣唇标本',
+    grade: 'SSR · 特级典藏',
+    basePreset: 'shenzhiwei',
+    modelUrl: '/models/daz_asian_head_base.glb',
+    skinTone: '#ffede6',
+    blushIntensity: 0.48,
+    lipColor: '#db586c',
+    irisColor: '#5e3622',
+    hairStyle: 'hair_braid01',
+    hairColor: '#2b1d18',
+    hairSheen: 0.88,
+    neckClearance: 0.40,
+    summoned: false,
+    boxPosition: { x: 10, y: -6, z: -190 },
+    morphs: {
+      jawVLine: 0.12,
+      cheekSoftness: 0.24,
+      noseBridge: 0.12,
+      eyeAlmond: 0.14,
+      lipFullness: 0.28,
+      neckDiameter: 0.97,
+      cutHeightOffset: 0.0,
+      cutTiltPitch: 4.0,
+      cutTiltRoll: 0.0
+    },
+    anatomyOptions: {
+      cutLevel: 'C4–C5 椎间盘横断面 (柔光次表面活性封存)',
+      vascularContrast: 1.14,
+      dermisRimScale: 1.0,
       wetness: 0.85,
       showLabels: false
     },
     dossier: {
-      origin: '基于东亚清冷骨相高精雕刻参数，高鼻梁直鼻背，内敛淡颜唇线与深邃黑瞳。',
-      anatomyNotes: '采用全盘发造型使修长颈柱与C5水平解剖断面360°无遮挡展露。切面完整展示颈深后肌群（斜方肌、头半棘肌、多裂肌、肩胛提肌）、分叉棘突与椎动脉横突孔。',
-      hairNotes: '江南温婉低盘发髻配双侧S型龙须碎发，专为360°旋转鉴赏颈部解剖切面与颌颈角线条设计。',
-      tags: ['清冷骨相', '低盘发全露断面', 'C5 全景解剖面', '360°鉴赏特化']
-    },
-    summoned: false,
-    boxPosition: { x: 0, y: -6, z: -180 }
+      origin: '搭载4,663顶点高密度温婉侧分粗麻花辫模型(hair_braid01.glb)，杏仁大眼配温婉鹅蛋脸与饱满花瓣唇。',
+      anatomyNotes: '斜分麻花辫垂于单侧肩颈外侧，底部C4/C5解剖断面完整展现颈部肌群筋膜室与椎骨横突孔椎动脉结构。',
+      tags: ['侧分粗麻花辫(4663v)', '温婉书卷骨相', '花瓣饱满唇', 'C4/C5医学横切面']
+    }
   }
 ];
 
 export const DAZ_TUTORIAL_STEPS = [
   {
     step: 'STEP 01',
-    title: '准备高精度亚洲女性基底模型 (Daz Studio Base Setup)',
-    subtitle: 'Genesis 8.1 Female / Genesis 9 + 东亚骨相变形包',
+    title: 'Daz Studio 基底加载与东方女性骨相预设 (Genesis 9 / MakeHuman MPFB2)',
+    subtitle: '如何建立高还原度的亚洲女性头颈基底，彻底告别简陋低模与欧美深眼窝',
     content: [
-      '1. 在 Daz Studio 中加载 【Genesis 8.1 Female】 或 【Genesis 9 Starter Essentials】 基础女性角色。',
-      '2. 在 Parameters -> Actor -> Head -> People/Real World 中，加载东亚女性高精骨相预设（推荐：Mei Lin 8 / Victoria 8.1 HD / Rin / 亚洲自定义头雕 Morph），将 Asian Head Proportion 权重推至 75%~95%，柔和眉弓与颧弓突度。',
-      '3. 将 Mesh Resolution（网格细分级别）设为 【High Resolution】，SubDivision Level（视口/导出细分）设为 Level 2，确保鼻翼、眼睑双褶与唇珠拥有电影级平滑拓扑。'
+      '1. 在 Daz Studio 中加载 Genesis 9 Starter Essentials（或在 Blender MPFB2 中加载 Asian Female Young 基底 + CC0 Young Asian Female Diffuse 2K 皮肤贴图）。',
+      '2. 在 Shaping 面板将 Head Proportion 设为东亚女性柔和鹅蛋/微V轮廓：将 Brow Ridge（眉弓突出度）降至 -35%，Cheekbones Smooth 调至 +45%，Mandible Angle Width（下颌角宽度）调至 -40%。',
+      '3. 眼部关键参数：启用 Epicanthic Fold（内眦赘皮/东方杏眼折痕）+55%～+75%，并将 Upper Eyelid Relax 设为 +15%（避免欧美模型的惊恐瞪眼感），Iris Scale（虹膜比例）放大至 126%。'
     ],
-    proTip: '没有 Daz3D 也没关系！本软件已内置 3 套已细分至近万面的 Daz 风格东亚女性高精度头部基底（林汐 / 苏婉 / 千雪），可直接在「半自动工坊」中实时推拉骨相滑块。'
+    proTip: '本软件已内置编译好的真实亚洲女性高精头模 `daz_asian_head_base.glb`（含4,494顶点头颈皮肤、3D眼球/虹膜/角膜、3D羽状睫毛与眉毛、32通道真实Morph形变与C4/C5无缝解剖断面），无需外部软件即可直接在工坊微调！'
   },
   {
     step: 'STEP 02',
-    title: '照片到3D头模：最高精度对齐方案 (Photo-to-3D Precision Matching)',
-    subtitle: 'Daz Face Transfer 2 / Blender KeenTools FaceBuilder 双工作流',
+    title: '输入参考照片 · Face Transfer / 照片半自动骨相与肤色拟合法',
+    subtitle: '使用正面平光人像照片自动反推肤色、唇色与 32 通道面部 Morph 权重',
     content: [
-      '【方案 A：Daz Studio 内置 Face Transfer 2】打开 Window -> Panes -> Face Transfer，导入正面无遮挡高清人物照片（建议平视、光线均匀、无刘海遮挡眉眼），勾选 "Generate High-Res PBR Skin Textures"，一键生成贴合照片五官比例与皮肤纹理的专属头部。',
-      '【方案 B：追求 99.9% 骨相还原 — KeenTools FaceBuilder】在 Blender 中使用 FaceBuilder 插件载入正/侧多角度照片，通过特征点钉选（内眼角、鼻翼沟、人中嵴、下颌角）精准拟合照片头骨，再通过 Daz-to-Blender Bridge 传回或直接导出 .glb/.obj。',
-      '【方案 C：本软件内置「1:1 照片叠图半自动对位」】在软件左侧上传参考照片，开启「3D视口半透明照片叠图校准」，一键吸取照片肤色/唇色，并用右侧骨相滑块实时对齐照片脸型轮廓！'
+      '1. 准备一张光线均匀、无刘海遮挡眉眼的正面平视照片（推荐焦距 85mm 人像镜头）。',
+      '2. 在本软件「半自动工坊」左侧点击「上传本地照片」，再点击「半自动采样对位」：系统会自动采样照片的额头/脸颊/双唇色温，并自动拟合面部 Morph 滑杆与真实 3D 发型。',
+      '3. 若在 Daz Studio 中使用 Face Transfer 2 或 Blender KeenTools FaceBuilder：生成头部 Morph 后，导出为包含 `KHR_mesh_quantization` Morph Targets 的 `.glb` 文件即可直接拖入本软件。'
     ],
-    proTip: '照片对位最关键的三个锚点是：① 两眼内眦间距；② 鼻尖至上唇珠（人中）长度；③ 下颌角（Gonion）转折高度与下巴尖弧度。'
+    proTip: '照片自动生成的肤色贴图常带有鼻翼暗影或唇齿亮斑；本软件采用了高斯频率分离（Frequency Separation）算法自动保留毛孔微纹理并匀化东方女性冷白瓷肌。'
   },
   {
     step: 'STEP 03',
-    title: '超写实亚洲女性发丝制作 (Hyper-Realistic Asian Hair Groom)',
-    subtitle: 'Daz Strand-Based Hair (SBH) / 多层各向异性发片导出规范',
+    title: '只保留头颈 (Head-Only Bust) · C4/C5 颈椎水平横断面拓扑切割',
+    subtitle: '如何精准剥离躯干并生成严丝合缝的 C4/C5 医学解剖横断面封口',
     content: [
-      '1. 亚洲女性发质核心在于「乌木深色基底 + Kajiya-Kay 双峰冷调天使光圈 + 额角/耳侧微米级游离碎发（Flyaways）」。',
-      '2. 在 Daz Studio 中使用 Strand-Based Hair 或 OOT Hairblending 发资产，开启 Line Tesselation（设为 2~3）以导出真实三维几何发丝束。',
-      '3. 若希望在旋转桌宠时无遮挡欣赏底部「医学解剖断面」，推荐选择低盘发、齐颌短波波头，或在导出前将后颈发束作束发/避让处理（本软件内置「后发避让解剖断面」实时滑块）。'
+      '1. 骨骼权重剥离：筛选 `neck_01` (Joint 43) 与 `head` (Joint 44) 权重之和 > 0.04 的头颈顶点，彻底移除锁骨、胸腔与四肢网格。',
+      '2. C4/C5 水平面精确切割：在世界坐标 Y = 1.362m（颈中部 C4/C5 椎间盘水平）建立水平切割面，将跨越切面的三角面底部顶点沿颈部边线性插值吸附至 Y === 1.362000m，形成零锯齿水平环口。',
+      '3. 解剖断面缝合 (`NeckCrossSection`)：沿颈部底环生成 64×12 极坐标同心医学断面网格（含气管凹槽、C4椎体微凸与真皮边缘倒角），赋予高分辨率医学解剖纹理。'
     ],
-    proTip: '本软件内置 5 套针对东亚女性定制的多层流线发束 + 450根独立3D微米级游离飞发系统，支持实时切换发型、发色与天使光圈强度。'
+    proTip: '您也可以直接导入任意第三方 `.glb` 或 `.obj` 头模，软件会自动计算底部包围盒并装配 C4/C5 医学解剖横断面底座！'
   },
   {
     step: 'STEP 04',
-    title: '颈部截断与解剖断面无缝装配 (Neck Slicing & Medical Cross-Section Assembly)',
-    subtitle: '导入 .GLB / .OBJ 自动截断身体并封口生成 C4/C5 医学解剖切面',
+    title: '7款真实 3D 发型库切换与独立发包导入 (`hair_*.glb`)',
+    subtitle: '告别程序化纸片头发，使用 983～5,432 顶点真实 UV 发束网格与自定义 3D 发包',
     content: [
-      '1. 在 Daz Studio 导出模型时，无需手动在建模软件里痛苦布尔切割颈部！你可以直接隐藏躯干（Scene -> 展开 Hip/Chest -> 仅保留 Neck Lower, Neck Upper, Head 可见），或者直接导出完整角色 .glb / .obj。',
-      '2. 在本软件「注册收藏品工坊」点击【导入外部 Daz GLB/OBJ 模型】，软件内置的 WebGL 动态截断器会自动在颈部（C3~C6 可调高度与倾角）切除多余身体。',
-      '3. 软件会在截断面自动严丝合缝封口装配【1024/2048级写实医学颈部解剖横断面】（包含真皮切缘、皮下浅筋膜脂肪层、胸锁乳突肌、气管软骨环、食管、颈动脉鞘及 C4 颈椎脊髓灰质蝴蝶角），并赋予湿润组织清漆反射（Clearcoat）与凹凸法线。'
+      '1. 软件内置 7 款真实 3D 发型模型 (`hair_long01.glb` 瀑布长卷发、`hair_bob02.glb` 法式侧分波波、`hair_bob01.glb` 层次锁骨发、`hair_ponytail01.glb` 高束马尾、`hair_braid01.glb` 侧分麻花辫、`hair_short02.glb` 精灵短发、`hair_short04.glb` 干练短发)。',
+      '2. 颈部避让处理：所有长发模型前胸发束均已做环颈外分处理，绝不遮挡正面天鹅颈与底部 C4/C5 解剖断面。',
+      '3. 外部发型导入：支持在工坊中直接上传自定义 `.glb` / `.obj` 头发模型，并实时调节发色与高光。'
     ],
-    proTip: '在软件中完成断面微调与收藏品命名后，点击「生成收藏品档案并召唤桌宠」，即可在 /collectibles/ 目录生成完整档案包并召唤到电脑屏幕上！'
+    proTip: '切换不同发型时，头部的额头高低与下颌宽度 Morph 会自动同步驱动头发网格的自适应贴合形变！'
   }
 ];
+
+export const DAZ3D_TUTORIAL_STEPS = DAZ_TUTORIAL_STEPS;

@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { buildCollectibleHeadNode } from './collectibleHeadAssembler.js';
+import {
+  buildCollectibleHeadNode,
+  updateHeadLifeAnimation,
+  triggerCollectibleBlink
+} from './collectibleHeadAssembler.js';
 import { soundEngine } from '../audio/tactileSoundEngine.js';
 
 /**
@@ -10,7 +14,7 @@ import { soundEngine } from '../audio/tactileSoundEngine.js';
  *  - Wheel Scroll Z-Depth push/pull along perspective rays toward/from Vanishing Point
  *  - Drag & Drop with tactile velocity inertia, wall collisions, and pet-to-pet physics
  *  - Click once -> Enter 360° Rotation Mode; Click again -> Cancel Rotation Mode
- *  - 3D Cursor Gaze Follow effect & Hover Dossier HUD Window coordinates
+ *  - Real 3D Eyeball Cursor Gaze Follow + Natural Eyelid Blinking + Hover Dossier HUD
  */
 
 export class DesktopBoxSpaceEngine {
@@ -22,27 +26,26 @@ export class DesktopBoxSpaceEngine {
 
     this.settings = {
       fov: 42,
-      vanishingPointOffsetX: 0, // -0.35 to +0.35 of screen width
-      vanishingPointOffsetY: 0, // -0.35 to +0.35 of screen height
-      boxWidthCm: 88,           // Half-width = 44
-      boxHeightCm: 52,          // Half-height = 26
-      boxMaxDepthMm: 1200,      // Displayed in mm (scene units = mm / 10 = 120 cm)
-      showBoxGrid: 'always',    // 'always' | 'interaction' | 'hidden'
-      followIntensity: 0.72,    // 0 to 1
-      wheelDepthStep: 1.0,      // Scroll sensitivity
+      vanishingPointOffsetX: 0,
+      vanishingPointOffsetY: 0,
+      boxWidthCm: 88,
+      boxHeightCm: 52,
+      boxMaxDepthMm: 1200,
+      showBoxGrid: 'always',
+      followIntensity: 0.72,
+      wheelDepthStep: 1.0,
       autoResetAfterRotate: false,
-      enablePetCollision: true
+      enablePetCollision: true,
+      petsAlwaysOnTop: true
     };
 
-    this.pets = new Map(); // id -> petEntry
+    this.pets = new Map();
     this.hoveredPetId = null;
-    this.activeDragPet = null;
     this.pointerDownInfo = null;
     this.mouseNDC = new THREE.Vector2(0, 0);
     this.mouseClient = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5 };
     this.raycaster = new THREE.Raycaster();
     this.clock = new THREE.Clock();
-    this.wallFlashAlpha = { left: 0, right: 0, top: 0, bottom: 0, front: 0, back: 0 };
     this.interactionHighlightTimer = 0;
 
     this.initScene();
@@ -58,7 +61,6 @@ export class DesktopBoxSpaceEngine {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(this.settings.fov, w / h, 5, 600);
-    // Camera sits at Z = +115 cm looking at origin (Z = 0 is the front screen glass plane!)
     this.cameraZ = 115;
     this.camera.position.set(0, 0, this.cameraZ);
     this.camera.lookAt(0, 0, -50);
@@ -75,11 +77,10 @@ export class DesktopBoxSpaceEngine {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.12;
 
-    // Museum-grade studio 4-point lighting for realistic skin SSS, hair sheen, and wet anatomy cross-section
-    const ambient = new THREE.HemisphereLight('#fff5f0', '#1e293b', 1.25);
+    const ambient = new THREE.HemisphereLight('#fff5f0', '#1e293b', 1.30);
     this.scene.add(ambient);
 
-    this.keyLight = new THREE.DirectionalLight('#fff8f2', 2.1);
+    this.keyLight = new THREE.DirectionalLight('#fff8f2', 2.05);
     this.keyLight.position.set(42, 48, 95);
     this.scene.add(this.keyLight);
 
@@ -87,8 +88,7 @@ export class DesktopBoxSpaceEngine {
     this.fillLight.position.set(-55, 15, 70);
     this.scene.add(this.fillLight);
 
-    // Upward anatomical uplight so the neck cross-section at the bottom is always well-lit when lifted or tilted!
-    this.anatomyUpLight = new THREE.DirectionalLight('#fde2e4', 1.35);
+    this.anatomyUpLight = new THREE.DirectionalLight('#fde2e4', 1.45);
     this.anatomyUpLight.position.set(0, -65, 55);
     this.scene.add(this.anatomyUpLight);
 
@@ -99,21 +99,18 @@ export class DesktopBoxSpaceEngine {
     this.updateCameraProjection();
   }
 
-  /**
-   * Computes bounded 3D Box Space dimensions matched to screen aspect ratio
-   */
   getBoxBounds() {
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
     const halfH = this.settings.boxHeightCm * 0.5;
     const halfW = halfH * aspect * (this.settings.boxWidthCm / 82);
-    const maxDepthCm = this.settings.boxMaxDepthMm / 10; // e.g., 1200mm -> 120cm
+    const maxDepthCm = this.settings.boxMaxDepthMm / 10;
     return {
       minX: -halfW,
       maxX: halfW,
       minY: -halfH,
       maxY: halfH,
-      minZ: -maxDepthCm, // Back wall of the box
-      maxZ: 0            // Front glass plane (computer screen surface)
+      minZ: -maxDepthCm,
+      maxZ: 0
     };
   }
 
@@ -123,7 +120,6 @@ export class DesktopBoxSpaceEngine {
     this.camera.fov = this.settings.fov;
     this.camera.aspect = w / h;
 
-    // Apply off-axis perspective projection when Vanishing Point offset is adjusted
     const ox = -this.settings.vanishingPointOffsetX * w;
     const oy = this.settings.vanishingPointOffsetY * h;
     if (Math.abs(ox) > 0.5 || Math.abs(oy) > 0.5) {
@@ -134,9 +130,6 @@ export class DesktopBoxSpaceEngine {
     this.camera.updateProjectionMatrix();
   }
 
-  /**
-   * Builds the 3D Perspective Box Space Wireframe Tunnel & Vanishing Point Crosshair
-   */
   initBoxWireframe() {
     if (this.boxGroup) {
       this.scene.remove(this.boxGroup);
@@ -157,7 +150,6 @@ export class DesktopBoxSpaceEngine {
       lineColors.push(col1.r, col1.g, col1.b, col2.r, col2.g, col2.b);
     };
 
-    // Depth slice rectangles from Z=0 (front glass) to Z=minZ (back wall)
     for (const frac of depthSlices) {
       const z = b.minZ * frac;
       const col = cFront.clone().lerp(cBack, frac);
@@ -167,7 +159,6 @@ export class DesktopBoxSpaceEngine {
       pushSeg(b.minX, b.maxY, z, b.minX, b.minY, z, col, col);
     }
 
-    // 4 Corner Perspective Rays + Mid-Wall Rays converging toward the Back Wall & Vanishing Point
     const rays = [
       [b.minX, b.minY], [b.maxX, b.minY], [b.maxX, b.maxY], [b.minX, b.maxY],
       [0, b.minY], [0, b.maxY], [b.minX, 0], [b.maxX, 0]
@@ -176,7 +167,6 @@ export class DesktopBoxSpaceEngine {
       pushSeg(rx, ry, 0, rx, ry, b.minZ, cFront, cBack);
     }
 
-    // Back wall vanishing-point diagonal crosshairs
     const vpCol = new THREE.Color('#4f46e5').multiplyScalar(0.65);
     pushSeg(b.minX * 0.35, b.minY * 0.35, b.minZ, b.maxX * 0.35, b.maxY * 0.35, b.minZ, vpCol, vpCol);
     pushSeg(b.minX * 0.35, b.maxY * 0.35, b.minZ, b.maxX * 0.35, b.minY * 0.35, b.minZ, vpCol, vpCol);
@@ -194,12 +184,11 @@ export class DesktopBoxSpaceEngine {
     const lines = new THREE.LineSegments(geom, this.boxLinesMat);
     this.boxGroup.add(lines);
 
-    // Back wall subtle translucent plane so user perceives the finite depth limit of the box
     const backWallGeo = new THREE.PlaneGeometry(b.maxX - b.minX, b.maxY - b.minY);
     this.backWallMat = new THREE.MeshBasicMaterial({
       color: '#0f172a',
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.12,
       depthWrite: false
     });
     const backWallMesh = new THREE.Mesh(backWallGeo, this.backWallMat);
@@ -213,7 +202,6 @@ export class DesktopBoxSpaceEngine {
     Object.assign(this.settings, newPartial);
     this.updateCameraProjection();
     this.initBoxWireframe();
-    // Clamp all active pets to updated box bounds
     const b = this.getBoxBounds();
     for (const pet of this.pets.values()) {
       pet.pos.x = Math.max(b.minX + 8, Math.min(b.maxX - 8, pet.pos.x));
@@ -222,9 +210,6 @@ export class DesktopBoxSpaceEngine {
     }
   }
 
-  /**
-   * Summons or updates a 3D Collectible Head Desktop Pet inside the 3D Box Space
-   */
   async summonCollectible(collectible) {
     if (this.pets.has(collectible.id)) {
       this.recallCollectible(collectible.id, false);
@@ -235,13 +220,10 @@ export class DesktopBoxSpaceEngine {
 
     const startX = Math.max(b.minX + 10, Math.min(b.maxX - 10, collectible.boxPosition?.x ?? 0));
     const startY = Math.max(b.minY + 11, Math.min(b.maxY - 10, collectible.boxPosition?.y ?? 2));
-    // boxPosition.z is in mm (-1200 .. 0), convert to cm (-120 .. 0)
     const rawZCm = (collectible.boxPosition?.z ?? -160) / 10;
     const startZ = Math.max(b.minZ + 8, Math.min(b.maxZ - 2, rawZCm));
 
     headNode.position.set(startX, startY, startZ);
-
-    // Subtle spawn scale-up animation
     headNode.scale.setScalar(0.01);
     this.scene.add(headNode);
 
@@ -254,7 +236,7 @@ export class DesktopBoxSpaceEngine {
       targetScale: 0.72,
       currentScale: 0.01,
       isRotationMode: false,
-      customRot: new THREE.Euler(0.12, 0, 0), // Slight tilt showing both face & neck cross-section
+      customRot: new THREE.Euler(0.10, 0, 0),
       currentRot: new THREE.Euler(0, 0, 0),
       radius: 8.2,
       phase: Math.random() * Math.PI * 2
@@ -287,8 +269,9 @@ export class DesktopBoxSpaceEngine {
       pet.node.userData.gimbalGroup.visible = pet.isRotationMode;
     }
     if (!pet.isRotationMode && this.settings.autoResetAfterRotate) {
-      pet.customRot.set(0.12, 0, 0);
+      pet.customRot.set(0.10, 0, 0);
     }
+    triggerCollectibleBlink(pet.node);
     const b = this.getBoxBounds();
     const panX = pet.pos.x / Math.max(1, b.maxX);
     soundEngine.playRotationModeToggle(pet.isRotationMode, panX);
@@ -299,7 +282,7 @@ export class DesktopBoxSpaceEngine {
   resetPetOrientation(id) {
     const pet = this.pets.get(id);
     if (!pet) return;
-    pet.customRot.set(0.12, 0, 0);
+    pet.customRot.set(0.10, 0, 0);
   }
 
   getSummonedList() {
@@ -313,9 +296,6 @@ export class DesktopBoxSpaceEngine {
     }));
   }
 
-  /**
-   * Projects a 3D world position to 2D screen pixel coordinates for the Hover Dossier Window
-   */
   worldToScreen(vec3) {
     const v = vec3.clone().project(this.camera);
     return {
@@ -324,9 +304,6 @@ export class DesktopBoxSpaceEngine {
     };
   }
 
-  /**
-   * Computes the 3D world intersection on the plane Z = targetZ for current mouse NDC
-   */
   getMouseWorldAtZ(targetZ) {
     this.raycaster.setFromCamera(this.mouseNDC, this.camera);
     const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -targetZ);
@@ -376,6 +353,27 @@ export class DesktopBoxSpaceEngine {
     });
   }
 
+  /**
+   * Returns true if the pointer event target is an interactive UI control or inside a window when pets are NOT on top
+   */
+  isBlockedByUI(e) {
+    const target = e.target;
+    if (!target || !(target instanceof Element)) return false;
+    // Always yield to the start modal or the 3D studio preview viewport canvas
+    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip')) {
+      return true;
+    }
+    // Always yield to interactive buttons, inputs, sliders, titlebars, tabs, or folder items
+    if (target.closest('button, input, select, textarea, label, a, #window-titlebar, .nav-tab, .os-icon, .archive-folder-item')) {
+      return true;
+    }
+    // If petsAlwaysOnTop is disabled, yield whenever pointer is inside #software-window
+    if (!this.settings.petsAlwaysOnTop && target.closest('#software-window')) {
+      return true;
+    }
+    return false;
+  }
+
   bindEvents() {
     window.addEventListener('resize', () => {
       const w = window.innerWidth;
@@ -385,14 +383,18 @@ export class DesktopBoxSpaceEngine {
       this.initBoxWireframe();
     });
 
-    this.canvas.addEventListener('pointerdown', (e) => {
+    // Global pointerdown so 3D pets work seamlessly even when #desktop-pet-canvas has pointer-events: none!
+    window.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       this.updateMouseCoords(e);
+      if (this.isBlockedByUI(e)) return;
+
       const hitPet = this.pickPetAtCursor();
       if (!hitPet) return;
 
       e.stopPropagation();
       this.interactionHighlightTimer = 1.5;
+      triggerCollectibleBlink(hitPet.node);
 
       const hitWorld = this.getMouseWorldAtZ(hitPet.pos.z);
       this.pointerDownInfo = {
@@ -405,7 +407,7 @@ export class DesktopBoxSpaceEngine {
         grabOffset: new THREE.Vector3().subVectors(hitPet.pos, hitWorld),
         pickupSoundPlayed: false
       };
-    });
+    }, true);
 
     window.addEventListener('pointermove', (e) => {
       this.updateMouseCoords(e);
@@ -422,14 +424,12 @@ export class DesktopBoxSpaceEngine {
 
         if (info.movedDist > 5) {
           if (pet.isRotationMode) {
-            // In 360° Rotation Mode: dragging freely rotates the head across yaw & pitch to inspect face & neck cross-section!
             pet.customRot.y += dx * 0.013;
             pet.customRot.x = Math.max(-Math.PI * 0.48, Math.min(Math.PI * 0.48, pet.customRot.x + dy * 0.013));
             const speedNorm = Math.min(1, Math.hypot(dx, dy) / 28);
             const b = this.getBoxBounds();
             soundEngine.updateDragWhoosh(speedNorm * 0.55, pet.pos.x / Math.max(1, b.maxX));
           } else {
-            // In Desktop Box Space Mode: dragging moves the head in [X, Y] at its current Z depth
             if (!info.pickupSoundPlayed) {
               info.pickupSoundPlayed = true;
               const b = this.getBoxBounds();
@@ -453,14 +453,22 @@ export class DesktopBoxSpaceEngine {
         return;
       }
 
-      // Hover detection when not dragging
+      if (this.isBlockedByUI(e)) {
+        if (this.hoveredPetId) {
+          this.hoveredPetId = null;
+          document.body.style.cursor = '';
+          this.onHoverChange(null);
+        }
+        return;
+      }
+
       const hitPet = this.pickPetAtCursor();
       const newId = hitPet ? hitPet.id : null;
       if (newId !== this.hoveredPetId) {
         this.hoveredPetId = newId;
-        this.canvas.style.cursor = hitPet
+        document.body.style.cursor = hitPet
           ? (hitPet.isRotationMode ? 'grab' : 'pointer')
-          : 'default';
+          : '';
       }
       if (this.hoveredPetId) {
         this.refreshHoverHUD();
@@ -477,7 +485,6 @@ export class DesktopBoxSpaceEngine {
 
       soundEngine.stopDragWhoosh();
 
-      // If pointer barely moved (< 5px), treat as a click -> Toggle 360° Rotation Mode!
       if (info.movedDist <= 5) {
         this.toggleRotationMode(pet.id);
       } else if (info.pickupSoundPlayed) {
@@ -486,12 +493,14 @@ export class DesktopBoxSpaceEngine {
       }
     });
 
-    // Mouse Wheel adjusts 3D Depth (Z-axis) inside the Bounded 3D Box Space!
-    this.canvas.addEventListener('wheel', (e) => {
+    window.addEventListener('wheel', (e) => {
       this.updateMouseCoords(e);
+      if (this.isBlockedByUI(e)) return;
+
       const hitPet = this.pickPetAtCursor() || (this.hoveredPetId ? this.pets.get(this.hoveredPetId) : null);
       if (!hitPet) return;
 
+      // Only intercept wheel if cursor is actually over a 3D head pet!
       e.preventDefault();
       e.stopPropagation();
       this.interactionHighlightTimer = 1.6;
@@ -519,7 +528,7 @@ export class DesktopBoxSpaceEngine {
 
       this.refreshHoverHUD();
       this.onPetStateUpdate(this.getSummonedList());
-    }, { passive: false });
+    }, { passive: false, capture: true });
   }
 
   updateMouseCoords(e) {
@@ -535,7 +544,6 @@ export class DesktopBoxSpaceEngine {
     const elapsed = this.clock.getElapsedTime();
     const b = this.getBoxBounds();
 
-    // Update Box Space Grid visibility & opacity
     if (this.interactionHighlightTimer > 0) {
       this.interactionHighlightTimer = Math.max(0, this.interactionHighlightTimer - dt);
     }
@@ -553,7 +561,6 @@ export class DesktopBoxSpaceEngine {
 
     const petArray = Array.from(this.pets.values());
 
-    // Pet-to-Pet physical elastic collision inside the 3D Box Space
     if (this.settings.enablePetCollision && petArray.length > 1) {
       for (let i = 0; i < petArray.length; i++) {
         for (let j = i + 1; j < petArray.length; j++) {
@@ -579,9 +586,7 @@ export class DesktopBoxSpaceEngine {
       }
     }
 
-    // Update each summoned 3D head pet
     for (const pet of petArray) {
-      // Smooth scale-in
       pet.currentScale += (pet.targetScale - pet.currentScale) * 0.14;
       pet.node.scale.setScalar(pet.currentScale);
 
@@ -589,11 +594,9 @@ export class DesktopBoxSpaceEngine {
 
       if (!isBeingDragged) {
         pet.pos.add(pet.vel);
-        pet.vel.multiplyScalar(0.88); // Damping
+        pet.vel.multiplyScalar(0.88);
       }
 
-      // Bounded 3D Box Space Wall Collisions (Left, Right, Top, Bottom, Front Glass, Back Wall)
-      // Because camera is perspective, visible frustum width at depth Z shrinks or grows, OR we enforce the physical 3D Box walls!
       const marginX = 7.8;
       const marginY = 9.2;
       const panX = pet.pos.x / Math.max(1, b.maxX);
@@ -638,13 +641,20 @@ export class DesktopBoxSpaceEngine {
         pet.vel.z = -Math.abs(pet.vel.z) * 0.5;
       }
 
-      // Gentle organic floating bob
       const bobY = Math.sin(elapsed * 1.8 + pet.phase) * 0.28;
       pet.node.position.set(pet.pos.x, pet.pos.y + bobY, pet.pos.z);
 
-      // Rotation Logic:
+      const cursorWorld = this.getMouseWorldAtZ(pet.pos.z * 0.5);
+      const dx = cursorWorld.x - pet.pos.x;
+      const dy = cursorWorld.y - pet.pos.y;
+      const follow = this.settings.followIntensity;
+
+      // Update live eyelid blinking + 3D eyeball cursor tracking (`look_left/right/up/down`)!
+      const eyeGazeX = Math.max(-0.85, Math.min(0.85, (dx / 24) * follow));
+      const eyeGazeY = Math.max(-0.75, Math.min(0.75, (dy / 22) * follow));
+      updateHeadLifeAnimation(pet.node, dt, eyeGazeX, eyeGazeY);
+
       if (pet.isRotationMode) {
-        // In 360° Rotation Mode: smoothly slerp toward user-inspected customRot + animate gimbal rings
         pet.node.rotation.x += (pet.customRot.x - pet.node.rotation.x) * 0.22;
         pet.node.rotation.y += (pet.customRot.y - pet.node.rotation.y) * 0.22;
         pet.node.rotation.z += (0 - pet.node.rotation.z) * 0.18;
@@ -653,15 +663,8 @@ export class DesktopBoxSpaceEngine {
           pet.node.userData.gimbalGroup.children[1].rotation.y -= dt * 0.6;
         }
       } else {
-        // In 3D Gaze Follow Mode:
-        // Head subtly turns toward the mouse cursor in 3D space + tilts with drag velocity
-        const cursorWorld = this.getMouseWorldAtZ(pet.pos.z * 0.5);
-        const dx = cursorWorld.x - pet.pos.x;
-        const dy = cursorWorld.y - pet.pos.y;
-        const follow = this.settings.followIntensity;
-
-        const targetYaw = Math.max(-0.62, Math.min(0.62, (dx / 42) * follow)) + pet.customRot.y * 0.35;
-        const targetPitch = Math.max(-0.48, Math.min(0.48, (-dy / 38) * follow)) + pet.customRot.x;
+        const targetYaw = Math.max(-0.55, Math.min(0.55, (dx / 45) * follow)) + pet.customRot.y * 0.35;
+        const targetPitch = Math.max(-0.42, Math.min(0.42, (-dy / 40) * follow)) + pet.customRot.x;
         const velocityRoll = Math.max(-0.32, Math.min(0.32, -pet.vel.x * 0.14));
 
         pet.node.rotation.x += (targetPitch - pet.node.rotation.x) * 0.10;

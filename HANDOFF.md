@@ -70,3 +70,24 @@
   2. **面部微表面平滑与花瓣唇/柔和山根重塑**：在 `scripts/build_head_models.py` 中新增 `smooth_facial_features()`，消除原始 `canonical_face_model.obj` 在嘴角、鼻翼旁、泪沟与颊部的拓扑凹凸感，微降山根高度并将内唇缝前推闭合为饱满柔和的花瓣唇。
   3. **高颅顶椭球发壳数学包络对齐（`cos(theta)/sin(theta)`）**：在 `src/three/hairBuilder.js` 中采用严格包络颅骨外侧的椭球参数方程（`y = 2.6 + 8.40 * cos(theta)`, `rx = 8.15 * sin(theta)`, `rz_back = 7.48 * sin(theta)`）构建连续发壳、贴颊修颜侧发（姬发式切口/长卷发束）与齐眉弧度刘海（`thetaSpan = 1.27`），彻底杜绝颅顶或后脑穿模。
 - **同步重新构建 `/点击开始游戏_CERVIX3D.html`（2.46 MB）并推送至 GitHub 远端仓库**。
+
+### [2026-10-12 Stage 4] 全面替换为真实高精亚洲女性 3D 头模 (`.glb`) + 7 款真实 3D 发型库 (`hair_*.glb`) + 彻底修复窗口遮挡 BUG
+- **用户最新明确指令（最高优先级，严禁退回程序化低模）**：
+  1. **不许再使用简陋的程序化人脸面罩 (`canonical_face_model.obj`) 或程序化数学纸片头发**：必须使用下载的真实高精度 3D 亚洲女性头模与真实 3D 头发模型库。
+  2. **彻底修复窗口遮挡 BUG（“现在窗口有BUG，那个DAZ窗口遮住一切窗口”）**：DAZ/软件主窗口绝不能遮挡所有其他窗口、桌面图标、3D 桌宠与悬停档案卡。
+- **核心架构升级与模型资产 (`scripts/build_real_daz_assets.py` -> `public/models/*.glb`)**：
+  1. **真实亚洲女性高精头模 (`public/models/daz_asian_head_base.glb`, 2.39 MB)**：
+     - 基于 MakeHuman/MPFB2 CC0 真实高精角色头模，通过骨骼权重 (`joints 43: neck_01`, `44: head`) 精确剥离躯干，并在 `Y = 1.362m`（C4/C5 颈椎水平）执行边插值水平切割，生成零锯齿水平颈环。
+     - 包含 5 大独立高精度网格：`HeadSkin`（4,494 顶点、8,554 三角面）、`NeckCrossSection`（无缝缝合于颈底环口的 64×12 极坐标 C4/C5 解剖断面封口网格，带气管凹槽与椎骨微凸）、`Eyes`（真实 3D 眼球 + 1.26x 放大东方琥珀深棕虹膜 + 透明高光角膜 `Cornea`）、`Eyebrows`（3D 柔雾眉毛网格）、`Eyelashes`（3D 羽状眼睫毛网格）。
+     - 内嵌 5 张高清纹理：高斯频率分离精修的东方女性冷白瓷肌贴图 (`skin_albedo.jpg`，含自然花瓣唇晕染与蜜桃腮红)、微米级毛孔法线贴图 (`skin_normal.jpg`)、东方深棕虹膜贴图 (`eye.jpg`)、眉毛与睫毛透明通道贴图。
+     - 内置 **32 通道 `KHR_mesh_quantization` 真实 Morph Targets**：支持面部骨相滑杆实时形变、**真实双侧眼睑自然眨眼动画 (`blink_left`, `blink_right`)** 以及 **真实 3D 眼球跟随鼠标视线转动 (`look_left`, `look_right`, `look_up`, `look_down`)**。
+  2. **7 款真实 3D 发型模型库 (`public/models/hair_*.glb`)**：
+     - 完整集成 7 款真实 UV 映射 3D 发模：`hair_long01.glb`（浪漫中分瀑布长卷发，3,312v）、`hair_bob02.glb`（法式侧分内扣波波头，1,688v）、`hair_bob01.glb`（知性层次感锁骨波波发，5,432v）、`hair_ponytail01.glb`（冷感干练高颅顶束马尾，3,902v）、`hair_braid01.glb`（温婉侧分立体粗麻花辫，4,663v）、`hair_short02.glb`（空气感碎发精灵短发，1,794v）、`hair_short04.glb`（极简干练齐耳短发，983v）。
+     - 所有长发模型的前胸发束均做了环颈外分处理，绝不遮挡正面天鹅颈与底部 C4/C5 医学解剖断面。
+  3. **彻底修复窗口遮挡与层级陷阱 (`index.html`, `src/style.css`, `src/main.js`, `src/three/desktopBoxSpaceEngine.js`)**：
+     - 移除 `#desktop-environment` 的 `z-index: 1` 层级陷阱；将悬停档案窗 `#pet-hover-dossier` 移至顶层 `z-index: 9999`，确保鼠标悬停桌宠时档案卡永远在最前。
+     - `#desktop-pet-canvas` 默认启用 **「📌 3D桌宠: 置顶最前」**（`z-index: 62; pointer-events: none;` 配合全局射线拾取穿透），使 3D 头部桌宠永远不会被 DAZ 软件窗口遮挡，且不阻碍任何窗口按钮点击。
+     - `#software-window` 新增 **「◧ 右侧紧凑停靠」**、**「🌓 半透毛玻璃」** 与强制生效的 `.window-hidden`（修复拖拽后 `style.transform = 'none'` 导致无法隐藏窗口的 BUG）。
+  4. **独立单文件可玩版更新 (`/点击开始游戏_CERVIX3D.html`, 8.59 MB)**：
+     - 将 `daz_asian_head_base.glb` 与全部 7 款 `hair_*.glb` 模型以 Base64 内嵌至 `window.__EMBEDDED_GLBS__`，双击 HTML 即可 100% 离线加载真实 3D 头模与全部 7 款真实 3D 发型。
+

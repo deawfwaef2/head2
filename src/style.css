@@ -45,24 +45,25 @@ body.bg-mode-transparent {
 }
 
 /* =========================================================================
-   LAYER 1: FULL COMPUTER SCREEN & 3D BOX SPACE
+   LAYER 1: FULL COMPUTER SCREEN & 3D BOX SPACE (Un-trapped stacking context!)
    ========================================================================= */
 #desktop-environment {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 1;
+  pointer-events: none;
 }
 
 #os-desktop-icons {
   position: fixed;
   top: 64px;
-  left: 20px;
+  left: 14px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  z-index: 5;
+  gap: 16px;
+  z-index: 48;
+  pointer-events: auto;
 }
 
 .os-icon {
@@ -199,13 +200,18 @@ body.bg-mode-transparent {
   box-shadow: inset 0 0 35px rgba(244, 63, 94, 0.28);
 }
 
-/* Full-screen 3D Desktop Pet Canvas */
+/* Full-screen 3D Desktop Pet Canvas (Always-on-top pass-through so DAZ window never blocks 3D pets!) */
 #desktop-pet-canvas {
   position: fixed;
   inset: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 10;
+  z-index: 62;
+  pointer-events: none;
+}
+
+#desktop-pet-canvas.pets-behind-window {
+  z-index: 15;
 }
 
 /* =========================================================================
@@ -214,12 +220,12 @@ body.bg-mode-transparent {
 #pet-hover-dossier {
   position: fixed;
   width: 315px;
-  background: rgba(9, 13, 24, 0.92);
+  background: rgba(9, 13, 24, 0.94);
   backdrop-filter: blur(14px);
-  border: 1px solid rgba(56, 189, 248, 0.55);
+  border: 1px solid rgba(56, 189, 248, 0.65);
   border-radius: 12px;
   padding: 13px 15px;
-  z-index: 75;
+  z-index: 9999;
   pointer-events: none;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.75), 0 0 22px rgba(56, 189, 248, 0.18);
   transition: opacity 0.12s ease, transform 0.12s ease;
@@ -483,16 +489,22 @@ body.bg-mode-transparent {
   background: rgba(56, 189, 248, 0.3);
 }
 
+.overlay-btn.active-top {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(52, 211, 153, 0.65);
+  color: #a7f3d0;
+}
+
 /* =========================================================================
-   LAYER 3: FLOATING SOFTWARE WINDOW (CERVIX-3D SUITE)
+   LAYER 3: FLOATING SOFTWARE WINDOW (CERVIX-3D SUITE — NON-BLOCKING MULTI-MODE)
    ========================================================================= */
 #software-window {
   position: fixed;
   top: 58px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(1240px, 95vw);
-  height: min(740px, calc(100vh - 135px));
+  right: 16px;
+  left: auto;
+  width: min(1120px, calc(100vw - 128px));
+  height: min(730px, calc(100vh - 132px));
   background: var(--bg-panel);
   backdrop-filter: blur(18px);
   border: 1px solid rgba(148, 163, 184, 0.24);
@@ -501,13 +513,26 @@ body.bg-mode-transparent {
   display: flex;
   flex-direction: column;
   z-index: 40;
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition: opacity 0.2s ease, width 0.22s ease;
 }
 
+/* Compact Right-Docked Mode: leaves left half of screen & Vanishing Point open for 3D Desktop Pets! */
+#software-window.window-dock-right {
+  width: min(740px, calc(100vw - 128px));
+}
+
+/* Semi-Transparent Glass Mode: see 3D Box Space right through the window! */
+#software-window.window-glass {
+  background: rgba(11, 16, 28, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+/* Bullet-proof hidden state even after inline drag styles are applied */
 #software-window.window-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) translateY(24px) scale(0.96);
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(20px) scale(0.96) !important;
 }
 
 #window-titlebar {
