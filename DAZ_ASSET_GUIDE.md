@@ -38,3 +38,30 @@
 - DAZ 官方许可说明：[Interactive Licenses](https://www.daz3d.com/interactive-license-info) 与 [EULA](https://www.daz3d.com/eula)。DAZ 表示，3D 内容用于游戏或其他交互应用时，使用/分发原始 3D 数据需要 Interactive License；如果某商品页没有提供该选项，则不能把该商品当作 app/game 的 3D 资产。请逐件核对现行条款，并向 DAZ 确认个人本机桌宠用途，不要把这段指南当作法律意见。
 - 本仓库不包含以上商业网格或贴图。上传的私人 GLB/OBJ 保存在**当前浏览器**的 IndexedDB，不会上传 GitHub，也不会随档案 ZIP 导出；更换浏览器或清除站点数据后需从原始备份重新导入。
 - 参考照片只在当前页面作叠图/颜色采样，不会自动作为新头模贴图保存到档案。请只上传自己有权使用的照片。
+
+## ⚠️ 关于 ShadowCore / 免费 DAZ 下载站的说明（必读）
+
+用户曾建议从 **ShadowCore（shadowcore.ru）** 等站点“注册下载 DAZ 头模与头发”。经核查，这类站点提供的是 **未经授权的 DAZ 付费商品拷贝**（与 render-state、3d-load 等同类），从这些渠道下载、分发或打包进本项目，都违反 DAZ EULA 与著作权法，并会污染整个公开仓库的合法性。
+
+**本项目的立场（与既往 HANDOFF 一致）：**
+
+1. **绝不从 ShadowCore 或任何非官方渠道下载 DAZ 商品**，也不把任何来源不明的 `.duf/.obj/.glb` 提交到仓库或打包进离线 HTML。
+2. **合法获得高精度头模/发型的正确途径：**
+   - DAZ 官方商店购买（上方候选清单），按 Interactive License 要求使用；
+   - DAZ 官方每周免费区 / DAZ Freebies（需登录官方账号领取，许可仍以商品页为准）；
+   - 你已购买资产的 **Blender 私有导出 GLB**，经由本软件「选本机高精头部 / 选配套头发」导入（只存当前浏览器 IndexedDB，不进仓库）；
+   - 本仓库内置的 **MakeHuman CC0 头模 + CC0 发型**（见下表），可放心打包与分发。
+3. 如果你已在 DAZ 官方购买角色/头发，告诉 Agent 商品名与代数（G8/G8.1/G9），Agent 会帮你核对导出清单（眼球/睫毛/眉毛/发际线）与 GLB 材质转换步骤，而不是去第三方站点找“免费版”。
+
+## 📦 本仓库内置 CC0 发型目录（可直接用，无需购买）
+
+| 发型 | 来源 | 工坊入口 | 特点 |
+|---|---|---|---|
+| 波波头 Bob | MakeHuman CC0 `bob02` | 「CC0 亚洲女头 + 波波发」 | 短发包脸轮廓 + 贴颊微发束 |
+| 长直发 Long | MakeHuman CC0 `long01` | 「CC0 亚洲女头 + 长发」 | 及腰长发 + 贴颊微发束 |
+| 低马尾 Ponytail | MakeHuman CC0 `ponytail01` | 「CC0 亚洲女头 + 低马尾」 | 绑发造型，露出颈部断面 |
+| 麻花辫 Braid | MakeHuman CC0 `braid01` | 「CC0 亚洲女头 + 麻花辫」 | 长辫垂背，适合展示后颈 |
+| 短发 Short | MakeHuman CC0 `short02` | 「CC0 亚洲女头 + 知性短发」 | 清爽短发，露出完整颈切面 |
+| 程序化长直/姬发/低盘发/微卷/波波 | 本项目程序化发壳 | 发型下拉菜单 | 参数化发壳，可调光泽与颈部避让 |
+
+> CC0 发型的原始 `.obj/.mhclo` 见 `assets_src/makehuman/`（含 `LICENSE_NOTE.txt`），构建脚本 `scripts/build_makehuman_head.py` 可复现 `public/models/mh_hair_*.obj`。它们是低面数发片资产，定位是“离线可玩的合法备选”，不是 DAZ 电影级毛发；追求照片级请走上方 DAZ 官方私有导入流程。
