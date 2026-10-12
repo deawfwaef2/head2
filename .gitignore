@@ -3,3 +3,7 @@ node_modules/
 .cache/
 uploads/
 *.log
+
+.npm/
+.cache/
+.sudo_as_admin_successful
