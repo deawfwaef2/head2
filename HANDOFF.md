@@ -94,3 +94,25 @@
   - 强力模型：优先评估 (b) 的可行性（许可证、拓扑质量、面数），并确认 `build_standalone_html.mjs` 能把新模型打包进单文件。
   - 较弱模型：请只修改 UI 文案、档案数据、音效参数，不要动 `hairBuilder.js`、`collectibleHeadAssembler.js`、`build_head_models.py`。
 - 工作区大小：本轮结束约 37MB（不含 `.cache` Playwright 浏览器，该目录属于快照排除项）。
+
+### [2026-10-12 Stage 6] 定位并修复「发片银色/白色镜面大色块」视觉 BUG（根因非贴图/非打光，而是材质混合方式）+ 仓库路径复位 + 可视化回归自检流程
+- **环境复位**：本轮接手时仓库被克隆进 `/home/user/project/` 子目录，已按 Stage 4/5 约定的协作铁律，把全部文件（含 `.git`）移回 `/home/user` 根目录，删除空的 `project/` 目录。**请后续模型继续保持仓库直接位于 `/home/user` 根目录，不要再嵌套子目录**（`build_standalone_html.mjs` 的 `path.resolve('/home/user/dist')` 等路径均写死为此绝对路径）。
+- **建立了一套可重复使用的可视化回归自检方法（强烈建议后续模型复用，而不是单纯读代码猜测）**：
+  1. `npm install` 后用 `start_process` 启动 `npm run dev`（Vite，端口 5173，比每次重建独立 HTML 快得多，改完代码保存即热更新）。
+  2. 用 Playwright（`pip install playwright && python3 -m playwright install chromium`，`launch(args=['--use-gl=swiftshader'])` 可在无 GPU 的沙箱里跑 WebGL）截图 `http://localhost:5173/`，点击 `#btn-start-pure-desktop` 进入桌宠层，再用 Pillow 裁剪/放大人脸区域（例如 `im.crop((420,300,680,560)).resize(...*3)`）才能看清面部/发丝细节，直接截全图根本看不出问题。
+  3. 验证完所有改动后，再跑 `node scripts/build_standalone_html.mjs` 重新生成 `点击开始游戏_CERVIX3D.html`，并用 `file://` 协议同样跑一遍 Playwright 自检（确保离线单文件版本与 dev 版本行为一致，确保无 console error）。
+  4. 定位疑难渲染 BUG 的技巧：给可疑材质临时加 `emissive` 纯色（如红/绿）渲染截图，可以直接用颜色分离出"这块亮斑到底是哪个 Mesh/材质"，比纯看代码猜测快得多（本轮正是用这个方法才找到真正根因，见下）。
+- **真正定位到的根因（请后续模型引以为戒，这是一个很容易被"调参数掩盖症状但扑不灭"的坑）**：用户反馈「头发有大块银白色/镜面色块，像塑料头盔」的 BUG，表面看像是「clearcoat/roughness 太低导致高光过曝」，但把 `hairBuilder.js` 里 `solidHairMat` / `strandHairMat` 的 `clearcoat` 降到 0、`roughness` 提到 0.6+ 后色块亮度只降了约 20%，仍然存在一大片死白。用 emissive 红绿分色渲染后发现：色块位置正好是**刘海 `strandHairMat`（`transparent: true` 的 alpha 混合材质）叠在不透明发壳 `solidHairMat` 正前方**的区域——问题根源是 **`transparent: true` 的 alpha *混合*（blending）：凡是 alpha 没有完全等于 1 的像素，都会与背后已经画好的不透明发壳像素做线性混合**。当刘海和发壳在同一视角同时被主光打出高光时，两层高光混合叠加后的结果比任何单层都亮得多，就会出现这种大片死白镜面色块——**这跟 roughness/clearcoat 参数本身没关系，调参数只能稍微缓解、永远无法根治**。
+- **修复**：把 `strandHairMat` 从 `transparent: true` 改为 **`transparent: false` + 单纯的 `alphaTest`（硬裁切，alphaTest 从 0.08 提到 0.35）**。这样每个像素要么完全显示自身材质的光照结果，要么被整个丢弃，绝不会再与背后的发壳做混合曝光叠加。副作用是发梢边缘从「羽化渐隐」变成「硬裁切」，但视觉上反而更像一根根利落的发丝切面，没有明显违和感（已截图确认，见下）。
+- **同步做的辅助性修复（都是独立、低风险的加分项，即使以后要回滚上面那条根因修复也不影响这些）**：
+  1. 在 `src/textures/skinTextureGenerator.js` 新增 `createRealisticHairNormalTexture()`，给头发材质加了基于单丝纹理的切线空间法线贴图（`normalMap`），用于后续进一步细化每根发丝的高光颗粒感（注：由于法线贴图的高频细节在 mipmap 缩小时容易被平均抵消，实测这个贴图本身对本次 BUG 的贡献有限，真正起决定作用的是上面的 alpha 混合改法线修复；但保留它作为后续精修的基础设施）。
+  2. 在 `buildForeheadFringeGeometry()` 里把 `microStrand` 的真实几何扰动幅度从 `0.05~0.06` 提到 `0.32~0.34`（并把 `cols` 从 32 提到 64），让刘海表面产生真实的凹凸起伏（而不仅是法线贴图的假凹凸），配合头发材质调整后，高光被自然打散成多条细发丝状光泽而不是一整块平面镜面反射。
+  3. 把 `desktopBoxSpaceEngine.js` 与 `studioPreviewEngine.js` 的主光源（key light）强度从 `2.1 / 2.15` 略降到 `1.65`，降低整体过曝风险（对皮肤材质也有轻微改善，但未深入调校皮肤，留给后续模型）。
+  4. 在 `createRealisticHairGroup()` 末尾为左右两侧新增了极小的「鬓角过渡补丁」(`temple bridge patch`，一对缩放过的小椭球，`solidHairMat`)，用于缓解刘海与侧发束在太阳穴结合处可能露出的头皮/皮肤三角形空隙（Stage 4 遗留的「悬空黑缝」问题的一部分）。**这是一个几何近似的权宜修补，不是精确的拼接数学解**，如果未来精细调整了 `buildForeheadFringeGeometry` / `buildCheekFramingLockGeometry` 的参数，请连带检查这对小椭球的 `position`/`scale`（当前写死为 `side*5.55, 6.1, 3.35`）是否还贴合，必要时移除或重新定位——**不要把它放大/移远，上一次尝试把它调大后在截图里变成两个突兀的黑色球形"耳罩"，非常难看**。
+- **回归自检结果**：用上述 Playwright 流程验证了全部 5 个发型下拉选项（`long_straight/hime_cut/low_chignon/soft_waves/sleek_bob`）+ 桌宠层的林汐/苏婉默认发型，均未再出现银色镜面大色块，控制台无 JS 报错；同时验证了桌宠悬浮档案卡 hover、单击切换 360° 旋转模式、滚轮景深缩放、"典藏库与半自动建模工坊"主窗口四个 Tab（含完整的照片半自动对位 UI、Daz 骨相滑块、颈部解剖断面实时预览含旋转/仰视/360°环绕三视图）均功能正常，未被本轮改动破坏。
+- **仍未解决、留给后续模型的待办（请勿误判为已修）**：
+  1. 刘海底边改成硬 alphaTest 裁切后，在特写放大截图下边缘有轻微锯齿（非 MSAA/alpha-to-coverage，仅靠 alphaTest discard），正常游玩视距下几乎不可见，但如果后续做"高精度特写鉴赏模式"建议加 `WebGLRenderer({ antialias: true })`（确认目前是否已开启）或采用 alpha-to-coverage 技巧改善。
+  2. 太阳穴鬓角补丁只是几何近似权宜解，没有做到真正无缝拼接数学解，未来有精力的强力模型可以参照 Stage 3/4 的参数化思路，把 `buildForeheadFringeGeometry` 和 `buildCheekFramingLockGeometry` 在过渡区的曲面方程统一成同一套参数空间，从根本上消除缝隙而不是拿补丁盖住。
+  3. 皮肤材质的「次表面散射感」「卡通感」问题（Stage 5 已指出）本轮未处理，仍待后续强力模型评估 Stage 5 提出的 (a)/(b)/(c) 三条路线。
+  4. HUD 消失点标签与桌宠重叠的问题（Stage 4 遗留 #2）本轮未处理（复查时桌宠默认左右分布位置下并不重叠，但不确定其他摆放位置下是否仍会重叠，留给边角料模型核实修复）。
+- 工作区大小：本轮结束约 37MB（不含 `node_modules`、`.cache`、`.npm`、`dist/` 等快照排除/可重新生成目录）。

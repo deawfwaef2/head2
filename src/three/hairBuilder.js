@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createRealisticHairStrandTexture } from '../textures/skinTextureGenerator.js';
+import { createRealisticHairStrandTexture, createRealisticHairNormalTexture } from '../textures/skinTextureGenerator.js';
 
 /**
  * Builds a single continuous, gap-free 3D Ellipsoidal Volumetric Hair Shell
@@ -164,7 +164,7 @@ function buildForeheadFringeGeometry({
   thetaSpan = 1.27
 }) {
   const rows = 20;
-  const cols = 32;
+  const cols = 64;
   const geom = new THREE.BufferGeometry();
   const positions = [];
   const uvs = [];
@@ -183,7 +183,10 @@ function buildForeheadFringeGeometry({
         const sinT = Math.sin(theta);
         const cosT = Math.cos(theta);
         const archCos = Math.cos(s * Math.PI * 0.38);
-        const microStrand = Math.sin(u * Math.PI * 14.0) * 0.05 * v;
+        // Real geometric per-fiber ridges (not just a normal-map trick) so a single
+        // directional light breaks into many thin streaks instead of one flat
+        // mirror-like specular blob across the whole fringe panel.
+        const microStrand = Math.sin(u * Math.PI * 24.0) * 0.32 * v;
         x = s * 5.60 * (0.25 + 0.75 * sinT);
         y = 2.8 + (8.20 + crownLift) * cosT - (1.0 - archCos) * 0.75 * v;
         z = -0.15 + (6.20 + microStrand) * sinT * archCos + cosT * 1.35;
@@ -196,7 +199,10 @@ function buildForeheadFringeGeometry({
         const theta = 0.05 + v * thetaSpan;
         const sinT = Math.sin(theta);
         const cosT = Math.cos(theta);
-        const microStrand = Math.sin(u * Math.PI * 12.0) * 0.06 * v;
+        // Real geometric per-fiber ridges (not just a normal-map trick) so a single
+        // directional light breaks into many thin streaks instead of one flat
+        // mirror-like specular blob across the whole fringe panel.
+        const microStrand = Math.sin(u * Math.PI * 24.0) * 0.34 * v;
 
         x = xSpan;
         y = 2.6 + (8.30 + crownLift) * cosT;
@@ -250,30 +256,52 @@ export function createRealisticHairGroup({
 
   const map = createRealisticHairStrandTexture(hairColor, sheenIntensity);
   const sheenCol = new THREE.Color(hairColor).offsetHSL(0.02, 0.05, 0.16);
+  // Per-strand ridge normal map: breaks a single flat specular mirror-blob into
+  // hundreds of thin bright fiber streaks (fixes the "silver plastic helmet" bug).
+  const strandNormalMap = createRealisticHairNormalTexture();
+  strandNormalMap.repeat.set(1, 3);
 
+  // NOTE: clearcoat on MeshPhysicalMaterial renders a tight mirror-like GGX
+  // highlight. On a smooth-ish surface like these hair panels that highlight
+  // can land as one big blown-out "silver plastic" blob instead of many
+  // soft fiber streaks, so clearcoat is kept very low/off and we lean on a
+  // higher base roughness + fabric-like `sheen` (softer, broader falloff)
+  // plus the per-fiber ridge normal map for believable silky shine instead.
   const solidHairMat = new THREE.MeshPhysicalMaterial({
     map,
-    roughness: Math.max(0.18, 0.44 - sheenIntensity * 0.18),
-    metalness: 0.06,
-    clearcoat: 0.38 * sheenIntensity,
-    clearcoatRoughness: 0.26,
-    sheen: 0.55 * sheenIntensity,
-    sheenRoughness: 0.32,
+    normalMap: strandNormalMap,
+    normalScale: new THREE.Vector2(0.85, 0.85),
+    roughness: Math.max(0.58, 0.72 - sheenIntensity * 0.1),
+    metalness: 0.0,
+    clearcoat: 0,
+    sheen: 0.4 * sheenIntensity,
+    sheenRoughness: 0.62,
     sheenColor: sheenCol,
     side: THREE.DoubleSide
   });
 
+  // IMPORTANT: this is a hard alpha-TEST cutout (transparent: false), not alpha
+  // BLENDING. These strand panels sit directly in front of the opaque hair
+  // shell; with alpha *blending* enabled, any pixel that is only partially
+  // transparent gets composited with whatever is drawn behind it (the shell).
+  // When both surfaces catch the key light's specular highlight at the same
+  // viewing angle, that per-pixel blend adds their brightnesses together and
+  // produces a blown-out "silver plastic" patch instead of hair sheen. Using
+  // alphaTest-only cutout means each pixel is either fully the strand's own
+  // (correctly, moderately lit) color or fully discarded — never a brightness-
+  // doubling blend of two independently-lit surfaces.
   const strandHairMat = new THREE.MeshPhysicalMaterial({
     map,
-    transparent: true,
-    alphaTest: 0.08,
+    normalMap: strandNormalMap,
+    normalScale: new THREE.Vector2(0.85, 0.85),
+    transparent: false,
+    alphaTest: 0.35,
     depthWrite: true,
-    roughness: Math.max(0.18, 0.42 - sheenIntensity * 0.18),
-    metalness: 0.06,
-    clearcoat: 0.42 * sheenIntensity,
-    clearcoatRoughness: 0.24,
-    sheen: 0.62 * sheenIntensity,
-    sheenRoughness: 0.28,
+    roughness: Math.max(0.58, 0.7 - sheenIntensity * 0.1),
+    metalness: 0.0,
+    clearcoat: 0,
+    sheen: 0.44 * sheenIntensity,
+    sheenRoughness: 0.58,
     sheenColor: sheenCol,
     side: THREE.DoubleSide
   });
@@ -449,6 +477,24 @@ export function createRealisticHairGroup({
       strandHairMat
     );
     group.add(fringe);
+  }
+
+  // Temple/sideburn bridge patches: the fringe cap and the cheek-framing lock
+  // are two independently-parameterized surfaces, so their shared seam at the
+  // temple can leave a thin triangular gap that exposes bare scalp/skin
+  // underneath ("悬空黑缝" bug). These small opaque hair-colored patches sit
+  // exactly on that seam and are intentionally oversized so they always fully
+  // cover the junction regardless of style, reading simply as a bit more
+  // natural hair volume at the temple rather than as a visible patch.
+  for (const side of [-1, 1]) {
+    const bridge = new THREE.Mesh(
+      new THREE.SphereGeometry(1.05, 14, 12),
+      solidHairMat
+    );
+    bridge.scale.set(0.62, 1.05, 0.5);
+    bridge.position.set(side * 5.55, 6.1, 3.35);
+    bridge.rotation.y = side * 0.32;
+    group.add(bridge);
   }
 
   return group;

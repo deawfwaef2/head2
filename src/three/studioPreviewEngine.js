@@ -47,7 +47,7 @@ export class StudioPreviewEngine {
     const hemi = new THREE.HemisphereLight('#fff7f2', '#1e293b', 1.25);
     this.scene.add(hemi);
 
-    const key = new THREE.DirectionalLight('#fff8f4', 2.15);
+    const key = new THREE.DirectionalLight('#fff8f4', 1.65);
     key.position.set(28, 32, 48);
     this.scene.add(key);
 

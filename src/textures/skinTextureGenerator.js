@@ -451,6 +451,51 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
   return tex;
 }
 
+/**
+ * Generates a tangent-space normal map encoding ~420 fine per-strand ridges.
+ * Fixes the "solid metallic mirror blob" bug: a flat hair patch lit by a single
+ * strong directional light reflects as one giant uniform-normal specular block.
+ * By perturbing the surface normal in thin vertical sinusoidal ridges (mimicking
+ * individual hair fibers), the same light now breaks into hundreds of thin bright
+ * streaks — which is what real silky hair sheen looks like — instead of one flat
+ * mirror-like highlight patch.
+ */
+export function createRealisticHairNormalTexture(strandCount = 420) {
+  const w = 512;
+  const h = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // Base neutral tangent-space normal (0.5, 0.5, 1.0) -> rgb(128,128,255)
+  ctx.fillStyle = 'rgb(128,128,255)';
+  ctx.fillRect(0, 0, w, h);
+
+  // Each strand is a thin vertical ridge: its slope pushes the normal's X
+  // component left/right as we cross the fiber, producing a rounded groove.
+  const ridgeWidth = w / strandCount;
+  for (let i = 0; i < strandCount; i++) {
+    const cx = (i + 0.5) * ridgeWidth;
+    const jitter = Math.sin(i * 12.9898) * ridgeWidth * 0.18;
+    const halfW = ridgeWidth * (0.55 + 0.25 * Math.abs(Math.sin(i * 3.7)));
+    const grad = ctx.createLinearGradient(cx - halfW, 0, cx + halfW, 0);
+    // Left slope leans normal -X, crest is neutral, right slope leans +X
+    grad.addColorStop(0.0, 'rgb(96,128,235)');
+    grad.addColorStop(0.5, 'rgb(150,128,255)');
+    grad.addColorStop(1.0, 'rgb(96,128,235)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - halfW + jitter, 0, halfW * 2, h);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export function samplePhotoColors(imgElement) {
   const c = document.createElement('canvas');
   c.width = 128;

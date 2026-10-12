@@ -79,7 +79,7 @@ export class DesktopBoxSpaceEngine {
     const ambient = new THREE.HemisphereLight('#fff5f0', '#1e293b', 1.25);
     this.scene.add(ambient);
 
-    this.keyLight = new THREE.DirectionalLight('#fff8f2', 2.1);
+    this.keyLight = new THREE.DirectionalLight('#fff8f2', 1.65);
     this.keyLight.position.set(42, 48, 95);
     this.scene.add(this.keyLight);
 
