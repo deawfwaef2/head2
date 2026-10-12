@@ -70,3 +70,13 @@
   2. **面部微表面平滑与花瓣唇/柔和山根重塑**：在 `scripts/build_head_models.py` 中新增 `smooth_facial_features()`，消除原始 `canonical_face_model.obj` 在嘴角、鼻翼旁、泪沟与颊部的拓扑凹凸感，微降山根高度并将内唇缝前推闭合为饱满柔和的花瓣唇。
   3. **高颅顶椭球发壳数学包络对齐（`cos(theta)/sin(theta)`）**：在 `src/three/hairBuilder.js` 中采用严格包络颅骨外侧的椭球参数方程（`y = 2.6 + 8.40 * cos(theta)`, `rx = 8.15 * sin(theta)`, `rz_back = 7.48 * sin(theta)`）构建连续发壳、贴颊修颜侧发（姬发式切口/长卷发束）与齐眉弧度刘海（`thetaSpan = 1.27`），彻底杜绝颅顶或后脑穿模。
 - **同步重新构建 `/点击开始游戏_CERVIX3D.html`（2.46 MB）并推送至 GitHub 远端仓库**。
+
+### [2026-10-12 Stage 4] 修复「林汐无发」BUG（发型 ID 不匹配）+ 重建单文件 HTML + 浏览器自检
+- **根因**：`index.html` 下拉与默认档案使用 `long_straight / low_chignon / soft_waves / sleek_bob`，但 `src/three/hairBuilder.js` 的 `createRealisticHairGroup()` 只实现了 `long_silk / hime_cut / clavicle_bob / cyber_updo`，其余 ID 落入空分支 → 静默无发（林汐桌宠光头）。
+- **修复**：在 `hairBuilder.js` 顶部新增 `HAIR_STYLE_ALIAS` 映射表（只改入口，不动发丝/发壳算法）。以后新增发型请同时更新「下拉 ID」「别名表」「分支」三处。
+- **自检**：用 Playwright(Chromium) 以 `file://` 打开 `点击开始游戏_CERVIX3D.html`，点击「开始游戏」后桌宠层正常渲染，两个桌宠均有头发。控制台无 JS 报错（仅 SwiftShader 的 WebGL context lost 警告）。
+- **仍未解决（给后续模型的待办，请勿误判为已修）**：
+  1. 苏婉（姬发切）与林汐的刘海/鬓角上方仍有少量**肤色/灰白缝隙**，发壳与额头交界处未完全贴合（用户截图中的「悬空黑缝」问题只修了一半）。建议由强力模型在 `buildForeheadFringeGeometry` / `buildContinuousHairShellGeometry` 处做贴合度调整，并以 `file://` 截图核对。
+  2. 桌宠 HUD 底部标签「透视消失点 VP…」与头部重叠，可在 `src/style.css` 中给 HUD 设置位置偏移（边角料，弱模型可改）。
+  3. 「收藏品注册 / 照片建模 / 音效」等功能在代码中已有入口，但本轮未做端到端验证。
+- **工作区**：仓库已改为直接位于 `/home/user` 根目录（与 `build_standalone_html.mjs` 的绝对路径约定一致）。`node_modules/`、`dist/`、`.cache/`（Playwright 浏览器）均属快照排除目录，不会被保存。

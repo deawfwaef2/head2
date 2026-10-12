@@ -230,12 +230,21 @@ function buildForeheadFringeGeometry({
 /**
  * Builds realistic multi-layered volumetric East Asian female hair styles.
  */
+// UI 下拉发型 ID -> 已实现的构建分支（修复 long_straight 等 ID 静默无发的 BUG）
+const HAIR_STYLE_ALIAS = {
+  long_straight: 'long_silk',
+  soft_waves: 'long_silk',
+  low_chignon: 'cyber_updo',
+  sleek_bob: 'clavicle_bob'
+};
+
 export function createRealisticHairGroup({
   style = 'long_silk',
   hairColor = '#141218',
   sheenIntensity = 0.85,
   neckClearance = 0.35
 } = {}) {
+  style = HAIR_STYLE_ALIAS[style] || style;
   const group = new THREE.Group();
   group.name = 'RealisticStrandHair';
 
