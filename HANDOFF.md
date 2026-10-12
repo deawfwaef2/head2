@@ -193,3 +193,11 @@
 - 新增 `src/data/privateModelStore.js`：浏览器 IndexedDB 保存自备 `.glb/.obj` 原文件，收藏品只保存 `private-asset:<id>` 引用；下次双击同一 HTML 可以恢复私人模型，GitHub/独立 HTML 均不包含原文件；模型文件实际留在当前浏览器数据中，换浏览器/清站点数据必须重新选文件。优先选含内嵌 PBR 贴图的 GLB；OBJ 缺材质不可能自动变写实。缺资产时启动循环只跳过对应藏品，不崩溃。
 - 工坊新增「选本机高精头部」「选配套头发」+ 头发 XYZ/缩放快速对位滑杆。GLB 头/发保留原作者 PBR/透明材质，独立头发需在同一场景导出以共享坐标；发丝对位不重新解析 GLB。导入路径已有 Playwright `file://` 测试：上传现有 LeePerrySmith.glb → 本地持久化 → 注册召唤 → 页面刷新恢复；再用同一 GLB 模拟发型文件测试头发引用和位置配置保存，均无 pageerror。该内置测试 GLB 是男性扫描，仅测试流程，**不是**目标女性模型。
 - 仍待：完整全身 GLB 的可靠只保留头部自动视窗缩放（默认应优先让用户选头部导出件）；OBJ 无贴图只能做几何导入；解剖盖为装配预览，尚非根据外部扫描切口的精确拓扑封口。找到的网上候选请写明个人使用/分发许可、体积和导出格式，绝不能仅凭免费就提交到公开仓库。
+
+### [2026-10-12 Stage 10b] DAZ 官方角色/头发候选清单 + 诚实校准导入说明 + 离线可玩回归
+- **仓库位置**：按前序约定将本轮克隆的仓库移回 `/home/user` 根目录；`scripts/build_standalone_html.mjs` 的 `/home/user` 固定路径现可直接运行。
+- **网络选材（只收录官方链接，不下载或打包商业资产）**：新增根目录 `DAZ_ASSET_GUIDE.md`，梳理 `Kei HD for Genesis 9`、`JS Genji for Genesis 9 Feminine`、`Kimiyo Asian Beauty: Heads & Bodies`，以及 `Everyday Spring Style Hair`、`dForce Strand-Based Beauty Style Long Hair`、`Xiu Lin Hair`；注明代数/`.DUF`/Iray→GLB 的限制与互动许可。`index.html` 的 DAZ 指南页加入同一份 6 项来源卡片和许可警示，链接在离线 HTML 中可见、点击需联网。
+- **修正文案与产品边界**：默认档案不再把程序化预设说成真实 DAZ 网格；工坊说明照片采样只取肤色、滑块手动调形、OBJ 单文件不读 MTL、外部模型颈部裁切只是平面裁切 + 解剖示意盖，并非自动布尔封口/临床解剖模型。离线 HTML 的测试扫描按钮在 `file://` 下给出提示，不会请求缺失的 `/models/LeePerrySmith.glb`。
+- **安全维护**：将 Vite 从 `^5.4.11` 更新到 `^6.4.4`；`npm audit --omit=dev` 为 0 vulnerabilities。应用版本统一为 `2.7.0`。
+- **离线构建与 QA**：`node scripts/build_standalone_html.mjs` 已生成根目录 `点击开始游戏_CERVIX3D.html` 和同步后的 `docs/index.html`（各约 4.18 MB），`cmp` 相同。Playwright 分别检查 Vite 与 `file://`：启动按钮正常，DAZ 卡片 6 项/教程 5 步加载，离线测试扫描按钮有提示；控制台/pageerror 均为 0。另在隔离浏览器档案完成注册 → localStorage 保存 → ZIP 下载/解压读取（无真实用户档案被写入）。视觉截图 `.qa/stage11_asset_catalog_final.png`。
+- **本轮仍未做 / 给后续模型**：没有购入或下载 DAZ 资产；仍需用户按商品和交互许可确认后，用自备合法 GLB 导入实测贴图/发际线。照片自动几何重建、任意头模的真实拓扑封口、Electron 跨 OS 打包均不在本轮实现范围。

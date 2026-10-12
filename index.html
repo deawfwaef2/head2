@@ -15,7 +15,7 @@
     <div id="os-desktop-icons">
       <div class="os-icon" data-action="open-tab" data-tab="studio">
         <div class="os-icon-glyph">🗿</div>
-        <span>Daz高精头雕工坊</span>
+        <span>头模导入工坊</span>
       </div>
       <div class="os-icon" data-action="open-tab" data-tab="vault">
         <div class="os-icon-glyph">🏛️</div>
@@ -27,7 +27,7 @@
       </div>
       <div class="os-icon" data-action="open-tab" data-tab="tutorial">
         <div class="os-icon-glyph">📘</div>
-        <span>Daz照片级建模教程</span>
+        <span>DAZ资产选型指南</span>
       </div>
     </div>
 
@@ -128,7 +128,7 @@
       <div class="win-brand">
         <span class="win-logo">◈</span>
         <div>
-          <div class="win-title">CERVIX-3D · 颅相典藏馆 <span class="win-ver">PRO v2.6</span></div>
+          <div class="win-title">CERVIX-3D · 颅相典藏馆 <span class="win-ver">PRO v2.7</span></div>
           <div class="win-desc">高精度3D解剖断面头部收藏品 · 半自动建模装配 · 盒型透视空间桌宠管理系统</div>
         </div>
       </div>
@@ -151,14 +151,14 @@
         <span class="tab-icon">🧬</span>
         <div>
           <div class="tab-name">注册收藏品 · 半自动工坊</div>
-          <div class="tab-sub">照片对位 / Daz亚洲女头 / 解剖断面装配</div>
+          <div class="tab-sub">照片叠图参考 / 私有模型导入 / 解剖示意装配</div>
         </div>
       </button>
       <button class="nav-tab" data-tab="tutorial">
         <span class="tab-icon">📘</span>
         <div>
-          <div class="tab-name">Daz3D 高精度建模教程</div>
-          <div class="tab-sub">照片级还原亚洲女性头模与写实发丝指南</div>
+          <div class="tab-name">DAZ资产选型与导入指南</div>
+          <div class="tab-sub">亚洲角色推荐 / GLB制作 / 发型适配</div>
         </div>
       </button>
       <button class="nav-tab" data-tab="settings">
@@ -186,7 +186,7 @@
             <h2>🏛️ 颅相典藏库 (已注册 3D 头部断面收藏品)</h2>
             <p>
               点击 <strong>「召唤至屏幕」</strong> 即可将头部收藏品投放到您的电脑屏幕 3D 盒型透视空间中。
-              鼠标靠上去会弹出<strong>收藏品档案窗口</strong>；<strong>滚轮</strong>调节远近景深；<strong>单击桌宠</strong>进入 360° 自由旋转模式（可仰视底部的写实医学解剖断面），<strong>再次单击</strong>取消旋转模式。
+              鼠标靠上去会弹出<strong>收藏品档案窗口</strong>；<strong>滚轮</strong>调节远近景深；<strong>单击桌宠</strong>进入 360° 自由旋转模式（可仰视底部的解剖结构示意断面），<strong>再次单击</strong>取消旋转模式。
             </p>
           </div>
           <div class="banner-btns">
@@ -205,7 +205,7 @@
           <div class="studio-col studio-col-left">
             <div class="card-block">
               <h3>📸 步骤 1：输入参考照片 & 半自动对位</h3>
-              <p class="hint-text">上传人物正面照片或选择预设参考照，支持 1:1 叠图对位建模与一键提取肤色/骨相参数。</p>
+              <p class="hint-text">上传正面照进行叠图参考。颜色采样只提取肤色；五官比例需你手动调滑块或导入外部头模，本功能不会自动识别照片并生成 3D 人脸。</p>
 
               <div class="photo-preview-box" id="photo-preview-box">
                 <canvas id="ref-photo-canvas" width="260" height="300"></canvas>
@@ -217,8 +217,8 @@
                   📷 上传本地照片
                   <input type="file" id="input-photo-upload" accept="image/*" hidden />
                 </label>
-                <button id="btn-auto-sample-photo" class="btn accent" title="从参考照片自动吸取肤色、红润度并匹配东亚女性骨相微调参数">
-                  ✨ 半自动采样对位
+                <button id="btn-auto-sample-photo" class="btn accent" title="仅采样参考照肤色并切换正面相机，不会自动识别或重建五官">
+                  ✨ 采样肤色 / 正面机位
                 </button>
               </div>
 
@@ -240,7 +240,7 @@
                   <span id="val-overlay-opacity">42%</span>
                 </div>
                 <div class="slider-row">
-                  <span>照片UV贴图投射融合</span>
+                  <span>照片贴图融合（非几何重建）</span>
                   <input type="range" id="slider-photo-uv-blend" min="0" max="0.75" step="0.05" value="0" />
                   <span id="val-photo-uv-blend">0%</span>
                 </div>
@@ -248,9 +248,9 @@
             </div>
 
             <div class="card-block">
-              <h3>📥 导入外部高精度 Daz3D 模型 (可选)</h3>
+              <h3>📥 导入自备 DAZ / Blender 头模资产 (可选)</h3>
               <p class="hint-text">
-                <strong>私人高精模型入口：</strong>选一个从 DAZ / Blender 导出的<strong>头部 .GLB（建议将纹理打包在 GLB 内）</strong>，原始文件只存在你当前浏览器的本机存储，不上传仓库。支持配套头发另选一个 GLB 并校准位置；OBJ 无贴图时无法还原原作者的 PBR 皮肤。颈部会附上可预览的解剖切面，切缘需检查对位。
+                <strong>私有资产入口：</strong>DAZ 的 <code>.DUF</code> 不能直接载入；请先从你获许可的流程导出头部 <strong>.GLB（内嵌 PBR 贴图）</strong>。模型只存当前浏览器 IndexedDB，不上传 GitHub，也不包含在档案 ZIP 中。OBJ 单文件仅读几何，不会自动关联 <code>.MTL</code>/贴图。配套头发要和头模保持同一坐标；颈部目前是裁切平面 + 解剖示意盖，不是自动布尔封口，务必在仰视和侧视下核对。
               </p>
               <div class="btn-row">
                 <label class="btn secondary file-btn">
@@ -261,8 +261,8 @@
                   💇 选配套头发 .GLB / .OBJ
                   <input type="file" id="input-hair-upload" accept=".glb,.obj" hidden />
                 </label>
-                <button id="btn-test-scan-glb" class="btn ghost" title="载入内置真实高精度人头扫描模型测试自动颈部截断与解剖断面封口">
-                  🧪 测试高精扫描头模(.glb)
+                <button id="btn-test-scan-glb" class="btn ghost" title="载入内置 Lee Perry-Smith 测试网格，仅演示平面裁切与断面盖；不是目标亚洲女性模型">
+                  🧪 测试扫描网格(.glb)
                 </button>
               </div>
               <div class="hint-text" id="private-asset-hint">🔒 本机导入不会出现在 GitHub 或下载的 HTML 中；请保留原文件以便迁移浏览器。</div>
@@ -281,7 +281,7 @@
                   ✨ CC0 亚洲女头 + 低马尾
                 </button>
               </div>
-              <div id="custom-model-status" class="status-pill">当前使用：内置 Daz 东亚女性高精细分头模 (9,160面)</div>
+              <div id="custom-model-status" class="status-pill">当前使用：程序化东亚女性风格预设（非 DAZ 原始网格）</div>
             </div>
           </div>
 
@@ -314,14 +314,14 @@
                 </div>
                 <div class="anatomy-inspector-info">
                   <div class="anatomy-header-row">
-                    <h4>🩸 底座颈部横切面医学解剖图谱 (C4/C5 水平)</h4>
+                    <h4>🩸 底座颈部横切面解剖示意 (C4/C5 水平)</h4>
                     <label class="checkbox-inline">
                       <input type="checkbox" id="chk-anatomy-labels" />
                       <span>在断面显示医学解剖标注</span>
                     </label>
                   </div>
                   <p class="hint-text">
-                    切面由外向内真实还原：<strong>表皮与真皮切缘环</strong> ➔ <strong>皮下浅筋膜脂肪小叶与颈阔肌</strong> ➔ <strong>胸锁乳突肌/斜方肌/舌骨下肌群束</strong> ➔ <strong>气管透明软骨C形环与食管星状腔</strong> ➔ <strong>双侧颈动脉鞘（颈总动脉/颈内静脉/迷走神经）</strong> ➔ <strong>C4颈椎椎体松质骨与椎管内蝴蝶形脊髓灰质</strong>。
+                    程序化断面贴图由外向内呈现主要结构示意：<strong>表皮/真皮切缘</strong> ➔ <strong>皮下脂肪与颈阔肌</strong> ➔ <strong>颈部肌群</strong> ➔ <strong>气管软骨环与食管</strong> ➔ <strong>颈动静脉与迷走神经示意</strong> ➔ <strong>C4/C5 椎体与脊髓示意</strong>。用于造型预览，不是临床影像或医学诊断模型。
                   </p>
                   <div class="anatomy-legend-grid">
                     <span><i style="background:#7dd3fc"></i>气管透明软骨环</span>
@@ -340,14 +340,14 @@
           <div class="studio-col studio-col-right">
             <!-- A. Base & Facial Morphs -->
             <div class="card-block">
-              <h3>👩 步骤 2：Daz 亚洲女性基底与骨相精调</h3>
+              <h3>👩 步骤 2：东亚风格预设与手动骨相微调</h3>
               <div class="control-group compact">
                 <div class="field-row">
                   <label>亚洲女性基底模型</label>
                   <select id="sel-base-preset">
-                    <option value="linxi">Daz G8.1 亚洲女性 · 林汐 (古典鹅蛋脸)</option>
-                    <option value="suwan">Daz G9 亚洲女性 · 苏婉 (精致V脸少女)</option>
-                    <option value="qianxue">东亚高智感骨相 · 千雪 (清冷直鼻骨相)</option>
+                    <option value="linxi">程序化东亚风格 · 林汐 (古典鹅蛋脸示例)</option>
+                    <option value="suwan">程序化东亚风格 · 苏婉 (精致V脸示例)</option>
+                    <option value="qianxue">程序化东亚风格 · 千雪 (清冷直鼻示例)</option>
                     <option value="mh_asian">MakeHuman CC0 亚洲女性 · 写实3D眼球/睫毛头雕</option>
                   </select>
                 </div>
@@ -389,27 +389,27 @@
 
             <!-- B. Realistic Strand Hair & Anatomical Neck Cross-Section -->
             <div class="card-block">
-              <h3>💇‍♀️ 步骤 3：写实发丝与颈部解剖断面调节</h3>
+              <h3>💇‍♀️ 步骤 3：发型外观与颈部解剖示意调节</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>高拟真亚洲女性发型</label>
+                  <label>内置程序化发型</label>
                   <select id="sel-hair-style">
-                    <option value="long_straight">东方乌木黑长直 (含450+微米级游离发丝)</option>
-                    <option value="hime_cut">日式姬发公主切 (齐腮侧发束 + 空气刘海)</option>
-                    <option value="low_chignon">江南温婉低盘发 (360°全露修长颈部与解剖断面)</option>
-                    <option value="soft_waves">韩系八字刘海微卷发 (蓬松高颅顶)</option>
-                    <option value="sleek_bob">清冷高智感内扣短波波头 (全露下颈断面)</option>
+                    <option value="long_straight">程序化乌木黑长直轮廓</option>
+                    <option value="hime_cut">程序化姬发公主切轮廓</option>
+                    <option value="low_chignon">程序化低盘发轮廓</option>
+                    <option value="soft_waves">程序化八字刘海微卷轮廓</option>
+                    <option value="sleek_bob">程序化内扣短波波轮廓</option>
                     <option value="none">无发模式 (纯医学头颈骨相标本展示)</option>
                   </select>
                 </div>
 
                 <div class="slider-row">
-                  <span>发丝天使光圈光泽度</span>
+                  <span>程序化头发材质光泽</span>
                   <input type="range" id="slider-hair-sheen" min="0.2" max="1.0" step="0.05" value="0.90" />
                   <span id="val-hair-sheen">90%</span>
                 </div>
                 <div class="slider-row">
-                  <span>后发避让解剖断面高度</span>
+                  <span>内置程序化后发避让强度</span>
                   <input type="range" id="slider-neck-clearance" min="0.0" max="1.0" step="0.05" value="0.38" />
                   <span id="val-neck-clearance">38%</span>
                 </div>
@@ -419,7 +419,7 @@
                   <span id="val-cut-height">0.0cm</span>
                 </div>
                 <div class="slider-row">
-                  <span>解剖切面俯仰倾角</span>
+                  <span>内置头模切面倾角（外部 GLB 暂不支持）</span>
                   <input type="range" id="morph-cut-pitch" min="-15" max="15" step="0.5" value="4.0" />
                   <span id="val-cut-pitch">+4.0°</span>
                 </div>
@@ -448,7 +448,7 @@
                 <div class="two-col-inputs">
                   <div>
                     <label>副标题 / 骨相定位</label>
-                    <input type="text" id="inp-col-subtitle" value="东亚写实照片级高精头雕标本" />
+                    <input type="text" id="inp-col-subtitle" value="东亚风格头部预设 · 参考照对位试作" />
                   </div>
                   <div>
                     <label>典藏评级</label>
@@ -465,7 +465,7 @@
                 </div>
                 <div>
                   <label>收藏品档案记录 (鼠标悬停桌宠时显示)</label>
-                  <textarea id="inp-col-notes" rows="2">基于人物参考照半自动对位建模。保留完整东亚女性柔和骨相与乌木丝感长发，颈底作C4椎体水平标准医学解剖横切封口。</textarea>
+                  <textarea id="inp-col-notes" rows="2">参考照仅用于叠图与肤色采样；五官需手动调节或导入自备模型。颈底为程序化解剖示意盖，须从仰视检查切口贴合。</textarea>
                 </div>
 
                 <button id="btn-save-and-summon" class="btn primary full-width">
@@ -481,13 +481,32 @@
       <section id="tab-tutorial" class="tab-panel">
         <div class="panel-banner">
           <div>
-            <h2>📘 Daz3D 亚洲女性高精度照片级头模 & 写实发丝建模全流程教程</h2>
+            <h2>📘 DAZ 亚洲角色与头发选型 · 私人模型导入工作流</h2>
             <p>
-              本指南教您如何使用 <strong>Daz Studio (Genesis 8.1 / 9 Asian Female) + Face Transfer 2 / KeenTools FaceBuilder + Strand-Based Hair</strong> 制作 99% 贴近真实照片的亚洲女性头部模型，并导入本软件自动装配颈部医学解剖断面。
+              下方候选来自 DAZ 官方产品页，均需自行核对价格、代数兼容与许可；本软件只负责本地预览/档案管理，不会自动从单张照片重建高精头模，也不附带这些商业资源。
             </p>
           </div>
         </div>
 
+        <section class="asset-scout" aria-label="DAZ 资产推荐清单">
+          <div class="asset-scout-heading">
+            <div>
+              <h3>🧭 官方资产候选清单</h3>
+              <p>按「亚洲女性脸模 / 发型结构 / 实时导出难度」筛选。价格与兼容信息会变化，购买前请打开官方商品页复核。</p>
+            </div>
+            <span>核对日期：2026-10-12</span>
+          </div>
+          <div id="daz-asset-recommendations" class="asset-card-grid"></div>
+          <div class="asset-license-warning">
+            <strong>⚖️ 授权提醒：</strong>DAZ 官方说明：DAZ 3D 内容用于游戏或其他交互应用时，使用/分发原始 3D 数据需要 Interactive License；若商品页未提供该许可选项，则不可把它作为 app/game 的 3D 资产。此软件不会把模型打包进 HTML、ZIP 或 GitHub；请逐件核对现行 EULA，并向 DAZ 确认你的个人桌宠用途是否需要额外许可。
+            <a href="https://www.daz3d.com/interactive-license-info" target="_blank" rel="noopener noreferrer">查看 DAZ 许可说明 ↗</a>
+          </div>
+        </section>
+
+        <div class="tutorial-section-heading">
+          <h3>🛠️ 导出与导入操作步骤</h3>
+          <span>照片对位 → 头发测试 → GLB → 解剖示意检查</span>
+        </div>
         <div id="tutorial-steps-container" class="tutorial-grid"></div>
       </section>
 
@@ -666,7 +685,7 @@
       <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v2.7 (离线直玩版)</div>
       <h1>3D 解剖断面头部收藏品 · 桌宠生成与盒型透视空间系统</h1>
       <p>
-        已搭载 <strong>Daz 东亚女性高精细分头雕（法线平滑无棱角 + 紧致天鹅颈无双下巴）</strong>、<strong>高颅顶包裹式写实丝感发丝</strong> 与 <strong>C4/C5 写实医学解剖横断面底座</strong>。
+        内置的是<strong>程序化东亚女性风格头模示例</strong>与 CC0 MakeHuman 备选，不是 DAZ Genesis 商业网格，也不会仅凭照片自动重建头模。追求更高写实度可在教程中挑选授权资产并导入 GLB；颈部断面为解剖结构示意。
       </p>
       <div class="start-feature-pills">
         <span>✦ 屏幕中心透视消失点</span>

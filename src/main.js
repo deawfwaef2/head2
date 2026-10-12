@@ -1,4 +1,4 @@
-import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS } from './data/defaultCollectibles.js';
+import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS, DAZ_ASSET_RECOMMENDATIONS } from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
 import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGenerator.js';
@@ -540,6 +540,22 @@ function renderArchiveExplorer() {
 // TUTORIAL RENDERER
 // ============================================================================
 function renderTutorialTab() {
+  const assetContainer = document.getElementById('daz-asset-recommendations');
+  if (assetContainer) {
+    assetContainer.innerHTML = DAZ_ASSET_RECOMMENDATIONS.map(asset => `
+      <article class="asset-card">
+        <div class="asset-card-top">
+          <span class="asset-card-group">${asset.group}</span>
+          <span class="asset-card-badge">${asset.badge}</span>
+        </div>
+        <h3>${asset.title}</h3>
+        <p>${asset.summary}</p>
+        <div class="asset-card-caveat"><strong>适配提醒：</strong>${asset.caveat}</div>
+        <a class="asset-card-link" href="${asset.url}" target="_blank" rel="noopener noreferrer">在 DAZ 官方商店查看 ↗</a>
+      </article>
+    `).join('');
+  }
+
   const container = document.getElementById('tutorial-steps-container');
   if (!container) return;
   container.innerHTML = DAZ_TUTORIAL_STEPS.map(s => `
@@ -843,7 +859,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.studioDraft.customModelType = file.name.toLowerCase().endsWith('.obj') ? 'obj' : 'glb';
       state.studioDraft.customHairUrl = null; // Never attach old hairstyle to a new head accidentally.
       await refreshStudio3DModel();
-      status.textContent = `🔒 本机模型已保存：${file.name} · ${Math.round(file.size / 1024 / 1024)} MB · ${state.studioDraft.customModelType.toUpperCase()}（原始 PBR 材质保留；请旋转核对颈部切面）`;
+      const importNote = state.studioDraft.customModelType === 'glb'
+        ? '保留文件中可解析的 PBR 材质/贴图'
+        : '仅导入几何，不读取配套 MTL/贴图';
+      status.textContent = `🔒 本机模型已保存：${file.name} · ${Math.round(file.size / 1024 / 1024)} MB · ${state.studioDraft.customModelType.toUpperCase()}（${importNote}；请仰视核对切口）`;
       showToast(`已加载私人模型「${file.name}」；下一步可选配套头发、调发际线并注册收藏品。`);
     } catch (error) {
       state.studioDraft.customModelUrl = oldUrl;
@@ -890,17 +909,26 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('btn-test-scan-glb').addEventListener('click', async () => {
-    if (state.studioDraft.customModelUrl === '/models/LeePerrySmith.glb') {
+    const testModelUrl = '/models/LeePerrySmith.glb';
+    const testModelLoaded = state.studioDraft.customModelUrl === testModelUrl;
+    if (!testModelLoaded && window.location.protocol === 'file:') {
+      showToast('离线单文件版不内嵌测试扫描网格；请用上方「选本机高精头部」载入自己的 GLB。');
+      return;
+    }
+    if (testModelLoaded) {
       state.studioDraft.customModelUrl = null;
       state.studioDraft.customHairUrl = null;
-      document.getElementById('custom-model-status').textContent = '当前使用：内置 Daz 东亚女性高精细分头模 (9,160面)';
-      showToast('已切换回内置 Daz 东亚女性高精细分头模');
+      const builtInLabel = state.studioDraft.basePreset === 'mh_asian'
+        ? 'CC0 MakeHuman 风格亚洲女性头模'
+        : '程序化东亚女性风格头模（非 DAZ 原始网格）';
+      document.getElementById('custom-model-status').textContent = `当前使用：${builtInLabel}`;
+      showToast(`已切回内置预设：${builtInLabel}`);
     } else {
-      state.studioDraft.customModelUrl = '/models/LeePerrySmith.glb';
+      state.studioDraft.customModelUrl = testModelUrl;
       state.studioDraft.customModelType = 'glb';
       state.studioDraft.customHairUrl = null;
-      document.getElementById('custom-model-status').textContent = '当前使用：外部高精三维人头扫描模型 (LeePerrySmith.glb + 自动颈部解剖封口)';
-      showToast('🧪 已载入真实 3D 扫描头模 (.glb)，演示自动颈部截断与 C4 医学解剖断面封口！');
+      document.getElementById('custom-model-status').textContent = '当前使用：Lee Perry-Smith 测试扫描网格（仅演示水平裁切/解剖示意盖）';
+      showToast('🧪 已载入测试扫描网格；仅演示裁切与示意盖，不是目标亚洲女性模型，也没有真实拓扑封口。');
     }
     await refreshStudio3DModel();
   });
@@ -912,7 +940,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customModelType = 'obj';
     state.studioDraft.customHairUrl = hairFile ? `/models/${hairFile}` : null;
     document.getElementById('sel-base-preset').value = 'mh_asian';
-    document.getElementById('custom-model-status').textContent = `当前使用：MakeHuman 亚洲女性高精3D头模 (含独立3D眼球/睫毛 + C4解剖断面 + ${label})`;
+    document.getElementById('custom-model-status').textContent = `当前使用：CC0 MakeHuman 风格亚洲女性头模 (独立3D眼球/睫毛 + 解剖示意盖 + ${label})`;
     showToast(`🧬 已载入 CC0 亚洲女性3D头雕（${label}），支持实时调节五官滑块、肤色唇色瞳色与解剖断面！`);
     await refreshStudio3DModel();
   };
@@ -1045,7 +1073,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         cutLevel
       },
       dossier: {
-        origin: `基于 ${state.studioDraft.basePreset === 'mh_asian' ? 'CC0 MakeHuman 亚洲女性头模' : state.studioDraft.customModelUrl ? '用户自备外部模型' : '内置程序化东亚女性头模'} 与照片半自动对位装配。`,
+        origin: `模型来源：${state.studioDraft.customModelUrl === '/models/LeePerrySmith.glb' ? 'Lee Perry-Smith 内置测试扫描网格' : state.studioDraft.customModelUrl && !state.studioDraft.customModelUrl.startsWith('/models/') ? '用户自备本机资产' : state.studioDraft.basePreset === 'mh_asian' ? 'CC0 MakeHuman 风格预设' : '程序化东亚风格预设'}；照片仅作叠图/肤色参考，五官由用户手动调整。`,
         anatomyNotes: notes,
         hairNotes: `发型 ${state.studioDraft.customHairUrl?.split('/').pop() || state.studioDraft.hairStyle}，光泽度 ${Math.round(state.studioDraft.hairSheen * 100)}%。`,
         tags: [state.studioDraft.basePreset === 'mh_asian' ? 'CC0 MakeHuman' : '3D头雕', cutLevel.slice(0, 10), grade.split('·')[0].trim(), '解剖断面']
