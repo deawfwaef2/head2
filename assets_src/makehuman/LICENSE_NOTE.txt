@@ -1,0 +1,10 @@
+Third-party assets used by scripts/build_makehuman_head.py
+
+- base.obj and targets/** : MakeHuman base mesh and morph targets.
+  Source: https://github.com/makehumancommunity/makehuman (makehuman/data/3dobjs/base.obj,
+  makehuman/data/targets/**). The files state: "explicitly released as CC0 in september 2020".
+- hair/** and eyebrows/** : MakeHuman system assets (makehuman_system_assets_cc0.zip).
+  Source: https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html
+  License: CC0.
+
+No DAZ Studio assets are included in this folder.

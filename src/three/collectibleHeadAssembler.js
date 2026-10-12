@@ -9,6 +9,20 @@ const objCache = new Map();
 const objLoader = new OBJLoader();
 const gltfLoader = new GLTFLoader();
 
+// Standalone HTML embeds model text under window.__EMBEDDED_MODELS__ keyed by file basename.
+// Lets user-picked presets (e.g. mh_asian_female_head.obj) load under file:// too.
+function embeddedModelText(url) {
+  if (typeof window === 'undefined' || !window.__EMBEDDED_MODELS__) return null;
+  const name = String(url).split('/').pop();
+  return window.__EMBEDDED_MODELS__[name] || null;
+}
+
+async function loadObjAny(url) {
+  const txt = embeddedModelText(url);
+  if (txt) return objLoader.parse(txt);
+  return new Promise((res, rej) => objLoader.load(url, res, undefined, rej));
+}
+
 const PRESET_PATHS = {
   linxi: '/models/daz_asian_female_linxi.obj',
   suwan: '/models/daz_asian_female_suwan.obj',
@@ -227,7 +241,8 @@ export async function buildCollectibleHeadNode(config = {}) {
     morphs = {},
     anatomyOptions = {},
     photoElement = null,
-    photoBlend = 0.0
+    photoBlend = 0.0,
+    customHairUrl = null
   } = config;
 
   const root = new THREE.Group();
@@ -277,7 +292,7 @@ export async function buildCollectibleHeadNode(config = {}) {
   if (customModelUrl) {
     let extObj;
     if (customModelType === 'obj') {
-      extObj = await new Promise((res, rej) => objLoader.load(customModelUrl, res, undefined, rej));
+      extObj = await loadObjAny(customModelUrl);
     } else {
       const gltf = await new Promise((res, rej) => gltfLoader.load(customModelUrl, res, undefined, rej));
       extObj = gltf.scene;
@@ -295,9 +310,15 @@ export async function buildCollectibleHeadNode(config = {}) {
     const cutY = -10.5 + (morphs.cutHeightOffset || 0);
     const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -cutY);
 
+    const isMHHead = /mh_asian_female_head/.test(customModelUrl);
+    const plainSkin = skinMaterial.clone();
+    plainSkin.map = null;
+    plainSkin.color = new THREE.Color(skinTone);
+    plainSkin.needsUpdate = true;
+
     extObj.traverse((child) => {
       if (child.isMesh && child.material) {
-        child.material = child.material.clone();
+        child.material = isMHHead ? plainSkin.clone() : child.material.clone();
         child.material.clippingPlanes = [clipPlane];
         child.material.clipShadows = true;
       }
@@ -310,6 +331,30 @@ export async function buildCollectibleHeadNode(config = {}) {
     const capMesh = new THREE.Mesh(capGeom, anatomyMaterial);
     capMesh.name = 'neck_cross_section';
     root.add(capMesh);
+
+    if (customHairUrl) {
+      const hairObj = await loadObjAny(customHairUrl);
+      hairObj.scale.copy(extObj.scale);
+      hairObj.position.copy(extObj.position);
+      const hairMat = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color(hairColor),
+        roughness: 0.42,
+        metalness: 0.0,
+        sheen: hairSheen,
+        sheenRoughness: 0.35,
+        sheenColor: new THREE.Color('#5a4a52'),
+        side: THREE.DoubleSide
+      });
+      hairObj.traverse((child) => {
+        if (child.isMesh) {
+          child.material = hairMat.clone();
+          child.material.clippingPlanes = [clipPlane];
+          child.material.clipShadows = true;
+        }
+      });
+      hairObj.name = 'CollectibleHair';
+      root.add(hairObj);
+    }
   } else {
     const objGroup = await loadPresetObjGeometry(basePreset);
     let headMesh = null;
