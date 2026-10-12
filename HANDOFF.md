@@ -201,3 +201,6 @@
 - **安全维护**：将 Vite 从 `^5.4.11` 更新到 `^6.4.4`；`npm audit --omit=dev` 为 0 vulnerabilities。应用版本统一为 `2.7.0`。
 - **离线构建与 QA**：`node scripts/build_standalone_html.mjs` 已生成根目录 `点击开始游戏_CERVIX3D.html` 和同步后的 `docs/index.html`（各约 4.18 MB），`cmp` 相同。Playwright 分别检查 Vite 与 `file://`：启动按钮正常，DAZ 卡片 6 项/教程 5 步加载，离线测试扫描按钮有提示；控制台/pageerror 均为 0。另在隔离浏览器档案完成注册 → localStorage 保存 → ZIP 下载/解压读取（无真实用户档案被写入）。视觉截图 `.qa/stage11_asset_catalog_final.png`。
 - **本轮仍未做 / 给后续模型**：没有购入或下载 DAZ 资产；仍需用户按商品和交互许可确认后，用自备合法 GLB 导入实测贴图/发际线。照片自动几何重建、任意头模的真实拓扑封口、Electron 跨 OS 打包均不在本轮实现范围。
+
+### [2026-10-12 Stage 10b 推送确认]
+- 已提交并推送 `89af702`（`Curate DAZ assets and clarify local import workflow`）至 `origin/main`；推送后 `HEAD` 与 `origin/main` 同为 `89af702`，工作树干净。GitHub PAT 只用于该次命令的 HTTP Authorization header，未写入文件或 git config。
