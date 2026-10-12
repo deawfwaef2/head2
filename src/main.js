@@ -5,6 +5,7 @@ import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGene
 import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
 import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
+import { keepPrivateModel, isPrivateModel } from './data/privateModelStore.js';
 
 // ============================================================================
 // APPLICATION STATE
@@ -18,10 +19,8 @@ function restoreCollectibles() {
     for (const item of saved) {
       if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
       // Blob URLs are bound to one browser session. Never persist a broken model reference.
-      if (item.customModelUrl?.startsWith('blob:')) {
-        item.customModelUrl = null;
-        item.customHairUrl = null;
-      }
+      if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+      if (item.customHairUrl?.startsWith('blob:')) item.customHairUrl = null;
       byId.set(item.id, item);
     }
     return [...byId.values()];
@@ -47,6 +46,8 @@ const state = {
     customModelUrl: null,
     customModelType: 'glb',
     customHairUrl: null,
+    customHairType: 'glb',
+    hairFit: { scale: 1, x: 0, y: 0, z: 0 },
     skinTone: '#f7d9cc',
     blushIntensity: 0.52,
     lipColor: '#d45868',
@@ -436,6 +437,8 @@ function loadCollectibleIntoStudio(col) {
     customModelUrl: col.customModelUrl || null,
     customModelType: col.customModelType || 'glb',
     customHairUrl: col.customHairUrl || null,
+    customHairType: col.customHairType || 'obj',
+    hairFit: col.hairFit || { scale: 1, x: 0, y: 0, z: 0 },
     skinTone: col.skinTone || '#f7d9cc',
     blushIntensity: col.blushIntensity ?? 0.52,
     lipColor: col.lipColor || '#d45868',
@@ -456,6 +459,14 @@ function loadCollectibleIntoStudio(col) {
   document.getElementById('col-lip').value = state.studioDraft.lipColor;
   document.getElementById('col-iris').value = state.studioDraft.irisColor;
   document.getElementById('col-hair').value = state.studioDraft.hairColor;
+  for (const prop of ['scale', 'x', 'y', 'z']) {
+    const value = Number(state.studioDraft.hairFit[prop]) || (prop === 'scale' ? 1 : 0);
+    document.getElementById(`hair-fit-${prop}`).value = String(value);
+    document.getElementById(`hair-fit-${prop}-value`).textContent = prop === 'scale' ? `${Math.round(value * 100)}%` : value.toFixed(1);
+  }
+  if (isPrivateModel(col.customModelUrl)) {
+    document.getElementById('custom-model-status').textContent = '🔒 本机私有高精模型（从浏览器仓库加载）；如清除了网站数据，请重新选原始 GLB。';
+  }
 
   document.getElementById('inp-col-name').value = col.name;
   document.getElementById('inp-col-id').value = col.id;
@@ -463,7 +474,7 @@ function loadCollectibleIntoStudio(col) {
   document.getElementById('inp-col-cutlevel').value = col.anatomyOptions?.cutLevel || '';
   document.getElementById('inp-col-notes').value = col.dossier?.anatomyNotes || '';
 
-  refreshStudio3DModel();
+  refreshStudio3DModel().catch(error => showToast(`预览载入失败：${error.message}`));
 }
 
 // ============================================================================
@@ -632,7 +643,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Summon initial default collectibles onto the computer screen
   for (const item of state.collectibles) {
     if (item.summoned) {
-      await desktopEngine.summonCollectible(item);
+      try {
+        await desktopEngine.summonCollectible(item);
+      } catch (error) {
+        // Browser storage may have been cleared; still let the studio boot.
+        console.warn(`无法恢复藏品「${item.name}」：${error.message}`);
+      }
     }
   }
   renderVaultGrid();
@@ -816,14 +832,62 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('input-model-upload').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const ext = file.name.split('.').pop().toLowerCase();
-    state.studioDraft.customModelUrl = url;
-    state.studioDraft.customModelType = ext === 'obj' ? 'obj' : 'glb';
-    document.getElementById('custom-model-status').textContent = `已导入外部模型：${file.name} (已自动截断颈部并装配医学解剖断面)`;
-    await refreshStudio3DModel();
-    showToast(`📥 已成功导入外部模型「${file.name}」并完成颈部医学解剖断面自动封口！`);
+    const oldUrl = state.studioDraft.customModelUrl;
+    const oldType = state.studioDraft.customModelType;
+    const oldHair = state.studioDraft.customHairUrl;
+    const status = document.getElementById('custom-model-status');
+    status.textContent = `正在读取「${file.name}」…`;
+    try {
+      const url = await keepPrivateModel(file);
+      state.studioDraft.customModelUrl = url;
+      state.studioDraft.customModelType = file.name.toLowerCase().endsWith('.obj') ? 'obj' : 'glb';
+      state.studioDraft.customHairUrl = null; // Never attach old hairstyle to a new head accidentally.
+      await refreshStudio3DModel();
+      status.textContent = `🔒 本机模型已保存：${file.name} · ${Math.round(file.size / 1024 / 1024)} MB · ${state.studioDraft.customModelType.toUpperCase()}（原始 PBR 材质保留；请旋转核对颈部切面）`;
+      showToast(`已加载私人模型「${file.name}」；下一步可选配套头发、调发际线并注册收藏品。`);
+    } catch (error) {
+      state.studioDraft.customModelUrl = oldUrl;
+      state.studioDraft.customModelType = oldType;
+      state.studioDraft.customHairUrl = oldHair;
+      status.textContent = `模型导入失败：${error.message}；建议使用含内嵌贴图的 .glb`;
+      showToast(status.textContent);
+    }
+    e.target.value = '';
   });
+
+  document.getElementById('input-hair-upload').addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!state.studioDraft.customModelUrl || /mh_asian_female_head/.test(state.studioDraft.customModelUrl)) {
+      showToast('请先导入你自己的头部 GLB，再选从同一场景导出的配套头发。');
+      e.target.value = '';
+      return;
+    }
+    const oldUrl = state.studioDraft.customHairUrl;
+    const oldType = state.studioDraft.customHairType;
+    try {
+      state.studioDraft.customHairUrl = await keepPrivateModel(file);
+      state.studioDraft.customHairType = file.name.toLowerCase().endsWith('.obj') ? 'obj' : 'glb';
+      await refreshStudio3DModel();
+      document.getElementById('private-asset-hint').textContent = `🔒 已保存配套头发：${file.name}；使用下方四个滑杆对齐发际线。`;
+      showToast(`头发已加载：${file.name}；请在正面、45°和侧面检查贴合。`);
+    } catch (error) {
+      state.studioDraft.customHairUrl = oldUrl;
+      state.studioDraft.customHairType = oldType;
+      showToast(`头发导入失败：${error.message}`);
+    }
+    e.target.value = '';
+  });
+
+  for (const prop of ['scale', 'x', 'y', 'z']) {
+    const slider = document.getElementById(`hair-fit-${prop}`);
+    slider.addEventListener('input', () => {
+      const value = Number(slider.value);
+      state.studioDraft.hairFit[prop] = value;
+      document.getElementById(`hair-fit-${prop}-value`).textContent = prop === 'scale' ? `${Math.round(value * 100)}%` : value.toFixed(1);
+      studioEngine.updateHairFitFast(state.studioDraft.hairFit);
+    });
+  }
 
   document.getElementById('btn-test-scan-glb').addEventListener('click', async () => {
     if (state.studioDraft.customModelUrl === '/models/LeePerrySmith.glb') {
@@ -914,6 +978,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('sel-hair-style').addEventListener('change', async (e) => {
+    if (isPrivateModel(state.studioDraft.customModelUrl)) {
+      showToast('自备高精模型请使用上方「选配套头发」，这里的旧程序化发型无法自动贴合。');
+      e.target.value = state.studioDraft.hairStyle;
+      return;
+    }
     state.studioDraft.hairStyle = e.target.value;
     state.studioDraft.customHairUrl = null;
     await refreshStudio3DModel();
@@ -960,6 +1029,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       customModelUrl: state.studioDraft.customModelUrl,
       customModelType: state.studioDraft.customModelType,
       customHairUrl: state.studioDraft.customHairUrl,
+      customHairType: state.studioDraft.customHairType,
+      hairFit: { ...state.studioDraft.hairFit },
       skinTone: state.studioDraft.skinTone,
       blushIntensity: state.studioDraft.blushIntensity,
       lipColor: state.studioDraft.lipColor,

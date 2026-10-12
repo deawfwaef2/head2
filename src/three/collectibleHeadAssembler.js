@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { createDazSkinTexture, createRealisticHairStrandTexture, createRealisticHairNormalTexture } from '../textures/skinTextureGenerator.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createRealisticHairGroup, createFittedHairFinishingGroom } from './hairBuilder.js';
+import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 
 const objCache = new Map();
 const objLoader = new OBJLoader();
@@ -253,13 +254,15 @@ export async function buildCollectibleHeadNode(config = {}) {
     anatomyOptions = {},
     photoElement = null,
     photoBlend = 0.0,
-    customHairUrl = null
+    customHairUrl = null,
+    customHairType = 'obj',
+    hairFit = { scale: 1, x: 0, y: 0, z: 0 }
   } = config;
 
   const root = new THREE.Group();
   root.name = 'CollectibleHeadRoot';
 
-  const isMHBuiltIn = (basePreset === 'mh_asian') || Boolean(customModelUrl && /mh_asian_female_head/.test(customModelUrl));
+  const isMHBuiltIn = (basePreset === 'mh_asian' && !customModelUrl) || Boolean(customModelUrl && /mh_asian_female_head/.test(customModelUrl));
 
   const { texture: skinTex, canvas: skinCanvas } = createDazSkinTexture({
     skinTone,
@@ -305,10 +308,11 @@ export async function buildCollectibleHeadNode(config = {}) {
 
   if (customModelUrl && !isMHBuiltIn) {
     let extObj;
+    const modelUrl = await resolvePrivateModelUrl(customModelUrl);
     if (customModelType === 'obj') {
-      extObj = await loadObjAny(customModelUrl);
+      extObj = await loadObjAny(modelUrl);
     } else {
-      const gltf = await new Promise((res, rej) => gltfLoader.load(customModelUrl, res, undefined, rej));
+      const gltf = await new Promise((res, rej) => gltfLoader.load(modelUrl, res, undefined, rej));
       extObj = gltf.scene;
     }
 
@@ -326,12 +330,49 @@ export async function buildCollectibleHeadNode(config = {}) {
 
     extObj.traverse((child) => {
       if (child.isMesh && child.material) {
-        child.material = child.material.clone();
-        child.material.clippingPlanes = [clipPlane];
-        child.material.clipShadows = true;
+        const clip = mat => {
+          const copy = mat.clone();
+          copy.clippingPlanes = [clipPlane];
+          copy.clipShadows = true;
+          return copy;
+        };
+        child.material = Array.isArray(child.material) ? child.material.map(clip) : clip(child.material);
       }
     });
     root.add(extObj);
+
+    // A companion hair file exported from the SAME scene retains its authored UVs,
+    // PBR textures and transparency. Never replace expensive hair-card materials
+    // with the low-fi procedural texture used by the fallback hairstyles.
+    if (customHairUrl) {
+      const hairUrl = await resolvePrivateModelUrl(customHairUrl);
+      const hairObj = customHairType === 'glb'
+        ? (await new Promise((res, rej) => gltfLoader.load(hairUrl, res, undefined, rej))).scene
+        : await loadObjAny(hairUrl);
+      if (customHairType === 'obj') {
+        const mat = new THREE.MeshPhysicalMaterial({
+          color: hairColor, roughness: 0.62, side: THREE.DoubleSide
+        });
+        hairObj.traverse(child => { if (child.isMesh) child.material = mat; });
+      }
+      const fit = hairFit || {};
+      const hairScale = Math.max(0.2, Math.min(3, Number(fit.scale) || 1));
+      hairObj.scale.setScalar(scale * hairScale);
+      hairObj.position.set(
+        -center.x * scale + (Number(fit.x) || 0),
+        -center.y * scale - 1.2 + (Number(fit.y) || 0),
+        -center.z * scale + (Number(fit.z) || 0)
+      );
+      hairObj.name = 'ImportedCompanionHair';
+      root.userData.companionHair = hairObj;
+      root.userData.companionHairBase = {
+        scale,
+        x: -center.x * scale,
+        y: -center.y * scale - 1.2,
+        z: -center.z * scale
+      };
+      root.add(hairObj);
+    }
 
     const capGeom = new THREE.CircleGeometry(3.4 * (morphs.neckDiameter || 1.0), 64);
     capGeom.rotateX(Math.PI / 2);

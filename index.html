@@ -250,17 +250,26 @@
             <div class="card-block">
               <h3>📥 导入外部高精度 Daz3D 模型 (可选)</h3>
               <p class="hint-text">
-                支持直接导入您从 Daz Studio / Blender 导出的 <code>.glb / .gltf / .obj</code> 头模或全身模型，软件将<strong>自动在颈部截断并封口生成医学解剖断面</strong>！
+                <strong>私人高精模型入口：</strong>选一个从 DAZ / Blender 导出的<strong>头部 .GLB（建议将纹理打包在 GLB 内）</strong>，原始文件只存在你当前浏览器的本机存储，不上传仓库。支持配套头发另选一个 GLB 并校准位置；OBJ 无贴图时无法还原原作者的 PBR 皮肤。颈部会附上可预览的解剖切面，切缘需检查对位。
               </p>
               <div class="btn-row">
                 <label class="btn secondary file-btn">
-                  📂 导入 .GLB / .OBJ
-                  <input type="file" id="input-model-upload" accept=".glb,.gltf,.obj" hidden />
+                  📂 选本机高精头部 .GLB / .OBJ
+                  <input type="file" id="input-model-upload" accept=".glb,.obj" hidden />
+                </label>
+                <label class="btn secondary file-btn">
+                  💇 选配套头发 .GLB / .OBJ
+                  <input type="file" id="input-hair-upload" accept=".glb,.obj" hidden />
                 </label>
                 <button id="btn-test-scan-glb" class="btn ghost" title="载入内置真实高精度人头扫描模型测试自动颈部截断与解剖断面封口">
                   🧪 测试高精扫描头模(.glb)
                 </button>
               </div>
+              <div class="hint-text" id="private-asset-hint">🔒 本机导入不会出现在 GitHub 或下载的 HTML 中；请保留原文件以便迁移浏览器。</div>
+              <div class="slider-row"><span>配套头发缩放</span><input id="hair-fit-scale" type="range" min="0.50" max="1.60" step="0.02" value="1"/><span id="hair-fit-scale-value">100%</span></div>
+              <div class="slider-row"><span>左右 X</span><input id="hair-fit-x" type="range" min="-6" max="6" step="0.2" value="0"/><span id="hair-fit-x-value">0.0</span></div>
+              <div class="slider-row"><span>高低 Y</span><input id="hair-fit-y" type="range" min="-6" max="6" step="0.2" value="0"/><span id="hair-fit-y-value">0.0</span></div>
+              <div class="slider-row"><span>前后 Z</span><input id="hair-fit-z" type="range" min="-6" max="6" step="0.2" value="0"/><span id="hair-fit-z-value">0.0</span></div>
               <div class="btn-row">
                 <button id="btn-mh-bob" class="btn secondary" title="MakeHuman CC0 亚洲女性3D头雕(含独立3D眼球/睫毛) + 波波头">
                   🧬 CC0 亚洲女头 + 波波发

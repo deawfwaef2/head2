@@ -105,6 +105,17 @@ export class StudioPreviewEngine {
   }
 
   /**
+   * Align a separately imported hair asset without reloading the GLB on every tick.
+   */
+  updateHairFitFast(fit = {}) {
+    const hair = this.headNode?.userData.companionHair;
+    const base = this.headNode?.userData.companionHairBase;
+    if (!hair || !base) return;
+    hair.scale.setScalar(base.scale * Math.max(0.2, Math.min(3, Number(fit.scale) || 1)));
+    hair.position.set(base.x + (Number(fit.x) || 0), base.y + (Number(fit.y) || 0), base.z + (Number(fit.z) || 0));
+  }
+
+  /**
    * Fast path for morph sliders without rebuilding textures or hair
    */
   updateMorphsFast(morphs = {}) {
