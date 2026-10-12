@@ -116,3 +116,29 @@
   3. 皮肤材质的「次表面散射感」「卡通感」问题（Stage 5 已指出）本轮未处理，仍待后续强力模型评估 Stage 5 提出的 (a)/(b)/(c) 三条路线。
   4. HUD 消失点标签与桌宠重叠的问题（Stage 4 遗留 #2）本轮未处理（复查时桌宠默认左右分布位置下并不重叠，但不确定其他摆放位置下是否仍会重叠，留给边角料模型核实修复）。
 - 工作区大小：本轮结束约 37MB（不含 `node_modules`、`.cache`、`.npm`、`dist/` 等快照排除/可重新生成目录）。
+### [2026-10-12 Stage 7（与 Stage 6 为同一时间窗口内并行提交，另一个 Agent 会话所做，详见下）] 网上找 CC0 写实头模 → MakeHuman 亚洲女性头模接入（实验选项，默认不变）
+- **来源与许可（全部 CC0，已写入 `assets_src/makehuman/LICENSE_NOTE.txt`）**：
+  - MakeHuman 基础网格 `base.obj`（19158 顶点）、宏观目标 `asian-female-young.target`、头部/颈部/下巴目标。
+  - MakeHuman system assets：头发 `bob02` / `long01`、眉毛 `eyebrow001`（`.mhclo` 绑定 + `.obj`，无贴图）。
+  - **没有使用任何 DAZ 资产。** 不要把 DAZ 原文件放进仓库（DAZ 许可证不允许公开再分发）。
+- **新增脚本**：`scripts/build_makehuman_head.py`（可复现）。流程：应用 Asian Female Young 形变 → 头/颈/下巴瘦化目标 → 只保留头部 + 窄颈柱（|x|≤1.1 且 y≥5.2 的规则排除肩斜方肌）→ 沿颈部截断 y=4.72，生成 50 点颈部断面圆盘 → 按林汐坐标系（头高 23.5、颈切面 y=-13.2）线性映射 → 用 `.mhclo` 绑定公式拟合头发/眉毛。
+- **输出**：`public/models/mh_asian_female_head.obj`（皮肤 5393 顶点 + `neck_cross_section` + `eyebrows`）、`mh_hair_bob02.obj`、`mh_hair_long01.obj`。
+- **代码改动（强力模型做的、不影响原预设）**：
+  - `collectibleHeadAssembler.js`：新增 `embeddedModelText()` / `loadObjAny()`（支持 file:// 离线版内嵌模型）；自定义模型分支对 `mh_asian_female_head` 使用**无贴图纯肤色**（MakeHuman UV 与 DAZ 贴图布局不同，原来的五官贴图会错位）；新增 `customHairUrl`，头发与头部使用同一变换与截断平面。
+  - `main.js`：`customHairUrl` 贯穿草稿、保存、读取；新增两个按钮 `btn-mh-bob` / `btn-mh-long`（界面标注 **[实验]**）。
+  - `index.html`：两个 [实验] 按钮。
+  - `scripts/build_standalone_html.mjs`：把三个 MH OBJ 以原始文本（保留 vn）内嵌进单文件 HTML。
+- **验证**：Playwright 下开始游戏 → 展开主窗口 → 工坊 → 点击 CC0 头模按钮，状态文字正常更新，**控制台无报错**。截图存 `.qa/stage5_mh_experimental.png`，测试脚本 `.qa/mh_test.py`。
+- **已知问题（诚实记录，给后续模型的待办）**：
+  1. **头发贴合错误**：当前 bob 发在正面像一块披风盖住前额和脸，发片与头皮间有大量悬空与穿插。`fit_proxy()` 对 `.mhclo` 偏移采用的是近似局部坐标系（x=边、y=面内、z=法线），**很可能是错的**，需要对照 MakeHuman 的 `proxy.py` 确认公式后再修。也可能是头发本身的缩放与颅顶高度不匹配。
+  2. **头部比例**：截图中头偏高、颈偏长，脸部“像面具”，缺少颧骨/鼻梁/唇形细节；MakeHuman 基础网格细节有限，远达不到 DAZ G8/G9 的精度。
+  3. **颈部断面**：目前只是通用圆盘（`CircleGeometry` 式），不是 `anatomyTextureGenerator` 的分层断面；要做成完整解剖断面，需要把 `neck_cross_section` 的 UV 按解剖纹理布局重新映射。
+  4. **眼睛/唇色**：皮肤是纯色，没有唇色、眼白、虹膜；可以用顶点颜色按区域上色作为过渡。
+  5. 默认仍是林汐/苏婉/千雪的 DAZ-风格程序化头，**不要**把默认切换到 MH 头模，直到头发问题修好。
+- **给后续模型的分工**：
+  - 强力模型：先修 `fit_proxy` 的偏移公式（对照 MakeHuman 源码 `proxy.py` 的 getCoords），再调头发缩放，最后做颈部解剖断面 UV；每修一步都要在 `.qa/` 截图并推送。
+  - 较弱模型：只调整 [实验] 按钮的文案和头发颜色参数（`hairColor`、`hairSheen`），不要改 `build_makehuman_head.py` 与 `collectibleHeadAssembler.js` 的分支结构。
+- **用户反馈待确认**：用户说已购买 DAZ 模型。若用户自行从 DAZ Studio 导出 Genesis 亚洲女性头 `.obj`，可以放进 `public/models/` 本地使用（不要提交到公开仓库）。
+- 工作区约 61MB（不含 `.cache`、`node_modules`）。
+
+> **⚠️ 并行协作说明（合并时追加）**：Stage 6 与 Stage 7 是两个不同 Agent 会话在同一时间窗口内对同一仓库的并行提交（`git push` 冲突后手动 `git merge` 解决）。Stage 6 专注修复头发材质渲染 BUG（程序化发型管线），Stage 7 专注探索 CC0 MakeHuman 真实头模资产替换路线，两者修改的文件基本不重叠（Stage 6 改 `hairBuilder.js`/`skinTextureGenerator.js`/光照；Stage 7 新增 `assets_src/makehuman/`、`build_makehuman_head.py`、`collectibleHeadAssembler.js` 的自定义模型分支），合并后两套改动都保留且互不冲突。默认桌宠仍使用 Stage 1-6 的林汐/苏婉/千雪程序化头模（Stage 7 的 MH 头模仅通过工坊里的 [实验] 按钮触发，不影响默认体验）。后续模型请注意：仓库中现在同时存在两条头模技术路线（程序化 OBJ 变形 + MakeHuman CC0 真人头模实验分支），在继续开发前请先读完两段日志，避免重复劳动或互相覆盖。

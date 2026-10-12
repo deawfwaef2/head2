@@ -35,10 +35,18 @@ function loadCompactObj(filePath) {
     .join('\n');
 }
 
+// MakeHuman CC0 head/hair keep their vn normals (OBJ loader does not recompute them for custom models)
+function loadRawObj(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
 const embeddedModels = {
   linxi: loadCompactObj('/home/user/public/models/daz_asian_female_linxi.obj'),
   suwan: loadCompactObj('/home/user/public/models/daz_asian_female_suwan.obj'),
-  qianxue: loadCompactObj('/home/user/public/models/daz_asian_female_qianxue.obj')
+  qianxue: loadCompactObj('/home/user/public/models/daz_asian_female_qianxue.obj'),
+  'mh_asian_female_head.obj': loadRawObj('/home/user/public/models/mh_asian_female_head.obj'),
+  'mh_hair_bob02.obj': loadRawObj('/home/user/public/models/mh_hair_bob02.obj'),
+  'mh_hair_long01.obj': loadRawObj('/home/user/public/models/mh_hair_long01.obj')
 };
 
 const embeddedModelsScript = `<script>window.__EMBEDDED_MODELS__ = ${JSON.stringify(embeddedModels)};</script>`;

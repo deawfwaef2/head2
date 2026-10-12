@@ -18,6 +18,7 @@ const state = {
     basePreset: 'linxi',
     customModelUrl: null,
     customModelType: 'glb',
+    customHairUrl: null,
     skinTone: '#f7d9cc',
     blushIntensity: 0.52,
     lipColor: '#d45868',
@@ -406,6 +407,7 @@ function loadCollectibleIntoStudio(col) {
     basePreset: col.basePreset || 'linxi',
     customModelUrl: col.customModelUrl || null,
     customModelType: col.customModelType || 'glb',
+    customHairUrl: col.customHairUrl || null,
     skinTone: col.skinTone || '#f7d9cc',
     blushIntensity: col.blushIntensity ?? 0.52,
     lipColor: col.lipColor || '#d45868',
@@ -785,16 +787,30 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-test-scan-glb').addEventListener('click', async () => {
     if (state.studioDraft.customModelUrl === '/models/LeePerrySmith.glb') {
       state.studioDraft.customModelUrl = null;
+      state.studioDraft.customHairUrl = null;
       document.getElementById('custom-model-status').textContent = '当前使用：内置 Daz 东亚女性高精细分头模 (9,160面)';
       showToast('已切换回内置 Daz 东亚女性高精细分头模');
     } else {
       state.studioDraft.customModelUrl = '/models/LeePerrySmith.glb';
       state.studioDraft.customModelType = 'glb';
+      state.studioDraft.customHairUrl = null;
       document.getElementById('custom-model-status').textContent = '当前使用：外部高精三维人头扫描模型 (LeePerrySmith.glb + 自动颈部解剖封口)';
       showToast('🧪 已载入真实 3D 扫描头模 (.glb)，演示自动颈部截断与 C4 医学解剖断面封口！');
     }
     await refreshStudio3DModel();
   });
+
+  // 8b. CC0 MakeHuman Asian female head (+ hair) preset
+  const loadMHHead = async (hairFile, label) => {
+    state.studioDraft.customModelUrl = '/models/mh_asian_female_head.obj';
+    state.studioDraft.customModelType = 'obj';
+    state.studioDraft.customHairUrl = hairFile ? `/models/${hairFile}` : null;
+    document.getElementById('custom-model-status').textContent = `当前使用：MakeHuman 亚洲女性头模 (CC0) + ${label}`;
+    showToast(`🧬 已载入 CC0 亚洲女性头模（${label}）`);
+    await refreshStudio3DModel();
+  };
+  document.getElementById('btn-mh-bob')?.addEventListener('click', () => loadMHHead('mh_hair_bob02.obj', '波波头发'));
+  document.getElementById('btn-mh-long')?.addEventListener('click', () => loadMHHead('mh_hair_long01.obj', '长发'));
 
   // 9. Studio Camera Preset Buttons & Anatomy Labels Checkbox
   document.querySelectorAll('[data-cam]').forEach(btn => {
@@ -813,6 +829,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 10. Studio Morph Sliders, Colors & Hair Controls
   document.getElementById('sel-base-preset').addEventListener('change', async (e) => {
     state.studioDraft.customModelUrl = null;
+    state.studioDraft.customHairUrl = null;
     state.studioDraft.basePreset = e.target.value;
     document.getElementById('custom-model-status').textContent = `当前使用：内置 Daz 东亚女性高精细分头模 (${e.target.value})`;
     await refreshStudio3DModel();
@@ -894,6 +911,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       basePreset: state.studioDraft.basePreset,
       customModelUrl: state.studioDraft.customModelUrl,
       customModelType: state.studioDraft.customModelType,
+      customHairUrl: state.studioDraft.customHairUrl,
       skinTone: state.studioDraft.skinTone,
       blushIntensity: state.studioDraft.blushIntensity,
       lipColor: state.studioDraft.lipColor,
