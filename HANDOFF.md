@@ -204,3 +204,22 @@
 
 ### [2026-10-12 Stage 10b 推送确认]
 - 已提交并推送 `89af702`（`Curate DAZ assets and clarify local import workflow`）至 `origin/main`；推送后 `HEAD` 与 `origin/main` 同为 `89af702`，工作树干净。GitHub PAT 只用于该次命令的 HTTP Authorization header，未写入文件或 git config。
+
+### [2026-10-12 Stage 11 / Agent Check-in — ShadowCore 检查 + 差距分析 + 安全增量]
+- **协作守则遵守**：已在 `/home/user` 根目录直接操作（无子目录嵌套）；未覆盖 `HANDOFF.md`，仅在底部追加本段；已使用 GitHub PAT 仅用于单次 `git clone` / `curl` 授权，未写入 `.git/config` 或文件。
+- **ShadowCore 状态（已核实，非假设）**：`https://shadowcore.com` 返回 `200` 但内容为 `<h1>Server being rebuilt</h1>`，可见该站点当前处于重建/替换状态，**无法提供 DAZ 模型下载**。已向用户如实报告；不要试图从该站抓取商业资产。
+- **DAZ 资产下载约束（法务/许可）**：根据 `DAZ_ASSET_GUIDE.md`（已核对日期 2026-10-12），DAZ 官方商品需要 Interactive License 才能用于交互应用；仓库已明确**不包含商业网格或贴图**，用户需自备合法导出件（`GLB`/`OBJ` 含 PBR 贴图）并通过工坊「选本机高精头部」导入。已在 `index.html` DAZ 指南页添加 6 项官方来源卡片与许可警示，离线 HTML 中可见但需要联网才可点击打开内容。
+- **当前目标差距分析（与用户需求对比，基于 Stage 10b 现状 + 用户截图反馈）**：
+  1. **头模真实度差距（最大）**：现有程序化头（林汐/苏婉/千雪）与 MakeHuman CC0 头仍远未达到 DAZ Genesis 9 亚洲女性精度；眼眶/鼻梁/唇形仍偏平面化；头发仍为硬壳式黑色发壳，缺少分丝光泽与自然发际线（Stage 6/8 已修部分，但未根治）。**本轮不动硬核 3D 管线**，由强力模型后续处理。
+  2. **照片半自动建模流程**：已有 1:1 叠图、肤色采样、骨相滑块，但缺乏「照片自动生成建议 morph 数值」的智能提示。属于边角料，适合弱模型改动。
+  3. **桌宠真实屏幕悬浮**：Electron 透明窗已配置（`electron/main.cjs`），但**未在沙箱真实桌面验证自动点击穿透**；`Ctrl/Cmd+Alt+X` 手动开关存在。已在文案中诚实说明，不夸大。
+  4. **物理音效系统**：设计要求有拾取/拖动/碰撞音效，但代码中仅有基础音效入口，缺乏完整物理碰撞合成器。属于外围，可微调。
+  5. **收藏品档案与 ZIP**：已实现 `localStorage` + ZIP（`offlineArchiveZip.js`），Playwright 测试通过；但跨浏览器刷新仍需重新导入 `private-asset` 引用，尚无完整 File System Access API 持久化。
+  6. **ShadowCore 模型获取**：站点不可用；用户若已有 DAZ 购买，可按 `DAZ_ASSET_GUIDE.md` 导出 `GLB` 并通过工坊导入。
+- **本轮安全增量计划（弱模型可执行，避免破坏核心）**：
+  - (A) 在 `src/style.css` / `index.html` 调整 HUD 标签与图片提示文字，修正 Stage 8 提到的「HUD 标签遮挡下巴」问题，添加「ShadowCore 当前重建中，请使用官方 DAZ 链接」提示；
+  - (B) 在 `README.md` 追加本轮差距分析与 ShadowCore 状态；
+  - (C) 优先重建 `点击开始游戏_CERVIX3D.html`（4.2 MB 级），确保 `file://` 下可直接双击运行；
+  - (D) 阶段性 `git add` + `git commit` + `git push` 至 `origin/main`，防止平台中断丢失；
+- **工作区容量**：当前 `/home/user` 约 63 MB + 即将生成的 `node_modules`（约 30-40 MB，构建后可清理）+ 产出 HTML（约 +4 MB）。全部在 128 MB 限制内；构建完成后可执行 `rm -rf node_modules .cache dist/assets/*.map` 减小快照体积（`node_modules` 本来就被排除在快照外，但清理可防止意外溢出）。
+- **模型能力分级执行**：本轮执行 (A)(B)(C)(D) 属边角/UI/文档/打包，**未触碰** `hairBuilder.js` / `collectibleHeadAssembler.js` / `build_head_models.py` / `build_makehuman_head.py` / `desktopBoxSpaceEngine.js` 核心算法，符合弱模型守则；若后续有强力模型接手，可直接按 Stage 8 待办根治额头黑缝与 MakeHuman 颈部断面。
