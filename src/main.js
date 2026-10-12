@@ -8,8 +8,35 @@ import { soundEngine } from './audio/tactileSoundEngine.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
+const STORAGE_KEY = 'cervix3d-collectibles-v1';
+function restoreCollectibles() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!Array.isArray(saved)) return JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
+    const byId = new Map(DEFAULT_COLLECTIBLES.map(item => [item.id, structuredClone(item)]));
+    for (const item of saved) {
+      if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
+      // Blob URLs are bound to one browser session. Never persist a broken model reference.
+      if (item.customModelUrl?.startsWith('blob:')) {
+        item.customModelUrl = null;
+        item.customHairUrl = null;
+      }
+      byId.set(item.id, item);
+    }
+    return [...byId.values()];
+  } catch (_) {
+    return JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
+  }
+}
+function persistCollectibles() {
+  try {
+    // Browser storage keeps offline file:// sessions usable after closing the page.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.collectibles));
+    return true;
+  } catch (_) { return false; }
+}
 const state = {
-  collectibles: JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES)),
+  collectibles: restoreCollectibles(),
   archiveItems: [],
   selectedArchiveIndex: 0,
   windowHidden: false,
@@ -447,20 +474,27 @@ async function fetchAndRenderArchives() {
     const resp = await fetch('/api/collectibles');
     const data = await resp.json();
     if (data.ok && Array.isArray(data.items)) {
-      state.archiveItems = data.items;
+      const serverIds = new Set(data.items.map(entry => entry.manifest?.id));
+      state.archiveItems = [...data.items, ...state.collectibles
+        .filter(item => !serverIds.has(item.id))
+        .map(item => makeLocalArchiveEntry(item))];
       renderArchiveExplorer();
       return;
     }
   } catch (_) {}
 
-  // Offline / file:// fallback: build archive items directly from state.collectibles
-  state.archiveItems = state.collectibles.map(item => ({
+  // Offline / file:// fallback: local records are real, but folder creation needs a download.
+  state.archiveItems = state.collectibles.map(makeLocalArchiveEntry);
+  renderArchiveExplorer();
+}
+
+function makeLocalArchiveEntry(item) {
+  return {
     folderName: item.folderName || `${item.id}_${item.name}`,
     folderPath: `/collectibles/${item.folderName || item.id}`,
     manifest: item,
     dossierMd: `# 颅相典藏档案 · ${item.name} (${item.id})\n\n- **典藏编号**: \`${item.id}\`\n- **藏品名称**: ${item.name}\n- **副标题**: ${item.subtitle || ''}\n- **解剖断面**: ${item.anatomyOptions?.cutLevel || ''}\n\n## 骨相与解剖记录\n${item.dossier?.origin || ''}\n\n${item.dossier?.anatomyNotes || ''}`
-  }));
-  renderArchiveExplorer();
+  };
 }
 
 function renderArchiveExplorer() {
@@ -949,23 +983,36 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.collectibles.unshift(newCollectible);
     }
 
-    // Write physical folder & manifest.json + dossier.md via Vite API middleware
+    const locallySaved = persistCollectibles();
+    let folderCreated = false;
+    // Vite desktop/dev mode can write an actual folder. file:// cannot write to disk silently.
+    if (window.location.protocol !== 'file:') {
+      try {
+        const response = await fetch('/api/collectibles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ collectible: newCollectible })
+        });
+        folderCreated = response.ok && (await response.json()).ok === true;
+      } catch (_) { /* Offline / static hosting: local storage remains available. */ }
+    }
+    await fetchAndRenderArchives();
     try {
-      await fetch('/api/collectibles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectible: newCollectible })
-      });
-      await fetchAndRenderArchives();
-    } catch (_) {}
-
-    await desktopEngine.summonCollectible(newCollectible);
+      await desktopEngine.summonCollectible(newCollectible);
+    } catch (error) {
+      showToast(`已保存档案，但模型载入失败：${error.message}`);
+      renderVaultGrid();
+      return;
+    }
     renderVaultGrid();
 
-    // Auto-increment serial ID for next registration
     const nextNum = state.collectibles.length + 1;
-    document.getElementById('inp-col-id').value = `SPEC-2026-00${nextNum}`;
-    showToast(`🎉 已生成档案夹 /collectibles/${newCollectible.folderName}/ 并将「${name}」召唤至电脑屏幕！`);
+    document.getElementById('inp-col-id').value = `SPEC-2026-${String(nextNum).padStart(3, '0')}`;
+    showToast(folderCreated
+      ? `🎉 已创建 /collectibles/${newCollectible.folderName}/ 并召唤「${name}」！`
+      : locallySaved
+        ? `🎉「${name}」已在本浏览器保存并召唤；若要实体档案，请到档案页下载文件。`
+        : `「${name}」已召唤；浏览器禁止本地存储，请到档案页下载备份。`);
   });
 
   // 12. Bind 3D Box Space, Vanishing Point & Tactile Sound Settings
@@ -1103,12 +1150,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       try {
         const imported = JSON.parse(ev.target.result);
         if (!imported.id || !imported.name) throw new Error('Invalid archive format');
-        state.collectibles.unshift(imported);
-        await fetch('/api/collectibles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ collectible: imported })
-        });
+        const existing = state.collectibles.findIndex(item => item.id === imported.id);
+        if (existing >= 0) state.collectibles[existing] = imported;
+        else state.collectibles.unshift(imported);
+        persistCollectibles();
+        if (window.location.protocol !== 'file:') {
+          try {
+            await fetch('/api/collectibles', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ collectible: imported })
+            });
+          } catch (_) { /* Local-only archive still works. */ }
+        }
         await fetchAndRenderArchives();
         await desktopEngine.summonCollectible(imported);
         renderVaultGrid();
