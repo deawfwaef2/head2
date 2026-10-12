@@ -234,6 +234,48 @@ export const DEFAULT_COLLECTIBLES = [
       anatomyNotes: '高束马尾与后颈自然分离，进入360°旋转检视模式可完整观察后颈斜方肌群、切口血迹与高亮度C5横断面解剖细节。',
       tags: ['高颅顶马尾(3902v)', '全露下颌折角', 'C5带血横切面', '静态标本表情']
     }
+  },
+  {
+    id: 'SPEC-2026-004',
+    folderName: 'SPEC-2026-004_ShenZhiwei',
+    name: '沈知微 · Shen Zhiwei',
+    subtitle: '温婉书香侧分粗麻花辫 · 杏眼自然唇标本',
+    grade: 'SSR · 特级典藏',
+    basePreset: 'shenzhiwei',
+    modelUrl: '/models/daz_asian_head_base.glb',
+    skinTone: '#ffede6',
+    blushIntensity: 0.48,
+    lipColor: '#c06975',
+    irisColor: '#5e3622',
+    hairStyle: 'hair_braid01',
+    hairColor: '#2b1d18',
+    hairSheen: 0.88,
+    neckClearance: 0.40,
+    summoned: false,
+    boxPosition: { x: 10, y: -6, z: -190 },
+    morphs: {
+      jawVLine: 0.12,
+      cheekSoftness: 0.24,
+      noseBridge: 0.12,
+      eyeAlmond: 0.14,
+      lipFullness: 0.0,
+      neckDiameter: 0.97,
+      cutHeightOffset: 0.0,
+      cutTiltPitch: 4.0,
+      cutTiltRoll: 0.0
+    },
+    anatomyOptions: {
+      cutLevel: 'C4–C5 椎间盘带血横断面 (高清微距封存)',
+      vascularContrast: 1.14,
+      dermisRimScale: 1.0,
+      wetness: 0.85,
+      showLabels: false
+    },
+    dossier: {
+      origin: '搭载4,663顶点高密度温婉侧分粗麻花辫模型(hair_braid01.glb)，杏仁大眼配温婉鹅蛋脸与自然闭合静态唇。',
+      anatomyNotes: '斜分麻花辫垂于单侧肩颈外侧，底部C4/C5解剖断面完整展现颈部肌群筋膜室与椎骨横突孔椎动脉结构。',
+      tags: ['侧分粗麻花辫(4663v)', '温婉书卷骨相', '静态自然唇', 'C4/C5带血横切面']
+    }
   }
 ];
 

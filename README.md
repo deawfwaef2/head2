@@ -1,5 +1,11 @@
-# CERVIX-3D · 颅相典藏馆 (PRO v2.6)
-**高精度 3D 解剖断面头部收藏品 · 半自动建模装配 · 盒型透视空间桌宠生成与管理系统**
+# CERVIX-3D · 颅相典藏馆
+**3D 头部藏品管理、预览与桌宠原型**
+
+## 先运行与当前限制
+- 下载仓库 ZIP 并解压，**双击根目录 `点击开始游戏_CERVIX3D.html`**，可离线进入浏览器版；浏览器版只在该浏览器窗口显示桌宠，不能跨应用悬浮。
+- 真正系统桌宠需要 Electron：`npm ci && npm install --no-save electron && npm run electron`。默认管理器是普通非置顶窗口；进入桌宠模式后空白区域鼠标穿透。**Ctrl/Cmd+Alt+M**（或 **Ctrl/Cmd+Alt+X**）、托盘菜单可恢复管理器，桌面模式行为仍须在目标 Windows/macOS/Linux 实机核验；未提供打包安装程序。
+- 内置 GLB 头/发是项目合成示例，**不是 DAZ Genesis 商业原版，也不等同照片级重建**。其生成脚本引用了旧环境 `/tmp/dl_inspect/base_body.glb`，当前仓库没有包含可复核的上游下载地址与许可原件；公开分发前务必核查资产来源与再分发权。切面是艺术解剖示意，不是临床用医学数据。官方头模/发型选材、许可与 Blender 处理步骤见 [`DAZ_ASSET_GUIDE.md`](DAZ_ASSET_GUIDE.md)。
+- 注册藏品保存在本浏览器 localStorage；导入的私人 GLB 存在本浏览器 IndexedDB，缺失时需要重新选原文件。档案页可下载包含 `manifest.json` + `dossier.md` 的 ZIP 文件夹，**模型本体不在 ZIP 里**。
 
 ---
 
@@ -63,4 +69,4 @@ npm run dev
 # 3. 在另一个终端启动 Electron 透明桌面层
 npm run electron
 ```
-在 Electron 模式下，窗口将设为 `transparent: true, frame: false, alwaysOnTop: true`，使 3D 头部收藏品真正悬浮于您的操作系统桌面与所有软件之上。
+Electron 先以非置顶、可从任务栏找回的管理窗口启动；切换至桌宠模式后才使用透明置顶层（`floating` 等级，避免遮盖全屏应用）。空白区域向其它窗口透传点击，鼠标命中模型时才接收操作。可用托盘 / Ctrl/Cmd+Alt+M 随时返回管理器。上方旧版“全屏透明置顶”说明以本段为准。

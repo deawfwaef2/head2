@@ -4,12 +4,36 @@ import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
 import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGenerator.js';
 import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
+import { keepPrivateModel, isPrivateModel } from './data/privateModelStore.js';
+import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
+const STORAGE_KEY = 'cervix3d-collectibles-v1';
+function restoreCollectibles() {
+  const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!Array.isArray(saved)) return defaults;
+    const byId = new Map(defaults.map(item => [item.id, item]));
+    for (const item of saved) {
+      if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
+      // A blob URL is tied to a single tab. Never restore a dead reference.
+      if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+      byId.set(item.id, item);
+    }
+    return [...byId.values()];
+  } catch (_) { return defaults; }
+}
+function persistCollectibles() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.collectibles));
+    return true;
+  } catch (_) { return false; }
+}
 const state = {
-  collectibles: JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES)),
+  collectibles: restoreCollectibles(),
   archiveItems: [],
   selectedArchiveIndex: 0,
   windowHidden: false,
@@ -60,6 +84,16 @@ function showToast(msg) {
   el.classList.remove('hidden');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 // ============================================================================
@@ -351,11 +385,15 @@ function renderVaultGrid() {
       if (action === 'toggle-summon') {
         if (desktopEngine.pets.has(id)) {
           desktopEngine.recallCollectible(id);
+          col.summoned = false;
           showToast(`已从电脑屏幕收回藏品「${col.name}」`);
         } else {
-          await desktopEngine.summonCollectible(col);
+          try { await desktopEngine.summonCollectible(col); }
+          catch (error) { showToast(`召唤失败：请重新导入「${col.name}」的原始模型。`); return; }
+          col.summoned = true;
           showToast(`✨ 已将「${col.name}」召唤至电脑屏幕 3D 盒型空间！`);
         }
+        persistCollectibles();
         renderVaultGrid();
       } else if (action === 'toggle-rotate') {
         desktopEngine.toggleRotationMode(id);
@@ -562,7 +600,7 @@ function initWindowDragging() {
   let startX = 0, startY = 0, origLeft = 0, origTop = 0;
 
   bar.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('button')) return;
+    if (window.cervixDesktopBridge?.isDesktop || e.target.closest('button')) return;
     dragging = true;
     const rect = win.getBoundingClientRect();
     win.style.transform = 'none';
@@ -587,6 +625,10 @@ function initWindowDragging() {
   });
 
   document.getElementById('win-btn-center').addEventListener('click', () => {
+    if (window.cervixDesktopBridge?.isDesktop) {
+      window.cervixDesktopBridge.centerManager();
+      return;
+    }
     win.style.left = '';
     win.style.right = '16px';
     win.style.top = '58px';
@@ -634,10 +676,32 @@ function initWindowDragging() {
   }
 }
 
+// In Electron, the ordinary manager and transparent desktop layer are distinct
+// OS window modes. In the downloadable HTML this remains an in-page toggle.
+function setWindowVisibility(hidden, fromMainProcess = false) {
+  state.windowHidden = hidden;
+  document.getElementById('software-window').classList.toggle('window-hidden', hidden);
+  document.getElementById('btn-toggle-window').textContent = hidden
+    ? '🗖 展开 CERVIX-3D 软件主窗口'
+    : '🗕 隐藏软件窗口 (纯看屏幕桌宠)';
+  const bridge = window.cervixDesktopBridge;
+  if (bridge?.isDesktop) {
+    document.body.classList.toggle('real-desktop-overlay', hidden);
+    document.body.classList.toggle('real-desktop-manager', !hidden);
+    if (!fromMainProcess) bridge.setMode(hidden ? 'overlay' : 'manager');
+  }
+}
+
 // ============================================================================
 // INITIALIZE EVERYTHING ON DOM READY
 // ============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  if (window.cervixDesktopBridge?.isDesktop) {
+    document.body.classList.remove('bg-mode-os', 'bg-mode-void');
+    document.body.classList.add('bg-mode-transparent', 'real-desktop-manager');
+    window.cervixDesktopBridge.onModeChange(mode => setWindowVisibility(mode === 'overlay', true));
+    document.getElementById('win-btn-close').addEventListener('click', () => window.cervixDesktopBridge.quit());
+  }
   // 1. Initialize Full-Screen 3D Perspective Box Space & Desktop Pet Engine
   const desktopCanvas = document.getElementById('desktop-pet-canvas');
   desktopEngine = new DesktopBoxSpaceEngine(desktopCanvas, {
@@ -655,10 +719,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  if (window.cervixDesktopBridge?.isDesktop) {
+    desktopEngine.updateSettings({ showBoxGrid: 'hidden' });
+    // The main process polls the real cursor while the transparent OS window
+    // ignores input; hit-testing restores input only over a 3D head or drag.
+    window.cervixDesktopBridge.onCursorPoint(({ x, y }) => {
+      if (!state.windowHidden) return;
+      const inside = x >= 0 && y >= 0 && x < window.innerWidth && y < window.innerHeight;
+      let hit = null;
+      if (inside) {
+        desktopEngine.updateMouseCoords({ clientX: x, clientY: y });
+        hit = desktopEngine.pickPetAtCursor();
+      }
+      window.cervixDesktopBridge.setIgnoreMouseEvents(!(hit || desktopEngine.pointerDownInfo));
+      if (!desktopEngine.pointerDownInfo) {
+        desktopEngine.hoveredPetId = hit?.id || null;
+        if (hit) desktopEngine.refreshHoverHUD();
+        else updateHoverDossierHUD(null);
+      }
+    });
+  }
+
   // Summon initial default collectibles onto the computer screen
   for (const item of state.collectibles) {
     if (item.summoned) {
-      await desktopEngine.summonCollectible(item);
+      try { await desktopEngine.summonCollectible(item); }
+      catch (error) { console.warn(`藏品「${item.name}」暂无法恢复：`, error); }
     }
   }
   renderVaultGrid();
@@ -683,9 +769,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnStartPure) {
     btnStartPure.addEventListener('click', () => {
       if (startOverlay) startOverlay.classList.add('hidden');
-      state.windowHidden = true;
-      document.getElementById('software-window').classList.add('window-hidden');
-      document.getElementById('btn-toggle-window').textContent = '🗖 展开 CERVIX-3D 软件主窗口';
+      setWindowVisibility(true);
       soundEngine.playSummon(true);
       showToast('🎮 已进入屏幕 3D 桌宠把玩模式！悬停看档案 | 单击模型切换360°旋转 | 滚轮推拉景深 | 拖拽碰撞盒壁');
     });
@@ -694,9 +778,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (btnStartStudio) {
     btnStartStudio.addEventListener('click', () => {
       if (startOverlay) startOverlay.classList.add('hidden');
-      state.windowHidden = false;
-      document.getElementById('software-window').classList.remove('window-hidden');
-      document.getElementById('btn-toggle-window').textContent = '🗕 隐藏软件窗口 (纯看屏幕桌宠)';
+      setWindowVisibility(false);
       soundEngine.playSummon(true);
       showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！可随时点击右上角「隐藏软件窗口」看屏幕桌宠');
     });
@@ -708,9 +790,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   document.querySelectorAll('.os-icon').forEach(icon => {
     icon.addEventListener('click', () => {
-      state.windowHidden = false;
-      document.getElementById('software-window').classList.remove('window-hidden');
-      document.getElementById('btn-toggle-window').textContent = '🗕 隐藏软件窗口 (纯看屏幕桌宠)';
+      setWindowVisibility(false);
       switchSoftwareTab(icon.dataset.tab);
     });
   });
@@ -718,11 +798,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 5. Bind Top-Right Desktop Overlay Controls (Hide/Show Window, Grid, Background, Mute)
   const toggleWinBtn = document.getElementById('btn-toggle-window');
   const toggleWindowVisibility = () => {
-    state.windowHidden = !state.windowHidden;
-    document.getElementById('software-window').classList.toggle('window-hidden', state.windowHidden);
-    toggleWinBtn.textContent = state.windowHidden
-      ? '🗖 展开 CERVIX-3D 软件主窗口'
-      : '🗕 隐藏软件窗口 (纯看屏幕桌宠)';
+    setWindowVisibility(!state.windowHidden);
     if (state.windowHidden) {
       showToast('已隐藏软件窗口！现在您可以直接在电脑屏幕上拖拽3D头模、滚轮推拉景深、单击切换360°旋转模式');
     }
@@ -761,9 +837,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-summon-all').addEventListener('click', async () => {
     for (const col of state.collectibles) {
       if (!desktopEngine.pets.has(col.id)) {
-        await desktopEngine.summonCollectible(col);
+        try { await desktopEngine.summonCollectible(col); col.summoned = true; }
+        catch (error) { console.warn(`召唤「${col.name}」失败`, error); }
       }
     }
+    persistCollectibles();
     renderVaultGrid();
     showToast('✨ 已将全部典藏头部桌宠召唤至电脑屏幕 3D 盒型空间！');
   });
@@ -842,13 +920,39 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('input-model-upload').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const ext = file.name.split('.').pop().toLowerCase();
-    state.studioDraft.customModelUrl = url;
-    state.studioDraft.customModelType = ext === 'obj' ? 'obj' : 'glb';
-    document.getElementById('custom-model-status').textContent = `已导入外部模型：${file.name} (已自动截断颈部并装配医学解剖断面)`;
-    await refreshStudio3DModel();
-    showToast(`📥 已成功导入外部模型「${file.name}」并完成颈部医学解剖断面自动封口！`);
+    if (!file.name.toLowerCase().endsWith('.glb')) {
+      showToast('目前仅支持内嵌贴图的 .glb；OBJ/GLTF 附属文件不会自动读取。');
+      e.target.value = '';
+      return;
+    }
+    const previous = state.studioDraft.customModelUrl;
+    const previousHairStyle = state.studioDraft.hairStyle;
+    let reference = null;
+    try {
+      try { reference = await keepPrivateModel(file); }
+      catch (storageError) {
+        console.warn('无法持久化私人模型，仅保留当前会话', storageError);
+        reference = URL.createObjectURL(file);
+      }
+      state.studioDraft.customModelUrl = reference;
+      state.studioDraft.customModelType = 'glb';
+      // Imported GLBs often already contain their own hair; built-in hair has
+      // different coordinates and would visibly float through that head.
+      state.studioDraft.hairStyle = 'none';
+      document.getElementById('sel-hair-style').value = 'none';
+      await refreshStudio3DModel();
+      const saved = isPrivateModel(reference);
+      document.getElementById('custom-model-status').textContent = `已预览：${file.name}（${saved ? '原件保存在本浏览器私人仓库' : '仅当前会话'}；须自行确认颈口）`;
+      showToast(`已预览「${file.name}」。${saved ? '本浏览器可恢复；仍请保留原文件备份。' : '浏览器存储失败，关闭页面后需重新选择。'}`);
+    } catch (error) {
+      state.studioDraft.customModelUrl = previous;
+      state.studioDraft.hairStyle = previousHairStyle;
+      document.getElementById('sel-hair-style').value = previousHairStyle;
+      if (reference?.startsWith('blob:')) URL.revokeObjectURL(reference);
+      e.target.value = '';
+      console.warn('头部 GLB 导入失败', error);
+      showToast('GLB 导入失败：请检查文件、贴图及导出坐标。');
+    }
   });
 
   const REAL_HAIRS = [
@@ -997,10 +1101,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         cutLevel
       },
       dossier: {
-        origin: `基于 Daz 亚洲女性高精基底 (${state.studioDraft.basePreset}) 与照片半自动对位生成。`,
+        origin: state.studioDraft.customModelUrl
+          ? '基于用户自备 GLB 与手工照片对位；原件仅保存在当前浏览器私人仓库（若浏览器存储不可用则仅当前会话），导出档案不含模型文件。'
+          : `基于内置 GLB 示例 (${state.studioDraft.basePreset}) 与手工照片对位。`,
         anatomyNotes: notes,
-        hairNotes: `高拟真发丝系统 (${state.studioDraft.hairStyle})，光泽度 ${Math.round(state.studioDraft.hairSheen * 100)}%。`,
-        tags: ['Daz高精头雕', cutLevel.slice(0, 10), grade.split('·')[0].trim(), '解剖断面封口']
+        hairNotes: `3D 发型 (${state.studioDraft.hairStyle})，光泽度 ${Math.round(state.studioDraft.hairSheen * 100)}%。`,
+        tags: ['3D头部藏品', cutLevel.slice(0, 10), grade.split('·')[0].trim(), '解剖切面示意']
       },
       summoned: true,
       boxPosition: {
@@ -1017,23 +1123,32 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.collectibles.unshift(newCollectible);
     }
 
-    // Write physical folder & manifest.json + dossier.md via Vite API middleware
-    try {
-      await fetch('/api/collectibles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ collectible: newCollectible })
-      });
-      await fetchAndRenderArchives();
-    } catch (_) {}
-
-    await desktopEngine.summonCollectible(newCollectible);
+    // Local persistence works for downloaded file:// HTML too. Only the local
+    // Vite middleware can write a physical server-side folder; browsers cannot.
+    const savedLocally = persistCollectibles();
+    let diskSaved = false;
+    if (location.protocol !== 'file:' && !location.hostname.endsWith('.github.io')) {
+      try {
+        const response = await fetch('/api/collectibles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ collectible: newCollectible })
+        });
+        diskSaved = response.ok;
+      } catch (_) {}
+    }
+    await fetchAndRenderArchives();
+    try { await desktopEngine.summonCollectible(newCollectible); }
+    catch (error) { console.warn('召唤失败，藏品档案仍已保存', error); }
     renderVaultGrid();
 
-    // Auto-increment serial ID for next registration
     const nextNum = state.collectibles.length + 1;
     document.getElementById('inp-col-id').value = `SPEC-2026-00${nextNum}`;
-    showToast(`🎉 已生成档案夹 /collectibles/${newCollectible.folderName}/ 并将「${name}」召唤至电脑屏幕！`);
+    showToast(diskSaved
+      ? `已在本地服务目录生成档案并登记「${name}」。`
+      : savedLocally
+        ? `已在浏览器保存「${name}」；可从档案页下载实体文件夹 ZIP。`
+        : `「${name}」仅在本次会话保留；浏览器存储不足，请下载档案备份。`);
   });
 
   // 12. Bind 3D Box Space, Vanishing Point & Tactile Sound Settings
@@ -1147,20 +1262,28 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-arch-summon').addEventListener('click', async () => {
     const current = state.archiveItems[state.selectedArchiveIndex];
     if (!current || !current.manifest) return;
-    await desktopEngine.summonCollectible(current.manifest);
-    showToast(`🎯 已从目录档案 /collectibles/${current.folderName}/ 召唤「${current.manifest.name}」至屏幕！`);
+    try {
+      await desktopEngine.summonCollectible(current.manifest);
+      const saved = state.collectibles.find(item => item.id === current.manifest.id);
+      if (saved) { saved.summoned = true; persistCollectibles(); }
+      showToast(`🎯 已从目录档案召唤「${current.manifest.name}」。`);
+    } catch (error) {
+      showToast(`无法召唤「${current.manifest.name}」：请检查私人 GLB 是否仍在本浏览器。`);
+    }
   });
 
   document.getElementById('btn-arch-download').addEventListener('click', () => {
     const current = state.archiveItems[state.selectedArchiveIndex];
     if (!current || !current.manifest) return;
-    const blob = new Blob([JSON.stringify(current.manifest, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${current.folderName}.cervix3d.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new Blob([JSON.stringify(current.manifest, null, 2)], { type: 'application/json' }),
+      `${current.folderName}.cervix3d.json`);
+  });
+  document.getElementById('btn-arch-folder-zip').addEventListener('click', () => {
+    const current = state.archiveItems[state.selectedArchiveIndex];
+    if (!current || !current.manifest) return;
+    const archive = createCollectibleFolderZip(current.folderName, current.manifest, current.dossierMd);
+    downloadBlob(archive, `${current.folderName}.zip`);
+    showToast('已下载档案文件夹 ZIP（manifest + dossier）；私人 GLB 原文件需单独备份。');
   });
 
   document.getElementById('input-import-archive').addEventListener('change', (e) => {
@@ -1170,17 +1293,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     reader.onload = async (ev) => {
       try {
         const imported = JSON.parse(ev.target.result);
-        if (!imported.id || !imported.name) throw new Error('Invalid archive format');
-        state.collectibles.unshift(imported);
-        await fetch('/api/collectibles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ collectible: imported })
-        });
+        if (typeof imported.id !== 'string' || typeof imported.name !== 'string') throw new Error('档案格式不正确');
+        const existing = state.collectibles.findIndex(item => item.id === imported.id);
+        if (existing >= 0) state.collectibles[existing] = imported;
+        else state.collectibles.unshift(imported);
+        persistCollectibles();
+        if (location.protocol !== 'file:' && !location.hostname.endsWith('.github.io')) {
+          try {
+            await fetch('/api/collectibles', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ collectible: imported })
+            });
+          } catch (_) {}
+        }
         await fetchAndRenderArchives();
-        await desktopEngine.summonCollectible(imported);
+        try {
+          await desktopEngine.summonCollectible(imported);
+          imported.summoned = true;
+          persistCollectibles();
+          showToast(`已导入并召唤「${imported.name}」。`);
+        } catch (error) {
+          imported.summoned = false;
+          persistCollectibles();
+          showToast(`档案已导入；召唤前请在此浏览器重新选择对应 GLB：${imported.name}`);
+        }
         renderVaultGrid();
-        showToast(`📤 已导入档案「${imported.name}」并召唤至电脑屏幕！`);
       } catch (err) {
         showToast(`导入失败：${err.message}`);
       }

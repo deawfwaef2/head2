@@ -107,4 +107,27 @@
      - 将 `SPEC-2026-000 · 初夏 · 照片真容定制标本` 设为首号默认召唤藏品与工坊默认预设，并在工坊参考照区域默认载入用户照片。
   5. **更新独立单文件可玩版 (`/点击开始游戏_CERVIX3D.html`, 9.34 MB)**：内嵌更新后的带血迹与特征痣头模 `daz_asian_head_base.glb`、专属发型 `hair_user_photo.glb`、其余 7 款真实 3D 发型及用户参考照数据。
 
+### [2026-10-12 Stage 5 / 协作接手] 合并同期 GLB 模型工作 + 真正修复系统窗口遮挡
+- 本轮开始时仓库 `main` 已被另一位 Agent **强制更新**至 `8e12c4c`（Stage 4：内置 GLB 头和 7 发型）；原本基于旧 `ac14c23` 的修复提交 `c541cda` 不能直接推主分支。为保留最新头/发模型，本轮从最新 `origin/main` 建 `fix/desktop-occlusion`，只移植与适配窗口、构建、诚实文案的修复；**严禁强制推送或用旧快照覆盖 Stage 4**。旧修复提交本地仍可追踪，但不是本分支的祖先。
+- Electron 真正遮挡根因：单个 `screen-saver` 等级全屏置顶窗口始终抓住透明区域输入，CSS z-index 修复只能解决网页内部，无法让系统其他软件可点击。现在默认普通大小、非置顶、任务栏可见的管理器；隐藏后变为 `floating` 等级透明桌宠层。主进程 40ms 轮询屏幕光标，即使穿透状态也让 renderer 射线检测宠物：空白区域点击穿透、命中头模可交互，拖动期间保持输入。托盘按钮、Ctrl/Cmd+Alt+M / X 随时恢复管理器；管理器有退出键。管理器 UI 在桌宠层绝不渲染，网页双击 HTML 时仍保留原有模拟体验。
+- 修复 `scripts/build_standalone_html.mjs` 硬编码 `/home/user` 导致在嵌套仓库错误打包：改为相对于脚本所在仓库；8 个必需 GLB 缺失立即报错；每次同步根目录可离线运行的 `点击开始游戏_CERVIX3D.html` 与 `docs/index.html`。构建已跑通，文件大小约 8.6MB、内嵌模型。`dist/` 被 .gitignore 排除，不必提交。
+- 真实性审计：Stage 4 内置 GLB 的构建脚本引用 `/tmp/dl_inspect/base_body.glb`，此仓库**没有可复核的上游下载来源与许可文件**；不能称它是 DAZ Genesis 商业原件，发布前必须核验授权。外部导入之前谎称 `.OBJ` 和任意全身模型都可自动切颈封口，实际上代码将 OBJ 静默换为内置头，任意 GLB 也不能自动精确布尔封口。本轮将 UI 限定为临时预览内嵌贴图 `.GLB`，说明必须事先在 Blender 裁成头部并检查颈口，失败给出提示；不要夸大“一张照片99%还原”。
+- 测试边界：Vite 构建/Node 语法校验/根目录 HTML 与 docs 完全相同已检查；此沙箱没有真实桌面、Electron GUI 或浏览器二进制，Windows/macOS 点击穿透仍需实机验证。HTML 能下载双击进入浏览器试玩，但不能仅凭 HTML 形成跨应用桌宠；需启动 Electron 源码。
+- 工作区约 92MB（移除安装依赖后）；曾并发 clone 到旧分支含大 GNM NPZ 导致超标，已切至 Stage 4 远端分支，注意后续构建完清理 `node_modules`，总量保持 <128MB。
 
+### [2026-10-12 Stage 6] 离线档案持久化、私人 GLB 保存、合法 DAZ 选材教程（在 Stage 5 推送后继续）
+- 之前 Stage 5 的修复已提交 `0c975bb` 并 **fast-forward 推送至 origin/main**；没有覆盖同期 Agent 的 `8e12c4c` GLB 头/发模型。此后再改动仍以 Stage 4/5 为基线。
+- 本轮恢复 `src/data/privateModelStore.js`：上传 GLB 先存 IndexedDB，档案存 `private-asset:<id>` 引用；3D 加载器按引用解析为本机 Blob URL，模型原件不进 GitHub/下载 ZIP。若 IndexedDB 失败仅退回会话级 Blob，并明确告知用户。localStorage 恢复/保存藏品参数；单个/全部召唤状态同步保存；恢复缺失私人模型时跳过坏藏品，不阻止整体启动。
+- 新增无依赖 UTF-8 ZIP 下载：档案页「下载档案文件夹 .zip」包含 `manifest.json` 与 `dossier.md`，离线 file:// 可用；仅 Vite 服务模式可能写到实体 `collectibles/`。改掉离线模式假装已写服务器目录的提示；导入 JSON 离线也可保存和重新召唤。
+- 真正核对官方商品页 `Kei HD for Genesis 9` 与 `Xiu Lin Hair for Genesis 9`：两者均为 DUF，官网页面有单独的 Interactive License 加购项；后者为多边形发型并非通用 GLB。新建 `DAZ_ASSET_GUIDE.md`（另列 JS Genji、Kimiyo、Spring、Strand-Based 长发候选），在离线 HTML 教程页加入官方下载链接/许可警示；**没有下载或公开分发任何商业 DAZ 资产**。外部头部导入后自动选「无内置发」，避免不同坐标的示例发模穿帮。Electron 打开官方 DAZ 外链转系统浏览器。
+- 已执行 Vite 打包、Node 语法校验、`docs/index.html` 与根目录 HTML 比对；用 Python zipfile 解开程序生成的 ZIP，含预期的两份 UTF-8 文件。仍未在真实桌面 Electron 或浏览器做视觉 QA；留待有 GUI 环境时检查穿透与私有 IndexedDB 在目标平台的行为。离线 HTML 约 8.60MB；移除 `node_modules` 后工作区约 111MB。
+
+### [2026-10-12 Stage 7a / 协作接手] 🚨 合并恢复被 force-push 覆盖的 Stage 5-electron/Stage 6 + 写实渲染管线升级
+- **并发事故经过（致后续所有 Agent，必读）**：本轮克隆时远端 `main` 为 `7426857`（含 Stage 5-electron 穿透修复与 Stage 6 私有持久化）；推送时被拒，发现 `main` 已被另一 Agent **强制改写为 `5a7af81`**（基于 Stage 4 的“标本 Stage 5”，标题恰好也叫 Stage 5），`0c975bb`/`7426857` 两轮工作在远端被抹掉。本轮**没有强制推送**，而是以 `5a7af81` 为新基线做三方内容合并：`main.js`/`index.html` 用 `git merge-file` 以 Stage 4 为基自动合流（零冲突）；三引擎在对方版本上重打渲染补丁并补回 `resolvePrivateModelUrl` 私有模型链路与 Electron `real-desktop-manager` 穿透守卫；打包脚本合流为“相对路径修复 + 9 GLB（含 `hair_user_photo.glb`）+ 参考照内嵌 + docs 同步”；`HANDOFF.md` 保留**两个 Stage 5 条目**（不改写任何历史）；`electron/`、`style.css`、`README.md`、`DAZ_ASSET_GUIDE.md`、`privateModelStore.js`、`offlineArchiveZip.js` 按原样恢复；对方的血迹头模/`hair_user_photo.glb`/参考照/标本神态/嘟嘴修复全部保留。
+- **⛔ 铁律重申**：任何情况下**禁止 `git push --force` 到 `main`**！推送被拒时一律 `fetch + 合并`解决；快照过期（看不到远端新提交）时先 `git fetch` 再动手。本轮另将工作区改为浅克隆（`--depth 1`，约 31MB），远离 128MB 快照丢失红线。
+- **写实渲染管线升级（回应用户“渲染很低级，要 DAZ 级真实感”）**：
+  1. 新增 `src/three/photorealLighting.js`：ACES + sRGB + PCF 柔和阴影 + PMREM `RoomEnvironment` 离线 IBL（零外部 HDR，`file://` 兼容），工坊与桌宠共用同一灯光色温体系。
+  2. 主光源开启 2048 阴影（鼻翼/唇缝/眼窝真实自投影）；背部轮廓光由物理单位下近乎无效的 `PointLight` 改为确定性 `DirectionalLight`。
+  3. 皮肤材质：程序化 512px 微观粗糙/毛孔贴图（`createSkinMicroMaps()`，单例）+ 法线增强 + 次表面暖调（sheen/emissive 近似）+ IBL，消除塑料皮感；发丝：`anisotropy 0.85` 各向异性高光 + 清漆发釉 + `alphaToCoverage` 柔边；眼球/角膜 IBL 高光增强；**完整保留对方的断面 `emissiveMap` 高亮设计**（只追加 IBL/高光参数）。
+  4. 双引擎新增 `setRenderQuality(low/medium/high)`（像素比/阴影/环境强度联动），设置页 UI 接线留待 Stage 7b。
+- **诚实边界**：浏览器实时 WebGL 做不到 DAZ Iray 离线光追的 100% 照片级；本次升级目标是“实时写实”（去塑料感、真实投影、发丝釉光、眼球高光）。已重建 `点击开始游戏_CERVIX3D.html` 并同步 `docs/index.html`（含 9 个内嵌 GLB + 参考照，约 8MB），双击即玩；`node --check` 全过，构建产物无外部脚本引用（仅教程页 DAZ 官网商品超链接）。

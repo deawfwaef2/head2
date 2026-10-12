@@ -5,6 +5,12 @@ import {
   triggerCollectibleBlink
 } from './collectibleHeadAssembler.js';
 import { soundEngine } from '../audio/tactileSoundEngine.js';
+import {
+  applyBaseRendererSettings,
+  ensureSceneEnvironment,
+  buildDesktopLightRig,
+  applyRenderQualityToEngine
+} from './photorealLighting.js';
 
 /**
  * Full-Screen 3D Perspective Box Space & Desktop Pet Physics/Interaction Engine
@@ -74,27 +80,17 @@ export class DesktopBoxSpaceEngine {
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
+    // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
+    applyBaseRendererSettings(this.renderer, 1.06);
+    ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
-    const ambient = new THREE.HemisphereLight('#fff5f0', '#1e293b', 1.30);
-    this.scene.add(ambient);
-
-    this.keyLight = new THREE.DirectionalLight('#fff8f2', 2.05);
-    this.keyLight.position.set(42, 48, 95);
-    this.scene.add(this.keyLight);
-
-    this.fillLight = new THREE.DirectionalLight('#93c5fd', 0.95);
-    this.fillLight.position.set(-55, 15, 70);
-    this.scene.add(this.fillLight);
-
-    this.anatomyUpLight = new THREE.DirectionalLight('#fde2e4', 1.45);
-    this.anatomyUpLight.position.set(0, -65, 55);
-    this.scene.add(this.anatomyUpLight);
-
-    this.rimLight = new THREE.PointLight('#38bdf8', 1.6, 260);
-    this.rimLight.position.set(0, 35, -80);
-    this.scene.add(this.rimLight);
+    // Stage 7 写实 5 点灯阵（与工坊同色温体系；背部轮廓光改用确定性方向光）
+    this.lightRig = buildDesktopLightRig(this.scene);
+    this.hemiLight = this.lightRig.hemi;
+    this.keyLight = this.lightRig.key;
+    this.fillLight = this.lightRig.fill;
+    this.anatomyUpLight = this.lightRig.up;
+    this.rimLight = this.lightRig.rim;
 
     this.updateCameraProjection();
   }
@@ -358,6 +354,9 @@ export class DesktopBoxSpaceEngine {
    * Returns true if the pointer event target is an interactive UI control or inside a window when pets are NOT on top
    */
   isBlockedByUI(e) {
+    // Native manager is a separate normal-sized OS window: never interact with
+    // invisible desktop pets behind its controls or background.
+    if (document.body.classList.contains('real-desktop-manager')) return true;
     const target = e.target;
     if (!target || !(target instanceof Element)) return false;
     // Always yield to the start modal or the 3D studio preview viewport canvas
@@ -376,13 +375,7 @@ export class DesktopBoxSpaceEngine {
   }
 
   bindEvents() {
-    window.addEventListener('resize', () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      this.renderer.setSize(w, h);
-      this.updateCameraProjection();
-      this.initBoxWireframe();
-    });
+    window.addEventListener('resize', () => this.resize());
 
     // Global pointerdown so 3D pets work seamlessly even when #desktop-pet-canvas has pointer-events: none!
     window.addEventListener('pointerdown', (e) => {
@@ -537,6 +530,20 @@ export class DesktopBoxSpaceEngine {
     this.mouseClient.y = e.clientY;
     this.mouseNDC.x = (e.clientX / window.innerWidth) * 2 - 1;
     this.mouseNDC.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  }
+
+  resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    this.renderer.setSize(w, h);
+    this.updateCameraProjection();
+    this.initBoxWireframe();
+  }
+
+  /** Stage 7：三档写实画质（low/medium/high），由设置页统一调度 */
+  setRenderQuality(level) {
+    applyRenderQualityToEngine(this, level);
+    this.resize();
   }
 
   animate() {

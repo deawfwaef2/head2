@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
+import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
+import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
@@ -28,7 +30,8 @@ async function fetchGlbArrayBuffer(url) {
     arrayBufferCache.set(url, buf);
     return buf;
   }
-  const resp = await fetch(url);
+  const localUrl = await resolvePrivateModelUrl(url);
+  const resp = await fetch(localUrl);
   if (!resp.ok) {
     throw new Error(`Failed to fetch GLB ${url}: ${resp.status}`);
   }
@@ -223,8 +226,15 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           sheen: sheenIntensity * 0.48,
           sheenRoughness: 0.35,
           sheenColor: displayColor.clone().multiplyScalar(1.55),
+          // Stage 7 写实发丝：各向异性高光 + 清漆发釉 + IBL 反射 + 边缘抗锯齿
+          anisotropy: 0.85,
+          clearcoat: 0.40,
+          clearcoatRoughness: 0.35,
+          specularIntensity: 0.90,
+          envMapIntensity: 1.30,
           transparent: true,
           alphaTest: 0.16,
+          alphaToCoverage: true,
           side: THREE.DoubleSide,
         });
         child.castShadow = true;
@@ -327,18 +337,28 @@ export async function buildCollectibleHeadNode(config = {}) {
         skinMap.colorSpace = THREE.SRGBColorSpace;
         skinMap.anisotropy = 8;
       }
+      // Stage 7 写实皮肤：微观粗糙/毛孔 + 次表面暖调 + IBL，消除塑料 low 感
+      const skinMicro = createSkinMicroMaps();
       child.material = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.28, 0.28),
+        normalScale: new THREE.Vector2(0.35, 0.35),
+        roughnessMap: skinMicro.roughnessMap,
+        bumpMap: skinMicro.bumpMap,
+        bumpScale: 0.02,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.36),
+        roughness: Number(materials.skinRoughness ?? 0.62),
         metalness: 0.0,
-        sheen: 0.24,
-        sheenRoughness: 0.65,
-        sheenColor: new THREE.Color('#ff9d8f'),
-        clearcoat: 0.08,
-        clearcoatRoughness: 0.38,
+        sheen: 0.35,
+        sheenRoughness: 0.55,
+        sheenColor: new THREE.Color('#ffb3a7'),
+        clearcoat: 0.14,
+        clearcoatRoughness: 0.50,
+        specularIntensity: 0.60,
+        ior: 1.46,
+        envMapIntensity: 0.90,
+        emissive: new THREE.Color('#2a0f0c'),
+        emissiveIntensity: 0.28,
       });
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
       child.name = 'NeckCrossSectionCap';
@@ -360,6 +380,8 @@ export async function buildCollectibleHeadNode(config = {}) {
         metalness: 0.02,
         clearcoat: 1.0,
         clearcoatRoughness: 0.08,
+        specularIntensity: 0.70,
+        envMapIntensity: 0.75,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -374,6 +396,9 @@ export async function buildCollectibleHeadNode(config = {}) {
         metalness: 0.0,
         clearcoat: 0.92,
         clearcoatRoughness: 0.04,
+        specularIntensity: 1.0,
+        ior: 1.38,
+        envMapIntensity: 1.60,
       });
     } else if (matName === 'Cornea') {
       child.material = new THREE.MeshPhysicalMaterial({
@@ -384,6 +409,9 @@ export async function buildCollectibleHeadNode(config = {}) {
         metalness: 0.0,
         clearcoat: 1.0,
         clearcoatRoughness: 0.01,
+        specularIntensity: 1.0,
+        ior: 1.38,
+        envMapIntensity: 2.20,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
@@ -395,6 +423,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         alphaTest: 0.06,
         depthWrite: false,
         roughness: 0.65,
+        envMapIntensity: 0.50,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {
@@ -405,6 +434,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         transparent: true,
         alphaTest: 0.10,
         roughness: 0.40,
+        envMapIntensity: 0.50,
         side: THREE.DoubleSide,
       });
     }

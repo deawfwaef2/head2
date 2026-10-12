@@ -451,6 +451,75 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
   return tex;
 }
 
+/**
+ * Stage 7 · 皮肤微观细节贴图（程序化生成，全离线）
+ * 生成 512px 灰度噪声：同时用作皮肤 roughnessMap（粗糙度变化）与 bumpMap（毛孔凹凸），
+ * 消除“塑料皮”廉价感。单例缓存，多颗头共用同一张，不占多余显存。
+ * 注意：数据贴图必须保持线性色彩空间（不设 SRGB），否则粗糙度会偏亮失真。
+ */
+let _skinMicroCache = null;
+export function createSkinMicroMaps(size = 512) {
+  if (_skinMicroCache) return _skinMicroCache;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // 基底：中高灰（×材质 roughness 0.62 ≈ 0.40 有效粗糙度，接近真实皮肤）
+  ctx.fillStyle = '#b0b0b0';
+  ctx.fillRect(0, 0, size, size);
+
+  // 大尺度柔和油脂/干燥区分区（T区偏光滑=偏暗，两颊偏干=偏亮）
+  const zones = [
+    [0.50, 0.44, 0.34, 'rgba(70,70,70,0.10)'],   // 中央T区：略光滑
+    [0.20, 0.55, 0.26, 'rgba(235,235,235,0.10)'], // 左颊：略干
+    [0.80, 0.55, 0.26, 'rgba(235,235,235,0.10)'], // 右颊：略干
+  ];
+  for (const [zx, zy, zr, col] of zones) {
+    const g = ctx.createRadialGradient(size * zx, size * zy, 4, size * zx, size * zy, size * zr);
+    g.addColorStop(0, col);
+    g.addColorStop(1, 'rgba(128,128,128,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  // 毛孔与微观噪点：随机深浅斑点
+  for (let i = 0; i < 9000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const r = Math.random() < 0.12 ? 1.6 + Math.random() * 1.4 : 0.5 + Math.random() * 1.0;
+    const dark = Math.random() < 0.55;
+    const v = dark ? 60 + Math.random() * 60 : 190 + Math.random() * 55;
+    ctx.fillStyle = `rgba(${v | 0},${v | 0},${v | 0},${0.05 + Math.random() * 0.09})`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 细小皮纹短线（增强近看真实感）
+  ctx.lineWidth = 0.7;
+  for (let i = 0; i < 900; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const a = Math.random() * Math.PI;
+    const len = 2 + Math.random() * 5;
+    const v = 95 + Math.random() * 90;
+    ctx.strokeStyle = `rgba(${v | 0},${v | 0},${v | 0},0.10)`;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+    ctx.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  tex.needsUpdate = true;
+  _skinMicroCache = { roughnessMap: tex, bumpMap: tex };
+  return _skinMicroCache;
+}
+
 export function samplePhotoColors(imgElement) {
   const c = document.createElement('canvas');
   c.width = 128;

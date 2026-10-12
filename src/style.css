@@ -44,6 +44,28 @@ body.bg-mode-transparent {
   background: transparent !important;
 }
 
+/* Native Electron modes must alter the OS window, not only its CSS z-index. */
+body.real-desktop-manager #desktop-environment,
+body.real-desktop-manager #desktop-overlay-bar,
+body.real-desktop-manager #screen-pets-strip { display: none; }
+body.real-desktop-manager #software-window {
+  inset: 0 !important; width: 100vw !important; height: 100vh !important;
+  max-height: none; transform: none !important; opacity: 1 !important;
+  visibility: visible !important; pointer-events: auto !important;
+  border-radius: 0; box-shadow: none; background: #111827;
+}
+body.real-desktop-manager #window-titlebar { -webkit-app-region: drag; cursor: default; }
+body.real-desktop-manager #window-titlebar button { -webkit-app-region: no-drag; }
+body.real-desktop-overlay #os-desktop-icons,
+body.real-desktop-overlay #software-window,
+body.real-desktop-overlay #desktop-overlay-bar,
+body.real-desktop-overlay #screen-pets-strip,
+body.real-desktop-overlay #start-game-overlay,
+body.real-desktop-overlay #toast-notification,
+body.real-desktop-overlay #vanishing-point-hud { display: none !important; }
+#win-btn-close { display: none; }
+body.real-desktop-manager #win-btn-close { display: inline-flex; }
+
 /* =========================================================================
    LAYER 1: FULL COMPUTER SCREEN & 3D BOX SPACE (Un-trapped stacking context!)
    ========================================================================= */

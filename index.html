@@ -142,7 +142,8 @@
         <button id="win-btn-dock" class="win-ctrl-btn" title="切换右侧紧凑停靠/宽屏展开模式，绝不遮挡左侧屏幕桌宠">◧ 紧凑/宽屏切换</button>
         <button id="win-btn-glass" class="win-ctrl-btn" title="切换窗口半透明毛玻璃透视">🌓 半透</button>
         <button id="win-btn-center" class="win-ctrl-btn" title="重置窗口位置">⊡ 归位</button>
-        <button id="win-btn-minimize" class="win-ctrl-btn" title="最小化软件窗口至屏幕右上角，全屏把玩3D桌宠">─ 最小化看桌宠</button>
+        <button id="win-btn-minimize" class="win-ctrl-btn" title="隐藏管理器，显示真实桌面桌宠">─ 最小化看桌宠</button>
+        <button id="win-btn-close" class="win-ctrl-btn" title="退出桌面程序">✕ 退出</button>
       </div>
     </div>
 
@@ -259,12 +260,12 @@
             <div class="card-block">
               <h3>📥 导入外部高精度 Daz3D 模型 (可选)</h3>
               <p class="hint-text">
-                支持直接导入您从 Daz Studio / Blender 导出的 <code>.glb / .gltf / .obj</code> 头模或全身模型，软件将<strong>自动在颈部截断并封口生成医学解剖断面</strong>！
+                请导入您有权使用、已在 Blender <strong>裁成头部并封好颈口</strong>、贴图内嵌的 <code>.glb</code>。本版不能对任意全身网格自动完成精确布尔裁切/封口；导入文件保存在当前浏览器私人仓库（IndexedDB），档案 ZIP 不包含模型本体，请自行保留原文件。
               </p>
               <div class="btn-row">
                 <label class="btn secondary file-btn">
-                  📂 导入 .GLB / .OBJ
-                  <input type="file" id="input-model-upload" accept=".glb,.gltf,.obj" hidden />
+                  📂 导入头部 .GLB
+                  <input type="file" id="input-model-upload" accept=".glb" hidden />
                 </label>
                 <button id="btn-test-scan-glb" class="btn ghost" title="一键轮播测试内置7款真实3D发型GLB模型">
                   💇‍♀️ 轮播7款真实3D发模(.glb)
@@ -476,12 +477,18 @@
           <div>
             <h2>📘 Daz3D 亚洲女性高精度照片级头模 & 写实发丝建模全流程教程</h2>
             <p>
-              本指南教您如何使用 <strong>Daz Studio (Genesis 8.1 / 9 Asian Female) + Face Transfer 2 / KeenTools FaceBuilder + Strand-Based Hair</strong> 制作 99% 贴近真实照片的亚洲女性头部模型，并导入本软件自动装配颈部医学解剖断面。
+              本指南介绍使用 <strong>Daz Studio (Genesis 8.1 / 9) + Blender / FaceBuilder</strong> 辅助照片对位、制作发型并导出 GLB；任何单张照片都不能保证特定相似度，颈部真实封口需在 Blender 中检查与手工修整。购买/分发 DAZ 资产前请逐件确认授权。
             </p>
           </div>
         </div>
 
         <div id="tutorial-steps-container" class="tutorial-grid"></div>
+        <div class="card-block" style="margin-top:18px;line-height:1.9;">
+          <h3>合法高精资产入口 · 官方链接（打开需要联网）</h3>
+          <p><a href="https://www.daz3d.com/kei-hd-for-genesis-9" target="_blank" rel="noopener noreferrer">Kei HD · Genesis 9 亚洲女性角色与 HD 肤质</a>　·　<a href="https://www.daz3d.com/js-genji-for-genesis-9-feminine" target="_blank" rel="noopener noreferrer">JS Genji · G9 女性底脸</a>　·　<a href="https://www.daz3d.com/kimiyo-asian-beauty-heads--bodies-for-genesis-9-feminine" target="_blank" rel="noopener noreferrer">Kimiyo · G9 多头型 Morph（无皮肤）</a></p>
+          <p><a href="https://www.daz3d.com/xiu-lin-hair-for-genesis-9" target="_blank" rel="noopener noreferrer">Xiu Lin · G9 多边形长马尾</a>　·　<a href="https://www.daz3d.com/everyday-spring-style-hair-for-genesis-8-and-9" target="_blank" rel="noopener noreferrer">Everyday Spring · G8/G9 发型</a>　·　<a href="https://www.daz3d.com/dforce-strand-based-beauty-style-long-hair-for-genesis-9-and-genesis-8-female" target="_blank" rel="noopener noreferrer">dForce Strand-Based 长发（需转实时网格）</a></p>
+          <p style="color:#fbbf24;">注意：商品的 .DUF 不能直接导入；请逐件核对 Interactive License，先在 Blender 裁好头与断面，烘焙 PBR 贴图，头+发导为同一 GLB；本程序不打包这些商业资产。</p>
+        </div>
       </section>
 
       <!-- ==================== TAB 4: 3D BOX SPACE & SOUND SETTINGS ==================== -->
@@ -631,6 +638,7 @@
               <div class="btn-row">
                 <button id="btn-arch-summon" class="btn primary">🎯 从此档案召唤桌宠上屏</button>
                 <button id="btn-arch-download" class="btn secondary">⬇️ 下载 .cervix3d.json 档案文件</button>
+                <button id="btn-arch-folder-zip" class="btn secondary">📦 下载档案文件夹 .zip</button>
               </div>
             </div>
             <div class="archive-code-split">
@@ -658,7 +666,7 @@
       <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v2.7 (离线直玩版)</div>
       <h1>3D 解剖断面头部收藏品 · 桌宠生成与盒型透视空间系统</h1>
       <p>
-        已搭载 <strong>Daz 东亚女性高精细分头雕（法线平滑无棱角 + 紧致天鹅颈无双下巴）</strong>、<strong>高颅顶包裹式写实丝感发丝</strong> 与 <strong>C4/C5 写实医学解剖横断面底座</strong>。
+        内置头部与 7 款 GLB 发型是本项目的可离线使用示例，<strong>并非 DAZ Genesis 原版，也不能仅凭一张照片自动还原人物</strong>。想制作接近参考照片的收藏品，请在工坊导入您有权使用、已在 Blender 裁切封口并烘焙贴图的头部 GLB；切面为艺术解剖示意。
       </p>
       <div class="start-feature-pills">
         <span>✦ 屏幕中心透视消失点</span>

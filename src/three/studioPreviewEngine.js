@@ -6,6 +6,12 @@ import {
   updateHeadLifeAnimation,
   triggerCollectibleBlink
 } from './collectibleHeadAssembler.js';
+import {
+  applyBaseRendererSettings,
+  ensureSceneEnvironment,
+  buildStudioLightRig,
+  applyRenderQualityToEngine
+} from './photorealLighting.js';
 
 export class StudioPreviewEngine {
   constructor(canvas) {
@@ -39,8 +45,9 @@ export class StudioPreviewEngine {
     this.renderer.setSize(w, h, false);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.12;
+    // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
+    applyBaseRendererSettings(this.renderer, 1.06);
+    ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.target.set(0, -1.5, 0.5);
@@ -50,25 +57,9 @@ export class StudioPreviewEngine {
     this.controls.maxDistance = 85;
     this.controls.update();
 
-    // Studio 4-point lighting + bottom anatomical inspection light
-    const hemi = new THREE.HemisphereLight('#fff7f2', '#1e293b', 1.30);
-    this.scene.add(hemi);
-
-    const key = new THREE.DirectionalLight('#fff8f4', 2.05);
-    key.position.set(28, 32, 48);
-    this.scene.add(key);
-
-    const fill = new THREE.DirectionalLight('#93c5fd', 0.95);
-    fill.position.set(-34, 10, 35);
-    this.scene.add(fill);
-
-    const bottomAnatomyLight = new THREE.DirectionalLight('#ffe4e6', 1.65);
-    bottomAnatomyLight.position.set(0, -48, 22);
-    this.scene.add(bottomAnatomyLight);
-
-    const backRim = new THREE.DirectionalLight('#38bdf8', 1.15);
-    backRim.position.set(0, 26, -42);
-    this.scene.add(backRim);
+    // Stage 7 写实 5 点灯阵（主光带柔和阴影 + 底部解剖检查灯 + 背部轮廓光）
+    this.lightRig = buildStudioLightRig(this.scene);
+    this.keyLight = this.lightRig.key;
 
     // Subtle circular specimen studio reference ring below the C4/C5 neck cross-section
     const gridGeo = new THREE.RingGeometry(5.2, 5.38, 64);
@@ -105,6 +96,12 @@ export class StudioPreviewEngine {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h, false);
     }
+  }
+
+  /** Stage 7：三档写实画质（low/medium/high），由设置页统一调度 */
+  setRenderQuality(level) {
+    applyRenderQualityToEngine(this, level);
+    this.resize();
   }
 
   async loadOrRebuild(config) {
