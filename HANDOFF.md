@@ -230,3 +230,9 @@
 - GNM has no age conditioning. These meshes are not age-verified and have no photographic skin texture, hair or eyelashes; photo fitting must supply the young-adult target appearance. No DAZ, ShadowCore, RenderHub, or other non-redistributable asset is included.
 - The raw NPZ is about 53.3 MB, below GitHub's 100 MB single-file hard limit but above the 50 MB warning threshold. No LFS is needed for this file. No application code changed, so no standalone HTML rebuild was needed.
 - The PAT the user pasted in chat was not used. The Arena GitHub connector is unsupported. Thus the branch is prepared locally but not pushed; pushing requires safe authentication after revoking the exposed token. Repository visibility is currently public; the user explicitly authorized a brief public release before switching it private.
+
+### [2026-10-12 Stage 13] GNM asset branch publication
+- User approved GitHub's official device authorization flow. A checksum-verified GitHub CLI was used from `/tmp`; the PAT pasted in chat was not used.
+- Pushed asset-only commit `ad59bfc` to `origin/assets/gnm-female-asian-v1`; remote hash was verified. `main` was not pushed or force-pushed.
+- GitHub accepted the 53,328,601-byte NPZ and emitted only the expected >50 MB advisory. The branch is publicly visible while the repository is public; user intends to make the repo private.
+- The CLI's OAuth credential was temporarily stored in plaintext under `/tmp/gh-config` because no system keyring was available. The temporary credential/config is to be securely removed after this record update is pushed. User should revoke the chat-exposed PAT and may revoke GitHub CLI's OAuth grant in GitHub Settings after publication.
