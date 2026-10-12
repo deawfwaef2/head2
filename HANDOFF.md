@@ -183,3 +183,7 @@
 - 本轮可视化 QA：`.qa/stage9_mh_long.png` / `.qa/stage9_mh_ponytail.png`；Playwright 在根目录 HTML 的 `file://` 下检查 MH 预览、启动按钮、档案保存与 ZIP，无 JS pageerror。GPU 软件渲染偶有 SwiftShader context-lost 警告但本轮无脚本异常。
 - **后续待办**：用户真正期望的是贴近照片的高精 DAZ 头发；本项目当前 CC0 MH 发片有低面数/硬边限制。要到照片级请以合法自备 DAZ/Blender 发型与头模同坐标导出并仔细调 UV / 物理渲染；不要把未经许可的商业原件提交到仓库。外部上传 blob 保存跨会话仍需完整文件持久化方案（如 IndexedDB/File System Access API），目前只保存参数。Electron 真实屏幕自动点击穿透交互尚需分平台测试。
 
+
+### [2026-10-12 Stage 9 合并补记] 并行 Agent 的 GitHub Pages 修复保留
+- 推送 Stage 9b 时发现另一位 Agent 同步修复 GitHub Pages 白屏并把 Pages 指向 `/docs`。已合并远端 `fa1407a`，完整保留其 `/docs` 发布规则与 `scripts/build_standalone_html.mjs` 自动同步逻辑，并保留本轮发型/离线档案/Electron 工作；冲突仅 HANDOFF 两段追加日志，全部保留，没有覆盖历史。
+- 以后每次构建必须同时核对 `cmp docs/index.html 点击开始游戏_CERVIX3D.html`；根目录 `index.html` 仅作 Vite 源文件，在线 Pages 实际发布 `/docs/index.html`。本轮合并推送后又将档案页「总会写入实体目录」文案更正为离线/服务模式区分。
