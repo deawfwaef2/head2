@@ -156,3 +156,11 @@
   3. **修复 HUD 消失点标签偏移**：在 `src/style.css` 中将 `.vp-label` 设为 `position: absolute; top: 156px; left: 50%; transform: translateX(-50%)`，使中心透视十字准星严格锁定在 `(50%, 50%)` 消失点，同时文字胶囊下移不挡下巴。
   4. **Playwright 视觉回归验证通过（零控制台报错）**：已生成并人工核验 `.qa/stage8_desktop.png`（林汐/苏婉全宽齐刘海与无高光白斑）、`.qa/stage8_mh_bob.png`（MakeHuman 3D 亚洲女头 + 波波发）、`.qa/stage8_mh_long.png`（MakeHuman 3D 亚洲女头 + 长卷发）与 `.qa/stage8_mh_anatomy.png`（仰视颈部 C4/C5 解剖切面），并重新打包更新单文件离线版 `/home/user/点击开始游戏_CERVIX3D.html`（4.16 MB）。
 
+
+### [2026-10-12 Stage 9] CC0 发型补充 / 离线档案持久化与实体 ZIP / Electron 独立 HTML 桌面启动
+- **每次编程先读根目录 HANDOFF，绝对不要覆盖本文件；每次修改后优先重建并提交 `点击开始游戏_CERVIX3D.html`。** 本轮从 `/home/user` 根目录操作。
+- 发型：将已有的 MakeHuman CC0 `mh_hair_ponytail01.obj` 接入工坊第三个「低马尾」按钮，波波与长发增加 `createFittedHairFinishingGroom` 确定性贴颊微发束；起初发束根部在高处出现悬浮大块，Playwright 截图后已将根部下移到发片内部并避免马尾外侧发包。**请注意这仍不是 DAZ 电影级毛发**，不要将其包装为照片级重建。素材出处在 `assets_src/makehuman/LICENSE_NOTE.txt`，外部高品质发型选择说明已加入 README。选中 `mh_asian` 下拉后自动使用适配的波波发，避免程序化发型不贴合。
+- 离线档案：`src/main.js` 新增 localStorage 恢复/保存；`file://` 保存不再谎称已生成磁盘文件夹。档案页新增「下载档案文件夹 .zip」（`src/data/offlineArchiveZip.js`，原生 UTF-8 ZIP store + CRC32），内含 `manifest.json` 与 `dossier.md`；Vite 服务模式仍可写 `collectibles/`。blob 外部模型 URL 跨刷新失效，恢复时清除引用；此限制必须如实告知。已用 Playwright `file://` 实测保存→刷新持久化、ZIP 下载后用 Python zipfile 读出两文件、运行时无 pageerror。
+- Electron：`electron/main.cjs` 默认直接 `loadFile` 根目录独立 HTML（不用先开 Vite），源码模式在支持透明窗的 OS 上提供真实桌面置顶层；预加载声明桌面模式，前端切为透明背景并隐藏网页模拟图标。`Ctrl/Cmd+Alt+X` 切换全屏鼠标穿透（手动开关；尚无可靠自动悬停穿透）；Electron 本轮未在沙箱真实桌面中运行验证，勿声称已发布安装包。`README.md` 更新为诚实的启动方式与模型许可/质量界限。
+- 本轮可视化 QA：`.qa/stage9_mh_long.png` / `.qa/stage9_mh_ponytail.png`；Playwright 在根目录 HTML 的 `file://` 下检查 MH 预览、启动按钮、档案保存与 ZIP，无 JS pageerror。GPU 软件渲染偶有 SwiftShader context-lost 警告但本轮无脚本异常。
+- **后续待办**：用户真正期望的是贴近照片的高精 DAZ 头发；本项目当前 CC0 MH 发片有低面数/硬边限制。要到照片级请以合法自备 DAZ/Blender 发型与头模同坐标导出并仔细调 UV / 物理渲染；不要把未经许可的商业原件提交到仓库。外部上传 blob 保存跨会话仍需完整文件持久化方案（如 IndexedDB/File System Access API），目前只保存参数。Electron 真实屏幕自动点击穿透交互尚需分平台测试。

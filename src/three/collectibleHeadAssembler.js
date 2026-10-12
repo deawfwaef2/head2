@@ -3,7 +3,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { createDazSkinTexture, createRealisticHairStrandTexture, createRealisticHairNormalTexture } from '../textures/skinTextureGenerator.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
-import { createRealisticHairGroup } from './hairBuilder.js';
+import { createRealisticHairGroup, createFittedHairFinishingGroom } from './hairBuilder.js';
 
 const objCache = new Map();
 const objLoader = new OBJLoader();
@@ -398,6 +398,10 @@ export async function buildCollectibleHeadNode(config = {}) {
       });
       hairObj.name = 'CollectibleHair';
       root.add(hairObj);
+      if (isMHBuiltIn && !/ponytail/.test(customHairUrl)) {
+        const hairKind = /bob/.test(customHairUrl) ? 'bob' : 'long';
+        root.add(createFittedHairFinishingGroom({ color: hairColor, sheen: hairSheen, style: hairKind }));
+      }
     } else if (hairStyle !== 'none') {
       const hairGroup = createRealisticHairGroup({
         style: hairStyle,

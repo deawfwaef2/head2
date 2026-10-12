@@ -44,6 +44,9 @@ body.bg-mode-transparent {
   background: transparent !important;
 }
 
+/* Electron shows the actual OS desktop, never the web-only mock desktop icons. */
+body.real-desktop-overlay #os-desktop-icons { display: none; }
+
 /* =========================================================================
    LAYER 1: FULL COMPUTER SCREEN & 3D BOX SPACE
    ========================================================================= */

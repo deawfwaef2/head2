@@ -4,6 +4,7 @@ import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
 import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGenerator.js';
 import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
+import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 
 // ============================================================================
 // APPLICATION STATE
@@ -605,6 +606,12 @@ function initWindowDragging() {
 // INITIALIZE EVERYTHING ON DOM READY
 // ============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  if (window.cervixDesktopBridge?.isDesktop) {
+    document.body.classList.remove('bg-mode-os', 'bg-mode-void');
+    document.body.classList.add('bg-mode-transparent', 'real-desktop-overlay');
+    state.bgModeIndex = 2;
+    document.getElementById('btn-quick-bg-mode').textContent = '✨ 背景: 透明桌面层';
+  }
   // 1. Initialize Full-Screen 3D Perspective Box Space & Desktop Pet Engine
   const desktopCanvas = document.getElementById('desktop-pet-canvas');
   desktopEngine = new DesktopBoxSpaceEngine(desktopCanvas, {
@@ -845,8 +852,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     showToast(`🧬 已载入 CC0 亚洲女性3D头雕（${label}），支持实时调节五官滑块、肤色唇色瞳色与解剖断面！`);
     await refreshStudio3DModel();
   };
-  document.getElementById('btn-mh-bob')?.addEventListener('click', () => loadMHHead('mh_hair_bob02.obj', '波波头'));
-  document.getElementById('btn-mh-long')?.addEventListener('click', () => loadMHHead('mh_hair_long01.obj', '柔顺长发'));
+  document.getElementById('btn-mh-bob')?.addEventListener('click', () => loadMHHead('mh_hair_bob02.obj', '波波头 + 分层鬓发'));
+  document.getElementById('btn-mh-long')?.addEventListener('click', () => loadMHHead('mh_hair_long01.obj', '柔顺长发 + 分层鬓发'));
+  document.getElementById('btn-mh-ponytail')?.addEventListener('click', () => loadMHHead('mh_hair_ponytail01.obj', '低马尾 + 分层鬓发'));
 
   // 9. Studio Camera Preset Buttons & Anatomy Labels Checkbox
   document.querySelectorAll('[data-cam]').forEach(btn => {
@@ -865,9 +873,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 10. Studio Morph Sliders, Colors & Hair Controls
   document.getElementById('sel-base-preset').addEventListener('change', async (e) => {
     state.studioDraft.customModelUrl = null;
-    state.studioDraft.customHairUrl = null;
     state.studioDraft.basePreset = e.target.value;
-    document.getElementById('custom-model-status').textContent = `当前使用：内置 Daz 东亚女性高精细分头模 (${e.target.value})`;
+    const mh = e.target.value === 'mh_asian';
+    state.studioDraft.customHairUrl = mh ? '/models/mh_hair_bob02.obj' : null;
+    document.getElementById('custom-model-status').textContent = mh
+      ? '当前使用：MakeHuman CC0 亚洲女性头雕 + 贴合式波波发（可点击下方切换长发/马尾）'
+      : `当前使用：内置程序化东亚女性头雕 (${e.target.value})`;
     await refreshStudio3DModel();
   });
 
@@ -963,10 +974,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         cutLevel
       },
       dossier: {
-        origin: `基于 Daz 亚洲女性高精基底 (${state.studioDraft.basePreset}) 与照片半自动对位生成。`,
+        origin: `基于 ${state.studioDraft.basePreset === 'mh_asian' ? 'CC0 MakeHuman 亚洲女性头模' : state.studioDraft.customModelUrl ? '用户自备外部模型' : '内置程序化东亚女性头模'} 与照片半自动对位装配。`,
         anatomyNotes: notes,
-        hairNotes: `高拟真发丝系统 (${state.studioDraft.hairStyle})，光泽度 ${Math.round(state.studioDraft.hairSheen * 100)}%。`,
-        tags: ['Daz高精头雕', cutLevel.slice(0, 10), grade.split('·')[0].trim(), '解剖断面封口']
+        hairNotes: `发型 ${state.studioDraft.customHairUrl?.split('/').pop() || state.studioDraft.hairStyle}，光泽度 ${Math.round(state.studioDraft.hairSheen * 100)}%。`,
+        tags: [state.studioDraft.basePreset === 'mh_asian' ? 'CC0 MakeHuman' : '3D头雕', cutLevel.slice(0, 10), grade.split('·')[0].trim(), '解剖断面']
       },
       summoned: true,
       boxPosition: {
@@ -1128,6 +1139,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!current || !current.manifest) return;
     await desktopEngine.summonCollectible(current.manifest);
     showToast(`🎯 已从目录档案 /collectibles/${current.folderName}/ 召唤「${current.manifest.name}」至屏幕！`);
+  });
+
+  document.getElementById('btn-arch-folder-zip').addEventListener('click', () => {
+    const current = state.archiveItems[state.selectedArchiveIndex];
+    if (!current?.manifest) return;
+    const blob = createCollectibleFolderZip(current.folderName, current.manifest, current.dossierMd);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${current.folderName.replace(/[^\w\-\u4e00-\u9fff]/g, '_')}.zip`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    showToast('📦 档案文件夹已下载为 ZIP，解压可得到 manifest.json 和 dossier.md。');
   });
 
   document.getElementById('btn-arch-download').addEventListener('click', () => {

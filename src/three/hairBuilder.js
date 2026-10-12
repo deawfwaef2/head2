@@ -245,6 +245,65 @@ function buildScalpUnderCapGeometry(crownLift = 0.0) {
   });
 }
 
+// A light-weight finishing groom for the fitted CC0 MakeHuman hairstyles. These thin,
+// tapered, individually displaced cards sit over the temple/cheek transition rather
+// than replacing the source hair. The deterministic offsets keep studio/desktop identical.
+export function createFittedHairFinishingGroom({ color = '#141218', sheen = 0.8, style = 'long' } = {}) {
+  const group = new THREE.Group();
+  group.name = 'FittedHairFinishingGroom';
+  const map = createRealisticHairStrandTexture(color, sheen);
+  const mat = new THREE.MeshPhysicalMaterial({
+    map, side: THREE.DoubleSide, alphaTest: 0.34, transparent: false,
+    roughness: 0.67, metalness: 0, clearcoat: 0,
+    sheen: 0.24 * sheen, sheenRoughness: 0.68,
+    sheenColor: new THREE.Color(color).offsetHSL(0, 0.02, 0.11),
+    depthWrite: true
+  });
+  const points = [], uvs = [], indices = [];
+  const rows = 9;
+  const length = style === 'bob' ? 5.8 : style === 'ponytail' ? 4.9 : 9.0;
+  const count = style === 'ponytail' ? 18 : 30;
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < count; i++) {
+      const p = (i + 0.5) / count;
+      const seed = Math.sin((i + 1) * 127.1 + side * 71.3) * 43758.5453;
+      const jitter = seed - Math.floor(seed);
+      // Emerge from INSIDE the fitted hair near the temple, never a floating
+      // root above the silhouette. The source proxy remains the continuous cap.
+      const startY = 4.8 - p * 0.9;
+      const startX = 5.75 + p * 1.18;
+      const startZ = 5.25 + 0.60 * Math.sin(p * Math.PI);
+      const drop = length * (0.76 + 0.22 * jitter);
+      const width = 0.075 + 0.075 * ((i * 17) % 11) / 11;
+      const first = points.length / 3;
+      for (let r = 0; r <= rows; r++) {
+        const t = r / rows;
+        const wave = Math.sin(t * 7.5 + i * 1.74) * 0.10 * t * t;
+        // In front of the cheek, then fan away below the jaw so the face stays visible.
+        const x = side * (startX + 0.70 * Math.sin(t * Math.PI * 0.7) + p * 0.43 * t + wave);
+        const y = startY - drop * t;
+        const z = startZ + 0.83 * Math.sin(t * Math.PI) + 0.35 * t + wave;
+        const taper = Math.sin(Math.PI * (0.07 + 0.91 * t));
+        const half = width * Math.max(0.025, taper);
+        points.push(x - half, y, z + 0.018, x + half, y, z + 0.018);
+        // Repeated S samples individual hair fibers; T runs root -> transparent tip.
+        uvs.push(p * 3.0, 1 - t, p * 3.0 + 0.18, 1 - t);
+        if (r < rows) {
+          const a = first + r * 2;
+          indices.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+        }
+      }
+    }
+  }
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+  geom.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geom.setIndex(indices);
+  geom.computeVertexNormals();
+  group.add(new THREE.Mesh(geom, mat));
+  return group;
+}
+
 // UI 下拉发型 ID -> 已实现的构建分支
 const HAIR_STYLE_ALIAS = {
   long_straight: 'long_silk',

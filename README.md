@@ -1,5 +1,11 @@
 # CERVIX-3D · 颅相典藏馆 (PRO v2.6)
-**高精度 3D 解剖断面头部收藏品 · 半自动建模装配 · 盒型透视空间桌宠生成与管理系统**
+**3D 解剖断面头部收藏品 · 半自动建模装配 · 盒型透视空间桌宠生成与管理系统**
+
+## 先玩起来 / 重要边界
+- 下载 ZIP 解压后，直接双击根目录 **`点击开始游戏_CERVIX3D.html`**；无需联网或安装依赖。网页模式的桌宠位于浏览器视口内，**不会悬浮到其他应用之上**。
+- 在注册页保存后，离线 HTML 用浏览器本地存储保存档案；到「档案目录」点 **「下载档案文件夹 .zip」** 可获得含 `manifest.json`、`dossier.md` 的实体文件夹。以 Vite 开发服务器运行时也会自动写入 `collectibles/`。
+- 真正跨应用、透明置顶的电脑桌面层需要另行运行下面的 **Electron 模式**；本仓库提供源码而非已签名/打包的 Windows/macOS 安装包。
+- 内置人脸与发型是 MakeHuman CC0 网格或程序化风格化模型，**不是 DAZ Genesis 商业网格，也不承诺照片级自动重建**。想达到 DAZ 的发丝和皮肤写实度，推荐用自己合法持有的资产在 Blender/DAZ 对齐、导出，再从本软件导入。
 
 ---
 
@@ -53,14 +59,16 @@
 本项目同时内置了完整的 **Electron 全屏透明置顶穿透桌面层源码**（位于 `electron/main.cjs` 与 `electron/preload.cjs`）：
 
 ```bash
-# 1. 安装依赖
 npm install
-npm install --save-dev electron
-
-# 2. 启动 Vite 服务
-npm run dev
-
-# 3. 在另一个终端启动 Electron 透明桌面层
+npm install --no-save electron
 npm run electron
 ```
-在 Electron 模式下，窗口将设为 `transparent: true, frame: false, alwaysOnTop: true`，使 3D 头部收藏品真正悬浮于您的操作系统桌面与所有软件之上。
+Electron 默认从根目录的独立 HTML 加载（**无需启动 Vite**）。开发热重载时，可先 `npm run dev`，然后设置 `VITE_DEV_SERVER_URL=http://localhost:5173` 再 `npm run electron`。窗口透明且置顶；启动后先点击开始游戏。**Ctrl/Cmd + Alt + X** 切换全屏鼠标穿透：穿透时可操作底下的系统窗口，再按一次恢复头雕/软件交互。目前不是即装即用的打包安装程序，实际桌面效果依赖操作系统的透明窗口合成器。
+
+## 更精致发型：合法素材与制作路线
+
+- **已可直接体验**：工坊「CC0 亚洲女头」三种已绑定的 MakeHuman 发型（波波、长发、低马尾）。模型来源与 CC0 凭据参见 `assets_src/makehuman/LICENSE_NOTE.txt`；波波/长发叠加轻量贴颊发束。高精近景下仍能看出低面数发片，不应与影视级 strand groom 混淆。
+- **更高质量的自备资产**：如已合法购买 DAZ Genesis 兼容发型，在 DAZ/Blender 同时导出**脸 + 发**为同一个 GLB，先在 Blender 中将发际线贴合额头，清理穿插，再导入工坊。DAZ 资产许可通常不允许原文件随公开仓库再分发，所以仓库不含该类模型。
+- **可检索的 CC0 候选**：MakeHuman 官方 system assets（本项目已含 3 件）；Meshy 的公开 [hair 分类](https://www.meshy.ai/tags/hair) 页面标示预制资源 CC0，但**具体作品必须逐件核查许可、拓扑、是否带透明贴图、是否为独立发型**。随机发模不会自动适配不同人物头围，请先在 Blender 配准后与脸合并导出 GLB。下载来源仅作选材指南，本项目没有将未经验证的第三方作品打包。
+- **照片比对**：上传正面照片 → 开启 1:1 叠图 → 检查头顶高度、刘海弧线、鬓角起点、耳前留发、下颌轮廓 → 在 Blender/DAZ 逐层调整发卡位置和 UV；眼睛、鼻尖、嘴角至少各验证正面和 45°，最后导出统一坐标 GLB。
+- 自备 `.glb/.obj` 通过浏览器上传得到临时 blob URL，仅当前会话有效；离线 HTML 不能把原始大模型塞进小型 JSON 档案。保留原模型文件并在下次打开时重新导入；**不要**把商业模型提交到公开仓库。
