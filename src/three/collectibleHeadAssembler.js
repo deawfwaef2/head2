@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { createDazSkinTexture, createRealisticHairStrandTexture } from '../textures/skinTextureGenerator.js';
+import { createDazSkinTexture, createRealisticHairStrandTexture, createRealisticHairNormalTexture } from '../textures/skinTextureGenerator.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createRealisticHairGroup } from './hairBuilder.js';
 
@@ -370,16 +370,19 @@ export async function buildCollectibleHeadNode(config = {}) {
     if (customHairUrl) {
       const hairObj = await loadObjAny(customHairUrl);
       const hairMap = createRealisticHairStrandTexture(hairColor, hairSheen);
+      const strandNormalMap = createRealisticHairNormalTexture();
+      strandNormalMap.repeat.set(1, 3);
       const sheenCol = new THREE.Color(hairColor).offsetHSL(0.02, 0.05, 0.16);
       const hairMat = new THREE.MeshPhysicalMaterial({
         map: hairMap,
+        normalMap: strandNormalMap,
+        normalScale: new THREE.Vector2(0.85, 0.85),
         color: new THREE.Color('#ffffff'),
-        roughness: Math.max(0.18, 0.44 - hairSheen * 0.18),
-        metalness: 0.06,
-        clearcoat: 0.38 * hairSheen,
-        clearcoatRoughness: 0.25,
-        sheen: 0.58 * hairSheen,
-        sheenRoughness: 0.30,
+        roughness: Math.max(0.56, 0.70 - hairSheen * 0.10),
+        metalness: 0.0,
+        clearcoat: 0,
+        sheen: 0.45 * hairSheen,
+        sheenRoughness: 0.58,
         sheenColor: sheenCol,
         side: THREE.DoubleSide
       });

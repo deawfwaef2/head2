@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createRealisticHairStrandTexture } from '../textures/skinTextureGenerator.js';
+import { createRealisticHairStrandTexture, createRealisticHairNormalTexture } from '../textures/skinTextureGenerator.js';
 
 /**
  * Builds a single continuous, gap-free 3D Ellipsoidal Volumetric Hair Shell
@@ -166,7 +166,7 @@ function buildForeheadFringeGeometry({
   thetaSpan = 1.32
 }) {
   const rows = 24;
-  const cols = 36;
+  const cols = 64;
   const geom = new THREE.BufferGeometry();
   const positions = [];
   const uvs = [];
@@ -196,7 +196,8 @@ function buildForeheadFringeGeometry({
 
       const cosP = Math.cos(phi);
       const sinP = Math.sin(phi);
-      const microWave = Math.sin(u * Math.PI * 14.0) * 0.05 * v;
+      // Geometric per-fiber ridges to break directional light into fine silky streaks
+      const microWave = Math.sin(u * Math.PI * 24.0) * 0.24 * v;
 
       const rx = 7.72;
       const rz = 6.88 + microWave;
@@ -266,30 +267,35 @@ export function createRealisticHairGroup({
 
   const map = createRealisticHairStrandTexture(hairColor, sheenIntensity);
   const sheenCol = new THREE.Color(hairColor).offsetHSL(0.02, 0.05, 0.16);
+  const strandNormalMap = createRealisticHairNormalTexture();
+  strandNormalMap.repeat.set(1, 3);
 
   const solidHairMat = new THREE.MeshPhysicalMaterial({
     map,
-    roughness: Math.max(0.18, 0.44 - sheenIntensity * 0.18),
-    metalness: 0.06,
-    clearcoat: 0.38 * sheenIntensity,
-    clearcoatRoughness: 0.26,
-    sheen: 0.55 * sheenIntensity,
-    sheenRoughness: 0.32,
+    normalMap: strandNormalMap,
+    normalScale: new THREE.Vector2(0.85, 0.85),
+    roughness: Math.max(0.56, 0.70 - sheenIntensity * 0.10),
+    metalness: 0.0,
+    clearcoat: 0,
+    sheen: 0.42 * sheenIntensity,
+    sheenRoughness: 0.60,
     sheenColor: sheenCol,
     side: THREE.DoubleSide
   });
 
+  // Use hard alphaTest cutout (transparent: false) so overlapping fringe & shell never double-expose specular blending!
   const strandHairMat = new THREE.MeshPhysicalMaterial({
     map,
-    transparent: true,
-    alphaTest: 0.08,
+    normalMap: strandNormalMap,
+    normalScale: new THREE.Vector2(0.85, 0.85),
+    transparent: false,
+    alphaTest: 0.35,
     depthWrite: true,
-    roughness: Math.max(0.18, 0.42 - sheenIntensity * 0.18),
-    metalness: 0.06,
-    clearcoat: 0.42 * sheenIntensity,
-    clearcoatRoughness: 0.24,
-    sheen: 0.62 * sheenIntensity,
-    sheenRoughness: 0.28,
+    roughness: Math.max(0.56, 0.68 - sheenIntensity * 0.10),
+    metalness: 0.0,
+    clearcoat: 0,
+    sheen: 0.46 * sheenIntensity,
+    sheenRoughness: 0.56,
     sheenColor: sheenCol,
     side: THREE.DoubleSide
   });

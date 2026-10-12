@@ -519,6 +519,42 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
   return tex;
 }
 
+/**
+ * Generates a tangent-space normal map encoding ~420 fine per-strand ridges.
+ * Breaks directional light into hundreds of thin bright fiber streaks instead of a flat mirror blob.
+ */
+export function createRealisticHairNormalTexture(strandCount = 420) {
+  const w = 512;
+  const h = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = 'rgb(128,128,255)';
+  ctx.fillRect(0, 0, w, h);
+
+  const ridgeWidth = w / strandCount;
+  for (let i = 0; i < strandCount; i++) {
+    const cx = (i + 0.5) * ridgeWidth;
+    const jitter = Math.sin(i * 12.9898) * ridgeWidth * 0.18;
+    const halfW = ridgeWidth * (0.55 + 0.25 * Math.abs(Math.sin(i * 3.7)));
+    const grad = ctx.createLinearGradient(cx - halfW, 0, cx + halfW, 0);
+    grad.addColorStop(0.0, 'rgb(96,128,235)');
+    grad.addColorStop(0.5, 'rgb(150,128,255)');
+    grad.addColorStop(1.0, 'rgb(96,128,235)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(cx - halfW + jitter, 0, halfW * 2, h);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export function samplePhotoColors(imgElement) {
   const c = document.createElement('canvas');
   c.width = 128;
