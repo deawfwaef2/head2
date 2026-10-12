@@ -1229,6 +1229,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine.updateSettings({ autoResetAfterRotate: e.target.checked });
   });
 
+  // Stage 7b: Photoreal render quality switch (persisted, applied to BOTH engines)
+  const QUALITY_KEY = 'cervix3d-render-quality';
+  const qualitySel = document.getElementById('sel-render-quality');
+  const applySavedQuality = (level) => {
+    const lvl = ['low', 'medium', 'high'].includes(level) ? level : 'high';
+    try {
+      if (desktopEngine) desktopEngine.setRenderQuality(lvl);
+      if (studioEngine) studioEngine.setRenderQuality(lvl);
+    } catch (err) { console.warn('应用渲染画质失败:', err); }
+    return lvl;
+  };
+  if (qualitySel) {
+    let savedQuality = 'high';
+    try { savedQuality = localStorage.getItem(QUALITY_KEY) || 'high'; } catch (_) { /* file:// 隐私模式 */ }
+    qualitySel.value = applySavedQuality(savedQuality);
+    qualitySel.addEventListener('change', (e) => {
+      const lvl = applySavedQuality(e.target.value);
+      try { localStorage.setItem(QUALITY_KEY, lvl); } catch (_) {}
+      const label = lvl === 'high' ? '✨ 极致画质' : lvl === 'medium' ? '⚖️ 标准画质' : '🚀 流畅画质';
+      showToast(`${label}已生效（工坊预览 + 屏幕桌宠同步切换）`);
+    });
+  }
+
   // Sound Sliders & Test Buttons
   for (const [id, valId, prop] of [
     ['snd-master', 'val-snd-master', 'masterVolume'],

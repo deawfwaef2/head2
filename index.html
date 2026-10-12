@@ -543,6 +543,25 @@
             </div>
           </div>
 
+          <!-- Photoreal Render Quality Settings (Stage 7) -->
+          <div class="card-block">
+            <h3>✨ 写实渲染画质 (IBL + 柔和阴影 + 皮肤/发丝PBR)</h3>
+            <p class="hint-text">
+              极致档开启 2K 柔和阴影与完整环境反射，皮肤毛孔、发丝釉光与眼球高光最接近照片质感；若电脑较卡可切至标准/流畅档。工坊预览与屏幕桌宠同步生效，档位会自动记住。
+            </p>
+
+            <div class="control-group">
+              <div class="field-row">
+                <label>渲染画质档位</label>
+                <select id="sel-render-quality">
+                  <option value="high">✨ 极致 (2K阴影 + 完整IBL反射，推荐独显)</option>
+                  <option value="medium">⚖️ 标准 (1K阴影 + 中等反射，核显流畅)</option>
+                  <option value="low">🚀 流畅 (关闭阴影 + 弱反射，老电脑救星)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <!-- Interaction & Tactile Physics Audio Settings -->
           <div class="card-block">
             <h3>🔊 拾取感、空间拖动感与物理碰撞音效引擎设置</h3>
@@ -673,6 +692,7 @@
         <span>🛞 滚轮推拉远近3D景深</span>
         <span>🔄 单击桌宠切换360°旋转模式</span>
         <span>📋 鼠标悬停显示收藏品档案</span>
+        <span>✨ 照片级PBR写实渲染</span>
         <span>🔊 拾取/拖动/盒壁碰撞物理音效</span>
       </div>
       <div class="start-btn-group">

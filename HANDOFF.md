@@ -131,3 +131,6 @@
   3. 皮肤材质：程序化 512px 微观粗糙/毛孔贴图（`createSkinMicroMaps()`，单例）+ 法线增强 + 次表面暖调（sheen/emissive 近似）+ IBL，消除塑料皮感；发丝：`anisotropy 0.85` 各向异性高光 + 清漆发釉 + `alphaToCoverage` 柔边；眼球/角膜 IBL 高光增强；**完整保留对方的断面 `emissiveMap` 高亮设计**（只追加 IBL/高光参数）。
   4. 双引擎新增 `setRenderQuality(low/medium/high)`（像素比/阴影/环境强度联动），设置页 UI 接线留待 Stage 7b。
 - **诚实边界**：浏览器实时 WebGL 做不到 DAZ Iray 离线光追的 100% 照片级；本次升级目标是“实时写实”（去塑料感、真实投影、发丝釉光、眼球高光）。已重建 `点击开始游戏_CERVIX3D.html` 并同步 `docs/index.html`（含 9 个内嵌 GLB + 参考照，约 8MB），双击即玩；`node --check` 全过，构建产物无外部脚本引用（仅教程页 DAZ 官网商品超链接）。
+
+### [2026-10-12 Stage 7b] 写实画质三档 UI（设置页 + 启动画面 + 持久化）
+- 设置页新增「✨ 写实渲染画质」卡片（`sel-render-quality`：极致/标准/流畅），切换时同时调度 `desktopEngine.setRenderQuality()` 与 `studioEngine.setRenderQuality()`（像素比上限 2/1.5/1、阴影 2048/1024/关闭、IBL 强度 0.85/0.65/0.35），档位存 `localStorage[cervix3d-render-quality]`，启动自动恢复；启动画面新增「✨ 照片级PBR写实渲染」特性 pill。已同步重建双击即玩 HTML 并推送。
