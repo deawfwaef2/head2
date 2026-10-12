@@ -1,0 +1,86 @@
+[
+  {
+    "file": "gnm_female_asian_01.obj",
+    "gender": "female",
+    "ethnicity": "asian",
+    "sampler": "Google GNM Head v3 identity_decoder_model.h5",
+    "decoder_batch_seed": 20261012,
+    "sample_index": 722,
+    "expression": "neutral",
+    "age_condition": "none (age is not an explicit GNM sampler label)",
+    "vertices": 17821,
+    "triangles": 35324,
+    "identity_min": -1.449444055557251,
+    "identity_max": 1.4137859344482422,
+    "bounds_m": [
+      [
+        -0.13191150473992178,
+        0.07090419496175444,
+        -0.09828558436332391
+      ],
+      [
+        0.13240915013510401,
+        0.4072536512506791,
+        0.1461024522618608
+      ]
+    ],
+    "texture": "none; UV coordinates included",
+    "license": "Apache-2.0"
+  },
+  {
+    "file": "gnm_female_asian_02.obj",
+    "gender": "female",
+    "ethnicity": "asian",
+    "sampler": "Google GNM Head v3 identity_decoder_model.h5",
+    "decoder_batch_seed": 20261012,
+    "sample_index": 496,
+    "expression": "neutral",
+    "age_condition": "none (age is not an explicit GNM sampler label)",
+    "vertices": 17821,
+    "triangles": 35324,
+    "identity_min": -1.4869248867034912,
+    "identity_max": 1.4736868143081665,
+    "bounds_m": [
+      [
+        -0.12805113856836098,
+        0.06905254246994885,
+        -0.09585271067414465
+      ],
+      [
+        0.12876374625297604,
+        0.4070718964392649,
+        0.14399193677256755
+      ]
+    ],
+    "texture": "none; UV coordinates included",
+    "license": "Apache-2.0"
+  },
+  {
+    "file": "gnm_female_asian_03.obj",
+    "gender": "female",
+    "ethnicity": "asian",
+    "sampler": "Google GNM Head v3 identity_decoder_model.h5",
+    "decoder_batch_seed": 20261012,
+    "sample_index": 103,
+    "expression": "neutral",
+    "age_condition": "none (age is not an explicit GNM sampler label)",
+    "vertices": 17821,
+    "triangles": 35324,
+    "identity_min": -1.4643328189849854,
+    "identity_max": 1.5978044271469116,
+    "bounds_m": [
+      [
+        -0.12884943130885612,
+        0.06807861079512934,
+        -0.09671604921673767
+      ],
+      [
+        0.1293565374665486,
+        0.407484482722299,
+        0.14482529627240662
+      ]
+    ],
+    "texture": "none; UV coordinates included",
+    "license": "Apache-2.0"
+  }
+]
