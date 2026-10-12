@@ -1,0 +1,54 @@
+{
+  "id": "SPEC-2026-002",
+  "folderName": "SPEC-2026-002_SuWan",
+  "name": "苏婉 · Su Wan",
+  "subtitle": "日式姬发公主切 · 精致V脸骨相标本",
+  "grade": "SSR · 特级典藏",
+  "createdAt": "2026-10-12 10:15",
+  "basePreset": "suwan",
+  "customModelUrl": null,
+  "customModelType": "glb",
+  "skinTone": "#f9dfd4",
+  "blushIntensity": 0.62,
+  "lipColor": "#de5466",
+  "irisColor": "#422618",
+  "hairStyle": "hime_cut",
+  "hairColor": "#18131a",
+  "hairSheen": 0.92,
+  "neckClearance": 0.45,
+  "morphs": {
+    "jawVLine": 0.28,
+    "cheekSoftness": 0.18,
+    "noseBridge": 0.12,
+    "eyeAlmond": 0.22,
+    "lipFullness": 0.2,
+    "neckDiameter": 0.93,
+    "cutHeightOffset": 0.35,
+    "cutTiltPitch": 7.5,
+    "cutTiltRoll": -2
+  },
+  "anatomyOptions": {
+    "cutLevel": "C4/C5 椎间盘微斜横断面 (Oblique C4-C5 Section)",
+    "vascularContrast": 1.25,
+    "dermisRimScale": 0.95,
+    "wetness": 0.88,
+    "showLabels": false
+  },
+  "dossier": {
+    "origin": "基于 Daz Genesis 9 Asian Female 高精度少女骨相基底，强化下颌V线收窄与卧蚕杏眼曲率。",
+    "anatomyNotes": "于C4-C5椎间水平作7.5°前倾解剖切面，颈部纤细，双侧胸锁乳突肌肌束纹理与皮下浅筋膜黄色脂肪小叶对比鲜明，切面具有高湿润浆膜光泽。",
+    "hairNotes": "日式姬发公主切（齐腮阶梯切齐侧发束 + 空气感轻薄齐刘海），低头或仰视旋转时可无遮挡观赏颈部断面。",
+    "tags": [
+      "Daz G9 少女骨相",
+      "姬发式公主切",
+      "C4/C5 斜切面",
+      "高湿润光泽"
+    ]
+  },
+  "summoned": true,
+  "boxPosition": {
+    "x": 26,
+    "y": 7,
+    "z": -260
+  }
+}

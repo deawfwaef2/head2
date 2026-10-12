@@ -1,0 +1,337 @@
+/**
+ * Procedural WebAudio Tactile Physics Sound Engine
+ * Synthesizes real-time physical audio feedback for:
+ *  - Pickup tactile lift (拾取感音效)
+ *  - Velocity-modulated 3D spatial drag whoosh/friction (空间拖动感音效)
+ *  - Bounded 3D Box Space wall & pet-to-pet collision impact (物理碰撞感音效)
+ *  - Z-depth scroll wheel spatial ticks (滚轮景深远近推拉音效)
+ *  - 360° Rotation Mode gimbal lock/unlock (旋转模式切换音效)
+ *  - Collectible summon / recall materialization (召唤与收回音效)
+ */
+
+class TactileSoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+    this.masterVolume = 0.75;
+    this.pickupVolume = 0.85;
+    this.dragVolume = 0.70;
+    this.collisionVolume = 0.90;
+    this.depthTickVolume = 0.65;
+
+    // Continuous drag node state
+    this.dragGain = null;
+    this.dragFilter = null;
+    this.dragPanner = null;
+    this.lastDepthTickTime = 0;
+    this.lastCollisionTime = 0;
+  }
+
+  ensureContext() {
+    if (!this.enabled) return null;
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
+  createPanner(ctx, panX = 0) {
+    if (ctx.createStereoPanner) {
+      const panner = ctx.createStereoPanner();
+      panner.pan.value = Math.max(-1, Math.min(1, panX));
+      panner.connect(ctx.destination);
+      return panner;
+    }
+    return ctx.destination;
+  }
+
+  /**
+   * 1. Pickup Sound (拾取感音效): Weighted organic lift + porcelain/specimen tactile transient
+   */
+  playPickup(panX = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const out = this.createPanner(ctx, panX);
+    const vol = this.masterVolume * this.pickupVolume;
+
+    // Sub-mid lift thud (92Hz -> 178Hz upward pitch envelope)
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(92, now);
+    osc.frequency.exponentialRampToValueAtTime(178, now + 0.085);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.36 * vol, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    osc.stop(now + 0.14);
+
+    // Crisp tactile finger-contact harmonic click
+    const clickOsc = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    clickOsc.type = 'sine';
+    clickOsc.frequency.setValueAtTime(680, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(340, now + 0.035);
+
+    clickGain.gain.setValueAtTime(0.18 * vol, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    clickOsc.connect(clickGain);
+    clickGain.connect(out);
+    clickOsc.start(now);
+    clickOsc.stop(now + 0.045);
+  }
+
+  /**
+   * 2. Release / Drop Sound (放下微震音效)
+   */
+  playRelease(panX = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    this.stopDragWhoosh();
+
+    const now = ctx.currentTime;
+    const out = this.createPanner(ctx, panX);
+    const vol = this.masterVolume * this.pickupVolume;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(155, now);
+    osc.frequency.exponentialRampToValueAtTime(76, now + 0.11);
+
+    gain.gain.setValueAtTime(0.28 * vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    osc.stop(now + 0.13);
+  }
+
+  /**
+   * 3. Continuous Velocity-Modulated Drag Whoosh / Friction (空间拖动感音效)
+   */
+  startDragWhoosh() {
+    const ctx = this.ensureContext();
+    if (!ctx || this.dragGain) return;
+
+    const bufferSize = ctx.sampleRate * 1.5;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let b0 = 0, b1 = 0, b2 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.997 * b0 + white * 0.029;
+      b1 = 0.985 * b1 + white * 0.032;
+      b2 = 0.950 * b2 + white * 0.048;
+      data[i] = (b0 + b1 + b2) * 0.35;
+    }
+
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    noise.loop = true;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 240;
+    filter.Q.value = 2.2;
+
+    const gain = ctx.createGain();
+    gain.gain.value = 0.0001;
+
+    const panner = this.createPanner(ctx, 0);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(panner);
+    noise.start();
+
+    this.dragNoise = noise;
+    this.dragFilter = filter;
+    this.dragGain = gain;
+    this.dragPanner = panner;
+  }
+
+  updateDragWhoosh(speedNorm = 0, panX = 0) {
+    if (!this.enabled) return;
+    if (!this.dragGain) this.startDragWhoosh();
+    if (!this.ctx || !this.dragGain) return;
+
+    const now = this.ctx.currentTime;
+    const clampedSpeed = Math.max(0, Math.min(1, speedNorm));
+    const targetFreq = 160 + clampedSpeed * 680;
+    const targetGain = clampedSpeed * 0.26 * this.masterVolume * this.dragVolume;
+
+    this.dragFilter.frequency.setTargetAtTime(targetFreq, now, 0.03);
+    this.dragGain.gain.setTargetAtTime(Math.max(0.0001, targetGain), now, 0.035);
+    if (this.dragPanner && this.dragPanner.pan) {
+      this.dragPanner.pan.setTargetAtTime(Math.max(-1, Math.min(1, panX)), now, 0.03);
+    }
+  }
+
+  stopDragWhoosh() {
+    if (!this.dragGain || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      this.dragGain.gain.setTargetAtTime(0.0001, now, 0.04);
+      const oldNoise = this.dragNoise;
+      setTimeout(() => {
+        try { oldNoise && oldNoise.stop(); } catch (_) {}
+      }, 120);
+    } catch (_) {}
+    this.dragNoise = null;
+    this.dragFilter = null;
+    this.dragGain = null;
+    this.dragPanner = null;
+  }
+
+  /**
+   * 4. Physical Box Wall & Pet-to-Pet Collision Impact (盒壁与藏品间物理碰撞音效)
+   */
+  playBoxWallCollision(intensity = 0.7, wallType = 'side', panX = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const nowMs = performance.now();
+    if (nowMs - this.lastCollisionTime < 55) return;
+    this.lastCollisionTime = nowMs;
+
+    const now = ctx.currentTime;
+    const out = this.createPanner(ctx, panX);
+    const force = Math.max(0.15, Math.min(1.0, intensity)) * this.masterVolume * this.collisionVolume;
+
+    // Low physical mass impact thud
+    const bodyOsc = ctx.createOscillator();
+    const bodyGain = ctx.createGain();
+    bodyOsc.type = 'sine';
+    const baseFreq = wallType === 'front_glass' ? 115 : wallType === 'back_wall' ? 68 : 88;
+    bodyOsc.frequency.setValueAtTime(baseFreq * 1.4, now);
+    bodyOsc.frequency.exponentialRampToValueAtTime(baseFreq * 0.55, now + 0.16);
+
+    bodyGain.gain.setValueAtTime(0.48 * force, now);
+    bodyGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+    bodyOsc.connect(bodyGain);
+    bodyGain.connect(out);
+    bodyOsc.start(now);
+    bodyOsc.stop(now + 0.19);
+
+    // Acrylic / Tempered Glass Box Boundary Resonance Overtones
+    const glassOsc = ctx.createOscillator();
+    const glassGain = ctx.createGain();
+    glassOsc.type = 'triangle';
+    const overtone = wallType === 'front_glass' ? 640 : wallType === 'pet' ? 420 : 510;
+    glassOsc.frequency.setValueAtTime(overtone, now);
+    glassOsc.frequency.exponentialRampToValueAtTime(overtone * 0.72, now + 0.09);
+
+    glassGain.gain.setValueAtTime(0.18 * force, now);
+    glassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.095);
+
+    glassOsc.connect(glassGain);
+    glassGain.connect(out);
+    glassOsc.start(now);
+    glassOsc.stop(now + 0.10);
+  }
+
+  /**
+   * 5. Mouse Wheel Z-Depth Scroll Tick (滚轮远近深度调节刻度音)
+   * depthRatio: 0 (front glass Z=0) to 1 (deepest back wall Z=-maxDepth)
+   */
+  playDepthTick(depthRatio = 0.3, panX = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const nowMs = performance.now();
+    if (nowMs - this.lastDepthTickTime < 35) return;
+    this.lastDepthTickTime = nowMs;
+
+    const now = ctx.currentTime;
+    const out = this.createPanner(ctx, panX);
+    const vol = this.masterVolume * this.depthTickVolume;
+
+    // Pitch shifts lower as the head goes deeper toward the vanishing point
+    const pitch = 520 - depthRatio * 290;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(pitch * 0.78, now + 0.045);
+
+    gain.gain.setValueAtTime(0.16 * vol, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+    osc.connect(gain);
+    gain.connect(out);
+    osc.start(now);
+    osc.stop(now + 0.055);
+  }
+
+  /**
+   * 6. Click to Toggle 360° Rotation Mode Gimbal Lock/Unlock Sound (旋转模式切换机械音)
+   */
+  playRotationModeToggle(entering = true, panX = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const out = this.createPanner(ctx, panX);
+    const vol = this.masterVolume * 0.8;
+
+    const freqs = entering ? [440, 660] : [620, 410];
+    freqs.forEach((f, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      const t0 = now + idx * 0.055;
+      osc.frequency.setValueAtTime(f, t0);
+      osc.frequency.exponentialRampToValueAtTime(f * 1.06, t0 + 0.07);
+
+      gain.gain.setValueAtTime(0.22 * vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.085);
+
+      osc.connect(gain);
+      gain.connect(out);
+      osc.start(t0);
+      osc.stop(t0 + 0.09);
+    });
+  }
+
+  /**
+   * 7. Summon / Recall Collectible Desktop Pet Sound (召唤/收回藏品桌宠音效)
+   */
+  playSummon(isSummon = true) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const vol = this.masterVolume * 0.75;
+    const notes = isSummon ? [220, 330, 440, 659.25] : [523.25, 392, 261.63];
+
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      const t0 = now + i * 0.045;
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.14 * vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.30);
+    });
+  }
+}
+
+export const soundEngine = new TactileSoundEngine();

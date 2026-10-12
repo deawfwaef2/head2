@@ -1,0 +1,54 @@
+{
+  "id": "SPEC-2026-003",
+  "folderName": "SPEC-2026-003_QianXue",
+  "name": "千雪 · Qian Xue",
+  "subtitle": "清冷高智感骨相 · 江南低盘发全露颈标本",
+  "grade": "UR · 博物馆级孤品",
+  "createdAt": "2026-10-12 11:00",
+  "basePreset": "qianxue",
+  "customModelUrl": null,
+  "customModelType": "glb",
+  "skinTone": "#f5d5c8",
+  "blushIntensity": 0.34,
+  "lipColor": "#b84656",
+  "irisColor": "#251814",
+  "hairStyle": "low_chignon",
+  "hairColor": "#110f14",
+  "hairSheen": 0.86,
+  "neckClearance": 0.85,
+  "morphs": {
+    "jawVLine": 0.16,
+    "cheekSoftness": -0.05,
+    "noseBridge": 0.24,
+    "eyeAlmond": 0.06,
+    "lipFullness": -0.04,
+    "neckDiameter": 0.96,
+    "cutHeightOffset": -0.25,
+    "cutTiltPitch": 2,
+    "cutTiltRoll": 0
+  },
+  "anatomyOptions": {
+    "cutLevel": "C5 颈椎水平全露式横断面 (Full-Exposure C5 Section)",
+    "vascularContrast": 1.3,
+    "dermisRimScale": 1.05,
+    "wetness": 0.85,
+    "showLabels": false
+  },
+  "dossier": {
+    "origin": "基于东亚清冷骨相高精雕刻参数，高鼻梁直鼻背，内敛淡颜唇线与深邃黑瞳。",
+    "anatomyNotes": "采用全盘发造型使修长颈柱与C5水平解剖断面360°无遮挡展露。切面完整展示颈深后肌群（斜方肌、头半棘肌、多裂肌、肩胛提肌）、分叉棘突与椎动脉横突孔。",
+    "hairNotes": "江南温婉低盘发髻配双侧S型龙须碎发，专为360°旋转鉴赏颈部解剖切面与颌颈角线条设计。",
+    "tags": [
+      "清冷骨相",
+      "低盘发全露断面",
+      "C5 全景解剖面",
+      "360°鉴赏特化"
+    ]
+  },
+  "summoned": false,
+  "boxPosition": {
+    "x": 0,
+    "y": -6,
+    "z": -180
+  }
+}

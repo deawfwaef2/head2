@@ -1,0 +1,54 @@
+{
+  "id": "SPEC-2026-001",
+  "folderName": "SPEC-2026-001_LinXi",
+  "name": "林汐 · Lin Xi",
+  "subtitle": "江南古典鹅蛋脸骨相 · 首号典藏标本",
+  "grade": "SSR · 原初典藏",
+  "createdAt": "2026-10-12 09:30",
+  "basePreset": "linxi",
+  "customModelUrl": null,
+  "customModelType": "glb",
+  "skinTone": "#f7d9cc",
+  "blushIntensity": 0.52,
+  "lipColor": "#d45868",
+  "irisColor": "#362015",
+  "hairStyle": "long_straight",
+  "hairColor": "#131015",
+  "hairSheen": 0.9,
+  "neckClearance": 0.38,
+  "morphs": {
+    "jawVLine": 0.08,
+    "cheekSoftness": 0.12,
+    "noseBridge": 0.06,
+    "eyeAlmond": 0.1,
+    "lipFullness": 0.12,
+    "neckDiameter": 0.98,
+    "cutHeightOffset": 0,
+    "cutTiltPitch": 4,
+    "cutTiltRoll": 0
+  },
+  "anatomyOptions": {
+    "cutLevel": "C4 颈椎标准横断面 (Standard C4 Transverse)",
+    "vascularContrast": 1.15,
+    "dermisRimScale": 1,
+    "wetness": 0.82,
+    "showLabels": false
+  },
+  "dossier": {
+    "origin": "基于 Daz Genesis 8.1 Asian Female 高精拓扑采集，对齐东方古典温婉鹅蛋脸骨相。",
+    "anatomyNotes": "于第4颈椎（C4）椎体中段水平作微前倾4°精密横切。切面清晰呈现透明软骨C形气管环、星状闭合食管黏膜、双侧颈动脉鞘（颈总动脉、颈内静脉、迷走神经）及椎管内蝴蝶形脊髓灰质前后角。",
+    "hairNotes": "采用三层式东方乌木黑长直丝感发束（含450+微米级游离飞发与Kajiya-Kay双峰天使光圈），后发束作断面避让处理。",
+    "tags": [
+      "Daz G8.1 亚洲女性",
+      "C4 标准解剖切面",
+      "黑长直写实发丝",
+      "温婉鹅蛋脸"
+    ]
+  },
+  "summoned": true,
+  "boxPosition": {
+    "x": -24,
+    "y": 5,
+    "z": -120
+  }
+}

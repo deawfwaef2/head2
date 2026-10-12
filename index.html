@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CERVIX-3D · 颅相典藏馆 — 3D解剖断面头部收藏品桌宠生成与管理系统</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body class="bg-mode-os">
+  <!-- =========================================================================
+       LAYER 1: FULL COMPUTER SCREEN ENVIRONMENT & 3D PERSPECTIVE BOX SPACE
+       ========================================================================= -->
+  <div id="desktop-environment">
+    <!-- Simulated OS Desktop Icons (so user feels the 3D pets are right on their computer screen) -->
+    <div id="os-desktop-icons">
+      <div class="os-icon" data-action="open-tab" data-tab="studio">
+        <div class="os-icon-glyph">🗿</div>
+        <span>Daz高精头雕工坊</span>
+      </div>
+      <div class="os-icon" data-action="open-tab" data-tab="vault">
+        <div class="os-icon-glyph">🏛️</div>
+        <span>颅相典藏库</span>
+      </div>
+      <div class="os-icon" data-action="open-tab" data-tab="archives">
+        <div class="os-icon-glyph">📁</div>
+        <span>collectibles/ 档案夹</span>
+      </div>
+      <div class="os-icon" data-action="open-tab" data-tab="tutorial">
+        <div class="os-icon-glyph">📘</div>
+        <span>Daz照片级建模教程</span>
+      </div>
+    </div>
+
+    <!-- Vanishing Point & Bounded 3D Box Space HUD Indicator at Screen Center -->
+    <div id="vanishing-point-hud">
+      <div class="vp-crosshair">
+        <span class="vp-ring"></span>
+        <span class="vp-dot"></span>
+      </div>
+      <div class="vp-label">
+        ✦ 屏幕透视消失点 VP <span id="vp-coord-text">(0%, 0%)</span> · 盒型景深 <span id="vp-depth-range">0 ~ -1200mm</span>
+      </div>
+    </div>
+
+    <!-- Box Wall Physical Collision Ripple Indicators -->
+    <div id="box-collision-overlay">
+      <div class="wall-flash wall-left" id="flash-left"></div>
+      <div class="wall-flash wall-right" id="flash-right"></div>
+      <div class="wall-flash wall-top" id="flash-top"></div>
+      <div class="wall-flash wall-bottom" id="flash-bottom"></div>
+      <div class="wall-flash wall-front" id="flash-front"></div>
+      <div class="wall-flash wall-back" id="flash-back"></div>
+    </div>
+
+    <!-- FULL-SCREEN 3D DESKTOP PET CANVAS (True Screen-Space 3D Perspective Box Space) -->
+    <canvas id="desktop-pet-canvas"></canvas>
+
+    <!-- HOVER DOSSIER FLOATING WINDOW (Appears when mouse hovers over a 3D Head Desktop Pet) -->
+    <div id="pet-hover-dossier" class="hidden">
+      <div class="dossier-header">
+        <div>
+          <span class="dossier-serial" id="hud-serial">SPEC-2026-001</span>
+          <span class="dossier-grade" id="hud-grade">SSR · 原初典藏</span>
+        </div>
+        <span class="dossier-mode-badge" id="hud-mode-badge">👁️ 3D追随中</span>
+      </div>
+      <div class="dossier-title" id="hud-name">林汐 · Lin Xi</div>
+      <div class="dossier-subtitle" id="hud-subtitle">江南古典鹅蛋脸骨相 · 首号典藏标本</div>
+      <div class="dossier-coords-bar">
+        <span>盒空间 X: <strong id="hud-pos-x">0</strong>cm</span>
+        <span>Y: <strong id="hud-pos-y">0</strong>cm</span>
+        <span>景深 Z: <strong id="hud-pos-z">-120</strong>mm</span>
+      </div>
+      <div class="dossier-section">
+        <div class="dossier-label">🔬 颈部解剖断面规格</div>
+        <div class="dossier-text" id="hud-anatomy-level">C4 颈椎标准横断面</div>
+        <div class="dossier-subtext" id="hud-anatomy-notes"></div>
+      </div>
+      <div class="dossier-section">
+        <div class="dossier-label">📋 角色与骨相档案</div>
+        <div class="dossier-subtext" id="hud-origin-notes"></div>
+      </div>
+      <div class="dossier-tags" id="hud-tags"></div>
+      <div class="dossier-footer-hint">
+        <span>🖱️ 单击桌宠：<strong>切换360°旋转模式</strong></span>
+        <span>滚轮：<strong>推拉远近3D深度</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       LAYER 2: TOP-RIGHT DESKTOP OVERLAY CONTROLLER BAR (Always visible on screen)
+       ========================================================================= -->
+  <div id="desktop-overlay-bar">
+    <div class="overlay-brand">
+      <span class="pulse-dot"></span>
+      <strong>CERVIX-3D 屏幕桌宠层</strong>
+      <span class="badge-count" id="active-pet-count-badge">2 在屏</span>
+    </div>
+    <div class="overlay-actions">
+      <button id="btn-toggle-window" class="overlay-btn primary" title="隐藏或展开软件主窗口，直接欣赏电脑屏幕上的3D头部桌宠">
+        🗕 隐藏软件窗口 (纯看屏幕桌宠)
+      </button>
+      <button id="btn-quick-box-grid" class="overlay-btn" title="切换屏幕中心透视消失点与3D盒型空间辅助网格">
+        📦 盒型透视网格: 常显
+      </button>
+      <button id="btn-quick-bg-mode" class="overlay-btn" title="切换仿真电脑桌面背景或暗房标本展柜">
+        🖥️ 背景: 仿真电脑桌面
+      </button>
+      <button id="btn-quick-mute" class="overlay-btn" title="物理音效开关">
+        🔊 物理音效: 开启
+      </button>
+    </div>
+  </div>
+
+  <!-- Active Screen Pets Floating Mini-Strip (Bottom-Left of Computer Screen) -->
+  <div id="screen-pets-strip">
+    <div class="strip-title">🎯 屏幕已召唤藏品 (单击模型切换旋转 / 滚轮调景深 / 拖拽碰撞盒壁)</div>
+    <div id="screen-pets-pills"></div>
+  </div>
+
+  <!-- =========================================================================
+       LAYER 3: FLOATING SOFTWARE WINDOW (CERVIX-3D Management & Creation Suite)
+       ========================================================================= -->
+  <div id="software-window">
+    <!-- Draggable Window Titlebar -->
+    <div id="window-titlebar">
+      <div class="win-brand">
+        <span class="win-logo">◈</span>
+        <div>
+          <div class="win-title">CERVIX-3D · 颅相典藏馆 <span class="win-ver">PRO v2.6</span></div>
+          <div class="win-desc">高精度3D解剖断面头部收藏品 · 半自动建模装配 · 盒型透视空间桌宠管理系统</div>
+        </div>
+      </div>
+      <div class="win-controls">
+        <button id="win-btn-minimize" class="win-ctrl-btn" title="最小化软件窗口至屏幕右上角，全屏把玩3D桌宠">─ 最小化看桌宠</button>
+        <button id="win-btn-center" class="win-ctrl-btn" title="重置窗口位置">⊡ 居中</button>
+      </div>
+    </div>
+
+    <!-- Software Navigation Tabs -->
+    <nav id="software-tabs">
+      <button class="nav-tab active" data-tab="vault">
+        <span class="tab-icon">🏛️</span>
+        <div>
+          <div class="tab-name">典藏库与召唤台</div>
+          <div class="tab-sub">已有桌宠管理 / 一键召唤上屏</div>
+        </div>
+      </button>
+      <button class="nav-tab" data-tab="studio">
+        <span class="tab-icon">🧬</span>
+        <div>
+          <div class="tab-name">注册收藏品 · 半自动工坊</div>
+          <div class="tab-sub">照片对位 / Daz亚洲女头 / 解剖断面装配</div>
+        </div>
+      </button>
+      <button class="nav-tab" data-tab="tutorial">
+        <span class="tab-icon">📘</span>
+        <div>
+          <div class="tab-name">Daz3D 高精度建模教程</div>
+          <div class="tab-sub">照片级还原亚洲女性头模与写实发丝指南</div>
+        </div>
+      </button>
+      <button class="nav-tab" data-tab="settings">
+        <span class="tab-icon">🎛️</span>
+        <div>
+          <div class="tab-name">盒型3D空间与物理音效设置</div>
+          <div class="tab-sub">中心透视消失点 / 景深边界 / 拾取碰撞音效</div>
+        </div>
+      </button>
+      <button class="nav-tab" data-tab="archives">
+        <span class="tab-icon">📂</span>
+        <div>
+          <div class="tab-name">档案目录管理器</div>
+          <div class="tab-sub">/collectibles/ 实体档案夹与导出</div>
+        </div>
+      </button>
+    </nav>
+
+    <!-- Software Content Area -->
+    <div id="software-body">
+      <!-- ==================== TAB 1: COLLECTIBLE VAULT & SUMMON DECK ==================== -->
+      <section id="tab-vault" class="tab-panel active">
+        <div class="panel-banner">
+          <div>
+            <h2>🏛️ 颅相典藏库 (已注册 3D 头部断面收藏品)</h2>
+            <p>
+              点击 <strong>「召唤至屏幕」</strong> 即可将头部收藏品投放到您的电脑屏幕 3D 盒型透视空间中。
+              鼠标靠上去会弹出<strong>收藏品档案窗口</strong>；<strong>滚轮</strong>调节远近景深；<strong>单击桌宠</strong>进入 360° 自由旋转模式（可仰视底部的写实医学解剖断面），<strong>再次单击</strong>取消旋转模式。
+            </p>
+          </div>
+          <div class="banner-btns">
+            <button id="btn-summon-all" class="btn accent">✨ 全部召唤至屏幕</button>
+            <button id="btn-goto-register" class="btn primary">＋ 注册新头部收藏品</button>
+          </div>
+        </div>
+
+        <div id="vault-grid" class="vault-grid"></div>
+      </section>
+
+      <!-- ==================== TAB 2: REGISTER COLLECTIBLE & DAZ STUDIO ==================== -->
+      <section id="tab-studio" class="tab-panel">
+        <div class="studio-layout">
+          <!-- Left Column: Photo Reference & External GLB/OBJ Model Import -->
+          <div class="studio-col studio-col-left">
+            <div class="card-block">
+              <h3>📸 步骤 1：输入参考照片 & 半自动对位</h3>
+              <p class="hint-text">上传人物正面照片或选择预设参考照，支持 1:1 叠图对位建模与一键提取肤色/骨相参数。</p>
+
+              <div class="photo-preview-box" id="photo-preview-box">
+                <canvas id="ref-photo-canvas" width="260" height="300"></canvas>
+                <div class="photo-badge" id="photo-status-badge">内置参考照：东方古典鹅蛋脸</div>
+              </div>
+
+              <div class="btn-row">
+                <label class="btn secondary file-btn">
+                  📷 上传本地照片
+                  <input type="file" id="input-photo-upload" accept="image/*" hidden />
+                </label>
+                <button id="btn-auto-sample-photo" class="btn accent" title="从参考照片自动吸取肤色、红润度并匹配东亚女性骨相微调参数">
+                  ✨ 半自动采样对位
+                </button>
+              </div>
+
+              <div class="preset-photo-row">
+                <span>快速切换示例照:</span>
+                <button class="chip-btn active" data-ref-photo="linxi">林汐照</button>
+                <button class="chip-btn" data-ref-photo="suwan">苏婉照</button>
+                <button class="chip-btn" data-ref-photo="qianxue">千雪照</button>
+              </div>
+
+              <div class="control-group compact">
+                <label class="checkbox-row">
+                  <input type="checkbox" id="chk-photo-overlay" />
+                  <span>在3D预览窗开启 <strong>1:1 照片半透明叠图对位</strong></span>
+                </label>
+                <div class="slider-row">
+                  <span>叠图透明度</span>
+                  <input type="range" id="slider-overlay-opacity" min="0.1" max="0.85" step="0.05" value="0.42" />
+                  <span id="val-overlay-opacity">42%</span>
+                </div>
+                <div class="slider-row">
+                  <span>照片UV贴图投射融合</span>
+                  <input type="range" id="slider-photo-uv-blend" min="0" max="0.75" step="0.05" value="0" />
+                  <span id="val-photo-uv-blend">0%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-block">
+              <h3>📥 导入外部高精度 Daz3D 模型 (可选)</h3>
+              <p class="hint-text">
+                支持直接导入您从 Daz Studio / Blender 导出的 <code>.glb / .gltf / .obj</code> 头模或全身模型，软件将<strong>自动在颈部截断并封口生成医学解剖断面</strong>！
+              </p>
+              <div class="btn-row">
+                <label class="btn secondary file-btn">
+                  📂 导入 .GLB / .OBJ
+                  <input type="file" id="input-model-upload" accept=".glb,.gltf,.obj" hidden />
+                </label>
+                <button id="btn-test-scan-glb" class="btn ghost" title="载入内置真实高精度人头扫描模型测试自动颈部截断与解剖断面封口">
+                  🧪 测试高精扫描头模(.glb)
+                </button>
+              </div>
+              <div id="custom-model-status" class="status-pill">当前使用：内置 Daz 东亚女性高精细分头模 (9,160面)</div>
+            </div>
+          </div>
+
+          <!-- Center Column: 3D Live Preview Viewport & 2D Medical Cross-Section Inspector -->
+          <div class="studio-col studio-col-center">
+            <div class="viewport-card">
+              <div class="viewport-toolbar">
+                <span class="vp-title">🔬 3D 头部与颈部解剖断面实时预览</span>
+                <div class="cam-preset-btns">
+                  <button class="chip-btn active" data-cam="front">正面骨相</button>
+                  <button class="chip-btn" data-cam="three_quarter">45°半侧</button>
+                  <button class="chip-btn highlight" data-cam="anatomy_bottom">🩸 仰视颈部解剖断面</button>
+                  <button class="chip-btn" data-cam="turntable">🔄 360°环绕</button>
+                </div>
+              </div>
+
+              <div class="studio-canvas-wrap">
+                <canvas id="studio-preview-canvas"></canvas>
+                <!-- 1:1 Semi-Transparent Photo Alignment Overlay -->
+                <canvas id="studio-photo-overlay" width="260" height="300" class="hidden"></canvas>
+                <div class="viewport-overlay-tip">
+                  左键拖拽：360°旋转检视头雕与底部解剖切面 | 滚轮：缩放细节 | 右键：平移
+                </div>
+              </div>
+
+              <!-- 2D High-Res Medical Anatomical Neck Cross-Section Atlas Inspector -->
+              <div class="anatomy-inspector-bar">
+                <div class="anatomy-canvas-holder">
+                  <canvas id="anatomy-2d-preview" width="220" height="220"></canvas>
+                </div>
+                <div class="anatomy-inspector-info">
+                  <div class="anatomy-header-row">
+                    <h4>🩸 底座颈部横切面医学解剖图谱 (C4/C5 水平)</h4>
+                    <label class="checkbox-inline">
+                      <input type="checkbox" id="chk-anatomy-labels" />
+                      <span>在断面显示医学解剖标注</span>
+                    </label>
+                  </div>
+                  <p class="hint-text">
+                    切面由外向内真实还原：<strong>表皮与真皮切缘环</strong> ➔ <strong>皮下浅筋膜脂肪小叶与颈阔肌</strong> ➔ <strong>胸锁乳突肌/斜方肌/舌骨下肌群束</strong> ➔ <strong>气管透明软骨C形环与食管星状腔</strong> ➔ <strong>双侧颈动脉鞘（颈总动脉/颈内静脉/迷走神经）</strong> ➔ <strong>C4颈椎椎体松质骨与椎管内蝴蝶形脊髓灰质</strong>。
+                  </p>
+                  <div class="anatomy-legend-grid">
+                    <span><i style="background:#7dd3fc"></i>气管透明软骨环</span>
+                    <span><i style="background:#ef4444"></i>双侧颈总动脉</span>
+                    <span><i style="background:#60a5fa"></i>双侧颈内静脉</span>
+                    <span><i style="background:#fde68a"></i>C4颈椎与脊髓灰质</span>
+                    <span><i style="background:#fb7185"></i>胸锁乳突肌/斜方肌</span>
+                    <span><i style="background:#fcd34d"></i>皮下脂肪层与真皮环</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Daz Morph Sliders, Realistic Hair, Cross-Section Controls & Dossier Save -->
+          <div class="studio-col studio-col-right">
+            <!-- A. Base & Facial Morphs -->
+            <div class="card-block">
+              <h3>👩 步骤 2：Daz 亚洲女性基底与骨相精调</h3>
+              <div class="control-group compact">
+                <div class="field-row">
+                  <label>亚洲女性基底模型</label>
+                  <select id="sel-base-preset">
+                    <option value="linxi">Daz G8.1 亚洲女性 · 林汐 (古典鹅蛋脸)</option>
+                    <option value="suwan">Daz G9 亚洲女性 · 苏婉 (精致V脸少女)</option>
+                    <option value="qianxue">东亚高智感骨相 · 千雪 (清冷直鼻骨相)</option>
+                  </select>
+                </div>
+
+                <div class="slider-row">
+                  <span>下颌V线收窄 (Jaw V-Line)</span>
+                  <input type="range" id="morph-jaw" min="-0.45" max="0.45" step="0.02" value="0.08" />
+                  <span id="val-morph-jaw">+0.08</span>
+                </div>
+                <div class="slider-row">
+                  <span>颧弓与苹果肌饱满度</span>
+                  <input type="range" id="morph-cheek" min="-0.40" max="0.40" step="0.02" value="0.12" />
+                  <span id="val-morph-cheek">+0.12</span>
+                </div>
+                <div class="slider-row">
+                  <span>鼻梁与鼻尖立体度</span>
+                  <input type="range" id="morph-nose" min="-0.40" max="0.45" step="0.02" value="0.06" />
+                  <span id="val-morph-nose">+0.06</span>
+                </div>
+                <div class="slider-row">
+                  <span>杏眼弧度与眼尾微挑</span>
+                  <input type="range" id="morph-eye" min="-0.35" max="0.40" step="0.02" value="0.10" />
+                  <span id="val-morph-eye">+0.10</span>
+                </div>
+                <div class="slider-row">
+                  <span>唇珠与水光唇丰满度</span>
+                  <input type="range" id="morph-lip" min="-0.35" max="0.45" step="0.02" value="0.12" />
+                  <span id="val-morph-lip">+0.12</span>
+                </div>
+
+                <div class="color-picker-grid">
+                  <label>肤色 <input type="color" id="col-skin" value="#f7d9cc" /></label>
+                  <label>唇色 <input type="color" id="col-lip" value="#d45868" /></label>
+                  <label>瞳色 <input type="color" id="col-iris" value="#362015" /></label>
+                  <label>发色 <input type="color" id="col-hair" value="#131015" /></label>
+                </div>
+              </div>
+            </div>
+
+            <!-- B. Realistic Strand Hair & Anatomical Neck Cross-Section -->
+            <div class="card-block">
+              <h3>💇‍♀️ 步骤 3：写实发丝与颈部解剖断面调节</h3>
+              <div class="control-group compact">
+                <div class="field-row">
+                  <label>高拟真亚洲女性发型</label>
+                  <select id="sel-hair-style">
+                    <option value="long_straight">东方乌木黑长直 (含450+微米级游离发丝)</option>
+                    <option value="hime_cut">日式姬发公主切 (齐腮侧发束 + 空气刘海)</option>
+                    <option value="low_chignon">江南温婉低盘发 (360°全露修长颈部与解剖断面)</option>
+                    <option value="soft_waves">韩系八字刘海微卷发 (蓬松高颅顶)</option>
+                    <option value="sleek_bob">清冷高智感内扣短波波头 (全露下颈断面)</option>
+                    <option value="none">无发模式 (纯医学头颈骨相标本展示)</option>
+                  </select>
+                </div>
+
+                <div class="slider-row">
+                  <span>发丝天使光圈光泽度</span>
+                  <input type="range" id="slider-hair-sheen" min="0.2" max="1.0" step="0.05" value="0.90" />
+                  <span id="val-hair-sheen">90%</span>
+                </div>
+                <div class="slider-row">
+                  <span>后发避让解剖断面高度</span>
+                  <input type="range" id="slider-neck-clearance" min="0.0" max="1.0" step="0.05" value="0.38" />
+                  <span id="val-neck-clearance">38%</span>
+                </div>
+                <div class="slider-row">
+                  <span>颈部截断高度 (C3~C6)</span>
+                  <input type="range" id="morph-cut-height" min="-1.5" max="1.5" step="0.1" value="0.0" />
+                  <span id="val-cut-height">0.0cm</span>
+                </div>
+                <div class="slider-row">
+                  <span>解剖切面俯仰倾角</span>
+                  <input type="range" id="morph-cut-pitch" min="-15" max="15" step="0.5" value="4.0" />
+                  <span id="val-cut-pitch">+4.0°</span>
+                </div>
+                <div class="slider-row">
+                  <span>断面湿润浆膜光泽度</span>
+                  <input type="range" id="slider-anatomy-wetness" min="0.2" max="1.0" step="0.05" value="0.82" />
+                  <span id="val-anatomy-wetness">82%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- C. Collectible Naming & Dossier Registration -->
+            <div class="card-block highlight-card">
+              <h3>🏷️ 步骤 4：收藏品命名与档案登记</h3>
+              <div class="control-group compact">
+                <div class="two-col-inputs">
+                  <div>
+                    <label>收藏品名称</label>
+                    <input type="text" id="inp-col-name" value="叶知秋 · Ye Zhiqiu" placeholder="如：林汐 · Lin Xi" />
+                  </div>
+                  <div>
+                    <label>典藏编号 (Serial ID)</label>
+                    <input type="text" id="inp-col-id" value="SPEC-2026-004" />
+                  </div>
+                </div>
+                <div class="two-col-inputs">
+                  <div>
+                    <label>副标题 / 骨相定位</label>
+                    <input type="text" id="inp-col-subtitle" value="东亚写实照片级高精头雕标本" />
+                  </div>
+                  <div>
+                    <label>典藏评级</label>
+                    <select id="sel-col-grade">
+                      <option value="SSR · 特级典藏">SSR · 特级典藏</option>
+                      <option value="UR · 博物馆级孤品">UR · 博物馆级孤品</option>
+                      <option value="SP · 专属照片定制">SP · 专属照片定制</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label>颈部解剖断面规格描述</label>
+                  <input type="text" id="inp-col-cutlevel" value="C4 颈椎标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)" />
+                </div>
+                <div>
+                  <label>收藏品档案记录 (鼠标悬停桌宠时显示)</label>
+                  <textarea id="inp-col-notes" rows="2">基于人物参考照半自动对位建模。保留完整东亚女性柔和骨相与乌木丝感长发，颈底作C4椎体水平标准医学解剖横切封口。</textarea>
+                </div>
+
+                <button id="btn-save-and-summon" class="btn primary full-width">
+                  💾 保存生成收藏品档案并召唤桌宠上屏
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 3: DAZ3D HIGH-PRECISION TUTORIAL ==================== -->
+      <section id="tab-tutorial" class="tab-panel">
+        <div class="panel-banner">
+          <div>
+            <h2>📘 Daz3D 亚洲女性高精度照片级头模 & 写实发丝建模全流程教程</h2>
+            <p>
+              本指南教您如何使用 <strong>Daz Studio (Genesis 8.1 / 9 Asian Female) + Face Transfer 2 / KeenTools FaceBuilder + Strand-Based Hair</strong> 制作 99% 贴近真实照片的亚洲女性头部模型，并导入本软件自动装配颈部医学解剖断面。
+            </p>
+          </div>
+        </div>
+
+        <div id="tutorial-steps-container" class="tutorial-grid"></div>
+      </section>
+
+      <!-- ==================== TAB 4: 3D BOX SPACE & SOUND SETTINGS ==================== -->
+      <section id="tab-settings" class="tab-panel">
+        <div class="settings-grid">
+          <!-- Box Space & Perspective Vanishing Point Settings -->
+          <div class="card-block">
+            <h3>📦 屏幕中心透视消失点 & 有限盒型3D空间设置</h3>
+            <p class="hint-text">
+              电脑屏幕为盒型空间的前玻璃面（<code>Z = 0mm</code>），屏幕中心为<strong>透视消失点（Vanishing Point）</strong>。桌宠在盒型空间内移动或用滚轮推远时，会产生真实的透视近大远小与侧面/底面解剖切面透视角度变化，并在触碰盒壁时发生物理反弹。
+            </p>
+
+            <div class="control-group">
+              <div class="slider-row">
+                <span>透视消失点水平中心偏移 (VP X)</span>
+                <input type="range" id="set-vp-x" min="-0.30" max="0.30" step="0.02" value="0" />
+                <span id="val-set-vp-x">0% (正中)</span>
+              </div>
+              <div class="slider-row">
+                <span>透视消失点垂直中心偏移 (VP Y)</span>
+                <input type="range" id="set-vp-y" min="-0.30" max="0.30" step="0.02" value="0" />
+                <span id="val-set-vp-y">0% (正中)</span>
+              </div>
+              <div class="slider-row">
+                <span>盒型空间最大远景深度 (Z Max Depth)</span>
+                <input type="range" id="set-box-depth" min="600" max="2200" step="100" value="1200" />
+                <span id="val-set-box-depth">1200 mm</span>
+              </div>
+              <div class="slider-row">
+                <span>盒型空间水平边界宽度</span>
+                <input type="range" id="set-box-width" min="55" max="115" step="5" value="88" />
+                <span id="val-set-box-width">88 cm</span>
+              </div>
+              <div class="slider-row">
+                <span>盒型空间垂直边界高度</span>
+                <input type="range" id="set-box-height" min="36" max="72" step="2" value="52" />
+                <span id="val-set-box-height">52 cm</span>
+              </div>
+              <div class="slider-row">
+                <span>3D 透视相机视场角 (Perspective FOV)</span>
+                <input type="range" id="set-fov" min="28" max="65" step="2" value="42" />
+                <span id="val-set-fov">42°</span>
+              </div>
+              <div class="field-row">
+                <label>盒型透视空间网格辅助线</label>
+                <select id="sel-box-grid-mode">
+                  <option value="always">常显屏幕中心透视消失点与盒型隧道网格</option>
+                  <option value="interaction">仅在拖拽/滚轮推拉桌宠时高亮显示盒型边界</option>
+                  <option value="hidden">完全隐藏辅助线 (纯享桌面悬浮桌宠)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interaction & Tactile Physics Audio Settings -->
+          <div class="card-block">
+            <h3>🔊 拾取感、空间拖动感与物理碰撞音效引擎设置</h3>
+            <p class="hint-text">
+              采用实时 WebAudio 物理声学合成器，根据拖拽速度、空间立体声声像（Stereo Pan）、滚轮Z轴景深比例与盒壁碰撞速度实时计算物理音效。
+            </p>
+
+            <div class="control-group">
+              <div class="slider-row">
+                <span>3D 鼠标视线追随灵敏度</span>
+                <input type="range" id="set-follow-intensity" min="0" max="1.0" step="0.05" value="0.72" />
+                <span id="val-set-follow-intensity">72%</span>
+              </div>
+              <div class="slider-row">
+                <span>滚轮 Z 轴深度推拉步进速度</span>
+                <input type="range" id="set-wheel-step" min="0.4" max="2.2" step="0.2" value="1.0" />
+                <span id="val-set-wheel-step">1.0x</span>
+              </div>
+              <label class="checkbox-row">
+                <input type="checkbox" id="chk-pet-collision" checked />
+                <span>开启屏幕多桌宠之间的三维物理弹性碰撞</span>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="chk-auto-reset-rot" />
+                <span>第二次点击取消「旋转模式」时自动回正头部朝向</span>
+              </label>
+
+              <hr class="divider" />
+
+              <div class="slider-row">
+                <span>主音量 (Master Volume)</span>
+                <input type="range" id="snd-master" min="0" max="1.0" step="0.05" value="0.75" />
+                <span id="val-snd-master">75%</span>
+              </div>
+              <div class="slider-row">
+                <span>🤏 拾取与放下重量感音效</span>
+                <input type="range" id="snd-pickup" min="0" max="1.0" step="0.05" value="0.85" />
+                <span id="val-snd-pickup">85%</span>
+              </div>
+              <div class="slider-row">
+                <span>💨 空间拖动风阻与摩擦感音效</span>
+                <input type="range" id="snd-drag" min="0" max="1.0" step="0.05" value="0.70" />
+                <span id="val-snd-drag">70%</span>
+              </div>
+              <div class="slider-row">
+                <span>💥 盒壁边界与桌宠物理碰撞音效</span>
+                <input type="range" id="snd-collision" min="0" max="1.0" step="0.05" value="0.90" />
+                <span id="val-snd-collision">90%</span>
+              </div>
+              <div class="slider-row">
+                <span>🛞 滚轮远近景深刻度音效</span>
+                <input type="range" id="snd-depth" min="0" max="1.0" step="0.05" value="0.65" />
+                <span id="val-snd-depth">65%</span>
+              </div>
+
+              <div class="sound-test-bar">
+                <span>🎧 物理音效实时试听:</span>
+                <button class="chip-btn" data-test-sound="pickup">🤏 拾取感</button>
+                <button class="chip-btn" data-test-sound="collision_glass">💥 撞击前玻璃</button>
+                <button class="chip-btn" data-test-sound="collision_wall">📦 撞击盒侧壁</button>
+                <button class="chip-btn" data-test-sound="depth">🛞 景深推拉</button>
+                <button class="chip-btn" data-test-sound="rotate">🔄 旋转锁定</button>
+                <button class="chip-btn" data-test-sound="summon">✨ 召唤桌宠</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== TAB 5: ARCHIVE DIRECTORY EXPLORER ==================== -->
+      <section id="tab-archives" class="tab-panel">
+        <div class="panel-banner">
+          <div>
+            <h2>📂 收藏品档案目录管理器 (<code>/collectibles/</code> 实体文件夹)</h2>
+            <p>
+              每次点击「生成收藏品档案」，系统都会在目录 <code>/collectibles/&lt;编号_名称&gt;/</code> 下生成结构化信息文件 <code>manifest.json</code> 与 Markdown 典藏档案 <code>dossier.md</code>。点击任意档案即可直接预览或召唤该桌宠到电脑屏幕上。
+            </p>
+          </div>
+          <div class="banner-btns">
+            <button id="btn-refresh-archives" class="btn secondary">🔄 刷新目录文件</button>
+            <label class="btn secondary file-btn">
+              📤 导入档案 (.json)
+              <input type="file" id="input-import-archive" accept=".json" hidden />
+            </label>
+          </div>
+        </div>
+
+        <div class="archives-layout">
+          <div id="archive-folder-list" class="archive-folder-list"></div>
+          <div class="archive-inspector">
+            <div class="archive-inspector-header">
+              <span id="arch-inspect-title">📄 正在检视: /collectibles/SPEC-2026-001_LinXi/</span>
+              <div class="btn-row">
+                <button id="btn-arch-summon" class="btn primary">🎯 从此档案召唤桌宠上屏</button>
+                <button id="btn-arch-download" class="btn secondary">⬇️ 下载 .cervix3d.json 档案文件</button>
+              </div>
+            </div>
+            <div class="archive-code-split">
+              <div class="code-pane">
+                <div class="code-pane-title">📋 dossier.md (收藏品典藏档案全文)</div>
+                <pre id="arch-dossier-content"></pre>
+              </div>
+              <div class="code-pane">
+                <div class="code-pane-title">⚙️ manifest.json (3D头雕、发丝与解剖断面配置数据)</div>
+                <pre id="arch-manifest-content"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-notification" class="hidden"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
