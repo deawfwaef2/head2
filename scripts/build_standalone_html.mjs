@@ -64,3 +64,19 @@ const outPath = '/home/user/点击开始游戏_CERVIX3D.html';
 fs.writeFileSync(outPath, standaloneHtml, 'utf8');
 const sizeMb = (fs.statSync(outPath).size / (1024 * 1024)).toFixed(2);
 console.log(`✅ Built standalone playable HTML: ${outPath} (${sizeMb} MB)`);
+
+// Also publish this exact self-contained build as /docs/index.html, which is
+// what GitHub Pages (https://deawfwaef2.github.io/head2/) actually serves.
+// IMPORTANT: Pages must NOT serve the raw repo-root index.html — that file
+// uses `<script type="module" src="/src/main.js">` which (a) imports the bare
+// specifier `three` that a browser cannot resolve without a bundler, and
+// (b) uses root-absolute paths ("/src/...") that 404 under the GitHub Pages
+// project subpath "/head2/" instead of the domain root. Both bugs together
+// produced a totally blank white page in production. Always keep Pages
+// pointed at "main" branch + "/docs" folder (not "/" root) in the repo's
+// GitHub Pages settings, and keep docs/index.html in sync via this script.
+const docsDir = '/home/user/docs';
+if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
+fs.writeFileSync(path.join(docsDir, 'index.html'), standaloneHtml, 'utf8');
+fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
+console.log(`✅ Synced GitHub Pages entry: ${path.join(docsDir, 'index.html')} (${sizeMb} MB)`);
