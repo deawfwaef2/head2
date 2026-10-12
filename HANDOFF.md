@@ -156,6 +156,24 @@
   3. **修复 HUD 消失点标签偏移**：在 `src/style.css` 中将 `.vp-label` 设为 `position: absolute; top: 156px; left: 50%; transform: translateX(-50%)`，使中心透视十字准星严格锁定在 `(50%, 50%)` 消失点，同时文字胶囊下移不挡下巴。
   4. **Playwright 视觉回归验证通过（零控制台报错）**：已生成并人工核验 `.qa/stage8_desktop.png`（林汐/苏婉全宽齐刘海与无高光白斑）、`.qa/stage8_mh_bob.png`（MakeHuman 3D 亚洲女头 + 波波发）、`.qa/stage8_mh_long.png`（MakeHuman 3D 亚洲女头 + 长卷发）与 `.qa/stage8_mh_anatomy.png`（仰视颈部 C4/C5 解剖切面），并重新打包更新单文件离线版 `/home/user/点击开始游戏_CERVIX3D.html`（4.16 MB）。
 
+### [2026-10-12 Stage 9] 修复 GitHub Pages 线上地址 https://deawfwaef2.github.io/head2/ 打开是「纯白空白页」的问题（部署配置 BUG，非 3D/美术 BUG）
+- **用户反馈**：线上 Pages 地址打开是一片空白白页，看不到任何 UI 或 3D 桌宠。
+- **根因排查（用 `curl`/`fetch_page` 直接核对线上源码，不是靠猜）**：
+  1. 用 GitHub REST API (`GET /repos/deawfwaef2/head2/pages`) 确认 Pages 配置是 `source.branch=main, source.path=/`（仓库根目录）。
+  2. 根目录 `index.html` 是 **Vite 开发期源文件**：`<link rel="stylesheet" href="/src/style.css">` 与 `<script type="module" src="/src/main.js">`，两个路径都以 `/` 开头（**根路径绝对路径**）。
+  3. GitHub Pages 的这个仓库是 **项目页（project page）**，真实访问路径是 `https://deawfwaef2.github.io/head2/`，但所有 `/xxx` 绝对路径会被浏览器解析成 `https://deawfwaef2.github.io/xxx`（**少了 `/head2/` 前缀**），导致 CSS 和入口 JS 全部 404。
+  4. 即使路径修好，`main.js` 内部 `import * as THREE from 'three'` 是**裸模块说明符（bare specifier）**，没有打包工具（Vite/Webpack）或 `<script type="importmap">` 的情况下，浏览器原生 ES Module **根本无法解析**，一样会直接报错中断执行。
+  5. 两个问题叠加 = CSS 不加载 + JS 完全不执行 = 浏览器只剩下默认白底 `<body>`，这就是用户看到的「纯白页面」。**这不是 3D 建模/美术质量问题，是部署配置问题**，所以之前几轮专注修头发/脸部渲染的工作完全没有触及这个 BUG。
+- **修复方案（已落地，不是空谈）**：
+  1. 新增仓库 `/docs` 目录，把已经验证过、完全自包含（零外部资源引用、零裸模块引用，全部 inline）的 `点击开始游戏_CERVIX3D.html` 构建产物复制为 `docs/index.html`（外加 `docs/.nojekyll` 防止 Jekyll 处理干扰）。
+  2. 用 GitHub REST API 把 Pages 的 `source` 从 `{branch: main, path: /}` 改成 **`{branch: main, path: /docs}`**（`PUT /repos/deawfwaef2/head2/pages`），这样线上服务的就是离线单文件版本，天然没有任何相对/绝对路径或裸模块解析问题。
+  3. 在 `scripts/build_standalone_html.mjs` 末尾新增自动同步逻辑：每次重新生成 `点击开始游戏_CERVIX3D.html` 后，**自动把同一份内容复制进 `docs/index.html`**，并确保 `docs/.nojekyll` 存在。**请后续所有模型注意：以后只要跑了 `node scripts/build_standalone_html.mjs`，`docs/index.html` 会自动跟着更新，不需要手动复制；但千万不要让 GitHub Pages 的 Pages 设置改回 `path: /`（根目录），根目录 `index.html` 永远是给 `npm run dev` 用的开发源文件，不能直接被 Pages 当成产物发布！**
+- **验证**：用 `curl`/`fetch_page` 确认 `GET /repos/deawfwaef2/head2/pages` 返回 `source.path` 已变为 `/docs`，状态为 `building`（GitHub 后台几分钟内会自动重新发布，属正常异步流程，无法在本轮沙箱内直接等待确认最终渲染效果，请用户稍后刷新 `https://deawfwaef2.github.io/head2/` 核实；若几分钟后仍是旧内容，通常是浏览器/CDN 缓存，建议强制刷新 Ctrl+F5）。
+- **给后续模型的提醒**：
+  1. 如果以后想做「真正的 Vite 构建产物部署」（而不是单文件离线版），必须在 `vite.config.js` 里设置 `base: '/head2/'`，否则同样的根路径 404 问题会再次出现在 `dist/` 产物里。当前选择直接发布单文件离线版是更稳妥、与本项目"必须优先保证可玩 HTML"的既定设计哲学一致的方案，不建议轻易改回 Vite 构建产物部署模式。
+  2. 这次合并时发现并入了另一位并行 Agent 的 Stage 7a/8 提交（MakeHuman 3D 头雕/眼球/发丝管线重大更新、HUD 消失点标签位置修复等），已用 `git merge --ff-only` 快进合并，未丢失任何一方工作，合并后在 `file://` 协议下重新跑过 Playwright 回归测试（0 控制台报错，头发无银色色块，发际线/HUD 均正常）。
+- 工作区大小：本轮结束约 59MB（不含 `node_modules`、`.cache`、`.npm`，`dist/` 为可重新生成产物）。
+
 
 ### [2026-10-12 Stage 9] CC0 发型补充 / 离线档案持久化与实体 ZIP / Electron 独立 HTML 桌面启动
 - **每次编程先读根目录 HANDOFF，绝对不要覆盖本文件；每次修改后优先重建并提交 `点击开始游戏_CERVIX3D.html`。** 本轮从 `/home/user` 根目录操作。
@@ -164,3 +182,4 @@
 - Electron：`electron/main.cjs` 默认直接 `loadFile` 根目录独立 HTML（不用先开 Vite），源码模式在支持透明窗的 OS 上提供真实桌面置顶层；预加载声明桌面模式，前端切为透明背景并隐藏网页模拟图标。`Ctrl/Cmd+Alt+X` 切换全屏鼠标穿透（手动开关；尚无可靠自动悬停穿透）；Electron 本轮未在沙箱真实桌面中运行验证，勿声称已发布安装包。`README.md` 更新为诚实的启动方式与模型许可/质量界限。
 - 本轮可视化 QA：`.qa/stage9_mh_long.png` / `.qa/stage9_mh_ponytail.png`；Playwright 在根目录 HTML 的 `file://` 下检查 MH 预览、启动按钮、档案保存与 ZIP，无 JS pageerror。GPU 软件渲染偶有 SwiftShader context-lost 警告但本轮无脚本异常。
 - **后续待办**：用户真正期望的是贴近照片的高精 DAZ 头发；本项目当前 CC0 MH 发片有低面数/硬边限制。要到照片级请以合法自备 DAZ/Blender 发型与头模同坐标导出并仔细调 UV / 物理渲染；不要把未经许可的商业原件提交到仓库。外部上传 blob 保存跨会话仍需完整文件持久化方案（如 IndexedDB/File System Access API），目前只保存参数。Electron 真实屏幕自动点击穿透交互尚需分平台测试。
+
