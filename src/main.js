@@ -441,15 +441,24 @@ function loadCollectibleIntoStudio(col) {
 // ============================================================================
 async function fetchAndRenderArchives() {
   try {
+    if (window.location.protocol === 'file:') throw new Error('offline file mode');
     const resp = await fetch('/api/collectibles');
     const data = await resp.json();
     if (data.ok && Array.isArray(data.items)) {
       state.archiveItems = data.items;
       renderArchiveExplorer();
+      return;
     }
-  } catch (err) {
-    console.warn('Fallback to memory collectibles list:', err);
-  }
+  } catch (_) {}
+
+  // Offline / file:// fallback: build archive items directly from state.collectibles
+  state.archiveItems = state.collectibles.map(item => ({
+    folderName: item.folderName || `${item.id}_${item.name}`,
+    folderPath: `/collectibles/${item.folderName || item.id}`,
+    manifest: item,
+    dossierMd: `# 颅相典藏档案 · ${item.name} (${item.id})\n\n- **典藏编号**: \`${item.id}\`\n- **藏品名称**: ${item.name}\n- **副标题**: ${item.subtitle || ''}\n- **解剖断面**: ${item.anatomyOptions?.cutLevel || ''}\n\n## 骨相与解剖记录\n${item.dossier?.origin || ''}\n\n${item.dossier?.anatomyNotes || ''}`
+  }));
+  renderArchiveExplorer();
 }
 
 function renderArchiveExplorer() {
@@ -597,7 +606,34 @@ window.addEventListener('DOMContentLoaded', async () => {
   fetchAndRenderArchives();
   initWindowDragging();
 
-  // 4. Bind Navigation Tabs & Desktop Shortcut Icons
+  // 4. Bind Start Game Overlay Buttons (Unlocks WebAudio & starts game)
+  const startOverlay = document.getElementById('start-game-overlay');
+  const btnStartPure = document.getElementById('btn-start-pure-desktop');
+  const btnStartStudio = document.getElementById('btn-start-with-studio');
+
+  if (btnStartPure) {
+    btnStartPure.addEventListener('click', () => {
+      if (startOverlay) startOverlay.classList.add('hidden');
+      state.windowHidden = true;
+      document.getElementById('software-window').classList.add('window-hidden');
+      document.getElementById('btn-toggle-window').textContent = '🗖 展开 CERVIX-3D 软件主窗口';
+      soundEngine.playSummon(true);
+      showToast('🎮 已进入屏幕 3D 桌宠把玩模式！悬停看档案 | 单击模型切换360°旋转 | 滚轮推拉景深 | 拖拽碰撞盒壁');
+    });
+  }
+
+  if (btnStartStudio) {
+    btnStartStudio.addEventListener('click', () => {
+      if (startOverlay) startOverlay.classList.add('hidden');
+      state.windowHidden = false;
+      document.getElementById('software-window').classList.remove('window-hidden');
+      document.getElementById('btn-toggle-window').textContent = '🗕 隐藏软件窗口 (纯看屏幕桌宠)';
+      soundEngine.playSummon(true);
+      showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！可随时点击右上角「隐藏软件窗口」看屏幕桌宠');
+    });
+  }
+
+  // Bind Navigation Tabs & Desktop Shortcut Icons
   document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.addEventListener('click', () => switchSoftwareTab(btn.dataset.tab));
   });

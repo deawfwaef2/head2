@@ -112,10 +112,10 @@ export class StudioPreviewEngine {
     const headMesh = this.headNode.userData.headMesh;
     const capMesh = this.headNode.userData.capMesh;
     if (headMesh && headMesh.userData.basePositions) {
-      applyHeadMorphsToGeometry(headMesh.geometry, headMesh.userData.basePositions, morphs, false);
+      applyHeadMorphsToGeometry(headMesh.geometry, headMesh.userData.basePositions, morphs, false, headMesh.userData.weldData);
     }
     if (capMesh && capMesh.userData.basePositions) {
-      applyHeadMorphsToGeometry(capMesh.geometry, capMesh.userData.basePositions, morphs, true);
+      applyHeadMorphsToGeometry(capMesh.geometry, capMesh.userData.basePositions, morphs, true, capMesh.userData.weldData);
     }
     this.updateCutHelperPosition(morphs);
   }

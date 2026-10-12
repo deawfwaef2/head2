@@ -638,6 +638,32 @@
   <!-- Toast Notification -->
   <div id="toast-notification" class="hidden"></div>
 
+  <!-- Launch / Start Game Modal (Ensures instant playability & WebAudio unlock on local HTML download) -->
+  <div id="start-game-overlay">
+    <div class="start-game-card">
+      <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v2.7 (离线直玩版)</div>
+      <h1>3D 解剖断面头部收藏品 · 桌宠生成与盒型透视空间系统</h1>
+      <p>
+        已搭载 <strong>Daz 东亚女性高精细分头雕（法线平滑无棱角 + 紧致天鹅颈无双下巴）</strong>、<strong>高颅顶包裹式写实丝感发丝</strong> 与 <strong>C4/C5 写实医学解剖横断面底座</strong>。
+      </p>
+      <div class="start-feature-pills">
+        <span>✦ 屏幕中心透视消失点</span>
+        <span>🛞 滚轮推拉远近3D景深</span>
+        <span>🔄 单击桌宠切换360°旋转模式</span>
+        <span>📋 鼠标悬停显示收藏品档案</span>
+        <span>🔊 拾取/拖动/盒壁碰撞物理音效</span>
+      </div>
+      <div class="start-btn-group">
+        <button id="btn-start-pure-desktop" class="btn primary start-big-btn">
+          ▶ 点击开始游戏 (直接进入屏幕3D桌宠把玩模式)
+        </button>
+        <button id="btn-start-with-studio" class="btn secondary start-big-btn">
+          🛠️ 进入典藏库与半自动建模工坊
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

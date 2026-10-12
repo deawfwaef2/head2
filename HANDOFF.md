@@ -55,3 +55,11 @@
 ### [2026-10-12 Stage 1] 初始化 `HANDOFF.md` 与 GitHub 远端同步
 - 创建多 Agent 协作规范文档 `HANDOFF.md`，记录用户全部设计约束与 `image-1.png` 暴露的四大核心视觉 BUG。
 - 准备构建双击即玩的独立打包版本 `点击开始游戏_CERVIX3D.html` 并推送至 `https://github.com/deawfwaef2/head2`。
+
+### [2026-10-12 Stage 2] 修复 `image-1.png` 四大核心视觉 BUG + 优先打包独立可玩 `点击开始游戏_CERVIX3D.html`
+- **重要环境提示（致后续模型）**：跨对话轮次时平台快照会自动清理 `node_modules/` 与后台进程，因此新轮次开始时请先执行 `npm install`，并在修改后执行 `node scripts/build_standalone_html.mjs` 更新根目录的 `点击开始游戏_CERVIX3D.html`。
+- **修复 BUG 1（面部多边形棱角感）**：在 `src/three/collectibleHeadAssembler.js` 中新增 `buildPositionWeldData()` 与 `computeWeldedSmoothNormals()`，对 `OBJLoader` 解出的非索引网格按三维空间重合坐标进行焊接法线平滑，彻底消除 Flat Shading 晶面棱角。
+- **修复 BUG 2（下巴与脖子红唇/眼线贴图错位）**：在 `scripts/build_head_models.py` 中重构面部外围至颈柱的 UV 映射路径（保持在纯肤色外圈 `0.5 + 0.44 * cos_t, 0.5 + 0.46 * sin_t`），严禁跨越纹理中心五官区，彻底消除脖子上的红线伪影。
+- **修复 BUG 3（长下巴、双下巴臃肿与粗脖子）**：重塑东亚女性三庭五眼骨相比例（下巴尖从 `Y = -9.4` 提拉至 `Y = -6.85`，眼裂放大 `+28%`，构建紧致内收的颌下三角 `Submental Tuck` 与纤细天鹅颈 `Rx = 3.25cm`）。
+- **修复 BUG 4（发际线/太阳穴悬空黑缝与发片发灰）**：在 `src/three/hairBuilder.js` 中新增连续包裹颅顶与太阳穴的 3D 立体发壳 `buildContinuousHairShellGeometry()` + 贴颊修颜侧发束 + 自然弧度齐眉/八字刘海，并在 `skinTextureGenerator.js` 中加深乌木黑发基底色度。
+- **优先生成独立 HTML**：已生成单文件离线直玩版 `/点击开始游戏_CERVIX3D.html`（2.37 MB，内嵌全套代码与 3 套近万面东亚女性头雕模型数据，包含「▶ 点击开始游戏」启动弹窗）。
