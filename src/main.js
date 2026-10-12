@@ -15,35 +15,35 @@ const state = {
   windowHidden: false,
   bgModeIndex: 0, // 0: os, 1: void, 2: transparent
   studioDraft: {
-    basePreset: 'linxi',
+    basePreset: 'user_photo',
     customModelUrl: null,
     customModelType: 'glb',
-    skinTone: '#ffe8df',
-    blushIntensity: 0.45,
-    lipColor: '#d45266',
-    irisColor: '#5c3422',
-    hairStyle: 'hair_long01',
-    hairColor: '#1c1624',
-    hairSheen: 0.92,
-    neckClearance: 0.42,
+    skinTone: '#ffe9df',
+    blushIntensity: 0.25,
+    lipColor: '#bf6872',
+    irisColor: '#3b2014',
+    hairStyle: 'hair_user_photo',
+    hairColor: '#191518',
+    hairSheen: 0.85,
+    neckClearance: 0.55,
     photoElement: null,
     photoBlend: 0.0,
     morphs: {
-      jawVLine: 0.16,
-      cheekSoftness: 0.14,
-      noseBridge: 0.15,
-      eyeAlmond: 0.18,
-      lipFullness: 0.18,
+      jawVLine: 0.04,
+      cheekSoftness: 0.16,
+      noseBridge: 0.04,
+      eyeAlmond: 0.08,
+      lipFullness: 0.0,
       neckDiameter: 0.96,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎间盘标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)',
-      vascularContrast: 1.15,
+      cutLevel: 'C4–C5 颈椎鲜血横切面 (切缘凝血渗血态 + 气管软骨环 + 脊髓灰质)',
+      vascularContrast: 1.28,
       dermisRimScale: 1.0,
-      wetness: 0.86,
+      wetness: 0.92,
       showLabels: false
     }
   }
@@ -65,11 +65,39 @@ function showToast(msg) {
 // ============================================================================
 // BUILT-IN REFERENCE PORTRAIT ILLUSTRATION GENERATOR (For Instant Semi-Auto Workflow)
 // ============================================================================
-function drawPresetReferencePortrait(canvas, preset = 'linxi') {
+function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
   const ctx = canvas.getContext('2d');
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
+
+  if (preset === 'user_photo') {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.clearRect(0, 0, w, h);
+      const scale = Math.max(w / img.width, h / img.height);
+      const dw = img.width * scale;
+      const dh = img.height * scale;
+      ctx.drawImage(img, (w - dw) * 0.5, (h - dh) * 0.5, dw, dh);
+      // Alignment guide lines
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.5, 10); ctx.lineTo(w * 0.5, h - 10);
+      ctx.moveTo(16, h * 0.44); ctx.lineTo(w - 16, h * 0.44);
+      ctx.stroke();
+      const overlayCanvas = document.getElementById('studio-photo-overlay');
+      if (overlayCanvas) {
+        const octx = overlayCanvas.getContext('2d');
+        octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        octx.drawImage(canvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+    };
+    img.src = (typeof window !== 'undefined' && window.__EMBEDDED_REF_PHOTO__)
+      ? window.__EMBEDDED_REF_PHOTO__
+      : '/models/user_photo_ref.png';
+  }
 
   // Studio portrait backdrop
   const bg = ctx.createRadialGradient(w * 0.5, h * 0.42, 12, w * 0.5, h * 0.5, w * 0.72);
@@ -218,7 +246,7 @@ function updateHoverDossierHUD(hoverInfo) {
     modeBadge.textContent = '🔄 360°旋转模式 (再点取消)';
     modeBadge.classList.add('rotating');
   } else {
-    modeBadge.textContent = '👁️ 3D视线追随中';
+    modeBadge.textContent = '🪦 静止标本态 (单击360°旋转)';
     modeBadge.classList.remove('rotating');
   }
 
@@ -639,7 +667,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const studioCanvas = document.getElementById('studio-preview-canvas');
   studioEngine = new StudioPreviewEngine(studioCanvas);
   const refPhotoCanvas = document.getElementById('ref-photo-canvas');
-  drawPresetReferencePortrait(refPhotoCanvas, 'linxi');
+  drawPresetReferencePortrait(refPhotoCanvas, 'user_photo');
   await refreshStudio3DModel();
 
   // 3. Render Tutorial & Fetch Archives
@@ -824,6 +852,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   const REAL_HAIRS = [
+    { id: 'hair_user_photo', name: '照片同款 · 清纯齐刘海碎发束发 (6,114v)' },
     { id: 'hair_long01', name: '浪漫中分瀑布长卷发 (3,312v)' },
     { id: 'hair_bob02', name: '法式侧分修颜内扣波波头 (1,688v)' },
     { id: 'hair_bob01', name: '知性层次感锁骨波波发 (5,432v)' },
@@ -864,6 +893,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customModelUrl = null;
     state.studioDraft.basePreset = e.target.value;
     const presetHairMap = {
+      user_photo: 'hair_user_photo',
       linxi: 'hair_long01',
       suwan: 'hair_bob02',
       qianxue: 'hair_ponytail01',

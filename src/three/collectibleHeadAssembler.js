@@ -6,10 +6,7 @@ import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
 
-// Cache ArrayBuffers so loading or cloning heads & 3D hair GLBs is instant
 const arrayBufferCache = new Map();
-
-// Converts 0.24m real-world MakeHuman/Daz head height to 27.6cm scene units
 const BUST_WORLD_SCALE = 115.0;
 
 function base64ToArrayBuffer(b64) {
@@ -46,57 +43,62 @@ function parseGlbBuffer(buffer) {
   });
 }
 
-// Preset baseline morph offsets so Lin Xi, Su Wan, Qian Xue, and Shen Zhiwei each have distinct East Asian facial bone structure
+// Subtle bone-structure biases per preset — NOTE: lipFullness is 0.0 across all presets so mouth is NEVER pouty ("嘟嘟嘴")!
 const PRESET_MORPH_BIASES = {
-  linxi: { jawVLine: 0.12, cheekSoftness: 0.10, noseBridge: 0.12, eyeAlmond: 0.14, lipFullness: 0.15 },
-  suwan: { jawVLine: 0.28, cheekSoftness: 0.04, noseBridge: 0.25, eyeAlmond: 0.28, lipFullness: 0.05 },
-  qianxue: { jawVLine: 0.22, cheekSoftness: 0.18, noseBridge: 0.20, eyeAlmond: 0.20, lipFullness: 0.22 },
-  shenzhiwei: { jawVLine: 0.06, cheekSoftness: 0.24, noseBridge: 0.08, eyeAlmond: 0.18, lipFullness: 0.28 },
+  user_photo: { jawVLine: 0.02, cheekSoftness: 0.16, noseBridge: 0.02, eyeAlmond: 0.06, lipFullness: 0.0 },
+  linxi: { jawVLine: 0.10, cheekSoftness: 0.10, noseBridge: 0.10, eyeAlmond: 0.10, lipFullness: 0.0 },
+  suwan: { jawVLine: 0.22, cheekSoftness: 0.04, noseBridge: 0.20, eyeAlmond: 0.22, lipFullness: 0.0 },
+  qianxue: { jawVLine: 0.18, cheekSoftness: 0.14, noseBridge: 0.16, eyeAlmond: 0.16, lipFullness: 0.0 },
+  shenzhiwei: { jawVLine: 0.06, cheekSoftness: 0.20, noseBridge: 0.06, eyeAlmond: 0.14, lipFullness: 0.0 },
 };
 
 /**
- * Applies facial morph sliders to all morph-enabled meshes inside `rootGroup`
- * (including HeadSkin, Eyebrows, Eyelashes, Eyes, and the attached 3D Hair GLB).
+ * Applies facial morph sliders to all morph-enabled meshes inside `rootGroup`.
+ * Never narrows mouth width automatically so lips remain flat, calm, and lifeless.
  */
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   if (!rootGroup) return;
   rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), ...morphs };
   const m = rootGroup.userData.currentMorphs;
-  const presetKey = rootGroup.userData.basePreset || 'linxi';
-  const bias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.linxi;
+  const presetKey = rootGroup.userData.basePreset || 'user_photo';
+  const bias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.user_photo;
 
-  // Support both Studio UI slider names (jawVLine, cheekSoftness, noseBridge, eyeAlmond, lipFullness)
-  // and detailed morph keys (jawWidth, chinLength, etc.)
-  const jawV = (m.jawVLine ?? -(m.jawWidth ?? 0)) + bias.jawVLine * 0.5;
-  const cheek = (m.cheekSoftness ?? m.cheekboneFullness ?? 0) + bias.cheekSoftness * 0.5;
-  const nose = (m.noseBridge ?? m.noseBridgeHeight ?? 0) + bias.noseBridge * 0.5;
-  const eye = (m.eyeAlmond ?? m.eyeSize ?? 0) + bias.eyeAlmond * 0.5;
-  const lip = (m.lipFullness ?? 0) + bias.lipFullness * 0.5;
+  const jawV = (m.jawVLine ?? -(m.jawWidth ?? 0)) + bias.jawVLine * 0.4;
+  const cheek = (m.cheekSoftness ?? m.cheekboneFullness ?? 0) + bias.cheekSoftness * 0.4;
+  const nose = (m.noseBridge ?? m.noseBridgeHeight ?? 0) + bias.noseBridge * 0.4;
+  const eye = (m.eyeAlmond ?? m.eyeSize ?? 0) + bias.eyeAlmond * 0.4;
+  const lip = (m.lipFullness ?? 0) + bias.lipFullness * 0.4;
   const forehead = Number(m.foreheadHeight ?? 0);
   const ear = Number(m.earSize ?? 0);
 
   const targetWeights = {
-    face_jaw_width_decr: jawV > 0 ? Math.min(1.25, jawV * 1.45) : 0,
-    face_jaw_width_incr: jawV < 0 ? Math.min(1.15, -jawV * 1.35) : 0,
-    face_chin_decr: jawV > 0 ? Math.min(1.0, jawV * 0.85) : 0,
-    face_chin_incr: jawV < 0 ? Math.min(1.0, -jawV * 0.85) : 0,
-    face_cheekbones_incr: cheek > 0 ? Math.min(1.2, cheek * 1.4) : 0,
-    face_cheekbones_decr: cheek < 0 ? Math.min(1.2, -cheek * 1.4) : 0,
-    face_nose_height_incr: nose > 0 ? Math.min(1.2, nose * 1.35) : 0,
-    face_nose_height_decr: nose < 0 ? Math.min(1.2, -nose * 1.35) : 0,
-    face_nose_width_decr: nose > 0 ? Math.min(1.1, nose * 0.95) : 0,
-    face_nose_width_incr: nose < 0 ? Math.min(1.1, -nose * 0.95) : 0,
-    face_eye_size_incr: eye > 0 ? Math.min(0.95, eye * 1.15) : 0,
-    face_eye_size_decr: eye < 0 ? Math.min(0.95, -eye * 1.15) : 0,
-    face_eye_tilt_incr: eye > 0 ? Math.min(1.1, eye * 1.25) : 0,
-    face_eye_tilt_decr: eye < 0 ? Math.min(1.1, -eye * 1.25) : 0,
-    face_lips_incr: lip > 0 ? Math.min(1.25, lip * 1.45) : 0,
-    face_lips_decr: lip < 0 ? Math.min(1.15, -lip * 1.35) : 0,
-    face_mouth_width_decr: lip > 0 ? Math.min(0.85, lip * 0.65) : 0,
-    face_forehead_incr: forehead > 0 ? Math.min(1.0, forehead * 1.3) : 0,
-    face_forehead_decr: forehead < 0 ? Math.min(1.0, -forehead * 1.3) : 0,
-    face_ear_size_incr: ear > 0 ? Math.min(1.0, ear * 1.3) : 0,
-    face_ear_size_decr: ear < 0 ? Math.min(1.0, -ear * 1.3) : 0,
+    face_jaw_width_decr: jawV > 0 ? Math.min(1.1, jawV * 1.25) : 0,
+    face_jaw_width_incr: jawV < 0 ? Math.min(1.1, -jawV * 1.25) : 0,
+    face_chin_decr: jawV > 0 ? Math.min(0.85, jawV * 0.65) : 0,
+    face_chin_incr: jawV < 0 ? Math.min(0.85, -jawV * 0.65) : 0,
+    face_cheekbones_incr: cheek > 0 ? Math.min(1.1, cheek * 1.25) : 0,
+    face_cheekbones_decr: cheek < 0 ? Math.min(1.1, -cheek * 1.25) : 0,
+    face_nose_height_incr: nose > 0 ? Math.min(1.1, nose * 1.2) : 0,
+    face_nose_height_decr: nose < 0 ? Math.min(1.1, -nose * 1.2) : 0,
+    face_nose_width_decr: nose > 0 ? Math.min(0.9, nose * 0.75) : 0,
+    face_nose_width_incr: nose < 0 ? Math.min(0.9, -nose * 0.75) : 0,
+    face_eye_size_incr: eye > 0 ? Math.min(0.8, eye * 0.95) : 0,
+    face_eye_size_decr: eye < 0 ? Math.min(0.8, -eye * 0.95) : 0,
+    face_eye_tilt_incr: eye > 0 ? Math.min(0.9, eye * 1.05) : 0,
+    face_eye_tilt_decr: eye < 0 ? Math.min(0.9, -eye * 1.05) : 0,
+    face_lips_incr: lip > 0 ? Math.min(0.75, lip * 0.85) : 0,
+    face_lips_decr: lip < 0 ? Math.min(0.95, -lip * 1.15) : 0,
+    face_mouth_width_decr: 0, // Never pinch mouth width into a pout!
+    face_forehead_incr: forehead > 0 ? Math.min(1.0, forehead * 1.2) : 0,
+    face_forehead_decr: forehead < 0 ? Math.min(1.0, -forehead * 1.2) : 0,
+    face_ear_size_incr: ear > 0 ? Math.min(1.0, ear * 1.2) : 0,
+    face_ear_size_decr: ear < 0 ? Math.min(1.0, -ear * 1.2) : 0,
+    blink_left: 0,
+    blink_right: 0,
+    look_left: 0,
+    look_right: 0,
+    look_up: 0,
+    look_down: 0,
   };
 
   rootGroup.traverse((child) => {
@@ -110,7 +112,6 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     }
   });
 
-  // Apply neck cross-section cut height offset or tilt if adjusted
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
     const cutOffsetCm = Number(m.cutHeightOffset ?? 0);
@@ -127,84 +128,32 @@ export function applyHeadMorphsToGeometry(geometryOrMesh, basePositions, morphs 
 }
 
 /**
- * Updates real-time blinking (`blink_left`, `blink_right`) and 3D eyeball cursor tracking
- * (`look_left`, `look_right`, `look_up`, `look_down`) on the head collectible!
+ * Lifeless Specimen Expression Mode ("不要眨眼，死人表情默认那种感觉"):
+ * Keeps eyelids and eyeballs 100% motionless in their calm, still specimen state.
  */
-export function updateHeadLifeAnimation(rootGroup, dt = 0.016, targetGazeX = 0, targetGazeY = 0) {
-  if (!rootGroup) return;
-  if (!rootGroup.userData.eyeLife) {
-    rootGroup.userData.eyeLife = {
-      timer: 1.0 + Math.random() * 2.4,
-      blinkPhase: -1,
-      blinkDuration: 0.16,
-      gazeX: 0,
-      gazeY: 0,
-    };
-  }
-  const life = rootGroup.userData.eyeLife;
-  life.timer -= dt;
-  if (life.timer <= 0 && life.blinkPhase < 0) {
-    life.blinkPhase = 0;
-    life.timer = 2.4 + Math.random() * 3.0;
-  }
-
-  let blinkWeight = 0;
-  if (life.blinkPhase >= 0) {
-    life.blinkPhase += dt / life.blinkDuration;
-    if (life.blinkPhase >= 1.0) {
-      life.blinkPhase = -1;
-      blinkWeight = 0;
-    } else {
-      const t = life.blinkPhase;
-      blinkWeight = t < 0.36 ? (t / 0.36) : (1.0 - (t - 0.36) / 0.64);
-      blinkWeight = Math.max(0, Math.min(1, blinkWeight));
-    }
-  }
-
-  const damp = Math.min(1, dt * 8.5);
-  life.gazeX += (targetGazeX - life.gazeX) * damp;
-  life.gazeY += (targetGazeY - life.gazeY) * damp;
-
-  const gx = Math.max(-0.85, Math.min(0.85, life.gazeX));
-  const gy = Math.max(-0.75, Math.min(0.75, life.gazeY));
-
-  rootGroup.traverse((child) => {
-    if (!child.isMesh || !child.morphTargetDictionary || !child.morphTargetInfluences) return;
-    const dict = child.morphTargetDictionary;
-    const infl = child.morphTargetInfluences;
-
-    if ('blink_left' in dict) infl[dict.blink_left] = blinkWeight * 0.88;
-    if ('blink_right' in dict) infl[dict.blink_right] = blinkWeight * 0.88;
-
-    if ('look_right' in dict) infl[dict.look_right] = gx > 0 ? gx : 0;
-    if ('look_left' in dict) infl[dict.look_left] = gx < 0 ? -gx : 0;
-    if ('look_up' in dict) infl[dict.look_up] = gy > 0 ? gy : 0;
-    if ('look_down' in dict) infl[dict.look_down] = gy < 0 ? -gy : 0;
-  });
+export function updateHeadLifeAnimation() {
+  // Intentionally motionless for authentic preserved specimen feel
 }
 
-export function triggerCollectibleBlink(rootGroup) {
-  if (!rootGroup || !rootGroup.userData.eyeLife) return;
-  rootGroup.userData.eyeLife.blinkPhase = 0;
+export function triggerCollectibleBlink() {
+  // Intentionally disabled ("不要眨眼")
 }
 
 function computeSkinTintColor(skinToneHex = '#ffe8df') {
   const c = new THREE.Color(skinToneHex || '#ffe8df');
-  const r = Math.min(1.08, Math.max(0.80, 0.74 + c.r * 0.28));
-  const g = Math.min(1.06, Math.max(0.77, 0.74 + c.g * 0.29));
-  const b = Math.min(1.06, Math.max(0.76, 0.74 + c.b * 0.30));
+  const r = Math.min(1.06, Math.max(0.82, 0.75 + c.r * 0.27));
+  const g = Math.min(1.05, Math.max(0.79, 0.75 + c.g * 0.28));
+  const b = Math.min(1.05, Math.max(0.78, 0.75 + c.b * 0.29));
   return new THREE.Color(r, g, b);
 }
 
-/**
- * Resolves any hair style ID (including legacy names) to one of the 7 real 3D hair GLBs
- */
-export function resolveRealHairStyle(styleName = 'hair_long01') {
+export function resolveRealHairStyle(styleName = 'hair_user_photo') {
   if (styleName === 'none') return 'none';
   const legacyMap = {
+    user_bangs: 'hair_user_photo',
     long_straight: 'hair_long01',
     long_waves: 'hair_long01',
-    hime_cut: 'hair_bob01',
+    hime_cut: 'hair_user_photo',
     sleek_bob: 'hair_bob02',
     short_bob: 'hair_bob02',
     low_chignon: 'hair_ponytail01',
@@ -213,6 +162,7 @@ export function resolveRealHairStyle(styleName = 'hair_long01') {
   };
   const mapped = legacyMap[styleName] || styleName;
   const valid = new Set([
+    'hair_user_photo',
     'hair_long01',
     'hair_bob01',
     'hair_bob02',
@@ -221,7 +171,7 @@ export function resolveRealHairStyle(styleName = 'hair_long01') {
     'hair_short02',
     'hair_short04',
   ]);
-  return valid.has(mapped) ? mapped : 'hair_long01';
+  return valid.has(mapped) ? mapped : 'hair_user_photo';
 }
 
 export async function attachRealHairModel(rootGroup, config = {}) {
@@ -233,7 +183,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     modelContainer.remove(oldHair);
   }
 
-  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_long01';
+  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_user_photo';
   const resolvedStyle = resolveRealHairStyle(rawStyle);
   if (resolvedStyle === 'none') {
     rootGroup.userData.currentHairStyle = 'none';
@@ -248,14 +198,14 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     const hairGroup = new THREE.Group();
     hairGroup.name = 'HairGroup';
 
-    const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#1c1624';
+    const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#191518';
     const baseColor = new THREE.Color(hairColorHex);
     const displayColor = new THREE.Color(
-      Math.max(0.14, baseColor.r * 1.25),
-      Math.max(0.11, baseColor.g * 1.25),
-      Math.max(0.15, baseColor.b * 1.25)
+      Math.max(0.13, baseColor.r * 1.20),
+      Math.max(0.11, baseColor.g * 1.20),
+      Math.max(0.13, baseColor.b * 1.20)
     );
-    const sheenIntensity = Number(config.hairSheen ?? 0.90);
+    const sheenIntensity = Number(config.hairSheen ?? 0.88);
 
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
@@ -268,11 +218,11 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         child.material = new THREE.MeshPhysicalMaterial({
           map: mapTex,
           color: displayColor,
-          roughness: Math.max(0.22, 0.55 - sheenIntensity * 0.25),
-          metalness: 0.04,
-          sheen: sheenIntensity * 0.55,
-          sheenRoughness: 0.32,
-          sheenColor: displayColor.clone().multiplyScalar(1.65),
+          roughness: Math.max(0.24, 0.55 - sheenIntensity * 0.25),
+          metalness: 0.03,
+          sheen: sheenIntensity * 0.48,
+          sheenRoughness: 0.35,
+          sheenColor: displayColor.clone().multiplyScalar(1.55),
           transparent: true,
           alphaTest: 0.16,
           side: THREE.DoubleSide,
@@ -316,13 +266,14 @@ function buildGimbalOverlayGroup() {
 }
 
 /**
- * Builds the complete High-Precision Collectible Head Bust Node (`只有头 + C4/C5 解剖断面 + 真实3D头发`)
+ * Builds the complete High-Precision Collectible Head Bust Node
+ * (`只有头 + 切口真实血迹 + 高亮度 C4/C5 医学解剖断面 + 照片定制发型/7款真实3D头发 + 静态失活表情`)
  */
 export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
   rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
   rootGroup.userData.collectibleId = config.id || 'StudioDraft';
-  rootGroup.userData.basePreset = config.basePreset || 'linxi';
+  rootGroup.userData.basePreset = config.basePreset || 'user_photo';
 
   const morphs = config.morphs || {};
   const materials = config.materials || {};
@@ -333,9 +284,9 @@ export async function buildCollectibleHeadNode(config = {}) {
   modelContainer.scale.setScalar(BUST_WORLD_SCALE);
   rootGroup.add(modelContainer);
 
-  const skinToneHex = config.skinTone || materials.skinToneHex || '#ffe8df';
-  const wetness = Number(config.anatomyOptions?.wetness ?? materials.crossSectionWetness ?? 0.86);
-  const vascularContrast = Number(config.anatomyOptions?.vascularContrast ?? materials.crossSectionVeinContrast ?? 1.15);
+  const skinToneHex = config.skinTone || materials.skinToneHex || '#ffe9df';
+  const wetness = Number(config.anatomyOptions?.wetness ?? materials.crossSectionWetness ?? 0.92);
+  const vascularContrast = Number(config.anatomyOptions?.vascularContrast ?? materials.crossSectionVeinContrast ?? 1.25);
   const showLabels = Boolean(config.anatomyOptions?.showLabels);
 
   const { colorTex, bumpTex } = createAnatomyTextures({
@@ -345,7 +296,6 @@ export async function buildCollectibleHeadNode(config = {}) {
     showLabels,
   });
 
-  // Determine model URL (defaulting to our real compiled East Asian Female Head GLB)
   const customUrl = config.customModelUrl || config.modelUrl;
   const isCustomObj = customUrl && (config.customModelType === 'obj' || customUrl.endsWith('.obj'));
   const targetGlbUrl = (!customUrl || isCustomObj || customUrl.includes('daz_asian_female_'))
@@ -384,11 +334,11 @@ export async function buildCollectibleHeadNode(config = {}) {
         color: computeSkinTintColor(skinToneHex),
         roughness: Number(materials.skinRoughness ?? 0.36),
         metalness: 0.0,
-        sheen: 0.28,
-        sheenRoughness: 0.62,
+        sheen: 0.24,
+        sheenRoughness: 0.65,
         sheenColor: new THREE.Color('#ff9d8f'),
         clearcoat: 0.08,
-        clearcoatRoughness: 0.40,
+        clearcoatRoughness: 0.38,
       });
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
       child.name = 'NeckCrossSectionCap';
@@ -397,14 +347,19 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.geometry.userData.parentHeadGroup = rootGroup;
       child.userData.basePositions = true;
 
+      // High-brightness, glistening wet C4/C5 anatomical cross-section!
+      // Using emissiveMap guarantees the downward-facing section is NEVER dark or black!
       child.material = new THREE.MeshPhysicalMaterial({
         map: colorTex,
+        emissiveMap: colorTex,
+        emissive: new THREE.Color('#ffffff'),
+        emissiveIntensity: 0.74,
         bumpMap: bumpTex,
-        bumpScale: 0.0035,
-        roughness: Math.max(0.08, 1.0 - wetness * 0.88),
+        bumpScale: 0.004,
+        roughness: Math.max(0.06, 1.0 - wetness * 0.90),
         metalness: 0.02,
-        clearcoat: wetness * 0.95,
-        clearcoatRoughness: 0.10,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.08,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -415,16 +370,16 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       child.material = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.06,
+        roughness: 0.08,
         metalness: 0.0,
-        clearcoat: 0.95,
-        clearcoatRoughness: 0.03,
+        clearcoat: 0.92,
+        clearcoatRoughness: 0.04,
       });
     } else if (matName === 'Cornea') {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.16,
+        opacity: 0.15,
         roughness: 0.02,
         metalness: 0.0,
         clearcoat: 1.0,
@@ -435,7 +390,7 @@ export async function buildCollectibleHeadNode(config = {}) {
       const browMap = child.material?.map || null;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
-        color: new THREE.Color('#2a1f1d'),
+        color: new THREE.Color('#241a18'),
         transparent: true,
         alphaTest: 0.06,
         depthWrite: false,
@@ -457,13 +412,9 @@ export async function buildCollectibleHeadNode(config = {}) {
 
   modelContainer.add(gltf.scene);
 
-  // Attach real 3D Hair GLB
   await attachRealHairModel(rootGroup, config);
-
-  // Apply initial facial morphs
   applyHeadMorphsToGroup(rootGroup, morphs);
 
-  // Attach 360° Rotation Gimbal Rings
   const gimbalGroup = buildGimbalOverlayGroup();
   rootGroup.add(gimbalGroup);
   rootGroup.userData.gimbalGroup = gimbalGroup;

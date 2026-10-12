@@ -32,7 +32,7 @@ export class DesktopBoxSpaceEngine {
       boxHeightCm: 52,
       boxMaxDepthMm: 1200,
       showBoxGrid: 'always',
-      followIntensity: 0.72,
+      followIntensity: 0.0,
       wheelDepthStep: 1.0,
       autoResetAfterRotate: false,
       enablePetCollision: true,
@@ -224,6 +224,7 @@ export class DesktopBoxSpaceEngine {
     const startZ = Math.max(b.minZ + 8, Math.min(b.maxZ - 2, rawZCm));
 
     headNode.position.set(startX, startY, startZ);
+    headNode.rotation.set(-0.18, 0, 0);
     headNode.scale.setScalar(0.01);
     this.scene.add(headNode);
 
@@ -236,8 +237,8 @@ export class DesktopBoxSpaceEngine {
       targetScale: 0.72,
       currentScale: 0.01,
       isRotationMode: false,
-      customRot: new THREE.Euler(0.10, 0, 0),
-      currentRot: new THREE.Euler(0, 0, 0),
+      customRot: new THREE.Euler(-0.18, 0, 0),
+      currentRot: new THREE.Euler(-0.18, 0, 0),
       radius: 8.2,
       phase: Math.random() * Math.PI * 2
     };
@@ -269,7 +270,7 @@ export class DesktopBoxSpaceEngine {
       pet.node.userData.gimbalGroup.visible = pet.isRotationMode;
     }
     if (!pet.isRotationMode && this.settings.autoResetAfterRotate) {
-      pet.customRot.set(0.10, 0, 0);
+      pet.customRot.set(-0.18, 0, 0);
     }
     triggerCollectibleBlink(pet.node);
     const b = this.getBoxBounds();
@@ -282,7 +283,7 @@ export class DesktopBoxSpaceEngine {
   resetPetOrientation(id) {
     const pet = this.pets.get(id);
     if (!pet) return;
-    pet.customRot.set(0.10, 0, 0);
+    pet.customRot.set(-0.18, 0, 0);
   }
 
   getSummonedList() {
@@ -641,18 +642,15 @@ export class DesktopBoxSpaceEngine {
         pet.vel.z = -Math.abs(pet.vel.z) * 0.5;
       }
 
-      const bobY = Math.sin(elapsed * 1.8 + pet.phase) * 0.28;
-      pet.node.position.set(pet.pos.x, pet.pos.y + bobY, pet.pos.z);
+      // Lifeless specimen mode: no lively vertical bobbing ("不要眨眼，而且头不要跟随鼠标旋转，就是死人表情默认那种感觉")
+      pet.node.position.set(pet.pos.x, pet.pos.y, pet.pos.z);
 
       const cursorWorld = this.getMouseWorldAtZ(pet.pos.z * 0.5);
       const dx = cursorWorld.x - pet.pos.x;
       const dy = cursorWorld.y - pet.pos.y;
       const follow = this.settings.followIntensity;
 
-      // Update live eyelid blinking + 3D eyeball cursor tracking (`look_left/right/up/down`)!
-      const eyeGazeX = Math.max(-0.85, Math.min(0.85, (dx / 24) * follow));
-      const eyeGazeY = Math.max(-0.75, Math.min(0.75, (dy / 22) * follow));
-      updateHeadLifeAnimation(pet.node, dt, eyeGazeX, eyeGazeY);
+      updateHeadLifeAnimation(pet.node, dt, 0, 0);
 
       if (pet.isRotationMode) {
         pet.node.rotation.x += (pet.customRot.x - pet.node.rotation.x) * 0.22;
@@ -663,13 +661,17 @@ export class DesktopBoxSpaceEngine {
           pet.node.userData.gimbalGroup.children[1].rotation.y -= dt * 0.6;
         }
       } else {
-        const targetYaw = Math.max(-0.55, Math.min(0.55, (dx / 45) * follow)) + pet.customRot.y * 0.35;
-        const targetPitch = Math.max(-0.42, Math.min(0.42, (-dy / 40) * follow)) + pet.customRot.x;
+        const targetYaw = follow > 0.01
+          ? Math.max(-0.55, Math.min(0.55, (dx / 45) * follow)) + pet.customRot.y * 0.35
+          : pet.customRot.y;
+        const targetPitch = follow > 0.01
+          ? Math.max(-0.42, Math.min(0.42, (-dy / 40) * follow)) + pet.customRot.x
+          : pet.customRot.x;
         const velocityRoll = Math.max(-0.32, Math.min(0.32, -pet.vel.x * 0.14));
 
-        pet.node.rotation.x += (targetPitch - pet.node.rotation.x) * 0.10;
-        pet.node.rotation.y += (targetYaw - pet.node.rotation.y) * 0.10;
-        pet.node.rotation.z += (velocityRoll - pet.node.rotation.z) * 0.12;
+        pet.node.rotation.x += (targetPitch - pet.node.rotation.x) * 0.14;
+        pet.node.rotation.y += (targetYaw - pet.node.rotation.y) * 0.14;
+        pet.node.rotation.z += (velocityRoll - pet.node.rotation.z) * 0.14;
       }
     }
 

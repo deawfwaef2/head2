@@ -28,7 +28,7 @@ export class StudioPreviewEngine {
     const w = this.canvas.clientWidth || 540;
     const h = this.canvas.clientHeight || 480;
     this.camera = new THREE.PerspectiveCamera(34, w / h, 1, 300);
-    this.camera.position.set(0, 0.5, 42);
+    this.camera.position.set(0, -6.5, 41);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -43,7 +43,7 @@ export class StudioPreviewEngine {
     this.renderer.toneMappingExposure = 1.12;
 
     this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.target.set(0, -0.8, 0.5);
+    this.controls.target.set(0, -1.5, 0.5);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     this.controls.minDistance = 16;
@@ -142,11 +142,11 @@ export class StudioPreviewEngine {
   setCameraPreset(preset) {
     this.autoRotate = false;
     if (preset === 'front') {
-      this.camera.position.set(0, 0.5, 42);
-      this.controls.target.set(0, -0.6, 0.5);
+      this.camera.position.set(0, -6.5, 41);
+      this.controls.target.set(0, -1.5, 0.5);
     } else if (preset === 'three_quarter') {
-      this.camera.position.set(20, 2.0, 36);
-      this.controls.target.set(0, -0.8, 0.5);
+      this.camera.position.set(18, -5.0, 36);
+      this.controls.target.set(0, -1.5, 0.5);
     } else if (preset === 'anatomy_bottom') {
       // Dramatic upward inspection view directly looking at the C4/C5 Medical Anatomical Neck Cross-Section!
       this.camera.position.set(0, -34, 15);

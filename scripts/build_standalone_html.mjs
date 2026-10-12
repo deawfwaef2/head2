@@ -18,6 +18,7 @@ const jsContent = jsFile ? fs.readFileSync(path.join(assetsDir, jsFile), 'utf8')
 
 const glbFiles = [
   'daz_asian_head_base.glb',
+  'hair_user_photo.glb',
   'hair_long01.glb',
   'hair_bob01.glb',
   'hair_bob02.glb',
@@ -35,7 +36,13 @@ for (const fname of glbFiles) {
   }
 }
 
-const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)};</script>`;
+let refPhotoDataUri = '';
+const refPhotoPath = '/home/user/public/models/user_photo_ref.jpg';
+if (fs.existsSync(refPhotoPath)) {
+  refPhotoDataUri = 'data:image/jpeg;base64,' + fs.readFileSync(refPhotoPath).toString('base64');
+}
+
+const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw
   .replace(/<link rel="stylesheet"[^>]*>/g, `<style>\n${cssContent}\n</style>`)

@@ -63,7 +63,7 @@
         <span class="dossier-serial" id="hud-serial">SPEC-2026-001</span>
         <span class="dossier-grade" id="hud-grade">SSR · 原初典藏</span>
       </div>
-      <span class="dossier-mode-badge" id="hud-mode-badge">👁️ 3D追随中</span>
+      <span class="dossier-mode-badge" id="hud-mode-badge">🪦 静止标本态</span>
     </div>
     <div class="dossier-title" id="hud-name">林汐 · Lin Xi</div>
     <div class="dossier-subtitle" id="hud-subtitle">江南古典鹅蛋脸骨相 · 首号典藏标本</div>
@@ -217,7 +217,7 @@
 
               <div class="photo-preview-box" id="photo-preview-box">
                 <canvas id="ref-photo-canvas" width="260" height="300"></canvas>
-                <div class="photo-badge" id="photo-status-badge">内置参考照：东方古典鹅蛋脸</div>
+                <div class="photo-badge" id="photo-status-badge">内置参考照：本人照片定制 (齐刘海+右颊痣)</div>
               </div>
 
               <div class="btn-row">
@@ -232,8 +232,9 @@
 
               <div class="preset-photo-row">
                 <span>快速切换示例照:</span>
-                <button class="chip-btn active" data-ref-photo="linxi">林汐照</button>
-                <button class="chip-btn" data-ref-photo="suwan">苏婉照</button>
+                <button class="chip-btn active" data-ref-photo="user_photo">本人照片</button>
+                <button class="chip-btn" data-ref-photo="linxi">林汐照</button>
+                <button class="chip-btn" data-ref-photo="suwan">苏晚照</button>
                 <button class="chip-btn" data-ref-photo="qianxue">千雪照</button>
               </div>
 
@@ -333,6 +334,7 @@
                 <div class="field-row">
                   <label>亚洲女性基底模型</label>
                   <select id="sel-base-preset">
+                    <option value="user_photo">照片真容定制标本 · 初夏 (齐刘海碎发 + 右颊痣 + 颈底血迹 · 4,494v)</option>
                     <option value="linxi">真实3D亚洲女头 · 林汐 (江南鹅蛋微V脸 · 4,494v)</option>
                     <option value="suwan">真实3D亚洲女头 · 苏晚 (清冷丹凤直鼻 · 4,494v)</option>
                     <option value="qianxue">真实3D亚洲女头 · 千雪 (冷艳高颅顶骨相 · 4,494v)</option>
@@ -342,35 +344,35 @@
 
                 <div class="slider-row">
                   <span>下颌V线收窄 (Jaw V-Line)</span>
-                  <input type="range" id="morph-jaw" min="-0.45" max="0.45" step="0.02" value="0.08" />
-                  <span id="val-morph-jaw">+0.08</span>
+                  <input type="range" id="morph-jaw" min="-0.45" max="0.45" step="0.02" value="0.04" />
+                  <span id="val-morph-jaw">+0.04</span>
                 </div>
                 <div class="slider-row">
                   <span>颧弓与苹果肌饱满度</span>
-                  <input type="range" id="morph-cheek" min="-0.40" max="0.40" step="0.02" value="0.12" />
-                  <span id="val-morph-cheek">+0.12</span>
+                  <input type="range" id="morph-cheek" min="-0.40" max="0.40" step="0.02" value="0.16" />
+                  <span id="val-morph-cheek">+0.16</span>
                 </div>
                 <div class="slider-row">
                   <span>鼻梁与鼻尖立体度</span>
-                  <input type="range" id="morph-nose" min="-0.40" max="0.45" step="0.02" value="0.06" />
-                  <span id="val-morph-nose">+0.06</span>
+                  <input type="range" id="morph-nose" min="-0.40" max="0.45" step="0.02" value="0.04" />
+                  <span id="val-morph-nose">+0.04</span>
                 </div>
                 <div class="slider-row">
                   <span>杏眼弧度与眼尾微挑</span>
-                  <input type="range" id="morph-eye" min="-0.35" max="0.40" step="0.02" value="0.10" />
-                  <span id="val-morph-eye">+0.10</span>
+                  <input type="range" id="morph-eye" min="-0.35" max="0.40" step="0.02" value="0.08" />
+                  <span id="val-morph-eye">+0.08</span>
                 </div>
                 <div class="slider-row">
-                  <span>唇珠与水光唇丰满度</span>
-                  <input type="range" id="morph-lip" min="-0.35" max="0.45" step="0.02" value="0.12" />
-                  <span id="val-morph-lip">+0.12</span>
+                  <span>唇部微调 (默认0平直静态唇)</span>
+                  <input type="range" id="morph-lip" min="-0.35" max="0.45" step="0.02" value="0.00" />
+                  <span id="val-morph-lip">+0.00</span>
                 </div>
 
                 <div class="color-picker-grid">
-                  <label>肤色 <input type="color" id="col-skin" value="#f7d9cc" /></label>
-                  <label>唇色 <input type="color" id="col-lip" value="#d45868" /></label>
-                  <label>瞳色 <input type="color" id="col-iris" value="#362015" /></label>
-                  <label>发色 <input type="color" id="col-hair" value="#131015" /></label>
+                  <label>肤色 <input type="color" id="col-skin" value="#ffe9df" /></label>
+                  <label>唇色 <input type="color" id="col-lip" value="#bf6872" /></label>
+                  <label>瞳色 <input type="color" id="col-iris" value="#3b2014" /></label>
+                  <label>发色 <input type="color" id="col-hair" value="#191518" /></label>
                 </div>
               </div>
             </div>
@@ -380,8 +382,9 @@
               <h3>💇‍♀️ 步骤 3：写实发丝与颈部解剖断面调节</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>7款真实3D发型 (.GLB)</label>
+                  <label>8款真实3D发型 (.GLB)</label>
                   <select id="sel-hair-style">
+                    <option value="hair_user_photo">照片同款 · 清纯齐刘海碎发束发 (hair_user_photo.glb · 6,114顶点)</option>
                     <option value="hair_long01">浪漫中分瀑布长卷发 (hair_long01.glb · 3,312顶点)</option>
                     <option value="hair_bob02">法式侧分修颜内扣波波头 (hair_bob02.glb · 1,688顶点)</option>
                     <option value="hair_bob01">知性层次感锁骨波波发 (hair_bob01.glb · 5,432顶点)</option>
@@ -542,9 +545,9 @@
 
             <div class="control-group">
               <div class="slider-row">
-                <span>3D 鼠标视线追随灵敏度</span>
-                <input type="range" id="set-follow-intensity" min="0" max="1.0" step="0.05" value="0.72" />
-                <span id="val-set-follow-intensity">72%</span>
+                <span>3D 鼠标视线追随灵敏度 (默认0=死人标本静止态)</span>
+                <input type="range" id="set-follow-intensity" min="0" max="1.0" step="0.05" value="0" />
+                <span id="val-set-follow-intensity">0% (静止标本)</span>
               </div>
               <div class="slider-row">
                 <span>滚轮 Z 轴深度推拉步进速度</span>

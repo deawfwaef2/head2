@@ -1,48 +1,51 @@
 {
   "id": "SPEC-2026-003",
+  "folderName": "SPEC-2026-003_QianXue",
   "name": "千雪 · Qian Xue",
-  "codename": "CERVIX-AF-03 · 冷艳高马尾财阀千金",
-  "subjectAge": "21岁",
-  "originRegion": "中国 · 成都 (East Asian Female G9/MH High-Poly)",
-  "acquisitionDate": "2026-10-12",
-  "cervicalLevel": "C5 颈椎上关节面横断面",
-  "preservationState": "S 级 · 高清微距解剖级封存",
-  "dazBaseFigure": "Real MakeHuman/Daz Asian Female Head GLB (4,494v + hair_ponytail01.glb)",
+  "subtitle": "冷艳高束马尾 · 财阀千金立体骨相典藏",
+  "grade": "UR · 殿堂孤品",
+  "basePreset": "qianxue",
   "modelUrl": "/models/daz_asian_head_base.glb",
-  "notes": "干练高束马尾(hair_ponytail01.glb)完整展露饱满额头、双耳与精致V型下颌折角。点击进入360°检视模式可无遮挡观察后颈斜方肌群、高马尾发束与C5横断面解剖细节。",
-  "summoned": true,
+  "skinTone": "#ffece5",
+  "blushIntensity": 0.28,
+  "lipColor": "#c2606c",
+  "irisColor": "#633824",
+  "hairStyle": "hair_ponytail01",
+  "hairColor": "#26181d",
+  "hairSheen": 0.9,
+  "neckClearance": 0.65,
+  "summoned": false,
   "boxPosition": {
-    "x": 2.15,
-    "y": 0.22,
-    "z": -0.2
+    "x": 14,
+    "y": -5,
+    "z": -180
   },
   "morphs": {
-    "jawWidth": -0.22,
-    "chinLength": -0.12,
-    "cheekboneFullness": 0.18,
-    "noseBridgeHeight": 0.2,
-    "noseWingWidth": -0.2,
-    "noseLength": 0.04,
-    "eyeSize": 0.22,
-    "eyeTilt": 0.2,
-    "eyeSpacing": -0.02,
-    "lipFullness": 0.24,
-    "mouthWidth": -0.18,
-    "foreheadHeight": 0,
-    "earSize": -0.06,
-    "neckSlimness": 0.18
+    "jawVLine": 0.2,
+    "cheekSoftness": 0.14,
+    "noseBridge": 0.18,
+    "eyeAlmond": 0.16,
+    "lipFullness": 0,
+    "neckDiameter": 0.95,
+    "cutHeightOffset": 0,
+    "cutTiltPitch": 4,
+    "cutTiltRoll": 0
   },
-  "materials": {
-    "skinToneHex": "#ffece5",
-    "blushIntensity": 0.42,
-    "lipTintHex": "#d94b62",
-    "skinRoughness": 0.36,
-    "subsurfaceScatter": 0.75,
-    "hairStyle": "hair_ponytail01",
-    "hairColorHex": "#26181d",
-    "hairHighlightHex": "#4f323b",
-    "irisColorHex": "#633824",
-    "crossSectionWetness": 0.88,
-    "crossSectionVeinContrast": 0.88
+  "anatomyOptions": {
+    "cutLevel": "C5 颈椎上关节面带血横切面 (高清微距封存)",
+    "vascularContrast": 1.22,
+    "dermisRimScale": 1,
+    "wetness": 0.9,
+    "showLabels": false
+  },
+  "dossier": {
+    "origin": "搭载3,902顶点干练高颅顶束马尾模型(hair_ponytail01.glb)，完整展露饱满额头、双耳与精致V型下颌折角。",
+    "anatomyNotes": "高束马尾与后颈自然分离，进入360°旋转检视模式可完整观察后颈斜方肌群、切口血迹与高亮度C5横断面解剖细节。",
+    "tags": [
+      "高颅顶马尾(3902v)",
+      "全露下颌折角",
+      "C5带血横切面",
+      "静态标本表情"
+    ]
   }
 }

@@ -1,0 +1,52 @@
+{
+  "id": "SPEC-2026-000",
+  "folderName": "SPEC-2026-000_UserPhoto",
+  "name": "初夏 · 照片真容定制标本",
+  "subtitle": "齐刘海碎发少女骨相 · 右颊特征痣 · C4颈部带血横断面",
+  "grade": "UR · 照片真容孤品",
+  "basePreset": "user_photo",
+  "modelUrl": "/models/daz_asian_head_base.glb",
+  "skinTone": "#ffe9df",
+  "blushIntensity": 0.25,
+  "lipColor": "#bf6872",
+  "irisColor": "#3b2014",
+  "hairStyle": "hair_user_photo",
+  "hairColor": "#191518",
+  "hairSheen": 0.85,
+  "neckClearance": 0.55,
+  "summoned": true,
+  "boxPosition": {
+    "x": -22,
+    "y": 2,
+    "z": -110
+  },
+  "morphs": {
+    "jawVLine": 0.04,
+    "cheekSoftness": 0.18,
+    "noseBridge": 0.04,
+    "eyeAlmond": 0.08,
+    "lipFullness": 0,
+    "neckDiameter": 0.96,
+    "cutHeightOffset": 0,
+    "cutTiltPitch": 4,
+    "cutTiltRoll": 0
+  },
+  "anatomyOptions": {
+    "cutLevel": "C4–C5 颈椎鲜血横切面 (切缘凝血渗血态 + 气管软骨环 + 脊髓灰质)",
+    "vascularContrast": 1.28,
+    "dermisRimScale": 1,
+    "wetness": 0.92,
+    "showLabels": false
+  },
+  "dossier": {
+    "origin": "依据用户上传照片 1:1 定制的少女头颈标本：还原清纯齐眉碎刘海与耳前鬓角碎发(hair_user_photo.glb · 6,114v)、柔和饱满鹅蛋脸、右脸颊3颗特征痣与平直自然的静态失活唇形（无眨眼/无视线追随）。",
+    "anatomyNotes": "颈部C4/C5横切面周围皮肤附着真实暗红凝血与鲜红渗血痕迹，底部断面高亮度清晰展现C4椎骨、蝴蝶形脊髓灰质、气管透明软骨环与双侧颈动静脉。",
+    "tags": [
+      "本人照片定制头模",
+      "齐刘海碎发(6114v)",
+      "右颊特征痣还原",
+      "切口凝血血迹感",
+      "静态失活标本表情"
+    ]
+  }
+}

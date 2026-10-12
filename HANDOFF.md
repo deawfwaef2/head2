@@ -91,3 +91,20 @@
   4. **独立单文件可玩版更新 (`/点击开始游戏_CERVIX3D.html`, 8.59 MB)**：
      - 将 `daz_asian_head_base.glb` 与全部 7 款 `hair_*.glb` 模型以 Base64 内嵌至 `window.__EMBEDDED_GLBS__`，双击 HTML 即可 100% 离线加载真实 3D 头模与全部 7 款真实 3D 发型。
 
+### [2026-10-12 Stage 5] 静态失活标本神态（取消眨眼与鼠标旋转跟随）+ 消除“嘟嘟嘴” + 高亮度带血颈部断面 + 用户本人照片定制头模 (`SPEC-2026-000` / `hair_user_photo.glb`)
+- **用户最新明确指令（最高优先级，严禁违背）**：
+  1. **不要眨眼 & 不要跟随鼠标旋转（“不要眨眼，而且头不要跟随鼠标旋转，就是死人表情默认那种感觉知道吧”）**：
+     - 彻底关闭自动眨眼（`blink_left`/`blink_right` 保持静态微阖失活感）与眼球视线追踪（`look_* = 0`）。
+     - `DesktopBoxSpaceEngine.js` 默认将 `followIntensity` 设为 `0.0` 并移除上下呼吸浮动 `bobY`，使桌面上的 3D 头模保持**死人/标本级绝对静止神态**（默认微仰 `-0.18 rad` 以直接展示颈部切口血迹与底部断面，仅在手动拖拽、滚轮推拉景深或单击进入 360° 旋转检视时才移动）。
+  2. **彻底修复“嘟嘟嘴”问题（“不知道为什么现在嘟嘟嘴就是嘴看上去有问题”）**：
+     - 原因定位：此前在烘焙与运行期叠加了 `face_mouth_width_decr`（收窄嘴角）+ `face_lips_incr`（前推唇珠）+ 仅涂抹嘴唇中央的窄唇彩，导致嘴唇向中间撅起呈“嘟嘟嘴”。
+     - 修复方案：在 `scripts/build_real_daz_assets.py` 与 `src/three/collectibleHeadAssembler.js` 中全面移除 `face_mouth_width_decr`，改用 `face_lips_decr: 0.22` 并将唇部前凸顶点 (`z > 0.134`) 向内收平 `36%`，配合全唇宽自然低饱和灰粉标本唇色 (`#bf6872`)，使双唇呈现平直、放松、自然闭合的静态标本嘴型。
+  3. **解决断面发黑并增加切口附近真实血迹感（“而且现在断面好黑，而且断面附近就是应该有点血迹感更真实”）**：
+     - 在 `scripts/build_real_daz_assets.py` 中，于 `daz_asian_head_base.glb` 的颈部切割口上方皮肤 (`Y ∈ [1.362, 1.388]`) 烘焙了真实的**暗红凝血切缘 (`#4a0409`) + 鲜红毛细血管不规则渗血晕染 (`#9e111b`) + 微细血点**。
+     - 为 `NeckCrossSection` 断面网格内嵌高清 `neck_section.jpg` 贴图、法线微向前倾 (`[0, -0.93, 0.36]`)，并在 `collectibleHeadAssembler.js` 中同时启用 `emissiveMap: colorTex, emissiveIntensity: 0.74`，彻底解决朝下断面背光发黑的问题，使 C4 颈椎、蝴蝶形脊髓灰质、气管软骨环、双侧颈动静脉与鲜红肌群在任何角度均清晰高亮。
+  4. **新增用户本人照片 1:1 定制预设角色与专属发型 (`SPEC-2026-000 · 初夏` + `public/models/hair_user_photo.glb`)**：
+     - 根据用户上传的照片 (`uploads/image-1.png` -> `public/models/user_photo_ref.jpg`)，在 `scripts/build_real_daz_assets.py` 中基于颅骨表面精确包络算法 (`get_skull_front_z`) 构建了 **6,114 顶点专属发型 `public/models/hair_user_photo.glb`**（贴合圆润颅顶的空气感齐眉直碎刘海 + 双耳前垂落的修颜鬓角碎发 + 露出双耳与天鹅颈的后脑束发），并在右脸颊对应位置点绘了照片同款的 **3 颗特征小痣**。
+     - 将 `SPEC-2026-000 · 初夏 · 照片真容定制标本` 设为首号默认召唤藏品与工坊默认预设，并在工坊参考照区域默认载入用户照片。
+  5. **更新独立单文件可玩版 (`/点击开始游戏_CERVIX3D.html`, 9.34 MB)**：内嵌更新后的带血迹与特征痣头模 `daz_asian_head_base.glb`、专属发型 `hair_user_photo.glb`、其余 7 款真实 3D 发型及用户参考照数据。
+
+

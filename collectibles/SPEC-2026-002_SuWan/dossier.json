@@ -1,48 +1,51 @@
 {
   "id": "SPEC-2026-002",
+  "folderName": "SPEC-2026-002_SuWan",
   "name": "苏晚 · Su Wan",
-  "codename": "CERVIX-AF-02 · 清冷丹凤侧分波波",
-  "subjectAge": "24岁",
-  "originRegion": "中国 · 杭州 (East Asian Female G9/MH High-Poly)",
-  "acquisitionDate": "2026-10-12",
-  "cervicalLevel": "C4 颈椎体下缘标准解剖断面",
-  "preservationState": "S 级 · 原位血管充盈态保存",
-  "dazBaseFigure": "Real MakeHuman/Daz Asian Female Head GLB (4,494v + hair_bob02.glb)",
+  "subtitle": "清冷丹凤侧分波波 · 高智感东方骨相标本",
+  "grade": "SSR · 特级典藏",
+  "basePreset": "suwan",
   "modelUrl": "/models/daz_asian_head_base.glb",
-  "notes": "清冷高级感东方女性骨相，搭配法式侧分修颜内扣波波头(hair_bob02.glb)。外眼角微挑丹凤眼型，鼻梁挺拔纤细，修长天鹅颈底部呈现完整的C4颈椎骨松质、气管C形软骨与颈动脉鞘断面。",
+  "skinTone": "#fff0ea",
+  "blushIntensity": 0.24,
+  "lipColor": "#b8626c",
+  "irisColor": "#4a2a1c",
+  "hairStyle": "hair_bob02",
+  "hairColor": "#151824",
+  "hairSheen": 0.94,
+  "neckClearance": 0.5,
   "summoned": true,
   "boxPosition": {
-    "x": 0,
-    "y": 0.18,
-    "z": -0.35
+    "x": 22,
+    "y": 1,
+    "z": -150
   },
   "morphs": {
-    "jawWidth": -0.28,
-    "chinLength": -0.16,
-    "cheekboneFullness": 0.08,
-    "noseBridgeHeight": 0.24,
-    "noseWingWidth": -0.24,
-    "noseLength": 0.08,
-    "eyeSize": 0.12,
-    "eyeTilt": 0.28,
-    "eyeSpacing": 0.04,
-    "lipFullness": 0.08,
-    "mouthWidth": -0.22,
-    "foreheadHeight": 0.08,
-    "earSize": -0.1,
-    "neckSlimness": 0.22
+    "jawVLine": 0.24,
+    "cheekSoftness": 0.06,
+    "noseBridge": 0.2,
+    "eyeAlmond": 0.2,
+    "lipFullness": -0.04,
+    "neckDiameter": 0.94,
+    "cutHeightOffset": 0,
+    "cutTiltPitch": 4,
+    "cutTiltRoll": 0
   },
-  "materials": {
-    "skinToneHex": "#fff0ea",
-    "blushIntensity": 0.24,
-    "lipTintHex": "#c84a5e",
-    "skinRoughness": 0.34,
-    "subsurfaceScatter": 0.78,
-    "hairStyle": "hair_bob02",
-    "hairColorHex": "#151824",
-    "hairHighlightHex": "#2f3854",
-    "irisColorHex": "#4a2a1c",
-    "crossSectionWetness": 0.9,
-    "crossSectionVeinContrast": 0.92
+  "anatomyOptions": {
+    "cutLevel": "C4 颈椎体下缘带血解剖断面 (原位血管充盈态)",
+    "vascularContrast": 1.25,
+    "dermisRimScale": 1,
+    "wetness": 0.92,
+    "showLabels": false
+  },
+  "dossier": {
+    "origin": "清冷高级感东方女性骨相，搭配法式不对称侧分修颜内扣波波头(hair_bob02.glb · 1,688v)。平直自然闭合唇线，静态失活眼神。",
+    "anatomyNotes": "短发造型360°无遮挡展露修长天鹅颈、颈底鲜血渗出切缘与底部高亮度C4颈椎横切面。",
+    "tags": [
+      "法式侧分波波(1688v)",
+      "切缘渗血细节",
+      "高亮度C4断面",
+      "静态失活标本"
+    ]
   }
 }
