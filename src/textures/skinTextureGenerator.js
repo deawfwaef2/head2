@@ -35,7 +35,8 @@ export function createDazSkinTexture(options = {}) {
     eyelinerIntensity = 0.90,
     browColor = '#261b18',
     photoElement = null,
-    photoBlend = 0.0
+    photoBlend = 0.0,
+    forMakeHuman3D = false
   } = options;
 
   const base = hexToRgb(skinTone);
@@ -58,26 +59,29 @@ export function createDazSkinTexture(options = {}) {
   ctx.fillStyle = faceGlow;
   ctx.fillRect(0, 0, size, size);
 
-  // 2. Soft Peach/Rose Apple Cheek Blush (u=0.33/0.67, v=0.48)
+  // 2. Soft Peach/Rose Apple Cheek Blush
+  const blushUOffset = forMakeHuman3D ? 0.153 : 0.165;
+  const blushV = forMakeHuman3D ? 0.421 : 0.485;
+  const blushRad = size * (forMakeHuman3D ? 0.095 : 0.125);
   for (const side of [-1, 1]) {
-    const [cx, cy] = uv(0.5 + side * 0.165, 0.485);
-    const blushGrad = ctx.createRadialGradient(cx, cy, size * 0.008, cx, cy, size * 0.125);
+    const [cx, cy] = uv(0.5 + side * blushUOffset, blushV);
+    const blushGrad = ctx.createRadialGradient(cx, cy, size * 0.008, cx, cy, blushRad);
     blushGrad.addColorStop(0, `rgba(238, 118, 126, ${0.30 * blushIntensity})`);
     blushGrad.addColorStop(0.55, `rgba(238, 130, 135, ${0.14 * blushIntensity})`);
     blushGrad.addColorStop(1, 'rgba(238, 130, 135, 0)');
     ctx.fillStyle = blushGrad;
     ctx.beginPath();
-    ctx.arc(cx, cy, size * 0.125, 0, Math.PI * 2);
+    ctx.arc(cx, cy, blushRad, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // 3. Delicate Nasal Bridge Contour, Highlight & Petite Nostrils
-  const [nbTopX, nbTopY] = uv(0.50, 0.645);
-  const [nbTipX, nbTipY] = uv(0.50, 0.456);
+  const [nbTopX, nbTopY] = uv(0.50, forMakeHuman3D ? 0.483 : 0.645);
+  const [nbTipX, nbTipY] = uv(0.50, forMakeHuman3D ? 0.388 : 0.456);
 
   // Subtle side nose shadow lines (柔和鼻影)
   for (const side of [-1, 1]) {
-    const sx = nbTopX + side * size * 0.026;
+    const sx = nbTopX + side * size * (forMakeHuman3D ? 0.020 : 0.026);
     const sGrad = ctx.createLinearGradient(0, nbTopY, 0, nbTipY);
     sGrad.addColorStop(0, 'rgba(150, 95, 82, 0.16)');
     sGrad.addColorStop(0.5, 'rgba(150, 95, 82, 0.09)');
@@ -86,7 +90,7 @@ export function createDazSkinTexture(options = {}) {
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(sx, nbTopY);
-    ctx.quadraticCurveTo(nbTopX + side * size * 0.018, (nbTopY + nbTipY) * 0.5, nbTopX + side * size * 0.024, nbTipY);
+    ctx.quadraticCurveTo(nbTopX + side * size * 0.016, (nbTopY + nbTipY) * 0.5, nbTopX + side * size * 0.020, nbTipY);
     ctx.stroke();
   }
 
@@ -99,213 +103,221 @@ export function createDazSkinTexture(options = {}) {
   ctx.lineWidth = 6;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(nbTopX, nbTopY + 8);
-  ctx.lineTo(nbTipX, nbTipY - 8);
+  ctx.moveTo(nbTopX, nbTopY + 6);
+  ctx.lineTo(nbTipX, nbTipY - 6);
   ctx.stroke();
 
   // Nose tip blush & pearl dot
-  const tipGlow = ctx.createRadialGradient(nbTipX, nbTipY, 1, nbTipX, nbTipY, size * 0.036);
+  const tipGlow = ctx.createRadialGradient(nbTipX, nbTipY, 1, nbTipX, nbTipY, size * 0.032);
   tipGlow.addColorStop(0, 'rgba(255, 250, 248, 0.48)');
   tipGlow.addColorStop(0.38, `rgba(235, 122, 124, ${0.22 * blushIntensity})`);
   tipGlow.addColorStop(1, 'rgba(235, 122, 124, 0)');
   ctx.fillStyle = tipGlow;
   ctx.beginPath();
-  ctx.arc(nbTipX, nbTipY, size * 0.036, 0, Math.PI * 2);
+  ctx.arc(nbTipX, nbTipY, size * 0.032, 0, Math.PI * 2);
   ctx.fill();
 
-  // Petite Nostrils (u = 0.462 & 0.538, v = 0.415)
+  // Petite Nostrils
+  const nostrilU = forMakeHuman3D ? 0.031 : 0.038;
+  const nostrilV = forMakeHuman3D ? 0.375 : 0.415;
   for (const side of [-1, 1]) {
-    const [nx, ny] = uv(0.50 + side * 0.038, 0.415);
+    const [nx, ny] = uv(0.50 + side * nostrilU, nostrilV);
     ctx.save();
     ctx.translate(nx, ny);
     ctx.rotate(side * 0.48);
-    const nGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, size * 0.012);
+    const nGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, size * 0.011);
     nGrad.addColorStop(0, 'rgba(68, 28, 25, 0.62)');
     nGrad.addColorStop(0.65, 'rgba(130, 68, 58, 0.25)');
     nGrad.addColorStop(1, 'rgba(130, 68, 58, 0)');
     ctx.fillStyle = nGrad;
     ctx.beginPath();
-    ctx.ellipse(0, 0, size * 0.012, size * 0.006, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, size * 0.011, size * 0.0055, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
   // 4. Petite Gradient Petal / Water-Gloss Lips (花瓣渐层水光唇)
-  // Narrower, softer, feathered edges so lips look natural and plump
   ctx.save();
-  const [mLeftX, mLeftY] = uv(0.402, 0.308);
-  const [mRightX, mRightY] = uv(0.598, 0.308);
-  const [cupidLX, cupidLY] = uv(0.474, 0.352);
-  const [cupidCX, cupidCY] = uv(0.500, 0.345);
-  const [cupidRX, cupidRY] = uv(0.526, 0.352);
-  const [lipBotX, lipBotY] = uv(0.500, 0.264);
-  const [partCX, partCY] = uv(0.500, 0.307);
+  const lipHalfU = forMakeHuman3D ? 0.076 : 0.098;
+  const lipPartV = forMakeHuman3D ? 0.3013 : 0.308;
+  const lipTopV = forMakeHuman3D ? 0.325 : 0.352;
+  const lipCupidDipV = forMakeHuman3D ? 0.320 : 0.345;
+  const lipBotV = forMakeHuman3D ? 0.278 : 0.264;
+  const [mLeftX, mLeftY] = uv(0.50 - lipHalfU, lipPartV);
+  const [mRightX, mRightY] = uv(0.50 + lipHalfU, lipPartV);
+  const [cupidLX, cupidLY] = uv(0.50 - lipHalfU * 0.27, lipTopV);
+  const [cupidCX, cupidCY] = uv(0.500, lipCupidDipV);
+  const [cupidRX, cupidRY] = uv(0.50 + lipHalfU * 0.27, lipTopV);
+  const [lipBotX, lipBotY] = uv(0.500, lipBotV);
+  const [partCX, partCY] = uv(0.500, lipPartV - 0.001);
 
   ctx.beginPath();
   ctx.moveTo(mLeftX, mLeftY);
   ctx.quadraticCurveTo((mLeftX + cupidLX) * 0.5, cupidLY + 2, cupidLX, cupidLY);
   ctx.quadraticCurveTo(cupidCX, cupidCY + 3, cupidRX, cupidRY);
   ctx.quadraticCurveTo((cupidRX + mRightX) * 0.5, cupidRY + 2, mRightX, mRightY);
-  ctx.quadraticCurveTo(partCX + size * 0.048, lipBotY + 2, lipBotX, lipBotY);
-  ctx.quadraticCurveTo(partCX - size * 0.048, lipBotY + 2, mLeftX, mLeftY);
+  ctx.quadraticCurveTo(partCX + size * (lipHalfU * 0.5), lipBotY + 2, lipBotX, lipBotY);
+  ctx.quadraticCurveTo(partCX - size * (lipHalfU * 0.5), lipBotY + 2, mLeftX, mLeftY);
   ctx.closePath();
 
-  const lipGrad = ctx.createRadialGradient(partCX, partCY, size * 0.008, partCX, (cupidCY + lipBotY) * 0.5, size * 0.098);
+  const lipGrad = ctx.createRadialGradient(partCX, partCY, size * 0.006, partCX, (cupidCY + lipBotY) * 0.5, size * lipHalfU);
   lipGrad.addColorStop(0, rgbStr(lip.r - 18, lip.g - 18, lip.b - 12, 0.96));
   lipGrad.addColorStop(0.52, rgbStr(lip.r + 8, lip.g + 4, lip.b + 8, 0.90));
-  lipGrad.addColorStop(0.88, rgbStr(lip.r + 28, lip.g + 24, lip.b + 24, 0.52));
+  lipGrad.addColorStop(0.85, rgbStr(lip.r + 28, lip.g + 24, lip.b + 24, 0.45));
   lipGrad.addColorStop(1, rgbStr(base.r, base.g, base.b, 0.0));
   ctx.fillStyle = lipGrad;
   ctx.fill();
 
   // Water-gloss specular droplets on lower lip
-  const [glossX, glossY] = uv(0.50, 0.285);
+  const [glossX, glossY] = uv(0.50, (lipPartV + lipBotV) * 0.5);
   ctx.beginPath();
-  ctx.ellipse(glossX - 10, glossY, size * 0.022, size * 0.0055, -0.08, 0, Math.PI * 2);
-  ctx.ellipse(glossX + 12, glossY, size * 0.016, size * 0.0045, 0.08, 0, Math.PI * 2);
+  ctx.ellipse(glossX - 9, glossY, size * 0.018, size * 0.0045, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(glossX + 10, glossY, size * 0.014, size * 0.0038, 0.08, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255, 248, 250, 0.52)';
   ctx.fill();
 
   // Delicate smiling mouth line (微笑唇线)
   ctx.beginPath();
-  ctx.moveTo(mLeftX - 3, mLeftY - 2);
-  ctx.quadraticCurveTo(partCX - size * 0.028, partCY + 3, partCX, partCY + 1);
-  ctx.quadraticCurveTo(partCX + size * 0.028, partCY + 3, mRightX + 3, mRightY - 2);
+  ctx.moveTo(mLeftX - 2, mLeftY - 1);
+  ctx.quadraticCurveTo(partCX - size * 0.024, partCY + 2, partCX, partCY + 1);
+  ctx.quadraticCurveTo(partCX + size * 0.024, partCY + 2, mRightX + 2, mRightY - 1);
   ctx.strokeStyle = 'rgba(82, 22, 30, 0.78)';
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 2.2;
   ctx.lineCap = 'round';
   ctx.stroke();
   ctx.restore();
 
   // 5. Large, Luminous East Asian Female Almond Eyes (星眸杏眼 + 卧蚕 + 双眼皮 + 纤长睫毛)
-  const eyeConfigs = [
-    { side: -1, outerU: 0.268, innerU: 0.422, centerU: 0.346, centerV: 0.622, topV: 0.654, botV: 0.592 },
-    { side: 1, outerU: 0.732, innerU: 0.578, centerU: 0.654, centerV: 0.622, topV: 0.654, botV: 0.592 }
-  ];
+  // When forMakeHuman3D is true, the head mesh has true 3D eyeballs (mapped to the medallion at 0.075, 0.925),
+  // so on the skin canvas we only draw soft periorbital eyeshadow, double eyelid crease, and upper lash rim around v=0.493!
+  const eyeConfigs = forMakeHuman3D
+    ? [
+        { side: -1, outerU: 0.336, innerU: 0.439, centerU: 0.389, centerV: 0.493, topV: 0.508, botV: 0.478 },
+        { side: 1, outerU: 0.664, innerU: 0.561, centerU: 0.611, centerV: 0.493, topV: 0.508, botV: 0.478 }
+      ]
+    : [
+        { side: -1, outerU: 0.268, innerU: 0.422, centerU: 0.346, centerV: 0.622, topV: 0.654, botV: 0.592 },
+        { side: 1, outerU: 0.732, innerU: 0.578, centerU: 0.654, centerV: 0.622, topV: 0.654, botV: 0.592 }
+      ];
 
   for (const eye of eyeConfigs) {
-    const [outerX, outerY] = uv(eye.outerU, 0.625);
-    const [innerX, innerY] = uv(eye.innerU, 0.612);
+    const [outerX, outerY] = uv(eye.outerU, eye.centerV + 0.002);
+    const [innerX, innerY] = uv(eye.innerU, eye.centerV - 0.008);
     const [topX, topY] = uv(eye.centerU, eye.topV);
     const [botX, botY] = uv(eye.centerU, eye.botV);
     const [irisX, irisY] = uv(eye.centerU, eye.centerV + 0.002);
 
     // (a) Soft Peach-Rose Eyeshadow Halo
-    const shadowGrad = ctx.createRadialGradient(irisX, irisY - 6, size * 0.015, irisX, irisY, size * 0.098);
-    shadowGrad.addColorStop(0, 'rgba(182, 102, 95, 0.34)');
-    shadowGrad.addColorStop(0.6, 'rgba(205, 128, 120, 0.16)');
+    const shadowGrad = ctx.createRadialGradient(irisX, irisY - 6, size * 0.015, irisX, irisY, size * (forMakeHuman3D ? 0.068 : 0.098));
+    shadowGrad.addColorStop(0, 'rgba(182, 102, 95, 0.30)');
+    shadowGrad.addColorStop(0.6, 'rgba(205, 128, 120, 0.14)');
     shadowGrad.addColorStop(1, 'rgba(205, 128, 120, 0)');
     ctx.fillStyle = shadowGrad;
     ctx.beginPath();
-    ctx.arc(irisX, irisY, size * 0.098, 0, Math.PI * 2);
+    ctx.arc(irisX, irisY, size * (forMakeHuman3D ? 0.068 : 0.098), 0, Math.PI * 2);
     ctx.fill();
 
     // (b) Aegyo-sal (卧蚕珍珠高光 + 下缘浅影)
-    const [aegyoX, aegyoY] = uv(eye.centerU, eye.botV - 0.014);
+    const [aegyoX, aegyoY] = uv(eye.centerU, eye.botV - 0.012);
     ctx.beginPath();
-    ctx.moveTo(innerX, innerY + 8);
-    ctx.quadraticCurveTo(aegyoX, aegyoY + 8, outerX, outerY + 8);
-    ctx.strokeStyle = 'rgba(255, 246, 242, 0.42)';
-    ctx.lineWidth = 4.5;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(innerX + eye.side * 6, innerY + 13);
-    ctx.quadraticCurveTo(aegyoX, aegyoY + 14, outerX - eye.side * 6, outerY + 12);
-    ctx.strokeStyle = 'rgba(148, 86, 78, 0.24)';
-    ctx.lineWidth = 1.6;
+    ctx.moveTo(innerX, innerY + 6);
+    ctx.quadraticCurveTo(aegyoX, aegyoY + 6, outerX, outerY + 6);
+    ctx.strokeStyle = 'rgba(255, 246, 242, 0.38)';
+    ctx.lineWidth = 3.8;
     ctx.stroke();
 
     // (c) Parallel-Crescent Double Eyelid Fold (扇形双眼皮折痕)
-    const [creaseOuterX, creaseOuterY] = uv(eye.outerU + eye.side * 0.005, 0.642);
-    const [creaseTopX, creaseTopY] = uv(eye.centerU, 0.669);
-    const [creaseInnerX, creaseInnerY] = uv(eye.innerU - eye.side * 0.002, 0.622);
+    const [creaseOuterX, creaseOuterY] = uv(eye.outerU + eye.side * 0.004, eye.topV - 0.008);
+    const [creaseTopX, creaseTopY] = uv(eye.centerU, eye.topV + 0.012);
+    const [creaseInnerX, creaseInnerY] = uv(eye.innerU - eye.side * 0.002, eye.centerV);
     ctx.beginPath();
     ctx.moveTo(creaseInnerX, creaseInnerY);
     ctx.quadraticCurveTo(creaseTopX, creaseTopY - (innerY - creaseTopY) * 0.42, creaseOuterX, creaseOuterY);
-    ctx.strokeStyle = 'rgba(112, 56, 48, 0.58)';
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = 'rgba(112, 56, 48, 0.52)';
+    ctx.lineWidth = 2.0;
     ctx.stroke();
 
-    // (d) Almond Eye Aperture Clip
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(innerX, innerY);
-    ctx.quadraticCurveTo(topX, topY - (innerY - topY) * 0.85, outerX, outerY);
-    ctx.quadraticCurveTo(botX, botY + (botY - innerY) * 0.85, innerX, innerY);
-    ctx.closePath();
-
-    const scleraGrad = ctx.createLinearGradient(0, topY, 0, botY);
-    scleraGrad.addColorStop(0, '#cbbec0');
-    scleraGrad.addColorStop(0.25, '#faf6f5');
-    scleraGrad.addColorStop(0.85, '#ffffff');
-    scleraGrad.addColorStop(1, '#e6d6d8');
-    ctx.fillStyle = scleraGrad;
-    ctx.fill();
-    ctx.clip();
-
-    // Inner corner pink lacrimal caruncle
-    ctx.beginPath();
-    ctx.arc(innerX - eye.side * 4, innerY, size * 0.011, 0, Math.PI * 2);
-    ctx.fillStyle = '#df828a';
-    ctx.fill();
-
-    // Large Expressive Iris (radius 0.039 * size)
-    const irisR = size * 0.039;
-    ctx.beginPath();
-    ctx.arc(irisX, irisY, irisR, 0, Math.PI * 2);
-    const irisGrad = ctx.createRadialGradient(irisX, irisY + 4, irisR * 0.15, irisX, irisY, irisR);
-    irisGrad.addColorStop(0, rgbStr(iris.r + 52, iris.g + 34, iris.b + 22, 1));
-    irisGrad.addColorStop(0.58, rgbStr(iris.r + 14, iris.g + 8, iris.b + 4, 1));
-    irisGrad.addColorStop(0.88, rgbStr(iris.r * 0.35, iris.g * 0.35, iris.b * 0.35, 1));
-    irisGrad.addColorStop(1, '#0c0706');
-    ctx.fillStyle = irisGrad;
-    ctx.fill();
-
-    // Radial iris fibers & lower warm amber crescent reflection
-    for (let k = 0; k < 120; k++) {
-      const a = (k / 120) * Math.PI * 2;
-      const rIn = irisR * 0.30;
-      const rOut = irisR * 0.86;
+    if (!forMakeHuman3D) {
+      // (d) 2D Painted Almond Eye Aperture Clip (only for canonical 2.5D face meshes)
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(irisX + Math.cos(a) * rIn, irisY + Math.sin(a) * rIn);
-      ctx.lineTo(irisX + Math.cos(a) * rOut, irisY + Math.sin(a) * rOut);
-      ctx.strokeStyle = k % 2 === 0
-        ? rgbStr(iris.r + 68, iris.g + 46, iris.b + 30, 0.34)
-        : 'rgba(12, 6, 4, 0.36)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
+      ctx.moveTo(innerX, innerY);
+      ctx.quadraticCurveTo(topX, topY - (innerY - topY) * 0.85, outerX, outerY);
+      ctx.quadraticCurveTo(botX, botY + (botY - innerY) * 0.85, innerX, innerY);
+      ctx.closePath();
+
+      const scleraGrad = ctx.createLinearGradient(0, topY, 0, botY);
+      scleraGrad.addColorStop(0, '#cbbec0');
+      scleraGrad.addColorStop(0.25, '#faf6f5');
+      scleraGrad.addColorStop(0.85, '#ffffff');
+      scleraGrad.addColorStop(1, '#e6d6d8');
+      ctx.fillStyle = scleraGrad;
+      ctx.fill();
+      ctx.clip();
+
+      // Inner corner pink lacrimal caruncle
+      ctx.beginPath();
+      ctx.arc(innerX - eye.side * 4, innerY, size * 0.011, 0, Math.PI * 2);
+      ctx.fillStyle = '#df828a';
+      ctx.fill();
+
+      // Large Expressive Iris (radius 0.039 * size)
+      const irisR = size * 0.039;
+      ctx.beginPath();
+      ctx.arc(irisX, irisY, irisR, 0, Math.PI * 2);
+      const irisGrad = ctx.createRadialGradient(irisX, irisY + 4, irisR * 0.15, irisX, irisY, irisR);
+      irisGrad.addColorStop(0, rgbStr(iris.r + 52, iris.g + 34, iris.b + 22, 1));
+      irisGrad.addColorStop(0.58, rgbStr(iris.r + 14, iris.g + 8, iris.b + 4, 1));
+      irisGrad.addColorStop(0.88, rgbStr(iris.r * 0.35, iris.g * 0.35, iris.b * 0.35, 1));
+      irisGrad.addColorStop(1, '#0c0706');
+      ctx.fillStyle = irisGrad;
+      ctx.fill();
+
+      // Radial iris fibers & lower warm amber crescent reflection
+      for (let k = 0; k < 120; k++) {
+        const a = (k / 120) * Math.PI * 2;
+        const rIn = irisR * 0.30;
+        const rOut = irisR * 0.86;
+        ctx.beginPath();
+        ctx.moveTo(irisX + Math.cos(a) * rIn, irisY + Math.sin(a) * rIn);
+        ctx.lineTo(irisX + Math.cos(a) * rOut, irisY + Math.sin(a) * rOut);
+        ctx.strokeStyle = k % 2 === 0
+          ? rgbStr(iris.r + 68, iris.g + 46, iris.b + 30, 0.34)
+          : 'rgba(12, 6, 4, 0.36)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Deep pupil
+      ctx.beginPath();
+      ctx.arc(irisX, irisY, irisR * 0.35, 0, Math.PI * 2);
+      ctx.fillStyle = '#060405';
+      ctx.fill();
+
+      // Upper lid soft shadow across top of iris
+      ctx.fillStyle = 'rgba(15, 7, 9, 0.30)';
+      ctx.fillRect(irisX - irisR, topY - 12, irisR * 2, (botY - topY) * 0.36);
+
+      // Crystal Star Catchlights (双眼神光)
+      ctx.beginPath();
+      ctx.ellipse(irisX - irisR * 0.30, irisY - irisR * 0.25, irisR * 0.21, irisR * 0.15, -0.3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(irisX + irisR * 0.32, irisY + irisR * 0.28, irisR * 0.095, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
+      ctx.fill();
+      ctx.restore(); // End eye aperture clip
     }
-
-    // Deep pupil
-    ctx.beginPath();
-    ctx.arc(irisX, irisY, irisR * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = '#060405';
-    ctx.fill();
-
-    // Upper lid soft shadow across top of iris
-    ctx.fillStyle = 'rgba(15, 7, 9, 0.30)';
-    ctx.fillRect(irisX - irisR, topY - 12, irisR * 2, (botY - topY) * 0.36);
-
-    // Crystal Star Catchlights (双眼神光)
-    ctx.beginPath();
-    ctx.ellipse(irisX - irisR * 0.30, irisY - irisR * 0.25, irisR * 0.21, irisR * 0.15, -0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(irisX + irisR * 0.32, irisY + irisR * 0.28, irisR * 0.095, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.82)';
-    ctx.fill();
-    ctx.restore(); // End eye aperture clip
 
     // (e) Winged Upper Eyeliner & Lush Clustered Eyelashes (漫画/写真感簇状睫毛)
     ctx.beginPath();
     ctx.moveTo(innerX, innerY);
     ctx.quadraticCurveTo(topX, topY - (innerY - topY) * 0.86, outerX, outerY);
-    ctx.lineTo(outerX + eye.side * size * 0.018, outerY - size * 0.005);
+    ctx.lineTo(outerX + eye.side * size * 0.015, outerY - size * 0.004);
     ctx.strokeStyle = `rgba(20, 11, 13, ${eyelinerIntensity})`;
-    ctx.lineWidth = 4.6;
+    ctx.lineWidth = forMakeHuman3D ? 3.6 : 4.6;
     ctx.lineCap = 'round';
     ctx.stroke();
 
@@ -314,7 +326,7 @@ export function createDazSkinTexture(options = {}) {
       const ctrlY = topY - (innerY - topY) * 0.86;
       const lx = (1 - t) * (1 - t) * innerX + 2 * (1 - t) * t * topX + t * t * outerX;
       const ly = (1 - t) * (1 - t) * innerY + 2 * (1 - t) * t * ctrlY + t * t * outerY;
-      const lashLen = size * (0.007 + 0.014 * Math.sin(Math.PI * Math.pow(t, 0.72)));
+      const lashLen = size * (forMakeHuman3D ? 0.005 + 0.009 * Math.sin(Math.PI * Math.pow(t, 0.72)) : 0.007 + 0.014 * Math.sin(Math.PI * Math.pow(t, 0.72)));
       const flareAng = -Math.PI * 0.5 + eye.side * (t - 0.32) * 0.92;
       ctx.beginPath();
       ctx.moveTo(lx, ly);
@@ -325,16 +337,21 @@ export function createDazSkinTexture(options = {}) {
         ly + Math.sin(flareAng + eye.side * 0.28) * lashLen
       );
       ctx.strokeStyle = 'rgba(18, 10, 12, 0.86)';
-      ctx.lineWidth = i % 3 === 0 ? 1.7 : 1.15;
+      ctx.lineWidth = i % 3 === 0 ? 1.6 : 1.1;
       ctx.stroke();
     }
   }
 
   // 6. Soft Feathered East Asian Arch Eyebrows (柔雾野生眉)
-  const browConfigs = [
-    { side: -1, p0: uv(0.438, 0.735), p1: uv(0.325, 0.750), p2: uv(0.228, 0.706) },
-    { side: 1, p0: uv(0.562, 0.735), p1: uv(0.675, 0.750), p2: uv(0.772, 0.706) }
-  ];
+  const browConfigs = forMakeHuman3D
+    ? [
+        { side: -1, p0: uv(0.444, 0.536), p1: uv(0.374, 0.547), p2: uv(0.312, 0.526) },
+        { side: 1, p0: uv(0.556, 0.536), p1: uv(0.626, 0.547), p2: uv(0.688, 0.526) }
+      ]
+    : [
+        { side: -1, p0: uv(0.438, 0.735), p1: uv(0.325, 0.750), p2: uv(0.228, 0.706) },
+        { side: 1, p0: uv(0.562, 0.735), p1: uv(0.675, 0.750), p2: uv(0.772, 0.706) }
+      ];
 
   for (const bCfg of browConfigs) {
     const [x0, y0] = bCfg.p0;

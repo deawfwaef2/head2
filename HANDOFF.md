@@ -152,6 +152,7 @@
      - **根因 1（白布/面具遮脸）**：`assets_src/makehuman/base.obj` 中除 `g body` 外还包含不可见的绑定辅助笼 `g helper-hair`、`g helper-tights` 与骨骼立方体 `g joint-*`！Stage 7 未按 group 过滤，把 `helper-hair` 当成皮肤导出成了包住整张脸的白色头盔，且污染了头部宽度计算导致 `kx = 0.72` 把脸横向压扁了 28%。现严格只提取 `g body`（头颈皮肤）+ `g helper-l/r-eye`（独立 3D 眼球）+ `g helper-l/r-eyelashes-1/2`（独立 3D 睫毛）。
      - **根因 2（`.mhclo` 头发绑定公式）**：还原 MakeHuman 官方 `proxy.py` 的世界坐标轴缩放公式（解析 `.mhclo` 头部的 `x_scale / y_scale / z_scale` 顶点对距离比，`fitted = w0*b0 + w1*b1 + w2*b2 + [ox*sx, oy*sy, oz*sz]`，外加 `+0.28cm` 颅顶法向防穿模偏移），使 `mh_hair_bob02.obj`、`mh_hair_long01.obj`、`mh_hair_ponytail01.obj` 100% 严丝合缝贴合头皮。
      - **根因 3（等比例骨相缩放与天鹅颈平滑延伸）**：按眉眼至下巴真实比例采用 `X:Y:Z = 1:1:1` 等比例缩放（`scale_s = 9.304`），消除长脸畸变；并在 `Y_mh = 4.69` 截断处向下平滑延伸 5 环天鹅颈柱至 `Y = -13.20cm`，消除颈底锯齿。
-     - **根因 4（3D 眼球虹膜/高光、花瓣唇、腮红与 6 环 3D 浮雕 C4/C5 解剖断面 UV 映射）**：在 `skinTextureGenerator.js` 的 `(0.075, 0.925)` 与 `(0.925, 0.925)` 处新增独立 3D 眼球虹膜/巩膜/眼神光圆盘与 3D 眉睫深咖色块，将 MakeHuman 3D 眼球、3D 眉睫、3D 嘴唇、苹果肌与鼻梁精确映射到 `skinTex`，并生成与林汐完全同规格的 6 环 3D 浮雕 `neck_cross_section` 底座，全面接入 Step 2/3 实时骨相滑块与换色系统。
-  3. **修复 HUD 消失点标签偏移**：在 `src/style.css` 中将 `.vp-label` 下移 `margin-top: 148px`，避免遮挡桌宠下巴。
+     - **根因 4（3D 眼球虹膜/高光、花瓣唇、腮红与 6 环 3D 浮雕 C4/C5 解剖断面 C¹ 连续 UV 映射 & 颈柱法线朝向修正）**：在 `skinTextureGenerator.js` 新增 `forMakeHuman3D` 模式与 `(0.075, 0.925)` 独立 3D 眼球虹膜/巩膜/眼神光圆盘，对 `g body` 采用 100% C¹ 连续仿射 UV 映射（彻底消除嘴角/下巴/下睑跨 UV 区线性插值导致的溢色环），修正 5 环天鹅颈延伸柱三角形绕序（`[u0, u1, w1]` 法线朝外）与 6 环 3D 浮雕 `neck_cross_section` 底座，全面接入 Step 2/3 实时骨相滑块与换色系统。
+  3. **修复 HUD 消失点标签偏移**：在 `src/style.css` 中将 `.vp-label` 设为 `position: absolute; top: 156px; left: 50%; transform: translateX(-50%)`，使中心透视十字准星严格锁定在 `(50%, 50%)` 消失点，同时文字胶囊下移不挡下巴。
+  4. **Playwright 视觉回归验证通过（零控制台报错）**：已生成并人工核验 `.qa/stage8_desktop.png`（林汐/苏婉全宽齐刘海与无高光白斑）、`.qa/stage8_mh_bob.png`（MakeHuman 3D 亚洲女头 + 波波发）、`.qa/stage8_mh_long.png`（MakeHuman 3D 亚洲女头 + 长卷发）与 `.qa/stage8_mh_anatomy.png`（仰视颈部 C4/C5 解剖切面），并重新打包更新单文件离线版 `/home/user/点击开始游戏_CERVIX3D.html`（4.16 MB）。
 

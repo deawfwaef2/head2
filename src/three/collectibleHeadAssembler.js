@@ -259,13 +259,16 @@ export async function buildCollectibleHeadNode(config = {}) {
   const root = new THREE.Group();
   root.name = 'CollectibleHeadRoot';
 
+  const isMHBuiltIn = (basePreset === 'mh_asian') || Boolean(customModelUrl && /mh_asian_female_head/.test(customModelUrl));
+
   const { texture: skinTex, canvas: skinCanvas } = createDazSkinTexture({
     skinTone,
     blushIntensity,
     lipColor,
     irisColor,
     photoElement,
-    photoBlend
+    photoBlend,
+    forMakeHuman3D: isMHBuiltIn
   });
 
   const { colorTex: anatomyColorTex, bumpTex: anatomyBumpTex, colorCanvas: anatomyCanvas } = createAnatomyTextures({
@@ -299,8 +302,6 @@ export async function buildCollectibleHeadNode(config = {}) {
     clearcoatRoughness: 0.16,
     side: THREE.DoubleSide
   });
-
-  const isMHBuiltIn = customModelUrl && /mh_asian_female_head/.test(customModelUrl);
 
   if (customModelUrl && !isMHBuiltIn) {
     let extObj;

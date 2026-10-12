@@ -133,17 +133,12 @@ def sculpt_mh_asian_beauty(V_in, groups):
             nz += 0.022 * tip_w
             ny += 0.008 * tip_w
 
-        # 4. Petite Sculpted Petal Lips & Gentle Smile Corner Lift (y in 5.04..5.30, |x| < 0.30, z > 1.12)
-        if 5.03 < y < 5.31 and abs(x) < 0.32 and z > 1.12:
-            mouth_w = math.exp(-((y - 5.172) / 0.095) ** 2) * math.exp(-(x / 0.24) ** 2)
-            nx *= (1.0 - 0.14 * mouth_w)
-            # Gentle corner lift at |x| ~ 0.18
-            corner_w = math.exp(-((abs(x) - 0.18) / 0.06) ** 2) * math.exp(-((y - 5.172) / 0.06) ** 2)
-            ny += 0.012 * corner_w
-            # Softly plump central upper/lower lip vermilion (z > 1.27)
-            if z > 1.26:
-                plump_w = math.exp(-(x / 0.14) ** 2) * math.exp(-((y - 5.175) / 0.075) ** 2)
-                nz += 0.014 * plump_w
+        # 4. Petite Sculpted Petal Lips & Gentle Smile Corner Lift
+        mouth_w = math.exp(-((y - 5.172) / 0.085) ** 2) * math.exp(-(x / 0.20) ** 2) * math.exp(-((max(0.0, 1.26 - z)) / 0.06) ** 2)
+        if mouth_w > 0.001:
+            nx *= (1.0 - 0.10 * mouth_w)
+            plump_w = math.exp(-(x / 0.13) ** 2) * math.exp(-((y - 5.175) / 0.070) ** 2) * math.exp(-((max(0.0, 1.27 - z)) / 0.05) ** 2)
+            nz += 0.014 * plump_w
 
         # 5. Slightly Enlarged Luminous Almond Eye Opening (around eye centers x = ±0.247, y = 5.793, z > 1.05)
         if 5.66 < y < 5.92 and z > 1.02:
@@ -352,34 +347,20 @@ def main():
     skin_Vx = xf(skin_V_mh)
     skin_tris = [[remap[a], remap[b], remap[c]] for f in kept_body_faces for (a, b, c) in to_triangles([f])]
 
-    # Map UVs of g body onto createDazSkinTexture layout (lips, cheek blush, nose highlight, pure porcelain skin)
+    # Map UVs of g body using a 100% C1-continuous linear affine projection on the front face
+    # (zero piecewise UV jumps across any triangle!)
     skin_UV = np.zeros((len(body_used), 2))
     for new_i, old_i in enumerate(body_used):
         x_m, y_m, z_m = skin_V_mh[new_i]
-        # 1. Outer 3D Lips (y in 5.055..5.285, |x| < 0.24, z > 1.225 so inner mouth cavity stays dark/skin)
-        if 5.055 <= y_m <= 5.285 and abs(x_m) <= 0.24 and z_m >= 1.225:
-            u = 0.50 + (x_m / 0.22) * 0.088
-            v = 0.308 + ((y_m - 5.172) / 0.108) * 0.040
-        # 2. Inner oral cavity behind lips (z < 1.225, y in 5.05..5.35, |x| < 0.25) -> deep mouth line color
-        elif 5.05 <= y_m <= 5.35 and abs(x_m) <= 0.25 and 0.95 <= z_m < 1.225:
-            u = 0.50
-            v = 0.308
-        # 3. Cheek Blush & Nasal Bridge / Nostrils (y in 5.285..5.66, z > 0.80)
-        elif 5.285 < y_m <= 5.66 and z_m > 0.80:
-            u = 0.50 + (x_m / 0.66) * 0.22
-            v = 0.415 + ((y_m - 5.285) / 0.375) * 0.145
-        # 4. Upper Eyelid & Periorbital Soft Eyeshadow (y in 5.66..5.90, |x| in 0.11..0.39, z > 1.04)
-        elif 5.66 < y_m <= 5.90 and 0.11 <= abs(x_m) <= 0.39 and z_m > 1.04:
-            # Sample the soft peach-rose eyeshadow halo just above the eyelid crease (v in 0.675..0.695)
-            side = 1.0 if x_m >= 0 else -1.0
-            u = 0.50 + side * (0.154 + ((abs(x_m) - 0.247) / 0.14) * 0.05)
-            v = 0.682 + ((y_m - 5.79) / 0.12) * 0.012
-        # 5. Pure Porcelain Skin (forehead, temples, chin, jaw, ears, cranium, neck)
-        else:
-            u = 0.50 + np.clip(x_m / 0.82, -0.32, 0.32)
-            v = 0.10 + np.clip((y_m - 4.65) / 2.25, 0.0, 1.0) * 0.12
-
-        skin_UV[new_i] = [np.clip(u, 0.01, 0.99), np.clip(v, 0.01, 0.99)]
+        t_front = np.clip((z_m - 0.45) / 0.50, 0.0, 1.0)
+        w_front = t_front * t_front * (3.0 - 2.0 * t_front)
+        t_y = np.clip((y_m - 4.65) / 2.20, 0.0, 1.0)
+        u_face = 0.50 + (x_m / 0.80) * 0.36
+        v_face = 0.14 + t_y * 0.68
+        v_back = 0.06 + t_y * 0.08
+        u = np.clip(u_face, 0.04, 0.96)
+        v = np.clip(w_front * v_face + (1.0 - w_front) * v_back, 0.04, 0.84)
+        skin_UV[new_i] = [u, v]
 
     # Smoothly extend neck_loop down to LINXI_NECK_Y = -13.20 cm with 5 cylindrical swan-neck rings!
     loop_local = [remap[i] for i in neck_loop]
@@ -417,15 +398,17 @@ def main():
 
             new_idx = len(skin_Vx) + len(neck_ext_V)
             neck_ext_V.append([px, py, pz])
-            neck_ext_UV.append([0.50 + 0.18 * cos_a, 0.08 + 0.04 * (1.0 - t)])
+            u_ring = np.clip(0.50 + (px / (0.80 * scale_s)) * 0.36, 0.08, 0.92)
+            v_ring = 0.06 + 0.08 * (1.0 - t)
+            neck_ext_UV.append([u_ring, v_ring])
             cur_ring.append(new_idx)
 
         for k in range(M):
             kn = (k + 1) % M
             u0, u1 = prev_ring[k], prev_ring[kn]
             w0, w1 = cur_ring[k], cur_ring[kn]
-            neck_ext_tris.append([u0, w0, w1])
-            neck_ext_tris.append([u0, w1, u1])
+            neck_ext_tris.append([u0, u1, w1])
+            neck_ext_tris.append([u0, w1, w0])
         prev_ring = cur_ring
 
     bottom_neck_ring = prev_ring
@@ -455,29 +438,6 @@ def main():
         for f in efaces:
             for (a, b, c) in to_triangles([f]):
                 skin_tris.append([e_remap[a], e_remap[b], e_remap[c]])
-
-    # Append 3D Eyelashes (helper-l/r-eyelashes-1/2) mapped to the Dark Espresso Swatch at UV (0.925, 0.925)
-    for lg in ('helper-l-eyelashes-1', 'helper-l-eyelashes-2', 'helper-r-eyelashes-1', 'helper-r-eyelashes-2'):
-        lfaces = groups.get(lg, [])
-        l_used = sorted({i for f in lfaces for i in f})
-        l_remap = {old: len(skin_Vx) + idx for idx, old in enumerate(l_used)}
-        l_Vx = xf(base_def[l_used])
-        l_UV = np.tile([0.925, 0.925], (len(l_used), 1))
-        skin_Vx = np.vstack([skin_Vx, l_Vx])
-        skin_UV = np.vstack([skin_UV, l_UV])
-        for f in lfaces:
-            for (a, b, c) in to_triangles([f]):
-                skin_tris.append([l_remap[a], l_remap[b], l_remap[c]])
-
-    # Append 3D Eyebrows (eyebrow001.mhclo) mapped to the Dark Espresso/Brow Swatch at UV (0.925, 0.925)
-    eb_V_mh, _, eb_F = fit_proxy(os.path.join(SRC, 'eyebrows', 'eyebrow001', 'eyebrow001.mhclo'), base_def)
-    eb_offset = len(skin_Vx)
-    eb_Vx = xf(eb_V_mh)
-    eb_UV = np.tile([0.945, 0.925], (len(eb_Vx), 1))
-    skin_Vx = np.vstack([skin_Vx, eb_Vx])
-    skin_UV = np.vstack([skin_UV, eb_UV])
-    for (a, b, c) in to_triangles(eb_F):
-        skin_tris.append([eb_offset + a, eb_offset + b, eb_offset + c])
 
     skin_N = smooth_normals(skin_Vx, skin_tris)
 
@@ -523,8 +483,9 @@ def main():
     cap_V = np.array(cap_verts, dtype=float)
     cap_UV = np.array(cap_uvs, dtype=float)
     cap_N = smooth_normals(cap_V, cap_tris)
-    # Ensure cap normals point downward (-Y)
+    # Ensure cap triangle winding and normals point downward (-Y)
     if np.mean(cap_N[:, 1]) > 0:
+        cap_tris = [[a, c, b] for (a, b, c) in cap_tris]
         cap_N = -cap_N
 
     out_head_path = os.path.join(OUT, 'mh_asian_female_head.obj')

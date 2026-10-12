@@ -144,6 +144,10 @@ body.bg-mode-transparent {
 }
 
 .vp-label {
+  position: absolute;
+  top: 156px;
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--font-mono);
   font-size: 11px;
   color: rgba(186, 230, 253, 0.78);
@@ -152,7 +156,6 @@ body.bg-mode-transparent {
   padding: 3px 10px;
   border-radius: 99px;
   white-space: nowrap;
-  margin-top: 148px;
 }
 
 /* Box Wall Physical Collision Ripples */
