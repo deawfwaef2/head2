@@ -1,6 +1,7 @@
 import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS } from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
+import { FORENSIC_EXPRESSION_PRESETS } from './three/collectibleHeadAssembler.js';
 import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGenerator.js';
 import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
@@ -10,7 +11,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-v2';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -40,6 +41,7 @@ const state = {
   bgModeIndex: 0, // 0: os, 1: void, 2: transparent
   studioDraft: {
     basePreset: 'user_photo',
+    deadExpression: 'dead_calm',
     customModelUrl: null,
     customModelType: 'glb',
     skinTone: '#ffe9df',
@@ -48,11 +50,18 @@ const state = {
     irisColor: '#3b2014',
     hairStyle: 'hair_user_photo',
     hairColor: '#191518',
-    hairSheen: 0.85,
+    hairSheen: 0.88,
     neckClearance: 0.55,
     photoElement: null,
     photoBlend: 0.0,
     morphs: {
+      deadExpression: 'dead_calm',
+      jawOpen: 0.0,
+      eyeRollUp: 0.0,
+      tongueOut: 0.0,
+      jawSide: 0.0,
+      bangsLength: 0.0,
+      hairVolume: 0.0,
       jawVLine: 0.04,
       cheekSoftness: 0.16,
       noseBridge: 0.04,
@@ -334,6 +343,11 @@ function renderVaultGrid() {
     const isSummoned = activeSet.has(item.id);
     const petEntry = desktopEngine ? desktopEngine.pets.get(item.id) : null;
     const isRotating = petEntry ? petEntry.isRotationMode : false;
+    const curExpr = item.deadExpression || item.morphs?.deadExpression || 'dead_calm';
+
+    const exprOptsHtml = FORENSIC_EXPRESSION_PRESETS.map(
+      ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀 ${ep.label}</option>`
+    ).join('');
 
     const card = document.createElement('div');
     card.className = `vault-card ${isSummoned ? 'summoned' : ''}`;
@@ -355,6 +369,11 @@ function renderVaultGrid() {
         <strong>🩸 底座解剖断面：</strong>${item.anatomyOptions?.cutLevel || 'C4 标准横切面'}<br/>
         <span>${item.dossier?.anatomyNotes || ''}</span>
       </div>
+      <div class="field-row" style="margin: 4px 0;">
+        <select class="vault-expr-select" data-vault-expr="${item.id}" style="width:100%;font-size:11.5px;padding:4px 6px;border-radius:6px;background:rgba(15,23,42,0.85);color:#e2e8f0;border:1px solid rgba(244,63,94,0.35);">
+          ${exprOptsHtml}
+        </select>
+      </div>
       <div class="dossier-tags">
         ${(item.dossier?.tags || []).map(t => `<span class="dossier-tag">${t}</span>`).join('')}
       </div>
@@ -374,6 +393,23 @@ function renderVaultGrid() {
     `;
     grid.appendChild(card);
   }
+
+  grid.querySelectorAll('[data-vault-expr]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.vaultExpr;
+      const exprId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (!col) return;
+      col.deadExpression = exprId;
+      col.morphs = { ...(col.morphs || {}), deadExpression: exprId };
+      persistCollectibles();
+      if (desktopEngine && desktopEngine.pets.has(id)) {
+        desktopEngine.setPetExpression(id, exprId);
+      }
+      const ep = FORENSIC_EXPRESSION_PRESETS.find(p => p.id === exprId);
+      showToast(`💀 已将「${col.name}」表情切换为：${ep ? ep.label : exprId}`);
+    });
+  });
 
   grid.querySelectorAll('[data-vault-action]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -421,11 +457,18 @@ function renderActivePetsStrip(summonedList = []) {
   }
 
   for (const p of summonedList) {
+    const curExpr = p.deadExpression || 'dead_calm';
+    const exprShortOpts = FORENSIC_EXPRESSION_PRESETS.map(
+      ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀${ep.shortLabel}</option>`
+    ).join('');
     const pill = document.createElement('div');
     pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
     pill.innerHTML = `
       <strong>${p.name}</strong>
       <span class="pet-pill-meta">[Z:${p.zMm}mm]</span>
+      <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换死人表情" style="padding:1px 4px;background:rgba(15,23,42,0.9);color:#fda4af;border:1px solid rgba(244,63,94,0.4);border-radius:4px;">
+        ${exprShortOpts}
+      </select>
       <button class="pill-mini-btn" data-pill-rot="${p.id}">
         ${p.isRotationMode ? '🔄 旋转中(点此取消)' : '🔄 旋转模式'}
       </button>
@@ -434,6 +477,20 @@ function renderActivePetsStrip(summonedList = []) {
     pillsContainer.appendChild(pill);
   }
 
+  pillsContainer.querySelectorAll('[data-pill-expr]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillExpr;
+      const exprId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (col) {
+        col.deadExpression = exprId;
+        col.morphs = { ...(col.morphs || {}), deadExpression: exprId };
+        persistCollectibles();
+      }
+      desktopEngine.setPetExpression(id, exprId);
+      renderVaultGrid();
+    });
+  });
   pillsContainer.querySelectorAll('[data-pill-rot]').forEach(btn => {
     btn.addEventListener('click', () => {
       desktopEngine.toggleRotationMode(btn.dataset.pillRot);
@@ -467,27 +524,47 @@ async function refreshStudio3DModel() {
   update2DAnatomyInspector();
 }
 
+function syncStudioExpressionUI(exprId) {
+  const sel = document.getElementById('sel-dead-expression');
+  if (sel) sel.value = exprId;
+  document.querySelectorAll('[data-dead-expr]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.deadExpr === exprId);
+  });
+}
+
 function loadCollectibleIntoStudio(col) {
+  const deadExpr = col.deadExpression || col.morphs?.deadExpression || 'dead_calm';
   state.studioDraft = JSON.parse(JSON.stringify({
-    basePreset: col.basePreset || 'linxi',
+    basePreset: col.basePreset || 'user_photo',
+    deadExpression: deadExpr,
     customModelUrl: col.customModelUrl || null,
     customModelType: col.customModelType || 'glb',
-    skinTone: col.skinTone || '#f7d9cc',
-    blushIntensity: col.blushIntensity ?? 0.52,
-    lipColor: col.lipColor || '#d45868',
-    irisColor: col.irisColor || '#362015',
-    hairStyle: col.hairStyle || 'long_straight',
-    hairColor: col.hairColor || '#131015',
+    skinTone: col.skinTone || '#ffe9df',
+    blushIntensity: col.blushIntensity ?? 0.25,
+    lipColor: col.lipColor || '#bf6872',
+    irisColor: col.irisColor || '#3b2014',
+    hairStyle: col.hairStyle || 'hair_user_photo',
+    hairColor: col.hairColor || '#191518',
     hairSheen: col.hairSheen ?? 0.90,
     neckClearance: col.neckClearance ?? 0.38,
     photoElement: null,
     photoBlend: 0.0,
-    morphs: { ...col.morphs },
+    morphs: {
+      deadExpression: deadExpr,
+      jawOpen: 0.0,
+      eyeRollUp: 0.0,
+      tongueOut: 0.0,
+      jawSide: 0.0,
+      bangsLength: 0.0,
+      hairVolume: 0.0,
+      ...(col.morphs || {})
+    },
     anatomyOptions: { ...col.anatomyOptions }
   }));
 
   document.getElementById('sel-base-preset').value = state.studioDraft.basePreset;
   document.getElementById('sel-hair-style').value = state.studioDraft.hairStyle;
+  syncStudioExpressionUI(deadExpr);
   document.getElementById('col-skin').value = state.studioDraft.skinTone;
   document.getElementById('col-lip').value = state.studioDraft.lipColor;
   document.getElementById('col-iris').value = state.studioDraft.irisColor;
@@ -956,14 +1033,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   const REAL_HAIRS = [
-    { id: 'hair_user_photo', name: '照片同款 · 清纯齐刘海碎发束发 (6,114v)' },
-    { id: 'hair_long01', name: '浪漫中分瀑布长卷发 (3,312v)' },
-    { id: 'hair_bob02', name: '法式侧分修颜内扣波波头 (1,688v)' },
-    { id: 'hair_bob01', name: '知性层次感锁骨波波发 (5,432v)' },
-    { id: 'hair_ponytail01', name: '冷感干练高颅顶束马尾 (3,902v)' },
-    { id: 'hair_braid01', name: '温婉侧分立体粗麻花辫 (4,663v)' },
-    { id: 'hair_short02', name: '空气感碎发精灵短发 (1,794v)' },
-    { id: 'hair_short04', name: '极简干练齐耳短发 (983v)' }
+    { id: 'hair_user_photo', name: '照片同款 · 空气碎刘海露耳束发 (5,029v)' },
+    { id: 'hair_short02', name: 'O4saken · 中式空气刘海微卷波波 (12,547v)' },
+    { id: 'hair_long01', name: 'Elvs Lara · 殿堂级中分柔顺长发 (17,360v)' },
+    { id: 'hair_braid01', name: 'Elvs Adrienne · 法式蓬松微卷盘发 (9,352v)' },
+    { id: 'hair_short04', name: 'Elvs Daisy · 千金感斜刘海半束发 (6,721v)' },
+    { id: 'hair_ponytail01', name: 'Elvs Hazel · 利落偏分高颅顶束发 (4,891v)' },
+    { id: 'hair_bob02', name: 'Toigo · 日系层次内卷短波波 (3,031v)' },
+    { id: 'hair_bob01', name: 'Toigo · 经典齐刘海内扣学生波波 (2,806v)' }
   ];
   let hairCycleIdx = 0;
 
@@ -975,7 +1052,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('custom-model-status').textContent = `当前使用：真实3D头模(daz_asian_head_base.glb) + ${picked.name}`;
     await refreshStudio3DModel();
     soundEngine.playSummon(true);
-    showToast(`💇‍♀️ 已切换真实 3D 发型模型：${picked.name} (${picked.id}.glb)`);
+    showToast(`💇‍♀️ 已切换 MhcloFit 高精 3D 发型：${picked.name} (${picked.id}.glb)`);
   });
 
   // 9. Studio Camera Preset Buttons & Anatomy Labels Checkbox
@@ -992,20 +1069,56 @@ window.addEventListener('DOMContentLoaded', async () => {
     await refreshStudio3DModel();
   });
 
-  // 10. Studio Morph Sliders, Colors & Hair Controls
+  // 10. Studio Morph Sliders, Forensic Post-Mortem Expressions, Colors & Hair Controls
+  const applyStudioDeadExpression = (exprId) => {
+    state.studioDraft.deadExpression = exprId;
+    state.studioDraft.morphs.deadExpression = exprId;
+    syncStudioExpressionUI(exprId);
+    studioEngine.updateMorphsFast(state.studioDraft.morphs);
+    const ep = FORENSIC_EXPRESSION_PRESETS.find(p => p.id === exprId);
+    if (ep) {
+      showToast(`💀 已切换死人/尸相表情：${ep.label} — ${ep.desc}`);
+    }
+  };
+
+  const selDeadExpr = document.getElementById('sel-dead-expression');
+  if (selDeadExpr) {
+    selDeadExpr.addEventListener('change', (e) => {
+      applyStudioDeadExpression(e.target.value);
+    });
+  }
+
+  document.querySelectorAll('[data-dead-expr]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyStudioDeadExpression(btn.dataset.deadExpr);
+    });
+  });
+
   document.getElementById('sel-base-preset').addEventListener('change', async (e) => {
     state.studioDraft.customModelUrl = null;
     state.studioDraft.basePreset = e.target.value;
     const presetHairMap = {
       user_photo: 'hair_user_photo',
       linxi: 'hair_long01',
-      suwan: 'hair_bob02',
+      suwan: 'hair_short02',
       qianxue: 'hair_ponytail01',
       shenzhiwei: 'hair_braid01'
+    };
+    const presetExprMap = {
+      user_photo: 'dead_calm',
+      linxi: 'dead_hollow',
+      suwan: 'dead_serene',
+      qianxue: 'dead_shock',
+      shenzhiwei: 'dead_smile'
     };
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
       document.getElementById('sel-hair-style').value = state.studioDraft.hairStyle;
+    }
+    if (presetExprMap[e.target.value]) {
+      state.studioDraft.deadExpression = presetExprMap[e.target.value];
+      state.studioDraft.morphs.deadExpression = presetExprMap[e.target.value];
+      syncStudioExpressionUI(presetExprMap[e.target.value]);
     }
     document.getElementById('custom-model-status').textContent = `当前使用：真实3D亚洲女性高精头模 (${e.target.value} + ${state.studioDraft.hairStyle}.glb)`;
     await refreshStudio3DModel();
@@ -1022,6 +1135,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  bindMorphSlider('morph-jaw-open', 'val-morph-jaw-open', 'jawOpen');
+  bindMorphSlider('morph-eye-roll', 'val-morph-eye-roll', 'eyeRollUp');
+  bindMorphSlider('morph-tongue-out', 'val-morph-tongue-out', 'tongueOut');
+  bindMorphSlider('morph-jaw-side', 'val-morph-jaw-side', 'jawSide');
+  bindMorphSlider('morph-bangs-len', 'val-morph-bangs-len', 'bangsLength');
+  bindMorphSlider('morph-hair-vol', 'val-morph-hair-vol', 'hairVolume');
   bindMorphSlider('morph-jaw', 'val-morph-jaw', 'jawVLine');
   bindMorphSlider('morph-cheek', 'val-morph-cheek', 'cheekSoftness');
   bindMorphSlider('morph-nose', 'val-morph-nose', 'noseBridge');
@@ -1085,6 +1204,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       grade,
       createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
       basePreset: state.studioDraft.basePreset,
+      deadExpression: state.studioDraft.deadExpression || state.studioDraft.morphs?.deadExpression || 'dead_calm',
       customModelUrl: state.studioDraft.customModelUrl,
       customModelType: state.studioDraft.customModelType,
       skinTone: state.studioDraft.skinTone,
