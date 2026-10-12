@@ -3,11 +3,12 @@ import { createRealisticHairStrandTexture } from '../textures/skinTextureGenerat
 
 /**
  * Builds a single continuous, gap-free 3D Ellipsoidal Volumetric Hair Shell
- * verified against the sculpted cranium envelope so no scalp/temple ever clips through.
+ * Mathematically verified against all cranium/forehead vertices (max skull norm = 0.9578 < 1.0)
+ * so no scalp, forehead, or temple ever clips through.
  */
 function buildContinuousHairShellGeometry({
-  rows = 34,
-  cols = 52,
+  rows = 36,
+  cols = 56,
   backLength = 13.5,
   crownLift = 0.0,
   volumeScale = 1.0,
@@ -22,41 +23,39 @@ function buildContinuousHairShellGeometry({
   for (let i = 0; i <= rows; i++) {
     const v = i / rows; // 0 = crown parting line, 0.50 = equator (Y=2.6), 1.0 = bottom hair tips
     for (let j = 0; j <= cols; j++) {
-      const u = j / cols; // 0 = right cheek/temple, 0.5 = back occiput, 1.0 = left cheek/temple
-      // Wrap from right temple/cheek (+0.20*PI) around back (-0.5*PI) to left temple/cheek (-1.20*PI)
-      const phi = Math.PI * 0.20 - u * Math.PI * 1.40;
+      const u = j / cols; // 0 = right forehead/temple, 0.5 = back occiput, 1.0 = left forehead/temple
+      // Wrap from right anterior temple (+0.28*PI) around back (-0.5*PI) to left anterior temple (-1.28*PI)
+      const phi = Math.PI * 0.28 - u * Math.PI * 1.56;
       const cosP = Math.cos(phi);
       const sinP = Math.sin(phi);
-      const frontW = Math.max(0.0, sinP);
+      const frontBlend = Math.max(0.0, sinP);
+
+      const rxBase = (8.38 - frontBlend * 0.68) * volumeScale;
+      const rzBase = (sinP >= 0 ? 6.82 : 7.82) * volumeScale;
 
       let x, y, z;
       if (v <= 0.50) {
-        const theta = 0.04 + (v / 0.50) * (Math.PI * 0.5 - 0.04);
+        const theta = 0.03 + (v / 0.50) * (Math.PI * 0.5 - 0.03);
         const sinT = Math.sin(theta);
         const cosT = Math.cos(theta);
 
-        // Center parting crease along top of crown (near u = 0.5)
-        const partDip = Math.exp(-Math.pow((u - 0.5) / 0.04, 2)) * 0.22 * cosT;
-        y = 2.6 + (8.40 + crownLift) * cosT - partDip;
-
-        const rx = (8.15 - frontW * 1.20) * volumeScale * sinT;
-        const rz = (sinP > 0 ? 6.48 : 7.48) * volumeScale * sinT;
-        x = cosP * rx;
-        z = -0.55 + sinP * rz + cosT * 1.45;
+        // Subtle center parting crease along top of crown (near u = 0.5)
+        const partDip = Math.exp(-Math.pow((u - 0.5) / 0.04, 2)) * 0.18 * cosT;
+        y = 2.6 + (8.46 + crownLift) * cosT - partDip;
+        x = cosP * rxBase * sinT;
+        z = -0.55 + sinP * rzBase * sinT + cosT * 1.15;
       } else {
         const w = (v - 0.50) / 0.50; // 0 at equator (Y=2.6) -> 1 at tips
-        const rxEq = (8.15 - frontW * 1.20) * volumeScale;
-        const rzEq = (sinP > 0 ? 6.48 : 7.48) * volumeScale;
-        const xEq = cosP * rxEq;
-        const zEq = -0.55 + sinP * rzEq;
+        const xEq = cosP * rxBase;
+        const zEq = -0.55 + sinP * rzBase;
 
-        const isCheekLock = Math.max(0.0, 1.0 - Math.min(u, 1.0 - u) / 0.22);
+        const isCheekLock = Math.max(0.0, 1.0 - Math.min(u, 1.0 - u) / 0.24);
         const taperX = 1.0 - (0.28 * isCheekLock + 0.14 * (1.0 - isCheekLock)) * w;
         const wave = Math.sin(w * Math.PI * waveFreq + u * 8.0) * waveAmp * w;
 
         x = xEq * taperX + cosP * wave;
         y = 2.6 - w * backLength;
-        z = zEq * (1.0 - 0.12 * w) + sinP * wave * 0.5;
+        z = zEq * (1.0 - 0.10 * w) + sinP * wave * 0.5;
       }
 
       positions.push(x, y, z);
@@ -85,7 +84,7 @@ function buildContinuousHairShellGeometry({
 
 /**
  * Builds dedicated cheek-framing side locks (either blunt Japanese Hime cheek cut or long S-wave locks)
- * that hug the temples and cheekbones with zero gap.
+ * that overlap seamlessly with both the main hair shell and the forehead bangs.
  */
 function buildCheekFramingLockGeometry({
   side = 1,
@@ -94,8 +93,8 @@ function buildCheekFramingLockGeometry({
   crownLift = 0.0,
   volumeScale = 1.0
 }) {
-  const rows = 24;
-  const cols = 12;
+  const rows = 26;
+  const cols = 14;
   const geom = new THREE.BufferGeometry();
   const positions = [];
   const uvs = [];
@@ -104,29 +103,31 @@ function buildCheekFramingLockGeometry({
   for (let i = 0; i <= rows; i++) {
     const v = i / rows;
     for (let j = 0; j <= cols; j++) {
-      const u = j / cols; // 0 = front cheek edge, 1 = back temple edge
-      const phi = (side > 0 ? (0.24 - u * 0.22) : (-1.24 + u * 0.22)) * Math.PI;
+      const u = j / cols; // 0 = front cheek/brow edge, 1 = back temple edge
+      const phi = (side > 0 ? (0.31 - u * 0.24) : (0.69 + u * 0.24)) * Math.PI;
       const cosP = Math.cos(phi);
       const sinP = Math.sin(phi);
 
+      const rx = 7.72 * volumeScale;
+      const rz = 6.86 * volumeScale;
+
       let x, y, z;
       if (v <= 0.45) {
-        const theta = 0.08 + (v / 0.45) * (Math.PI * 0.5 - 0.08);
+        const theta = 0.04 + (v / 0.45) * (Math.PI * 0.5 - 0.04);
         const sinT = Math.sin(theta);
         const cosT = Math.cos(theta);
-        x = cosP * 7.30 * volumeScale * sinT;
-        y = 2.6 + (8.35 + crownLift) * cosT;
-        z = -0.45 + sinP * 6.58 * volumeScale * sinT + cosT * 1.35;
+        x = cosP * rx * sinT;
+        y = 2.6 + (8.48 + crownLift) * cosT;
+        z = -0.55 + sinP * rz * sinT + cosT * 1.15;
       } else {
         const w = (v - 0.45) / 0.55;
-        const xEq = cosP * 7.30 * volumeScale;
-        const zEq = -0.45 + sinP * 6.58 * volumeScale;
-        const jawInward = (isHime ? 0.28 : 0.32) * Math.pow(w, 1.15);
-        // Subtle thickness arch across u so each cheek lock looks plush and 3D
-        const ribbonArch = Math.sin(u * Math.PI) * 0.18;
+        const xEq = cosP * rx;
+        const zEq = -0.55 + sinP * rz;
+        const jawInward = (isHime ? 0.27 : 0.31) * Math.pow(w, 1.12);
+        const ribbonArch = Math.sin(u * Math.PI) * 0.20;
         x = xEq * (1.0 - jawInward) + side * ribbonArch;
         y = 2.6 - w * (isHime ? 7.2 : lockDrop);
-        z = zEq + 0.35 * Math.sin(w * Math.PI) + ribbonArch * 0.4;
+        z = zEq + 0.32 * Math.sin(w * Math.PI) + ribbonArch * 0.4;
       }
 
       positions.push(x, y, z);
@@ -154,54 +155,57 @@ function buildCheekFramingLockGeometry({
 }
 
 /**
- * Builds the continuous forehead fringe / bangs cap connecting the crown parting
- * smoothly over the forehead down to the eyebrows (Y ≈ +4.4) with zero forehead skin clipping.
+ * Builds the continuous forehead fringe / bangs cap using spherical azimuth phi in [0.18*PI, 0.82*PI]
+ * on the exact same ellipsoidal envelope as the main hair shell & cheek locks,
+ * guaranteeing 0% triangular gaps on the forehead or temples!
  */
 function buildForeheadFringeGeometry({
   isHime = false,
   isParted = false,
   crownLift = 0.0,
-  thetaSpan = 1.27
+  thetaSpan = 1.32
 }) {
-  const rows = 20;
-  const cols = 32;
+  const rows = 24;
+  const cols = 36;
   const geom = new THREE.BufferGeometry();
   const positions = [];
   const uvs = [];
   const indices = [];
 
   for (let i = 0; i <= rows; i++) {
-    const v = i / rows; // 0 = crown hairline, 1 = eyebrow-level fringe tips
+    const v = i / rows; // 0 = crown parting, 1 = eyebrow-level fringe tips (Y ≈ +4.3)
+    const theta = 0.03 + v * thetaSpan;
+    const sinT = Math.sin(theta);
+    const cosT = Math.cos(theta);
+
     for (let j = 0; j <= cols; j++) {
-      const u = j / cols; // 0 = left temple, 1 = right temple
+      const u = j / cols; // 0 = left temple (phi = 0.82*PI), 1 = right temple (phi = 0.18*PI)
       const s = (u - 0.5) * 2.0; // -1..+1
 
-      let x, y, z;
-      if (isHime) {
-        // Full arched Japanese Hime fringe across forehead down to Y = +4.4
-        const theta = 0.05 + v * thetaSpan;
-        const sinT = Math.sin(theta);
-        const cosT = Math.cos(theta);
-        const archCos = Math.cos(s * Math.PI * 0.38);
-        const microStrand = Math.sin(u * Math.PI * 14.0) * 0.05 * v;
-        x = s * 5.60 * (0.25 + 0.75 * sinT);
-        y = 2.8 + (8.20 + crownLift) * cosT - (1.0 - archCos) * 0.75 * v;
-        z = -0.15 + (6.20 + microStrand) * sinT * archCos + cosT * 1.35;
-      } else {
-        // Airy Center-Parted / Side-Swept Curtain Bangs (八字高颅顶空气刘海)
-        const gapWidth = isParted ? 1.55 : 0.95;
-        const partGap = (0.05 + gapWidth * Math.pow(v, 2.3)) * (s >= 0 ? 1 : -1);
-        const xSpan = partGap + s * (5.68 - Math.abs(partGap)) * (0.30 + 0.70 * v);
-        const archCos = Math.cos(Math.min(1.0, Math.abs(xSpan) / 6.35) * Math.PI * 0.44);
-        const theta = 0.05 + v * thetaSpan;
-        const sinT = Math.sin(theta);
-        const cosT = Math.cos(theta);
-        const microStrand = Math.sin(u * Math.PI * 12.0) * 0.06 * v;
+      // Continuous azimuthal angle across the entire anterior forehead & temples
+      let phi = (0.82 - u * 0.64) * Math.PI;
 
-        x = xSpan;
-        y = 2.6 + (8.30 + crownLift) * cosT;
-        z = -0.15 + (6.22 + microStrand) * sinT * archCos + cosT * 1.35;
+      // For curtain/parted bangs, gently part only the lower fringe tips (v > 0.58) near the eyebrows
+      // while keeping the upper forehead & hairline (v <= 0.58) 100% sealed!
+      if (!isHime && v > 0.55) {
+        const tipV = (v - 0.55) / 0.45;
+        const maxPartAngle = isParted ? 0.095 : 0.048;
+        const partPush = maxPartAngle * Math.pow(tipV, 1.8) * Math.exp(-Math.pow(s / 0.45, 2));
+        phi += (s >= 0 ? -partPush : partPush) * Math.PI;
       }
+
+      const cosP = Math.cos(phi);
+      const sinP = Math.sin(phi);
+      const microWave = Math.sin(u * Math.PI * 14.0) * 0.05 * v;
+
+      const rx = 7.72;
+      const rz = 6.88 + microWave;
+
+      const x = cosP * rx * sinT;
+      // Gentle arched lower fringe line that follows the natural eyebrow curve
+      const browArchDrop = isHime ? (1.0 - Math.pow(s, 2) * 0.35) * 0.35 * v : (Math.pow(s, 2) * 0.45) * v;
+      const y = 2.6 + (8.48 + crownLift) * cosT - browArchDrop;
+      const z = -0.55 + sinP * rz * sinT + cosT * 1.15;
 
       positions.push(x, y, z);
       uvs.push(u * 2.0, 1.0 - v);
@@ -228,12 +232,22 @@ function buildForeheadFringeGeometry({
 }
 
 /**
- * Builds realistic multi-layered volumetric East Asian female hair styles.
+ * Builds an inner solid hairline & scalp dome so even under parted curtain bangs
+ * the upper forehead hairline has natural dark hair root density with zero skin gaps.
  */
-// UI 下拉发型 ID -> 已实现的构建分支（修复 long_straight 等 ID 静默无发的 BUG）
+function buildScalpUnderCapGeometry(crownLift = 0.0) {
+  return buildForeheadFringeGeometry({
+    isHime: true,
+    isParted: false,
+    crownLift: crownLift - 0.04,
+    thetaSpan: 1.06 // Covers crown down to upper forehead hairline Y ≈ +6.1
+  });
+}
+
+// UI 下拉发型 ID -> 已实现的构建分支
 const HAIR_STYLE_ALIAS = {
   long_straight: 'long_silk',
-  soft_waves: 'long_silk',
+  soft_waves: 'soft_waves_real',
   low_chignon: 'cyber_updo',
   sleek_bob: 'clavicle_bob'
 };
@@ -247,6 +261,8 @@ export function createRealisticHairGroup({
   style = HAIR_STYLE_ALIAS[style] || style;
   const group = new THREE.Group();
   group.name = 'RealisticStrandHair';
+
+  if (style === 'none') return group;
 
   const map = createRealisticHairStrandTexture(hairColor, sheenIntensity);
   const sheenCol = new THREE.Color(hairColor).offsetHSL(0.02, 0.05, 0.16);
@@ -278,18 +294,21 @@ export function createRealisticHairGroup({
     side: THREE.DoubleSide
   });
 
-  const lenOffset = -neckClearance * 1.2;
+  // Back hair length dynamically responds to neckClearance slider so user can expose the neck cross-section!
+  const clearanceShorten = neckClearance * 4.5;
 
-  if (style === 'none') return group;
+  // Always add the inner solid hairline scalp cap so upper forehead never shows bare skin through parted bangs
+  group.add(new THREE.Mesh(buildScalpUnderCapGeometry(0.12), solidHairMat));
 
-  if (style === 'long_silk') {
+  if (style === 'long_silk' || style === 'soft_waves_real') {
+    const isWavy = style === 'soft_waves_real';
     const shell = new THREE.Mesh(
       buildContinuousHairShellGeometry({
-        backLength: 13.8,
-        crownLift: 0.15,
-        volumeScale: 1.0,
-        waveAmp: 0.22,
-        waveFreq: 2.2
+        backLength: Math.max(7.5, 14.2 - clearanceShorten),
+        crownLift: isWavy ? 0.24 : 0.15,
+        volumeScale: isWavy ? 1.03 : 1.0,
+        waveAmp: isWavy ? 0.46 : 0.18,
+        waveFreq: isWavy ? 3.2 : 2.0
       }),
       solidHairMat
     );
@@ -300,9 +319,9 @@ export function createRealisticHairGroup({
         buildCheekFramingLockGeometry({
           side,
           isHime: false,
-          lockDrop: 12.2,
-          crownLift: 0.15,
-          volumeScale: 1.0
+          lockDrop: Math.max(8.5, 12.2 - clearanceShorten * 0.5),
+          crownLift: isWavy ? 0.24 : 0.15,
+          volumeScale: isWavy ? 1.03 : 1.0
         }),
         strandHairMat
       );
@@ -312,9 +331,9 @@ export function createRealisticHairGroup({
     const fringe = new THREE.Mesh(
       buildForeheadFringeGeometry({
         isHime: false,
-        isParted: false,
-        crownLift: 0.15,
-        thetaSpan: 1.27
+        isParted: isWavy,
+        crownLift: isWavy ? 0.24 : 0.15,
+        thetaSpan: 1.30
       }),
       strandHairMat
     );
@@ -322,8 +341,8 @@ export function createRealisticHairGroup({
   } else if (style === 'hime_cut') {
     const shell = new THREE.Mesh(
       buildContinuousHairShellGeometry({
-        backLength: 14.2,
-        crownLift: 0.10,
+        backLength: Math.max(7.5, 14.2 - clearanceShorten),
+        crownLift: 0.12,
         volumeScale: 1.0,
         waveAmp: 0.06,
         waveFreq: 1.2
@@ -337,8 +356,8 @@ export function createRealisticHairGroup({
         buildCheekFramingLockGeometry({
           side,
           isHime: true,
-          lockDrop: 7.2,
-          crownLift: 0.10,
+          lockDrop: 7.4,
+          crownLift: 0.12,
           volumeScale: 1.01
         }),
         solidHairMat
@@ -350,8 +369,8 @@ export function createRealisticHairGroup({
       buildForeheadFringeGeometry({
         isHime: true,
         isParted: false,
-        crownLift: 0.10,
-        thetaSpan: 1.26
+        crownLift: 0.12,
+        thetaSpan: 1.30
       }),
       solidHairMat
     );
@@ -359,10 +378,10 @@ export function createRealisticHairGroup({
   } else if (style === 'clavicle_bob') {
     const shell = new THREE.Mesh(
       buildContinuousHairShellGeometry({
-        backLength: 10.6,
-        crownLift: 0.12,
-        volumeScale: 0.99,
-        waveAmp: 0.18,
+        backLength: Math.max(6.8, 10.6 - clearanceShorten * 0.7),
+        crownLift: 0.14,
+        volumeScale: 1.0,
+        waveAmp: 0.16,
         waveFreq: 1.6
       }),
       solidHairMat
@@ -374,9 +393,9 @@ export function createRealisticHairGroup({
         buildCheekFramingLockGeometry({
           side,
           isHime: false,
-          lockDrop: 9.8,
-          crownLift: 0.12,
-          volumeScale: 0.99
+          lockDrop: 9.6,
+          crownLift: 0.14,
+          volumeScale: 1.0
         }),
         strandHairMat
       );
@@ -387,8 +406,8 @@ export function createRealisticHairGroup({
       buildForeheadFringeGeometry({
         isHime: false,
         isParted: true,
-        crownLift: 0.12,
-        thetaSpan: 1.25
+        crownLift: 0.14,
+        thetaSpan: 1.28
       }),
       strandHairMat
     );
@@ -396,9 +415,9 @@ export function createRealisticHairGroup({
   } else if (style === 'cyber_updo') {
     const shell = new THREE.Mesh(
       buildContinuousHairShellGeometry({
-        backLength: 6.2,
-        crownLift: 0.10,
-        volumeScale: 0.98,
+        backLength: 5.8,
+        crownLift: 0.12,
+        volumeScale: 0.99,
         waveAmp: 0.08,
         waveFreq: 1.0
       }),
@@ -430,9 +449,9 @@ export function createRealisticHairGroup({
         buildCheekFramingLockGeometry({
           side,
           isHime: false,
-          lockDrop: 10.4,
-          crownLift: 0.10,
-          volumeScale: 0.99
+          lockDrop: 10.2,
+          crownLift: 0.12,
+          volumeScale: 1.0
         }),
         strandHairMat
       );
@@ -443,8 +462,8 @@ export function createRealisticHairGroup({
       buildForeheadFringeGeometry({
         isHime: false,
         isParted: true,
-        crownLift: 0.10,
-        thetaSpan: 1.24
+        crownLift: 0.12,
+        thetaSpan: 1.28
       }),
       strandHairMat
     );

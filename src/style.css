@@ -152,6 +152,7 @@ body.bg-mode-transparent {
   padding: 3px 10px;
   border-radius: 99px;
   white-space: nowrap;
+  margin-top: 148px;
 }
 
 /* Box Wall Physical Collision Ripples */

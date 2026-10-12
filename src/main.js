@@ -802,15 +802,17 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // 8b. CC0 MakeHuman Asian female head (+ hair) preset
   const loadMHHead = async (hairFile, label) => {
+    state.studioDraft.basePreset = 'mh_asian';
     state.studioDraft.customModelUrl = '/models/mh_asian_female_head.obj';
     state.studioDraft.customModelType = 'obj';
     state.studioDraft.customHairUrl = hairFile ? `/models/${hairFile}` : null;
-    document.getElementById('custom-model-status').textContent = `当前使用：MakeHuman 亚洲女性头模 (CC0) + ${label}`;
-    showToast(`🧬 已载入 CC0 亚洲女性头模（${label}）`);
+    document.getElementById('sel-base-preset').value = 'mh_asian';
+    document.getElementById('custom-model-status').textContent = `当前使用：MakeHuman 亚洲女性高精3D头模 (含独立3D眼球/睫毛 + C4解剖断面 + ${label})`;
+    showToast(`🧬 已载入 CC0 亚洲女性3D头雕（${label}），支持实时调节五官滑块、肤色唇色瞳色与解剖断面！`);
     await refreshStudio3DModel();
   };
-  document.getElementById('btn-mh-bob')?.addEventListener('click', () => loadMHHead('mh_hair_bob02.obj', '波波头发'));
-  document.getElementById('btn-mh-long')?.addEventListener('click', () => loadMHHead('mh_hair_long01.obj', '长发'));
+  document.getElementById('btn-mh-bob')?.addEventListener('click', () => loadMHHead('mh_hair_bob02.obj', '波波头'));
+  document.getElementById('btn-mh-long')?.addEventListener('click', () => loadMHHead('mh_hair_long01.obj', '柔顺长发'));
 
   // 9. Studio Camera Preset Buttons & Anatomy Labels Checkbox
   document.querySelectorAll('[data-cam]').forEach(btn => {
@@ -868,6 +870,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('sel-hair-style').addEventListener('change', async (e) => {
     state.studioDraft.hairStyle = e.target.value;
+    state.studioDraft.customHairUrl = null;
     await refreshStudio3DModel();
   });
 

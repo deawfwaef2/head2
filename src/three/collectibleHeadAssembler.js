@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { createDazSkinTexture } from '../textures/skinTextureGenerator.js';
+import { createDazSkinTexture, createRealisticHairStrandTexture } from '../textures/skinTextureGenerator.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createRealisticHairGroup } from './hairBuilder.js';
 
@@ -9,24 +9,35 @@ const objCache = new Map();
 const objLoader = new OBJLoader();
 const gltfLoader = new GLTFLoader();
 
-// Standalone HTML embeds model text under window.__EMBEDDED_MODELS__ keyed by file basename.
-// Lets user-picked presets (e.g. mh_asian_female_head.obj) load under file:// too.
-function embeddedModelText(url) {
+// Standalone HTML embeds model text under window.__EMBEDDED_MODELS__ keyed by file basename or preset key.
+function embeddedModelText(urlOrKey) {
   if (typeof window === 'undefined' || !window.__EMBEDDED_MODELS__) return null;
-  const name = String(url).split('/').pop();
+  if (window.__EMBEDDED_MODELS__[urlOrKey]) return window.__EMBEDDED_MODELS__[urlOrKey];
+  const name = String(urlOrKey).split('/').pop();
   return window.__EMBEDDED_MODELS__[name] || null;
 }
 
 async function loadObjAny(url) {
+  const cacheKey = `url:${url}`;
+  if (objCache.has(cacheKey)) {
+    return objCache.get(cacheKey).clone(true);
+  }
   const txt = embeddedModelText(url);
-  if (txt) return objLoader.parse(txt);
-  return new Promise((res, rej) => objLoader.load(url, res, undefined, rej));
+  if (txt) {
+    const parsed = objLoader.parse(txt);
+    objCache.set(cacheKey, parsed);
+    return parsed.clone(true);
+  }
+  const loaded = await new Promise((res, rej) => objLoader.load(url, res, undefined, rej));
+  objCache.set(cacheKey, loaded);
+  return loaded.clone(true);
 }
 
 const PRESET_PATHS = {
   linxi: '/models/daz_asian_female_linxi.obj',
   suwan: '/models/daz_asian_female_suwan.obj',
-  qianxue: '/models/daz_asian_female_qianxue.obj'
+  qianxue: '/models/daz_asian_female_qianxue.obj',
+  mh_asian: '/models/mh_asian_female_head.obj'
 };
 
 export async function loadPresetObjGeometry(preset = 'linxi') {
@@ -35,9 +46,9 @@ export async function loadPresetObjGeometry(preset = 'linxi') {
     return objCache.get(key).clone(true);
   }
 
-  // Support offline file:// standalone HTML execution via inline embedded OBJ strings!
-  if (typeof window !== 'undefined' && window.__EMBEDDED_MODELS__ && window.__EMBEDDED_MODELS__[key]) {
-    const parsed = objLoader.parse(window.__EMBEDDED_MODELS__[key]);
+  const embedded = embeddedModelText(key) || embeddedModelText(PRESET_PATHS[key]);
+  if (embedded) {
+    const parsed = objLoader.parse(embedded);
     objCache.set(key, parsed);
     return parsed.clone(true);
   }
@@ -158,7 +169,7 @@ export function applyHeadMorphsToGeometry(geom, basePositions, morphs = {}, isCa
 
   const pitchRad = (cutTiltPitch * Math.PI) / 180;
   const rollRad = (cutTiltRoll * Math.PI) / 180;
-  const neckCz = -1.85;
+  const neckCz = -2.05;
 
   for (let i = 0; i < arr.length; i += 3) {
     let x = basePositions[i];
@@ -166,37 +177,37 @@ export function applyHeadMorphsToGeometry(geom, basePositions, morphs = {}, isCa
     let z = basePositions[i + 2];
 
     if (!isCap) {
-      if (y < -0.5 && y > -7.2 && z > -3.0) {
-        const w = Math.max(0, Math.min(1, (-0.5 - y) / 6.4));
+      if (y < -0.5 && y > -7.5 && z > -3.0) {
+        const w = Math.max(0, Math.min(1, (-0.5 - y) / 6.6));
         x *= (1.0 - jawVLine * 0.24 * w);
       }
-      if (y > -2.5 && y < 2.8 && z > -2.0) {
+      if (y > -2.8 && y < 2.8 && z > -2.0) {
         const w = Math.exp(-Math.pow(y / 2.0, 2));
         x *= (1.0 + cheekSoftness * 0.14 * w);
         z += cheekSoftness * 0.28 * w * Math.exp(-Math.pow((Math.abs(x) - 3.0) / 2.0, 2));
       }
-      if (Math.abs(x) < 2.2 && y > -2.2 && y < 4.2 && z > 4.0) {
-        const nw = Math.exp(-Math.pow(x / 1.4, 2)) * Math.exp(-Math.pow((y - 0.8) / 2.6, 2));
+      if (Math.abs(x) < 2.2 && y > -2.6 && y < 4.2 && z > 4.0) {
+        const nw = Math.exp(-Math.pow(x / 1.4, 2)) * Math.exp(-Math.pow((y - 0.5) / 2.6, 2));
         z += noseBridge * 0.65 * nw;
       }
-      if (y > 1.0 && y < 4.0 && z > 2.4) {
-        for (const ex of [-3.18, 3.18]) {
-          const ew = Math.exp(-Math.pow((x - ex) / 1.5, 2)) * Math.exp(-Math.pow((y - 2.4) / 0.9, 2));
+      if (y > -0.2 && y < 4.0 && z > 2.4) {
+        for (const ex of [-2.8, 2.8]) {
+          const ew = Math.exp(-Math.pow((x - ex) / 1.6, 2)) * Math.exp(-Math.pow((y - 1.8) / 1.2, 2));
           if (ew > 0.02) {
-            const outer = (Math.abs(x) - 3.18) / 1.4;
-            y += eyeAlmond * 0.36 * outer * ew;
+            const outer = (Math.abs(x) - 2.6) / 1.4;
+            y += eyeAlmond * 0.34 * outer * ew;
           }
         }
       }
-      if (Math.abs(x) < 2.4 && y > -5.2 && y < -2.4 && z > 3.8) {
-        const lw = Math.exp(-Math.pow(x / 1.8, 2)) * Math.exp(-Math.pow((y + 3.8) / 0.9, 2));
+      if (Math.abs(x) < 2.5 && y > -5.8 && y < -2.2 && z > 3.8) {
+        const lw = Math.exp(-Math.pow(x / 1.8, 2)) * Math.exp(-Math.pow((y + 4.1) / 1.1, 2));
         z += lipFullness * 0.55 * lw;
       }
     }
 
-    // Neck diameter & Anatomical Cross-Section Cut Plane height/tilt (below y = -7.2)
-    if (isCap || y < -7.2) {
-      const neckWeight = isCap ? 1.0 : Math.max(0, Math.min(1, (-7.2 - y) / 5.2));
+    // Neck diameter & Anatomical Cross-Section Cut Plane height/tilt (below y = -7.5)
+    if (isCap || y < -7.5) {
+      const neckWeight = isCap ? 1.0 : Math.max(0, Math.min(1, (-7.5 - y) / 5.2));
       const scaleR = 1.0 + (neckDiameter - 1.0) * neckWeight;
       x *= scaleR;
       z = neckCz + (z - neckCz) * scaleR;
@@ -268,14 +279,14 @@ export async function buildCollectibleHeadNode(config = {}) {
 
   const skinMaterial = new THREE.MeshPhysicalMaterial({
     map: skinTex,
-    roughness: 0.44,
+    roughness: 0.42,
     metalness: 0.01,
-    clearcoat: 0.14,
-    clearcoatRoughness: 0.42,
-    sheen: 0.32,
-    sheenRoughness: 0.68,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.40,
+    sheen: 0.34,
+    sheenRoughness: 0.65,
     sheenColor: new THREE.Color('#ffd5c8'),
-    reflectivity: 0.42
+    reflectivity: 0.44
   });
 
   const anatomyMaterial = new THREE.MeshPhysicalMaterial({
@@ -289,7 +300,9 @@ export async function buildCollectibleHeadNode(config = {}) {
     side: THREE.DoubleSide
   });
 
-  if (customModelUrl) {
+  const isMHBuiltIn = customModelUrl && /mh_asian_female_head/.test(customModelUrl);
+
+  if (customModelUrl && !isMHBuiltIn) {
     let extObj;
     if (customModelType === 'obj') {
       extObj = await loadObjAny(customModelUrl);
@@ -310,15 +323,9 @@ export async function buildCollectibleHeadNode(config = {}) {
     const cutY = -10.5 + (morphs.cutHeightOffset || 0);
     const clipPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -cutY);
 
-    const isMHHead = /mh_asian_female_head/.test(customModelUrl);
-    const plainSkin = skinMaterial.clone();
-    plainSkin.map = null;
-    plainSkin.color = new THREE.Color(skinTone);
-    plainSkin.needsUpdate = true;
-
     extObj.traverse((child) => {
       if (child.isMesh && child.material) {
-        child.material = isMHHead ? plainSkin.clone() : child.material.clone();
+        child.material = child.material.clone();
         child.material.clippingPlanes = [clipPlane];
         child.material.clipShadows = true;
       }
@@ -331,32 +338,9 @@ export async function buildCollectibleHeadNode(config = {}) {
     const capMesh = new THREE.Mesh(capGeom, anatomyMaterial);
     capMesh.name = 'neck_cross_section';
     root.add(capMesh);
-
-    if (customHairUrl) {
-      const hairObj = await loadObjAny(customHairUrl);
-      hairObj.scale.copy(extObj.scale);
-      hairObj.position.copy(extObj.position);
-      const hairMat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color(hairColor),
-        roughness: 0.42,
-        metalness: 0.0,
-        sheen: hairSheen,
-        sheenRoughness: 0.35,
-        sheenColor: new THREE.Color('#5a4a52'),
-        side: THREE.DoubleSide
-      });
-      hairObj.traverse((child) => {
-        if (child.isMesh) {
-          child.material = hairMat.clone();
-          child.material.clippingPlanes = [clipPlane];
-          child.material.clipShadows = true;
-        }
-      });
-      hairObj.name = 'CollectibleHair';
-      root.add(hairObj);
-    }
   } else {
-    const objGroup = await loadPresetObjGeometry(basePreset);
+    const presetToLoad = isMHBuiltIn ? 'mh_asian' : basePreset;
+    const objGroup = await loadPresetObjGeometry(presetToLoad);
     let headMesh = null;
     let capMesh = null;
 
@@ -383,7 +367,34 @@ export async function buildCollectibleHeadNode(config = {}) {
 
     root.add(objGroup);
 
-    if (hairStyle !== 'none') {
+    if (customHairUrl) {
+      const hairObj = await loadObjAny(customHairUrl);
+      const hairMap = createRealisticHairStrandTexture(hairColor, hairSheen);
+      const sheenCol = new THREE.Color(hairColor).offsetHSL(0.02, 0.05, 0.16);
+      const hairMat = new THREE.MeshPhysicalMaterial({
+        map: hairMap,
+        color: new THREE.Color('#ffffff'),
+        roughness: Math.max(0.18, 0.44 - hairSheen * 0.18),
+        metalness: 0.06,
+        clearcoat: 0.38 * hairSheen,
+        clearcoatRoughness: 0.25,
+        sheen: 0.58 * hairSheen,
+        sheenRoughness: 0.30,
+        sheenColor: sheenCol,
+        side: THREE.DoubleSide
+      });
+      hairObj.traverse((child) => {
+        if (child.isMesh) {
+          const hGeom = child.geometry.clone();
+          const hWeld = buildPositionWeldData(hGeom.attributes.position.array);
+          computeWeldedSmoothNormals(hGeom, hWeld);
+          child.geometry = hGeom;
+          child.material = hairMat;
+        }
+      });
+      hairObj.name = 'CollectibleHair';
+      root.add(hairObj);
+    } else if (hairStyle !== 'none') {
       const hairGroup = createRealisticHairGroup({
         style: hairStyle,
         hairColor,

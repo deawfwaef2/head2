@@ -72,13 +72,16 @@ def sculpt_asian_female_face(verts, uvs, preset='linxi'):
             ny = 2.5 + (ny - 2.5) * 0.96
 
         # 2. Smooth feminine forehead & eliminate heavy male supraorbital ridge
+        # Natural East Asian forehead: gentle frontal eminence at y in 3.2..5.2, then curves smoothly BACKWARD toward hairline (y > 5.2)
         if y > 1.8:
-            brow_w = math.exp(-((y - 3.8) / 2.1) ** 2) * math.exp(-(x / 5.5) ** 2)
-            nz -= 0.45 * brow_w
-            if y > 3.6:
-                fore_w = ((y - 3.6) / 4.7) * math.exp(-(x / 6.2) ** 2)
-                nz += 0.58 * fore_w
-                nx *= (1.0 - 0.06 * ((y - 3.6) / 4.7))
+            brow_w = math.exp(-((y - 3.6) / 1.9) ** 2) * math.exp(-(x / 5.5) ** 2)
+            nz -= 0.42 * brow_w
+            eminence_w = math.exp(-((y - 4.6) / 1.8) ** 2) * math.exp(-(x / 4.8) ** 2)
+            nz += 0.22 * eminence_w
+            if y > 4.8:
+                hairline_t = (y - 4.8) / 3.5
+                nz -= 0.68 * (hairline_t ** 1.25)
+                nx *= (1.0 - 0.08 * hairline_t)
 
         # 3. Smooth malar/cheek contour + soft apple cheek fullness + fill hollow buccal cheeks!
         cheek_w = math.exp(-((y - 0.2) / 3.8) ** 2)
@@ -137,16 +140,18 @@ def sculpt_asian_female_face(verts, uvs, preset='linxi'):
             if r2 < 1.0:
                 nz += 0.28 * math.sqrt(max(0.0, 1.0 - r2))
 
-        # 7. Petite, Softly Closed Petal Lips (消除嘴唇中间深沟与嘴角凹陷)
-        mouth_w = math.exp(-(x / 2.7) ** 2) * math.exp(-((y + 4.35) / 1.4) ** 2)
+        # 7. Petite, Softly Closed Petal Lips & Youthful Short Philtrum (消除嘴唇中间深沟与嘴角凹陷，缩短人中比例)
+        philtrum_lift = math.exp(-(x / 3.4) ** 2) * math.exp(-((y + 3.85) / 2.15) ** 2)
+        ny += 0.42 * philtrum_lift
+        mouth_w = math.exp(-(x / 2.8) ** 2) * math.exp(-((y + 4.35) / 1.45) ** 2)
         if mouth_w > 0.02:
-            nx *= (1.0 - 0.16 * mouth_w)
+            nx *= (1.0 - 0.04 * mouth_w)
             # In canonical_face_model, inner lip vertices (y in -4.6..-3.9) are recessed at z ~ 5.2 while vermilion is at z ~ 5.8.
             # Bring recessed inner lip line smoothly forward so lips form a soft, natural closed petal!
             inner_lip_w = math.exp(-(x / 2.2) ** 2) * math.exp(-((y + 4.25) / 0.55) ** 2)
             if z < 5.65:
-                nz += (5.65 - z) * 0.72 * inner_lip_w
-            nz += 0.22 * (lip_plump - 0.9) * mouth_w
+                nz += (5.65 - z) * 0.75 * inner_lip_w
+            nz += 0.24 * (lip_plump - 0.9) * mouth_w
         # Fill oral commissure & labiomental shadows so mouth blends seamlessly into cheeks and chin
         commissure_w = math.exp(-((abs(x) - 2.25) / 1.15) ** 2) * math.exp(-((y + 4.45) / 1.35) ** 2)
         nz += 0.58 * commissure_w

@@ -374,6 +374,75 @@ export function createDazSkinTexture(options = {}) {
     ctx.restore();
   }
 
+  // 6b. Dedicated 3D Eyeball Iris+Sclera Medallion at UV (0.075, 0.925) & 3D Lash/Brow Swatch at UV (0.925, 0.925)
+  // Used by true 3D eyeball/eyelash/eyebrow submeshes (e.g., MakeHuman high-precision 3D Asian female head)
+  {
+    const [eMedX, eMedY] = uv(0.075, 0.925);
+    const sclR = size * 0.068;
+    const irR = size * 0.032;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(eMedX, eMedY, sclR, 0, Math.PI * 2);
+    const sclGrad = ctx.createRadialGradient(eMedX, eMedY, irR * 0.9, eMedX, eMedY, sclR);
+    sclGrad.addColorStop(0, '#fcfaf9');
+    sclGrad.addColorStop(0.65, '#f4ecee');
+    sclGrad.addColorStop(1, '#d8c4c8');
+    ctx.fillStyle = sclGrad;
+    ctx.fill();
+
+    // Iris disc
+    ctx.beginPath();
+    ctx.arc(eMedX, eMedY, irR, 0, Math.PI * 2);
+    const irGrad = ctx.createRadialGradient(eMedX, eMedY + 3, irR * 0.12, eMedX, eMedY, irR);
+    irGrad.addColorStop(0, rgbStr(iris.r + 56, iris.g + 38, iris.b + 24, 1));
+    irGrad.addColorStop(0.58, rgbStr(iris.r + 16, iris.g + 10, iris.b + 5, 1));
+    irGrad.addColorStop(0.86, rgbStr(iris.r * 0.32, iris.g * 0.32, iris.b * 0.32, 1));
+    irGrad.addColorStop(1, '#0b0605');
+    ctx.fillStyle = irGrad;
+    ctx.fill();
+
+    for (let k = 0; k < 96; k++) {
+      const a = (k / 96) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(eMedX + Math.cos(a) * irR * 0.30, eMedY + Math.sin(a) * irR * 0.30);
+      ctx.lineTo(eMedX + Math.cos(a) * irR * 0.86, eMedY + Math.sin(a) * irR * 0.86);
+      ctx.strokeStyle = k % 2 === 0
+        ? rgbStr(iris.r + 70, iris.g + 48, iris.b + 32, 0.36)
+        : 'rgba(12, 6, 4, 0.38)';
+      ctx.lineWidth = 1.1;
+      ctx.stroke();
+    }
+
+    // Pupil
+    ctx.beginPath();
+    ctx.arc(eMedX, eMedY, irR * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = '#050304';
+    ctx.fill();
+
+    // Star catchlights
+    ctx.beginPath();
+    ctx.ellipse(eMedX - irR * 0.28, eMedY - irR * 0.26, irR * 0.22, irR * 0.16, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.97)';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(eMedX + irR * 0.30, eMedY + irR * 0.28, irR * 0.10, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fill();
+    ctx.restore();
+
+    // 3D Eyelash & Eyebrow dark espresso swatch at UV (0.925, 0.925)
+    const [bSwX, bSwY] = uv(0.925, 0.925);
+    const swR = size * 0.055;
+    const swGrad = ctx.createRadialGradient(bSwX, bSwY, 2, bSwX, bSwY, swR);
+    swGrad.addColorStop(0, '#140d0e');
+    swGrad.addColorStop(0.55, rgbStr(brow.r * 0.85, brow.g * 0.85, brow.b * 0.85, 1));
+    swGrad.addColorStop(1, rgbStr(brow.r, brow.g, brow.b, 1));
+    ctx.fillStyle = swGrad;
+    ctx.beginPath();
+    ctx.arc(bSwX, bSwY, swR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // 7. Optional Photo Reference UV Projection Blend
   if (photoElement && photoBlend > 0.01) {
     ctx.save();
@@ -405,46 +474,45 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
   const ctx = canvas.getContext('2d');
 
   const base = hexToRgb(hairColorHex);
-  // Solid deep base in the upper 86% so overlapping locks never look like sparse comb teeth
+  // Solid deep base across full width (0..w) so RepeatWrapping in S never hits a transparent side border!
   const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-  bgGrad.addColorStop(0, rgbStr(base.r * 0.7, base.g * 0.7, base.b * 0.7, 0.98));
-  bgGrad.addColorStop(0.78, rgbStr(base.r * 0.85, base.g * 0.85, base.b * 0.85, 0.96));
-  bgGrad.addColorStop(0.94, rgbStr(base.r * 0.8, base.g * 0.8, base.b * 0.8, 0.45));
+  bgGrad.addColorStop(0, rgbStr(base.r * 0.68, base.g * 0.68, base.b * 0.68, 1.0));
+  bgGrad.addColorStop(0.82, rgbStr(base.r * 0.84, base.g * 0.84, base.b * 0.84, 0.98));
+  bgGrad.addColorStop(0.95, rgbStr(base.r * 0.78, base.g * 0.78, base.b * 0.78, 0.55));
   bgGrad.addColorStop(1.0, rgbStr(base.r, base.g, base.b, 0.0));
   ctx.fillStyle = bgGrad;
-  ctx.fillRect(14, 0, w - 28, h);
+  ctx.fillRect(0, 0, w, h);
 
-  // Draw 420 fine silk hair fibers with subtle, realistic dark-espresso / blue-black sheen
-  for (let i = 0; i < 420; i++) {
-    const x = (i / 420) * w;
-    const edgeFade = Math.pow(Math.sin((i / 420) * Math.PI), 0.45);
+  // Draw 480 fine silk hair fibers across full width with realistic Kajiya-Kay dual-lobe anisotropic sheen
+  for (let i = 0; i < 480; i++) {
+    const x = ((i + 0.5) / 480) * w;
     const toneShift = ((i * 29) % 14) - 7;
 
     const grad = ctx.createLinearGradient(x, 0, x, h);
-    grad.addColorStop(0, rgbStr(base.r * 0.55, base.g * 0.55, base.b * 0.55, 0.98 * edgeFade));
-    grad.addColorStop(0.24, rgbStr(base.r + toneShift, base.g + toneShift, base.b + toneShift, 0.98 * edgeFade));
-    // Subtle, natural silk highlight band (not washed-out white!)
-    grad.addColorStop(0.35, rgbStr(base.r + 28 * sheenIntensity, base.g + 24 * sheenIntensity, base.b + 34 * sheenIntensity, 0.98 * edgeFade));
-    grad.addColorStop(0.48, rgbStr(base.r + toneShift, base.g + toneShift, base.b + toneShift, 0.96 * edgeFade));
-    grad.addColorStop(0.62, rgbStr(base.r + 16 * sheenIntensity, base.g + 14 * sheenIntensity, base.b + 22 * sheenIntensity, 0.94 * edgeFade));
-    grad.addColorStop(0.86, rgbStr(base.r * 0.75, base.g * 0.75, base.b * 0.75, 0.78 * edgeFade));
+    grad.addColorStop(0, rgbStr(base.r * 0.52, base.g * 0.52, base.b * 0.52, 0.98));
+    grad.addColorStop(0.22, rgbStr(base.r + toneShift, base.g + toneShift, base.b + toneShift, 0.98));
+    // Primary & secondary silk highlight bands (Kajiya-Kay angel halo)
+    grad.addColorStop(0.34, rgbStr(base.r + 36 * sheenIntensity, base.g + 32 * sheenIntensity, base.b + 44 * sheenIntensity, 0.98));
+    grad.addColorStop(0.47, rgbStr(base.r + toneShift, base.g + toneShift, base.b + toneShift, 0.98));
+    grad.addColorStop(0.60, rgbStr(base.r + 22 * sheenIntensity, base.g + 20 * sheenIntensity, base.b + 30 * sheenIntensity, 0.96));
+    grad.addColorStop(0.86, rgbStr(base.r * 0.75, base.g * 0.75, base.b * 0.75, 0.85));
     grad.addColorStop(1.0, rgbStr(base.r, base.g, base.b, 0.0));
 
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.bezierCurveTo(
-      x + Math.sin(i * 1.7) * 2.5, h * 0.33,
-      x - Math.sin(i * 2.3) * 2.5, h * 0.66,
-      x + Math.sin(i * 3.1) * 1.5, h
+      x + Math.sin(i * 1.7) * 2.2, h * 0.33,
+      x - Math.sin(i * 2.3) * 2.2, h * 0.66,
+      x + Math.sin(i * 3.1) * 1.4, h
     );
     ctx.strokeStyle = grad;
-    ctx.lineWidth = 1.8;
+    ctx.lineWidth = 1.9;
     ctx.stroke();
   }
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.anisotropy = 8;
   tex.needsUpdate = true;
