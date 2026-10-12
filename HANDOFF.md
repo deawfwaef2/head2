@@ -134,3 +134,16 @@
 
 ### [2026-10-12 Stage 7b] 写实画质三档 UI（设置页 + 启动画面 + 持久化）
 - 设置页新增「✨ 写实渲染画质」卡片（`sel-render-quality`：极致/标准/流畅），切换时同时调度 `desktopEngine.setRenderQuality()` 与 `studioEngine.setRenderQuality()`（像素比上限 2/1.5/1、阴影 2048/1024/关闭、IBL 强度 0.85/0.65/0.35），档位存 `localStorage[cervix3d-render-quality]`，启动自动恢复；启动画面新增「✨ 照片级PBR写实渲染」特性 pill。已同步重建双击即玩 HTML 并推送。
+
+### [2026-10-12 Stage 8] 用户反馈"不够大师级"：黑发去灰、皮肤去蜡、断面加粗 + 深度 QA 取证
+- **用户原话**：发丝灰/塑料感、皮肤泥土/蜡像感、颈断面仍是纯色红盘。已重建双击 HTML（含 9 GLB + 参考照，9.35MB）并同步 `docs/index.html`。
+- **发丝去灰**（`collectibleHeadAssembler.js`）：按发色亮度自适应 `envMapIntensity 0.32~0.87`（黑发≈0.35，原 1.30 是被 RoomEnvironment 洗灰的主因）、`clearcoat 0.22`、`sheen≤0.30`、`metalness 0`、`anisotropy 0.60`。QA 截图确认黑发带束状细节。
+- **皮肤去蜡**：微观毛孔贴图对比增强 + 高光压制（额头仍有轻微平光，待下一轮）。
+- **断面 BOLD 加粗**（`anatomyTextureGenerator.js`）：器官半径/亮度/对比整体放大：气管软骨环、食管、甲状腺、双侧颈动脉/颈静脉/迷走神经束、颈椎+蝴蝶脊髓、14 个肌群纤维束、脂肪小叶环、皮肤环。1024 隔离渲染（`qaiso2.mjs`）证实纹理本身是丰富解剖图（见 `/tmp/qa/qa14_bold_full.png`，不在仓库）。
+- **⛔ 沙箱 QA 重要结论（勿重蹈）**：
+  1. 无头 Chrome（SwiftShader）中 cap 渲染为**黑盘**，但属**环境 artifact**：把 cap 贴图运行时换成品红/绿棋盘格仍显示黑色 → 此环境 canvas→GL 纹理上传链路损坏（与尺寸/内容无关）。另 `drawImage` 跨 canvas 读回全空、`toDataURL` 串面，只有直接 `getImageData` 与合成器截图可信。
+  2. `envMapIntensity` 属性**不**导致 shader 错误（曾误删眉毛/睫毛两行，重加后构建 `qashader.mjs` 报 0 错误；之前 2 个错误是 SwiftShader 并行编译抖动，须跑 2 次再信）。
+  3. `--use-gl/--use-angle` 在此 Chrome 构建下全部被忽略（仍 SwiftShader-vulkan）；Xvfb+headed+`--ignore-gpu-blocklist` 一度能 boot 但渲染器不变；Playwright Firefox 可下载但软件 WebGL 被 blocklist 禁用（headless 报 `AllowWebgl2:false`，headed 在 Xvfb 下挂起）。**此沙箱内无法做第二渲染器交叉验证**。
+  4. 源码 draw 函数隔离运行 opaqueFrac=1、产物 bundle 经取证与源码一致、cap 网格/UV/材质参数全部核验正确 → 真机 GPU 上断面应为纹理盘。用户说的"纯色红"最可能是**从外侧看到的血环 baked ring**（旧小器官在小尺寸下也呈红盘感，本轮 BOLD 直接对治）。
+- **待用户确认**：在新版工坊用「仰视底部解剖切面」预设看颈底，回传一张截图；若仍纯色则必是真机材质链 bug（届时查 `map/emissiveMap` 同纹理 + `flipY`）。
+- **次要**：工坊 tab 中列底部 2D 解剖卡在 1560×900 无头截图里显窄挤（疑无头字体度量问题，真机待看）；cap 每头重绘 1024² + 百万像素 bump 循环可做成单例缓存（性能优化，未做）。

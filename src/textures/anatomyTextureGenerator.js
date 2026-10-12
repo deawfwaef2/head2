@@ -40,15 +40,15 @@ function drawMuscleCompartment(ctx, cx, cy, rx, ry, angle, baseColor, fiberTint,
   ctx.beginPath();
   ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
   const grad = ctx.createRadialGradient(-rx * 0.2, -ry * 0.2, rx * 0.1, 0, 0, Math.max(rx, ry));
-  grad.addColorStop(0, fiberTint || '#b93842');
-  grad.addColorStop(0.65, baseColor || '#8f222c');
-  grad.addColorStop(1, '#5e141c');
+  grad.addColorStop(0, fiberTint || '#c43a46');
+  grad.addColorStop(0.65, baseColor || '#9c2430');
+  grad.addColorStop(1, '#4d0d15');
   ctx.fillStyle = grad;
   ctx.fill();
   ctx.clip();
 
   // Internal perimysium marbling (white fibrous septa dividing muscle fascicles)
-  ctx.strokeStyle = 'rgba(248, 224, 220, 0.36)';
+  ctx.strokeStyle = 'rgba(250, 228, 224, 0.48)';
   ctx.lineWidth = 1.4;
   const count = Math.floor((rx * ry) / 85);
   for (let i = 0; i < count; i++) {
@@ -148,8 +148,8 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
     ctx.translate(lx, ly);
     ctx.rotate(ang);
     ctx.beginPath();
-    ctx.ellipse(0, 0, size * 0.013, size * 0.022, 0, 0, Math.PI * 2);
-    ctx.fillStyle = i % 2 === 0 ? '#f4d58d' : '#e5b968';
+    ctx.ellipse(0, 0, size * 0.016, size * 0.027, 0, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? '#f8dc9a' : '#eab95e';
     ctx.fill();
     ctx.strokeStyle = 'rgba(195, 115, 95, 0.45)';
     ctx.lineWidth = 1.2;
@@ -162,8 +162,8 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
   ctx.beginPath();
   ctx.arc(cx, cy, fasciaR, 0, Math.PI * 2);
   const matrixGrad = ctx.createRadialGradient(cx, cy, size * 0.04, cx, cy, fasciaR);
-  matrixGrad.addColorStop(0, '#c67d7a');
-  matrixGrad.addColorStop(0.55, '#b86362');
+  matrixGrad.addColorStop(0, '#b4655f');
+  matrixGrad.addColorStop(0.55, '#a85552');
   matrixGrad.addColorStop(0.92, '#d9aba6');
   matrixGrad.addColorStop(1.0, '#f0dedc');
   ctx.fillStyle = matrixGrad;
@@ -188,11 +188,11 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
   for (const side of [-1, 1]) {
     // (a) Sternocleidomastoid Muscle (胸锁乳突肌) - large prominent anterolateral oval
     const [scmX, scmY] = uvToXY(0.5 + side * 0.275, 0.635);
-    drawMuscleCompartment(ctx, scmX, scmY, size * 0.095, size * 0.052, side * 0.68, '#982430', '#c43c48', side + 2);
+    drawMuscleCompartment(ctx, scmX, scmY, size * 0.102, size * 0.057, side * 0.68, '#a32430', '#cf424e', side + 2);
 
     // (b) Infrahyoid Strap Muscles (舌骨下肌群: Sternohyoid & Sternothyroid) - anterior near midline
     const [strapX, strapY] = uvToXY(0.5 + side * 0.095, 0.795);
-    drawMuscleCompartment(ctx, strapX, strapY, size * 0.058, size * 0.032, side * 0.22, '#9e2935', '#c84450', side + 5);
+    drawMuscleCompartment(ctx, strapX, strapY, size * 0.062, size * 0.035, side * 0.22, '#a82d39', '#d24a56', side + 5);
 
     // (c) Omohyoid superior belly
     const [omoX, omoY] = uvToXY(0.5 + side * 0.20, 0.745);
@@ -204,11 +204,11 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
 
     // (e) Anterior, Middle & Posterior Scalene Muscles (前/中/后斜角肌 - lateral to vertebra)
     const [scalX, scalY] = uvToXY(0.5 + side * 0.24, 0.44);
-    drawMuscleCompartment(ctx, scalX, scalY, size * 0.068, size * 0.048, -side * 0.35, '#8a2029', '#b23440', side + 14);
+    drawMuscleCompartment(ctx, scalX, scalY, size * 0.074, size * 0.052, -side * 0.35, '#96242e', '#bc3a46', side + 14);
 
     // (f) Levator Scapulae & Splenius Cervicis (肩胛提肌与头夹肌 - posterolateral)
     const [levX, levY] = uvToXY(0.5 + side * 0.28, 0.31);
-    drawMuscleCompartment(ctx, levX, levY, size * 0.078, size * 0.046, -side * 0.75, '#861e28', '#ad323d', side + 19);
+    drawMuscleCompartment(ctx, levX, levY, size * 0.084, size * 0.050, -side * 0.75, '#92222c', '#b83844', side + 19);
 
     // (g) Semispinalis & Multifidus (半棘肌与多裂肌 - deep posterior flanking spinous process)
     const [semiX, semiY] = uvToXY(0.5 + side * 0.115, 0.255);
@@ -216,7 +216,7 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
 
     // (h) Trapezius Muscle (斜方肌 - posterior superficial crescent)
     const [trapX, trapY] = uvToXY(0.5 + side * 0.175, 0.165);
-    drawMuscleCompartment(ctx, trapX, trapY, size * 0.095, size * 0.036, -side * 0.30, '#962430', '#bc3b48', side + 29);
+    drawMuscleCompartment(ctx, trapX, trapY, size * 0.10, size * 0.040, -side * 0.30, '#a22834', '#c4414e', side + 29);
   }
 
   // 5. Cervical Vertebra C4 & Spinal Cord (第4颈椎横切面与椎管脊髓)
@@ -246,37 +246,37 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
   for (const side of [-1, 1]) {
     const [tpX, tpY] = uvToXY(0.50 + side * 0.115, 0.43);
     ctx.beginPath();
-    ctx.ellipse(tpX, tpY, size * 0.045, size * 0.028, side * 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#efe3cc';
+    ctx.ellipse(tpX, tpY, size * 0.050, size * 0.032, side * 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#f3e7d0';
     ctx.fill();
-    ctx.strokeStyle = '#c5b08b';
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = '#b89f72';
+    ctx.lineWidth = 3.5;
     ctx.stroke();
 
     // Foramen transversarium containing Vertebral Artery & Vein (椎动脉与椎静脉)
     const [vaX, vaY] = uvToXY(0.50 + side * 0.12, 0.43);
     ctx.beginPath();
-    ctx.arc(vaX, vaY, size * 0.013, 0, Math.PI * 2);
+    ctx.arc(vaX, vaY, size * 0.015, 0, Math.PI * 2);
     ctx.fillStyle = '#4a0c12';
     ctx.fill();
-    ctx.strokeStyle = '#dc2626';
-    ctx.lineWidth = 2.2;
+    ctx.strokeStyle = '#e02030';
+    ctx.lineWidth = 3;
     ctx.stroke();
   }
 
   // C4 Vertebral Body (C4 椎体 - Cortical rim + Trabecular cancellous bone core)
   ctx.beginPath();
-  ctx.ellipse(vertX, vertY, size * 0.076, size * 0.054, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#f5ead6'; // Dense ivory cortical bone rim
+  ctx.ellipse(vertX, vertY, size * 0.088, size * 0.062, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#f7edda'; // Dense ivory cortical bone rim
   ctx.fill();
-  ctx.strokeStyle = '#c9b38c';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#b89f72';
+  ctx.lineWidth = 4;
   ctx.stroke();
 
   // Spongy trabecular bone core inside vertebral body
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(vertX, vertY, size * 0.062, size * 0.042, 0, 0, Math.PI * 2);
+  ctx.ellipse(vertX, vertY, size * 0.072, size * 0.048, 0, 0, Math.PI * 2);
   ctx.fillStyle = '#b85d56';
   ctx.fill();
   ctx.clip();
@@ -295,42 +295,42 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
 
   // Vertebral Foramen (椎孔) & Spinal Cord (脊髓横切面)
   ctx.beginPath();
-  ctx.ellipse(cordX, cordY, size * 0.050, size * 0.040, 0, 0, Math.PI * 2);
+  ctx.ellipse(cordX, cordY, size * 0.056, size * 0.045, 0, 0, Math.PI * 2);
   ctx.fillStyle = '#5a2d32'; // Epidural space
   ctx.fill();
-  ctx.strokeStyle = '#dfd0b8';
-  ctx.lineWidth = 2.2;
+  ctx.strokeStyle = '#e8dcc4';
+  ctx.lineWidth = 3;
   ctx.stroke();
 
   // Dura mater & Subarachnoid CSF space
   ctx.beginPath();
-  ctx.ellipse(cordX, cordY, size * 0.041, size * 0.032, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#8fa8b2';
+  ctx.ellipse(cordX, cordY, size * 0.046, size * 0.036, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#9db9c6';
   ctx.fill();
 
   // Spinal Cord White Matter Oval
   ctx.beginPath();
-  ctx.ellipse(cordX, cordY, size * 0.035, size * 0.026, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#f3ead8';
+  ctx.ellipse(cordX, cordY, size * 0.040, size * 0.030, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#f6eeda';
   ctx.fill();
-  ctx.strokeStyle = '#d4c3a3';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = '#c9b892';
+  ctx.lineWidth = 2;
   ctx.stroke();
 
   // Iconic Butterfly-Shaped Spinal Gray Matter Horns (脊髓灰质蝴蝶角)
-  ctx.fillStyle = '#b9837e';
+  ctx.fillStyle = '#c08a84';
   for (const side of [-1, 1]) {
     ctx.beginPath();
-    ctx.ellipse(cordX + side * size * 0.013, cordY - size * 0.005, size * 0.009, size * 0.014, side * 0.25, 0, Math.PI * 2);
+    ctx.ellipse(cordX + side * size * 0.015, cordY - size * 0.006, size * 0.011, size * 0.017, side * 0.25, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(cordX + side * size * 0.014, cordY + size * 0.007, size * 0.006, size * 0.013, -side * 0.35, 0, Math.PI * 2);
+    ctx.ellipse(cordX + side * size * 0.016, cordY + size * 0.008, size * 0.0075, size * 0.015, -side * 0.35, 0, Math.PI * 2);
     ctx.fill();
   }
   // Grey commissure & central canal
-  ctx.fillRect(cordX - size * 0.014, cordY - size * 0.003, size * 0.028, size * 0.006);
+  ctx.fillRect(cordX - size * 0.016, cordY - size * 0.0035, size * 0.032, size * 0.007);
   ctx.beginPath();
-  ctx.arc(cordX, cordY, 2.2, 0, Math.PI * 2);
+  ctx.arc(cordX, cordY, 2.6, 0, Math.PI * 2);
   ctx.fillStyle = '#4a2024';
   ctx.fill();
   ctx.restore();
@@ -382,19 +382,19 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
     ctx.translate(thyX, thyY);
     ctx.rotate(side * 0.42);
     ctx.beginPath();
-    ctx.ellipse(0, 0, size * 0.036, size * 0.068, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#7e1d28';
+    ctx.ellipse(0, 0, size * 0.043, size * 0.077, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#8a1f2b';
     ctx.fill();
-    ctx.strokeStyle = '#e2b2ae';
-    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = '#eec0bc';
+    ctx.lineWidth = 2.8;
     ctx.stroke();
     // Thyroid follicles texture
-    for (let i = 0; i < 22; i++) {
+    for (let i = 0; i < 26; i++) {
       const a = i * 2.1;
-      const r = Math.sqrt(i / 22) * 0.8;
+      const r = Math.sqrt(i / 26) * 0.8;
       ctx.beginPath();
-      ctx.arc(Math.cos(a) * size * 0.028 * r, Math.sin(a) * size * 0.056 * r, 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(190, 55, 65, 0.65)';
+      ctx.arc(Math.cos(a) * size * 0.033 * r, Math.sin(a) * size * 0.062 * r, 3.8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(198, 62, 72, 0.7)';
       ctx.fill();
     }
     ctx.restore();
@@ -404,28 +404,28 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
   ctx.save();
   // Outer perichondrium & C-shaped hyaline cartilage ring (pearly bluish-white)
   ctx.beginPath();
-  ctx.ellipse(trachX, trachY, size * 0.068, size * 0.062, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#d8e6ec'; // Pearly hyaline cartilage
+  ctx.ellipse(trachX, trachY, size * 0.080, size * 0.073, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#dceaf2'; // Pearly hyaline cartilage
   ctx.fill();
-  ctx.strokeStyle = '#9bb8c4';
-  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#8ba9ba';
+  ctx.lineWidth = 4;
   ctx.stroke();
 
   // Posterior trachealis muscle gap on the C-ring (facing esophagus at bottom of trachea)
   ctx.beginPath();
-  ctx.ellipse(trachX, trachY + size * 0.046, size * 0.044, size * 0.018, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#b84b56';
+  ctx.ellipse(trachX, trachY + size * 0.054, size * 0.050, size * 0.021, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#c0525c';
   ctx.fill();
 
   // Inner mucosal ring
   ctx.beginPath();
-  ctx.ellipse(trachX, trachY, size * 0.050, size * 0.045, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#e58c96';
+  ctx.ellipse(trachX, trachY, size * 0.058, size * 0.052, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#eb939c';
   ctx.fill();
 
   // Deeply recessed Tracheal Airway Lumen (dark cavity with depth gradient)
   ctx.beginPath();
-  ctx.ellipse(trachX, trachY, size * 0.043, size * 0.038, 0, 0, Math.PI * 2);
+  ctx.ellipse(trachX, trachY, size * 0.050, size * 0.044, 0, 0, Math.PI * 2);
   const lumenGrad = ctx.createRadialGradient(trachX, trachY - size * 0.01, size * 0.005, trachX, trachY, size * 0.045);
   lumenGrad.addColorStop(0, '#120306');
   lumenGrad.addColorStop(0.75, '#26080e');
@@ -440,7 +440,7 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
     const [csX, csY] = uvToXY(0.50 + side * 0.195, 0.56);
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(csX, csY, size * 0.072, size * 0.050, side * 0.25, 0, Math.PI * 2);
+    ctx.ellipse(csX, csY, size * 0.078, size * 0.055, side * 0.25, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(244, 228, 224, 0.52)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(255, 242, 238, 0.75)';
@@ -450,33 +450,33 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
     // (a) Common Carotid Artery (颈总动脉 - medial, thick round muscular arterial wall)
     const [caX, caY] = uvToXY(0.50 + side * 0.162, 0.565);
     ctx.beginPath();
-    ctx.arc(caX, caY, size * 0.026, 0, Math.PI * 2);
-    ctx.fillStyle = '#f07882'; // Thick tunica media
+    ctx.arc(caX, caY, size * 0.031, 0, Math.PI * 2);
+    ctx.fillStyle = '#f4848e'; // Thick tunica media
     ctx.fill();
-    ctx.strokeStyle = '#c81e2b';
+    ctx.strokeStyle = '#d41e2e';
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(caX, caY, size * 0.016, 0, Math.PI * 2);
+    ctx.arc(caX, caY, size * 0.019, 0, Math.PI * 2);
     ctx.fillStyle = vascularContrast > 1.1 ? '#7f0912' : '#4a060b'; // Arterial lumen
     ctx.fill();
 
     // (b) Internal Jugular Vein (颈内静脉 - lateral, larger oval thinner-walled dark venous blue-purple lumen)
     const [ijvX, ijvY] = uvToXY(0.50 + side * 0.228, 0.555);
     ctx.beginPath();
-    ctx.ellipse(ijvX, ijvY, size * 0.032, size * 0.024, side * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = '#6c7ea8';
+    ctx.ellipse(ijvX, ijvY, size * 0.038, size * 0.029, side * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = '#7588b2';
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(ijvX, ijvY, size * 0.025, size * 0.018, side * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = '#191d38'; // Deep venous lumen
+    ctx.ellipse(ijvX, ijvY, size * 0.030, size * 0.022, side * 0.35, 0, Math.PI * 2);
+    ctx.fillStyle = '#1d2140'; // Deep venous lumen
     ctx.fill();
 
     // (c) Vagus Nerve CN X (迷走神经 - posterior between artery and vein)
     const [vnX, vnY] = uvToXY(0.50 + side * 0.192, 0.532);
     ctx.beginPath();
-    ctx.arc(vnX, vnY, size * 0.0075, 0, Math.PI * 2);
+    ctx.arc(vnX, vnY, size * 0.009, 0, Math.PI * 2);
     ctx.fillStyle = '#f7e594';
     ctx.fill();
     ctx.strokeStyle = '#b4943e';
@@ -573,3 +573,5 @@ export function createAnatomyTextures(options = {}) {
 
   return { colorTex, bumpTex, colorCanvas };
 }
+
+

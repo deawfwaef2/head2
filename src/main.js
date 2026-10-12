@@ -756,6 +756,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   drawPresetReferencePortrait(refPhotoCanvas, 'user_photo');
   await refreshStudio3DModel();
 
+  // Stage 8: headless visual-QA hook（无头浏览器截图验证/排障用，对正常游玩无任何影响）
+  window.__cervixQA = {
+    get desktop() { return desktopEngine; },
+    get studio() { return studioEngine; },
+    state,
+  };
+
   // 3. Render Tutorial & Fetch Archives
   renderTutorialTab();
   fetchAndRenderArchives();

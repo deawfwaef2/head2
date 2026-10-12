@@ -218,20 +218,23 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           mapTex.colorSpace = THREE.SRGBColorSpace;
           mapTex.anisotropy = 8;
         }
+        // Stage 8 发丝去灰：深色发必须压低环境反射/釉面/绒光，否则 RoomEnvironment 会把黑发洗成灰白塑料感
+        const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
+        const hairEnvI = 0.32 + Math.min(0.55, hairLum * 0.85);
+        const hairSheen = Math.min(0.30, sheenIntensity * 0.30);
         child.material = new THREE.MeshPhysicalMaterial({
           map: mapTex,
           color: displayColor,
-          roughness: Math.max(0.24, 0.55 - sheenIntensity * 0.25),
-          metalness: 0.03,
-          sheen: sheenIntensity * 0.48,
-          sheenRoughness: 0.35,
-          sheenColor: displayColor.clone().multiplyScalar(1.55),
-          // Stage 7 写实发丝：各向异性高光 + 清漆发釉 + IBL 反射 + 边缘抗锯齿
-          anisotropy: 0.85,
-          clearcoat: 0.40,
-          clearcoatRoughness: 0.35,
-          specularIntensity: 0.90,
-          envMapIntensity: 1.30,
+          roughness: Math.max(0.30, 0.58 - sheenIntensity * 0.22),
+          metalness: 0.0,
+          sheen: hairSheen,
+          sheenRoughness: 0.42,
+          sheenColor: displayColor.clone().multiplyScalar(1.15),
+          anisotropy: 0.60,
+          clearcoat: 0.22,
+          clearcoatRoughness: 0.42,
+          specularIntensity: 0.70,
+          envMapIntensity: hairEnvI,
           transparent: true,
           alphaTest: 0.16,
           alphaToCoverage: true,
@@ -337,15 +340,15 @@ export async function buildCollectibleHeadNode(config = {}) {
         skinMap.colorSpace = THREE.SRGBColorSpace;
         skinMap.anisotropy = 8;
       }
-      // Stage 7 写实皮肤：微观粗糙/毛孔 + 次表面暖调 + IBL，消除塑料 low 感
+      // Stage 7/8 写实皮肤：微观粗糙/毛孔 + 次表面暖调 + IBL（Stage 8 降低自发光洗白、增强毛孔法线）
       const skinMicro = createSkinMicroMaps();
       child.material = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.35, 0.35),
+        normalScale: new THREE.Vector2(0.45, 0.45),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.02,
+        bumpScale: 0.03,
         color: computeSkinTintColor(skinToneHex),
         roughness: Number(materials.skinRoughness ?? 0.62),
         metalness: 0.0,
@@ -358,7 +361,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         ior: 1.46,
         envMapIntensity: 0.90,
         emissive: new THREE.Color('#2a0f0c'),
-        emissiveIntensity: 0.28,
+        emissiveIntensity: 0.15,
       });
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
       child.name = 'NeckCrossSectionCap';
