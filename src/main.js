@@ -2,13 +2,22 @@ import {
   DEFAULT_COLLECTIBLES,
   DAZ_TUTORIAL_STEPS,
   REAL_HAIR_CATALOG,
+  FACE_ARCHETYPE_CATALOG,
+  EYEBROW_STYLE_CATALOG,
   STUDY_ROLE_CATALOG,
   getStudyRoleMeta,
   resolveCollectibleLifePhotoSrc
 } from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
-import { FORENSIC_EXPRESSION_PRESETS, updateHairSheen, attachSpecimenContainerAndDecor, resolveRealHairStyle } from './three/collectibleHeadAssembler.js';
+import {
+  FORENSIC_EXPRESSION_PRESETS,
+  updateHairSheen,
+  attachSpecimenContainerAndDecor,
+  resolveRealHairStyle,
+  setHeadFaceArchetype,
+  setHeadEyebrowStyle
+} from './three/collectibleHeadAssembler.js';
 import { VISUAL_STYLE_PRESETS } from './three/photorealLighting.js';
 import {
   CONTAINER_STYLE_CATALOG,
@@ -23,7 +32,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage27-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage28-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -40,6 +49,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage27-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage25-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage24-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage24-master-v1') ||
@@ -51,7 +61,7 @@ function restoreCollectibles() {
     if (Array.isArray(legacy)) {
       const builtinIds = new Set(defaults.map(d => d.id));
       for (const item of legacy) {
-        if (item && typeof item.id !== 'string' && !builtinIds.has(item.id)) {
+        if (item && typeof item.id === 'string' && !builtinIds.has(item.id)) {
           if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
           defaults.unshift(item);
         }
@@ -83,24 +93,28 @@ const state = {
   visualCustomConfig: {
     presetId: 'rainy_study',
     windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.74,
-    chiaroscuro: 1.25,
-    keyColor: '#ffeed6',
+    windowGoboStrength: 0.76,
+    chiaroscuro: 1.28,
+    tyndall: 0.95,
+    vintagePhoto: 0.86,
+    keyColor: '#ffdca8',
     rimColor: '#93c5fd',
     keyAzimuthDeg: 38,
     keyElevationDeg: 32,
-    keyIntensity: 2.15,
-    rimIntensity: 1.52,
-    sssIntensity: 1.28,
-    skinGloss: 0.18,
-    wetGloss: 0.18,
-    sharpen: 0.56,
-    contrast: 1.24,
-    warmth: 0.02,
-    bloomStrength: 0.04
+    keyIntensity: 2.18,
+    rimIntensity: 1.38,
+    sssIntensity: 1.32,
+    skinGloss: 0.16,
+    wetGloss: 0.16,
+    sharpen: 0.58,
+    contrast: 1.26,
+    warmth: 0.12,
+    bloomStrength: 0.08
   },
   studioDraft: {
     basePreset: 'fangyaoping',
+    faceArchetype: 'cn_oval_scholar',
+    eyebrowStyle: 'cn_scholar_natural',
     deadExpression: 'dead_calm',
     containerStyle: 'none',
     decorStyle: 'study_tomes',
@@ -111,9 +125,9 @@ const state = {
     customModelType: 'glb',
     customHairUrl: null,
     customHairType: 'glb',
-    skinTone: '#ffece2',
-    blushIntensity: 0.28,
-    lipColor: '#c66872',
+    skinTone: '#faDFce',
+    blushIntensity: 0.18,
+    lipColor: '#bc646e',
     irisColor: '#382015',
     hairStyle: 'daz_hair_air_bangs_long',
     groomDensity: 6000,
@@ -455,31 +469,62 @@ function updateHoverDossierHUD(hoverInfo) {
   hud.classList.remove('hidden');
 }
 
+function updateStructureFloatingHUD(info) {
+  const hud = document.getElementById('structure-floating-hud');
+  if (!hud) return;
+  if (!info || !info.id) {
+    hud.classList.add('hidden');
+    hud.dataset.structId = '';
+    return;
+  }
+  hud.dataset.structId = info.id;
+  const titleEl = document.getElementById('struct-hud-title');
+  if (titleEl) {
+    const icon = info.isShelfStructure ? '🪵' : info.isDecorProp ? '🕯️' : '🏗️';
+    const occSuffix = info.occupiedByName ? ` (已装入: ${info.occupiedByName.split('·')[0].trim()})` : '';
+    titleEl.textContent = `${icon} ${info.label}${occSuffix}`;
+  }
+  const ejectBtn = document.getElementById('btn-struct-hud-eject');
+  if (ejectBtn) {
+    ejectBtn.style.display = info.occupiedByPetId ? 'inline-flex' : 'none';
+  }
+  const left = Math.max(150, Math.min(window.innerWidth - 150, info.screenX || window.innerWidth * 0.5));
+  const top = Math.max(68, Math.min(window.innerHeight - 60, (info.screenY || window.innerHeight * 0.5) - 18));
+  hud.style.left = `${left}px`;
+  hud.style.top = `${top}px`;
+  hud.classList.remove('hidden');
+}
+
 function renderPlacedStructuresList(list = []) {
   const container = document.getElementById('placed-structures-list');
   if (!container) return;
   container.innerHTML = '';
   if (list.length === 0) {
-    container.innerHTML = `<span style="font-size:11px;color:#64748b;">当前桌面未放置收纳建筑，所有头颅均为裸露断颈直接镇纸；点击上方按钮可建造收纳建筑。</span>`;
+    container.innerHTML = `<span style="font-size:11px;color:#64748b;">当前场景建筑/层架/摆件已全部删除清空；点击上方按钮可重新建造或恢复默认展架。</span>`;
     return;
   }
   for (const s of list) {
+    const icon = s.isShelfStructure ? '🪵' : s.isDecorProp ? '🕯️' : '🏗️';
     const occText = s.occupiedByName
       ? `🩸已装入:${s.occupiedByName.split('·')[0].trim()}`
-      : `⚪空置(可拖入断头)`;
+      : s.isShelfStructure
+        ? '可拖动/可删层板'
+        : s.isDecorProp
+          ? '可拖动/可删摆件'
+          : '⚪空置(可拖入断头)';
     const chip = document.createElement('span');
     chip.className = 'dossier-tag';
     chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:rgba(15,23,42,0.88);border:1px solid rgba(251,191,36,0.45);color:#fde68a;font-size:11px;';
     chip.innerHTML = `
-      <span>🏗️ ${s.label} (${occText})</span>
-      <button data-remove-structure="${s.id}" style="background:none;border:none;color:#fda4af;cursor:pointer;font-weight:bold;padding:0 2px;" title="拆除该收纳建筑（内部头颅将留在原地）">✕</button>
+      <span>${icon} ${s.label} (${occText})</span>
+      <button data-remove-structure="${s.id}" style="background:none;border:none;color:#fda4af;cursor:pointer;font-weight:bold;padding:0 2px;" title="删除该建筑/层板/摆件">✕</button>
     `;
     container.appendChild(chip);
   }
   container.querySelectorAll('[data-remove-structure]').forEach(btn => {
     btn.addEventListener('click', () => {
       desktopEngine?.removeContainerStructure(btn.dataset.removeStructure);
-      showToast('🗑️ 已拆除该收纳建筑（如有头颅在其中已自动释放至桌面）');
+      showToast('🗑️ 已删除该建筑/层板/摆件（如有头颅在其中已自动释放回桌面）');
     });
   });
 }
@@ -765,9 +810,17 @@ function renderActivePetsStrip(summonedList = []) {
   for (const p of summonedList) {
     const col = state.collectibles.find(c => c.id === p.id) || p;
     const curHair = resolveRealHairStyle(col.hairStyle || p.hairStyle || 'hair_bob01');
+    const curFace = col.faceArchetype || col.morphs?.faceArchetype || 'cn_oval_scholar';
+    const curBrow = col.eyebrowStyle || col.morphs?.eyebrowStyle || 'cn_scholar_natural';
     const curExpr = p.deadExpression || 'dead_calm';
     const curCont = p.containerStyle || 'none';
     const curRole = col.studyRole || 'gaokao_pomodoro';
+    const faceShortOpts = FACE_ARCHETYPE_CATALOG.map(
+      fa => `<option value="${fa.id}" ${fa.id === curFace ? 'selected' : ''}>${fa.shortLabel}</option>`
+    ).join('');
+    const browShortOpts = EYEBROW_STYLE_CATALOG.map(
+      bw => `<option value="${bw.id}" ${bw.id === curBrow ? 'selected' : ''}>${bw.shortLabel}</option>`
+    ).join('');
     const hairShortOpts = REAL_HAIR_CATALOG.map(
       hp => `<option value="${hp.id}" ${hp.id === curHair ? 'selected' : ''}>${hp.shortLabel || hp.label}</option>`
     ).join('');
@@ -788,6 +841,12 @@ function renderActivePetsStrip(summonedList = []) {
     pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
     pill.innerHTML = `
       <strong>${p.name.split('·')[0].trim()}</strong>
+      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换中韩青年女头型流派（圆润娃娃脸 / 韩国鹅蛋V脸 / 中式书卷鹅蛋脸等）" style="padding:1px 4px;background:rgba(46,16,38,0.92);color:#fbcfe8;border:1px solid rgba(244,114,182,0.5);border-radius:4px;">
+        ${faceShortOpts}
+      </select>
+      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换 8 款中韩根根分明真毛流眉形" style="padding:1px 4px;background:rgba(36,24,16,0.92);color:#fde68a;border:1px solid rgba(245,158,11,0.5);border-radius:4px;">
+        ${browShortOpts}
+      </select>
       <select class="pill-mini-btn" data-pill-hair="${p.id}" title="一键切换 28 款大师级真发丝 3D 发型" style="padding:1px 4px;background:rgba(12,26,46,0.92);color:#7dd3fc;border:1px solid rgba(56,189,248,0.5);border-radius:4px;">
         ${hairShortOpts}
       </select>
@@ -808,6 +867,46 @@ function renderActivePetsStrip(summonedList = []) {
     `;
     pillsContainer.appendChild(pill);
   }
+
+  pillsContainer.querySelectorAll('[data-pill-face]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillFace;
+      const faceId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (col) {
+        col.faceArchetype = faceId;
+        col.morphs = { ...(col.morphs || {}), faceArchetype: faceId };
+        persistCollectibles();
+      }
+      const petEntry = desktopEngine?.pets.get(id);
+      if (petEntry?.headNode) {
+        setHeadFaceArchetype(petEntry.headNode, faceId);
+        desktopEngine.wakeRender(1.5, true);
+      }
+      const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === faceId);
+      showToast(`🍑 已为「${col ? col.name.split('·')[0].trim() : id}」切换中韩头型：${fa ? fa.label : faceId}`);
+    });
+  });
+
+  pillsContainer.querySelectorAll('[data-pill-brow]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillBrow;
+      const browId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (col) {
+        col.eyebrowStyle = browId;
+        col.morphs = { ...(col.morphs || {}), eyebrowStyle: browId };
+        persistCollectibles();
+      }
+      const petEntry = desktopEngine?.pets.get(id);
+      if (petEntry?.headNode) {
+        setHeadEyebrowStyle(petEntry.headNode, browId);
+        desktopEngine.wakeRender(1.5, true);
+      }
+      const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
+      showToast(`✒️ 已为「${col ? col.name.split('·')[0].trim() : id}」切换眉形：${bw ? bw.label : browId}`);
+    });
+  });
 
   pillsContainer.querySelectorAll('[data-pill-hair]').forEach(sel => {
     sel.addEventListener('change', async (e) => {
@@ -1264,6 +1363,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const desktopCanvas = document.getElementById('desktop-pet-canvas');
   desktopEngine = new DesktopBoxSpaceEngine(desktopCanvas, {
     onHoverChange: updateHoverDossierHUD,
+    onStructureSelect: updateStructureFloatingHUD,
     onPetStateUpdate: (list) => {
       renderActivePetsStrip(list);
       renderVaultGrid();
@@ -1278,6 +1378,24 @@ window.addEventListener('DOMContentLoaded', async () => {
         el.classList.add('active');
         setTimeout(() => el.classList.remove('active'), 260);
       }
+    }
+  });
+
+  document.getElementById('btn-struct-hud-eject')?.addEventListener('click', () => {
+    const hud = document.getElementById('structure-floating-hud');
+    const structId = hud?.dataset?.structId;
+    if (structId && desktopEngine) {
+      desktopEngine.ejectHeadFromStructure(structId);
+      showToast('📤 已将头颅从收纳建筑中单独取出，现在可分开摆放建筑与头颅！');
+    }
+  });
+
+  document.getElementById('btn-struct-hud-delete')?.addEventListener('click', () => {
+    const hud = document.getElementById('structure-floating-hud');
+    const structId = hud?.dataset?.structId;
+    if (structId && desktopEngine) {
+      desktopEngine.removeContainerStructure(structId);
+      showToast('🗑️ 已删除选中的 3D 建筑/层架/摆件！');
     }
   });
 
@@ -1555,6 +1673,64 @@ window.addEventListener('DOMContentLoaded', async () => {
     await refreshStudio3DModel();
   });
 
+  const syncStudioFaceArchetypeUI = (archId) => {
+    const sel = document.getElementById('sel-face-archetype');
+    if (sel) sel.value = archId;
+    document.querySelectorAll('[data-face-arch]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.faceArch === archId);
+    });
+  };
+
+  const syncStudioEyebrowStyleUI = (browId) => {
+    const sel = document.getElementById('sel-eyebrow-style');
+    if (sel) sel.value = browId;
+    document.querySelectorAll('[data-brow-style]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.browStyle === browId);
+    });
+  };
+
+  const applyStudioFaceArchetype = (archId) => {
+    state.studioDraft.faceArchetype = archId;
+    state.studioDraft.morphs.faceArchetype = archId;
+    syncStudioFaceArchetypeUI(archId);
+    if (studioEngine?.headNode) {
+      setHeadFaceArchetype(studioEngine.headNode, archId);
+      studioEngine.wakeRender(1.5, true);
+    }
+    const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === archId);
+    if (fa) showToast(`🍑 已切换中韩青年女头型流派：${fa.label}`);
+  };
+
+  const applyStudioEyebrowStyle = (browId) => {
+    state.studioDraft.eyebrowStyle = browId;
+    state.studioDraft.morphs.eyebrowStyle = browId;
+    syncStudioEyebrowStyleUI(browId);
+    if (studioEngine?.headNode) {
+      setHeadEyebrowStyle(studioEngine.headNode, browId);
+      studioEngine.wakeRender(1.5, true);
+    }
+    const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
+    if (bw) showToast(`✒️ 已切换根根分明真毛流眉形：${bw.label}`);
+  };
+
+  document.getElementById('sel-face-archetype')?.addEventListener('change', (e) => {
+    applyStudioFaceArchetype(e.target.value);
+  });
+  document.querySelectorAll('[data-face-arch]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyStudioFaceArchetype(btn.dataset.faceArch);
+    });
+  });
+
+  document.getElementById('sel-eyebrow-style')?.addEventListener('change', (e) => {
+    applyStudioEyebrowStyle(e.target.value);
+  });
+  document.querySelectorAll('[data-brow-style]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyStudioEyebrowStyle(btn.dataset.browStyle);
+    });
+  });
+
   // 10. Studio Morph Sliders, Forensic Post-Mortem Expressions, Colors & Hair Controls
   const applyStudioDeadExpression = (exprId) => {
     state.studioDraft.deadExpression = exprId;
@@ -1591,6 +1767,30 @@ window.addEventListener('DOMContentLoaded', async () => {
       qianxue: 'daz_hair_hime',
       shenzhiwei: 'daz_hair_curtain_wave'
     };
+    const presetFaceMap = {
+      fangyaoping: 'cn_oval_scholar',
+      user_photo: 'cn_round_babyface',
+      linxi: 'kr_idol_vline',
+      suwan: 'cn_classical_melon',
+      qianxue: 'kr_sweet_heart',
+      shenzhiwei: 'cn_cold_royal'
+    };
+    const presetBrowMap = {
+      fangyaoping: 'cn_scholar_natural',
+      user_photo: 'kr_straight_mist',
+      linxi: 'kr_idol_arch',
+      suwan: 'cn_willow_classical',
+      qianxue: 'kr_sweet_droop',
+      shenzhiwei: 'cn_cold_sword'
+    };
+    const presetSkinMap = {
+      fangyaoping: '#faDFce',
+      user_photo: '#fff0eb',
+      linxi: '#f6edf5',
+      suwan: '#fcf0e1',
+      qianxue: '#fff5f4',
+      shenzhiwei: '#f4e6dc'
+    };
     const presetExprMap = {
       fangyaoping: 'dead_calm',
       user_photo: 'dead_calm',
@@ -1600,12 +1800,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       shenzhiwei: 'dead_smile'
     };
     const presetMorphMap = {
-      fangyaoping: { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.14, noseBridge: 0.06, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.04 },
-      user_photo:  { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-      linxi:       { jawVLine: -0.06, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.08, lipFullness: -0.02 },
-      suwan:       { jawVLine: 0.04, chinLength: 0.02, cheekSoftness: 0.08, noseBridge: 0.04, eyeAlmond: 0.05, eyeTilt: -0.04, lipFullness: 0.08 },
-      qianxue:     { jawVLine: 0.14, chinLength: -0.04, cheekSoftness: 0.04, noseBridge: 0.08, eyeAlmond: 0.14, eyeTilt: 0.10, lipFullness: 0.02 },
-      shenzhiwei:  { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
+      fangyaoping: { jawVLine: 0.08, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.04, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.04 },
+      user_photo:  { jawVLine: -0.18, chinLength: -0.22, cheekSoftness: 0.28, noseBridge: 0.02, eyeAlmond: 0.18, eyeTilt: -0.08, lipFullness: 0.12 },
+      linxi:       { jawVLine: 0.24, chinLength: -0.04, cheekSoftness: 0.16, noseBridge: 0.22, eyeAlmond: 0.12, eyeTilt: 0.16, lipFullness: 0.10 },
+      suwan:       { jawVLine: 0.22, chinLength: 0.04, cheekSoftness: 0.04, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.10, lipFullness: 0.06 },
+      qianxue:     { jawVLine: 0.26, chinLength: -0.16, cheekSoftness: 0.22, noseBridge: 0.10, eyeAlmond: 0.20, eyeTilt: -0.04, lipFullness: 0.16 },
+      shenzhiwei:  { jawVLine: 0.16, chinLength: 0.14, cheekSoftness: -0.12, noseBridge: 0.20, eyeAlmond: 0.04, eyeTilt: 0.14, lipFullness: 0.02 },
     };
     if (e.target.value === 'fangyaoping' || e.target.value === 'user_photo') {
       drawPresetReferencePortrait(refPhotoCanvas, e.target.value);
@@ -1613,6 +1813,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
       syncStudioHairUI(state.studioDraft.hairStyle);
+    }
+    if (presetFaceMap[e.target.value]) {
+      state.studioDraft.faceArchetype = presetFaceMap[e.target.value];
+      state.studioDraft.morphs.faceArchetype = presetFaceMap[e.target.value];
+      syncStudioFaceArchetypeUI(presetFaceMap[e.target.value]);
+    }
+    if (presetBrowMap[e.target.value]) {
+      state.studioDraft.eyebrowStyle = presetBrowMap[e.target.value];
+      state.studioDraft.morphs.eyebrowStyle = presetBrowMap[e.target.value];
+      syncStudioEyebrowStyleUI(presetBrowMap[e.target.value]);
+    }
+    if (presetSkinMap[e.target.value]) {
+      state.studioDraft.skinTone = presetSkinMap[e.target.value];
+      const colSkin = document.getElementById('col-skin');
+      if (colSkin) colSkin.value = presetSkinMap[e.target.value];
     }
     if (presetExprMap[e.target.value]) {
       state.studioDraft.deadExpression = presetExprMap[e.target.value];
@@ -2182,7 +2397,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     setGravityMode(e.target.checked);
   });
 
-  // Visual Style Presets & Real-Time Lighting / Window Gobo / Chiaroscuro Sliders
+  // Visual Style Presets & Real-Time Lighting / Window Gobo / Chiaroscuro / Tyndall / Vintage Photo Sliders
   const applyVisualConfigAndSyncUI = (patch = {}, fromPreset = false) => {
     if ('wetGloss' in patch && !('skinGloss' in patch)) {
       patch.skinGloss = patch.wetGloss;
@@ -2192,17 +2407,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       const p = VISUAL_STYLE_PRESETS[patch.presetId];
       Object.assign(state.visualCustomConfig, {
         windowGobo: p.windowGobo || 'rain_mullion',
-        windowGoboStrength: p.windowGoboStrength ?? 0.74,
-        chiaroscuro: p.chiaroscuro ?? 1.25,
-        keyColor: p.keyColor || '#ffeed6',
+        windowGoboStrength: p.windowGoboStrength ?? 0.76,
+        chiaroscuro: p.chiaroscuro ?? 1.28,
+        tyndall: p.tyndall ?? 0.95,
+        vintagePhoto: p.vintagePhoto ?? 0.86,
+        keyColor: p.keyColor || '#ffdca8',
         rimColor: p.rimColor || '#93c5fd',
         keyAzimuthDeg: p.keyAzimuthDeg,
         keyElevationDeg: p.keyElevationDeg,
         keyIntensity: p.keyIntensity,
         rimIntensity: p.rimIntensity,
         sssIntensity: p.sssIntensity,
-        skinGloss: p.skinGloss ?? 0.18,
-        wetGloss: p.skinGloss ?? 0.18,
+        skinGloss: p.skinGloss ?? 0.16,
+        wetGloss: p.skinGloss ?? 0.16,
         sharpen: p.sharpen,
         contrast: p.contrast,
         warmth: p.warmth,
@@ -2214,6 +2431,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (el) el.value = String(val);
         if (vEl) vEl.textContent = fmt(val);
       };
+      syncSlider('vc-tyndall', 'val-vc-tyndall', state.visualCustomConfig.tyndall, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-vintage-photo', 'val-vc-vintage-photo', state.visualCustomConfig.vintagePhoto, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', state.visualCustomConfig.chiaroscuro, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', state.visualCustomConfig.windowGoboStrength, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-key-azimuth', 'val-vc-key-azimuth', p.keyAzimuthDeg, v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
@@ -2244,7 +2463,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const presetId = btn.dataset.stylePreset;
       applyVisualConfigAndSyncUI({ presetId }, true);
       const p = VISUAL_STYLE_PRESETS[presetId];
-      if (p) showToast(`🎬 已切换窗户透光与伦勃朗明暗预设：${p.label}`);
+      if (p) showToast(`🎬 已切换唯美老照片与丁达尔光影预设：${p.label}`);
     });
   });
 
@@ -2269,6 +2488,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyVisualConfigAndSyncUI({ [key]: v }, false);
     });
   };
+  bindVcSlider('vc-tyndall', 'val-vc-tyndall', 'tyndall', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-vintage-photo', 'val-vc-vintage-photo', 'vintagePhoto', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', 'chiaroscuro', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', 'windowGoboStrength', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-key-azimuth', 'val-vc-key-azimuth', 'keyAzimuthDeg', v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
@@ -2282,7 +2503,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-warmth', 'val-vc-warmth', 'warmth', v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`);
   bindVcSlider('vc-bloom', 'val-vc-bloom', 'bloomStrength', v => `${Math.round(v * 100)}%`);
 
-  // Stage 27: Rainy Study Room Audio & 3D Rainy Window Controls
+  // Stage 28: High-Clarity Multi-Layer Stereo Rainy Study Audio Controls
   const btnQuickRain = document.getElementById('btn-quick-rain-study');
   const chkRainAudio = document.getElementById('chk-rain-study-audio');
   const setRainStudyMode = (enabled) => {
@@ -2294,7 +2515,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnQuickRain.textContent = enabled ? '🌧️ 小雨伴学: 开启' : '🌧️ 小雨伴学: 静音';
     }
     showToast(enabled
-      ? '🌧️ 已开启雨夜书房窗外淅沥小雨白噪音 (ASMR)，静心沉浸刷题！'
+      ? '🌧️ 已开启立体声淅沥小雨 + 屋檐水滴伴学音效 (ASMR)，音量已大幅提升！'
       : '🔇 已关闭窗外小雨伴学环境音');
   };
   btnQuickRain?.addEventListener('click', () => {
@@ -2309,14 +2530,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (vEl) vEl.textContent = `${Math.round(v * 100)}%`;
     soundEngine.setRainVolume(v);
   });
-  document.getElementById('chk-rain-window-3d')?.addEventListener('change', (e) => {
-    desktopEngine.updateSettings({ rainyWindowEnabled: e.target.checked });
-    showToast(e.target.checked
-      ? '🪟 已显示 3D 雨夜书房木格窗、飘雨粒子与绿罩伴学台灯'
-      : '🌌 已隐藏 3D 雨夜书房木格窗背景');
-  });
 
-  // Stage 27: Placeable 3D Specimen Container Structure Controls (`可放置的头颅收纳建筑`)
+  // Stage 28: Placeable, Draggable & Deletable 3D Structures / Shelves / Props Controls
   const structureStylesCycle = ['glass_bell_jar', 'velvet_chalice', 'formalin_cylinder', 'acrylic_cube', 'surgical_tray', 'guillotine_plinth'];
   let nextQuickStructIdx = 0;
   document.getElementById('btn-quick-place-container')?.addEventListener('click', () => {
@@ -2324,7 +2539,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     nextQuickStructIdx++;
     const s = desktopEngine.placeContainerStructure(styleId);
     if (s) {
-      showToast(`🏗️ 已在书桌上放置独立收纳建筑【${s.label}】！可将任意断头拖入其中自动封存，或直接拖动建筑底座`);
+      showToast(`🏗️ 已在书桌上放置独立收纳建筑【${s.label}】！左键按住可自由拖动移位，右键单击或按 Delete 键可随时秒删`);
     }
   });
   document.querySelectorAll('[data-place-structure]').forEach(btn => {
@@ -2332,13 +2547,65 @@ window.addEventListener('DOMContentLoaded', async () => {
       const styleId = btn.dataset.placeStructure;
       const s = desktopEngine.placeContainerStructure(styleId);
       if (s) {
-        showToast(`🏗️ 已建造独立收纳建筑【${s.label}】！把任意人头拖到它上方即可磁吸放入，拖人头即可重新拎出！`);
+        showToast(`🏗️ 已建造独立收纳建筑【${s.label}】！左键拖动可移动建筑，右键单击可随时删除`);
       }
     });
   });
   document.getElementById('btn-clear-all-structures')?.addEventListener('click', () => {
-    desktopEngine.clearAllContainerStructures();
-    showToast('🗑️ 已清空全部收纳建筑，所有头颅均已释放回桌面作为纯断头镇纸！');
+    desktopEngine.clearAllContainerStructures(true);
+    showToast('🗑️ 已清空并删除场景中全部收纳建筑、层架与摆件！');
+  });
+  document.getElementById('btn-restore-stage-props')?.addEventListener('click', () => {
+    if (desktopEngine.deletedStagePropIds) desktopEngine.deletedStagePropIds.clear();
+    desktopEngine.rebuildStageGroup();
+    desktopEngine.placeContainerStructure('glass_bell_jar', { x: -20, z: -15, playSound: true });
+    desktopEngine.placeContainerStructure('velvet_chalice', { x: 20, z: -15, playSound: false });
+    showToast('🔄 已恢复默认书桌层架、摆件与收纳建筑！');
+  });
+
+  // Stage 28: Quick Desktop Active Head Face Archetype & Eyebrow Style Switcher
+  const getTargetDesktopPet = () => {
+    if (!desktopEngine || desktopEngine.pets.size === 0) return null;
+    if (desktopEngine.hoveredPetId && desktopEngine.pets.has(desktopEngine.hoveredPetId)) {
+      return desktopEngine.pets.get(desktopEngine.hoveredPetId);
+    }
+    return Array.from(desktopEngine.pets.values())[0];
+  };
+  document.getElementById('vcd-sel-face-archetype')?.addEventListener('change', (e) => {
+    const faceId = e.target.value;
+    const pet = getTargetDesktopPet();
+    if (!pet) return;
+    setHeadFaceArchetype(pet.headNode, faceId);
+    pet.collectible.faceArchetype = faceId;
+    pet.collectible.morphs = { ...(pet.collectible.morphs || {}), faceArchetype: faceId };
+    const col = state.collectibles.find(c => c.id === pet.id);
+    if (col) {
+      col.faceArchetype = faceId;
+      col.morphs = { ...(col.morphs || {}), faceArchetype: faceId };
+      persistCollectibles();
+    }
+    desktopEngine.wakeRender(1.5, true);
+    desktopEngine.emitPetsChange();
+    const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === faceId);
+    showToast(`🍑 已将「${pet.collectible.name.split('·')[0].trim()}」切换为：${fa ? fa.label : faceId}`);
+  });
+  document.getElementById('vcd-sel-eyebrow-style')?.addEventListener('change', (e) => {
+    const browId = e.target.value;
+    const pet = getTargetDesktopPet();
+    if (!pet) return;
+    setHeadEyebrowStyle(pet.headNode, browId);
+    pet.collectible.eyebrowStyle = browId;
+    pet.collectible.morphs = { ...(pet.collectible.morphs || {}), eyebrowStyle: browId };
+    const col = state.collectibles.find(c => c.id === pet.id);
+    if (col) {
+      col.eyebrowStyle = browId;
+      col.morphs = { ...(col.morphs || {}), eyebrowStyle: browId };
+      persistCollectibles();
+    }
+    desktopEngine.wakeRender(1.5, true);
+    desktopEngine.emitPetsChange();
+    const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
+    showToast(`✒️ 已将「${pet.collectible.name.split('·')[0].trim()}」切换为：${bw ? bw.label : browId}`);
   });
 
   // Floor Style, Shelf Layout & Screen-Space Formation Switcher

@@ -8,11 +8,11 @@ import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 /**
- * Stage 23 · 大师级实时画质·画风色调·微距锐化后期定制链 (Customizable Beauty & Film Grade Post Chain)
- * - 支持 6 大画风色调预设 (暖金展柜 / 冷冽法医 / 哥特丝绒 / 赛博霓虹 / 胶片画报 / 极净日光)
- * - 支持 5-Tap 微距毛孔与发丝锐化 (uSharpen) —— 消除 WebGL 模糊感，让 2K 毛孔/睫毛/虹膜/丝绸发束刀锋般锐利
- * - 支持 色温冷暖 (uWarmth)、明暗对比 (uContrast)、饱和度 (uSaturation)、暗部色调分离 (uShadowTint)、电影暗角 (uVignette)、胶片微颗粒 (uFilmGrain)
- * - 全程保留 Alpha 透明通道，零黑屏、零火球眩光
+ * Stage 28 · 唯美老照片胶片感 + 屏幕空间丁达尔体积光束 + 微距毛孔锐化后期定制链
+ * - 支持 丁达尔斜射体积光散射 (uTyndall) —— 从书房斜上方洒下的暖银丁达尔光线与高光柔晕
+ * - 支持 唯美老照片胶片乳剂调色 (uVintagePhoto) —— 复古暖银盐高光、天鹅绒微褐暗部褪色、胶片卤化银高光晕染 (Halation)
+ * - 支持 5-Tap 微距毛孔与发丝锐化 (uSharpen) —— 让 2K 毛孔/野生眉毛流/睫毛/虹膜/丝绸发束清晰锐利
+ * - 全程保留 Alpha 透明通道，零黑屏
  */
 
 export const BeautyGradeShader = {
@@ -20,14 +20,18 @@ export const BeautyGradeShader = {
     tDiffuse: { value: null },
     tSourceAlpha: { value: null },
     uResolution: { value: new THREE.Vector2(1280, 720) },
-    uVignette: { value: 0.32 },
-    uSaturation: { value: 1.10 },
-    uContrast: { value: 1.08 },
-    uWarmth: { value: 0.04 },
-    uSharpen: { value: 0.42 },
-    uFilmGrain: { value: 0.0 },
-    uTint: { value: new THREE.Vector3(1.0, 0.99, 0.97) },
-    uShadowTint: { value: new THREE.Vector3(0.02, 0.01, 0.03) },
+    uVignette: { value: 0.42 },
+    uSaturation: { value: 0.88 },
+    uContrast: { value: 1.16 },
+    uWarmth: { value: 0.14 },
+    uSharpen: { value: 0.54 },
+    uFilmGrain: { value: 0.24 },
+    uTyndall: { value: 0.82 },
+    uVintagePhoto: { value: 0.76 },
+    uTyndallAngle: { value: -0.58 },
+    uTyndallColor: { value: new THREE.Vector3(1.0, 0.91, 0.76) },
+    uTint: { value: new THREE.Vector3(1.02, 0.98, 0.91) },
+    uShadowTint: { value: new THREE.Vector3(0.09, 0.06, 0.05) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -46,6 +50,10 @@ export const BeautyGradeShader = {
     uniform float uWarmth;
     uniform float uSharpen;
     uniform float uFilmGrain;
+    uniform float uTyndall;
+    uniform float uVintagePhoto;
+    uniform float uTyndallAngle;
+    uniform vec3 uTyndallColor;
     uniform vec3 uTint;
     uniform vec3 uShadowTint;
     varying vec2 vUv;
@@ -55,51 +63,109 @@ export const BeautyGradeShader = {
       vec3 col = c.rgb;
       if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
       col = clamp(col, 0.0, 2.0);
+      float srcAlpha = texture2D(tSourceAlpha, vUv).r;
 
-      // 1. 5-Tap Micro-Detail Unsharp Mask (Pores, Eyelashes, Iris & Hair Strands Clarity)
+      // 1. 5-Tap Micro-Detail Unsharp Mask + Analog Halation Blur Sample
+      vec2 texel = 1.0 / max(uResolution, vec2(256.0));
+      vec3 n = texture2D(tDiffuse, vUv + vec2(0.0, texel.y)).rgb;
+      vec3 s = texture2D(tDiffuse, vUv - vec2(0.0, texel.y)).rgb;
+      vec3 e = texture2D(tDiffuse, vUv + vec2(texel.x, 0.0)).rgb;
+      vec3 w = texture2D(tDiffuse, vUv - vec2(texel.x, 0.0)).rgb;
+      vec3 blur = 0.25 * (n + s + e + w);
+
       if (uSharpen > 0.001) {
-        vec2 texel = 1.0 / max(uResolution, vec2(256.0));
-        vec3 n = texture2D(tDiffuse, vUv + vec2(0.0, texel.y)).rgb;
-        vec3 s = texture2D(tDiffuse, vUv - vec2(0.0, texel.y)).rgb;
-        vec3 e = texture2D(tDiffuse, vUv + vec2(texel.x, 0.0)).rgb;
-        vec3 w = texture2D(tDiffuse, vUv - vec2(texel.x, 0.0)).rgb;
-        vec3 blur = 0.25 * (n + s + e + w);
         vec3 detail = clamp(col - blur, -0.25, 0.25);
-        col = clamp(col + detail * (uSharpen * 1.45), 0.0, 2.0);
+        col = clamp(col + detail * (uSharpen * 1.55), 0.0, 2.0);
       }
 
-      // 2. Color Temperature Warmth Shift
+      // 2. Screen-Space Volumetric Tyndall Light Rays (光线丁达尔感)
+      if (uTyndall > 0.001) {
+        // Directional radial scatter from upper window corner + diagonal Tyndall shafts
+        vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.76, 0.92) : vec2(0.24, 0.92);
+        vec2 delta = (lightOrigin - vUv) * 0.22;
+        vec2 sampleUv = vUv;
+        float scatter = 0.0;
+        float weight = 0.22;
+        for (int i = 0; i < 6; i++) {
+          sampleUv += delta * 0.16;
+          vec3 sc = texture2D(tDiffuse, clamp(sampleUv, 0.01, 0.99)).rgb;
+          float lumS = dot(sc, vec3(0.299, 0.587, 0.114));
+          scatter += smoothstep(0.32, 0.92, lumS) * weight;
+          weight *= 0.82;
+        }
+
+        // Slanted window-beam Tyndall shafts across screen
+        vec2 p = vUv - vec2(0.54, 0.65);
+        float ca = cos(uTyndallAngle);
+        float sa = sin(uTyndallAngle);
+        vec2 rot = vec2(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
+        float shaftPattern =
+          0.52 * exp(-pow((rot.x + 0.12) * 5.2, 2.0)) +
+          0.44 * exp(-pow((rot.x - 0.05) * 4.2, 2.0)) +
+          0.32 * exp(-pow((rot.x - 0.21) * 6.0, 2.0));
+        float fineBeams = 0.82 + 0.18 * sin(rot.x * 48.0);
+        float heightFalloff = smoothstep(0.05, 0.88, vUv.y);
+        float beamVeil = shaftPattern * fineBeams * heightFalloff;
+
+        // Combine radial light scatter on head highlights + volumetric atmospheric shaft veil
+        vec3 tyndallGlow = uTyndallColor * (scatter * 0.16 * srcAlpha + beamVeil * (0.065 + 0.055 * srcAlpha));
+        col += tyndallGlow * uTyndall;
+        // Ensure alpha carries the subtle volumetric Tyndall beam in transparent desktop areas
+        srcAlpha = max(srcAlpha, clamp(beamVeil * 0.24 * uTyndall, 0.0, 0.38));
+      }
+
+      // 3. Color Temperature Warmth Shift
       col.r += uWarmth * 0.075;
-      col.g += uWarmth * 0.018;
-      col.b -= uWarmth * 0.075;
+      col.g += uWarmth * 0.022;
+      col.b -= uWarmth * 0.072;
       col = max(col, vec3(0.0));
 
-      // 3. Highlight / Midtone Art-Style Tint & Shadow Split-Toning
+      // 4. Highlight / Midtone Art-Style Tint & Shadow Split-Toning
       col *= uTint;
       float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.45, lumaPre), 0.0, 1.0);
-      col += uShadowTint * shadowMask * 0.45;
+      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.46, lumaPre), 0.0, 1.0);
+      col += uShadowTint * shadowMask * 0.48;
 
-      // 4. S-Curve Contrast pivoted at 0.18 middle grey
+      // 5. S-Curve Contrast pivoted at 0.18 middle grey
       col = (col - vec3(0.18)) * uContrast + vec3(0.18);
       col = max(col, vec3(0.0));
 
-      // 5. Saturation
+      // 6. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
       col = mix(vec3(luma), col, uSaturation);
 
-      // 6. Optional Subtle Film Grain
-      if (uFilmGrain > 0.001) {
-        float noise = fract(sin(dot(vUv * uResolution, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-        col += noise * uFilmGrain * 0.12;
+      // 7. Poetic Vintage Old-Photograph Film Emulsion (唯美老照片胶片感)
+      if (uVintagePhoto > 0.001) {
+        float lumV = dot(col, vec3(0.299, 0.587, 0.114));
+        // Warm silver-halide / creamy sepia tone curve
+        vec3 sepia = vec3(lumV * 1.09, lumV * 0.96, lumV * 0.81);
+        vec3 poeticFilm = mix(col, sepia, 0.34);
+        // Lifted nostalgic velvet-cocoa shadows (eliminates harsh digital black)
+        vec3 liftedFloor = vec3(0.048, 0.036, 0.032);
+        poeticFilm = liftedFloor + poeticFilm * (vec3(0.96, 0.94, 0.90) - liftedFloor);
+        // Warm analog lens halation on skin/hair highlights
+        vec3 wideBlur = 0.5 * (
+          texture2D(tDiffuse, vUv + texel * 3.5).rgb +
+          texture2D(tDiffuse, vUv - texel * 3.5).rgb
+        );
+        float hiMask = smoothstep(0.52, 0.92, dot(wideBlur, vec3(0.299, 0.587, 0.114)));
+        poeticFilm += vec3(0.11, 0.065, 0.035) * hiMask * srcAlpha;
+
+        col = mix(col, poeticFilm, clamp(uVintagePhoto, 0.0, 1.0));
       }
 
-      // 7. Cinema Vignette (RGB only, preserves alpha)
-      vec2 d = vUv - vec2(0.5);
-      float v = 1.0 - uVignette * smoothstep(0.15, 0.75, length(d) * 1.35);
+      // 8. Analog Silver-Halide Film Grain
+      if (uFilmGrain > 0.001) {
+        float noise = fract(sin(dot(vUv * uResolution, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
+        col += noise * uFilmGrain * 0.11;
+      }
+
+      // 9. Poetic Vintage Oval Vignette (RGB only, preserves alpha)
+      vec2 d = (vUv - vec2(0.5)) * vec2(1.08, 0.96);
+      float v = 1.0 - uVignette * smoothstep(0.16, 0.76, length(d) * 1.38);
       col *= v;
 
-      gl_FragColor = vec4(clamp(col, 0.0, 1.0), texture2D(tSourceAlpha, vUv).r);
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), clamp(srcAlpha, 0.0, 1.0));
     }
   `,
 };
@@ -151,20 +217,22 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
 
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    options.bloomStrength ?? 0.05,
-    options.bloomRadius ?? 0.30,
-    options.bloomThreshold ?? 0.94
+    options.bloomStrength ?? 0.08,
+    options.bloomRadius ?? 0.36,
+    options.bloomThreshold ?? 0.88
   );
 
   const gradePass = new ShaderPass(BeautyGradeShader);
   gradePass.uniforms.tSourceAlpha.value = alphaTarget.texture;
   gradePass.uniforms.uResolution.value.set(width * pixelRatio, height * pixelRatio);
-  gradePass.uniforms.uVignette.value = options.vignette ?? 0.32;
-  gradePass.uniforms.uSaturation.value = options.saturation ?? 1.10;
-  gradePass.uniforms.uContrast.value = options.contrast ?? 1.08;
-  gradePass.uniforms.uWarmth.value = options.warmth ?? 0.04;
-  gradePass.uniforms.uSharpen.value = options.sharpen ?? 0.42;
-  gradePass.uniforms.uFilmGrain.value = options.filmGrain ?? 0.0;
+  gradePass.uniforms.uVignette.value = options.vignette ?? 0.42;
+  gradePass.uniforms.uSaturation.value = options.saturation ?? 0.88;
+  gradePass.uniforms.uContrast.value = options.contrast ?? 1.16;
+  gradePass.uniforms.uWarmth.value = options.warmth ?? 0.14;
+  gradePass.uniforms.uSharpen.value = options.sharpen ?? 0.54;
+  gradePass.uniforms.uFilmGrain.value = options.filmGrain ?? 0.24;
+  gradePass.uniforms.uTyndall.value = options.tyndall ?? 0.82;
+  gradePass.uniforms.uVintagePhoto.value = options.vintagePhoto ?? 0.76;
 
   const resizeAlpha = () => {
     const rw = Math.max(2, Math.floor(sizeW * sizeRatio));
@@ -218,6 +286,13 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       if (params.warmth !== undefined) u.uWarmth.value = Number(params.warmth);
       if (params.sharpen !== undefined) u.uSharpen.value = Number(params.sharpen);
       if (params.filmGrain !== undefined) u.uFilmGrain.value = Number(params.filmGrain);
+      if (params.tyndall !== undefined) u.uTyndall.value = Number(params.tyndall);
+      if (params.vintagePhoto !== undefined) u.uVintagePhoto.value = Number(params.vintagePhoto);
+      if (params.tyndallAngle !== undefined) u.uTyndallAngle.value = Number(params.tyndallAngle);
+      if (params.tyndallColor) {
+        const tc = new THREE.Color(params.tyndallColor);
+        u.uTyndallColor.value.set(tc.r, tc.g, tc.b);
+      }
       if (Array.isArray(params.tint)) {
         u.uTint.value.set(params.tint[0], params.tint[1], params.tint[2]);
       }

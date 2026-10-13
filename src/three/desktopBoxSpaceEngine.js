@@ -41,6 +41,7 @@ export class DesktopBoxSpaceEngine {
   constructor(canvas, callbacks = {}) {
     this.canvas = canvas;
     this.onHoverChange = callbacks.onHoverChange || (() => {});
+    this.onStructureSelect = callbacks.onStructureSelect || (() => {});
     this.onPetStateUpdate = callbacks.onPetStateUpdate || (() => {});
     this.onStructuresUpdate = callbacks.onStructuresUpdate || (() => {});
     this.onBoxCollisionVisual = callbacks.onBoxCollisionVisual || (() => {});
@@ -59,22 +60,23 @@ export class DesktopBoxSpaceEngine {
       autoResetAfterRotate: false,
       enablePetCollision: true,
       petsAlwaysOnTop: true,
-      // Stage 27 Gravity, Walnut Study Desk, Rainy Window & Placeable Container Structures
       enableGravity: true,
       floorStyle: 'walnut_desk',
       shelfLayout: 'study_side_rack',
       defaultContainerStyle: 'glass_bell_jar',
       defaultDecorStyle: 'study_tomes',
-      rainyWindowEnabled: true,
+      rainyWindowEnabled: false,
     };
 
     this.stagePlatforms = [];
+    this.deletedStagePropIds = new Set();
     this.visualConfig = { presetId: 'rainy_study' };
 
     this.pets = new Map();
     this.structures = new Map();
     this.structureSerial = 1;
     this.hoveredPetId = null;
+    this.selectedStructureId = null;
     this.pointerDownInfo = null;
     this.mouseNDC = new THREE.Vector2(0, 0);
     this.mouseClient = { x: window.innerWidth * 0.5, y: window.innerHeight * 0.5 };
@@ -124,11 +126,9 @@ export class DesktopBoxSpaceEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
-    // Stage 22 唯美写实管线：ACES + sRGB + 静态阴影缓存 + 环形眼神光离线 IBL
-    applyBaseRendererSettings(this.renderer, 0.86);
+    applyBaseRendererSettings(this.renderer, 0.90);
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
-    // Stage 7 写实 5 点灯阵（与工坊同色温体系；背部轮廓光改用确定性方向光）
     this.lightRig = buildDesktopLightRig(this.scene);
     this.hemiLight = this.lightRig.hemi;
     this.keyLight = this.lightRig.key;
@@ -136,7 +136,6 @@ export class DesktopBoxSpaceEngine {
     this.anatomyUpLight = this.lightRig.up;
     this.rimLight = this.lightRig.rim;
 
-    // Stage 13a 电影级后期链（辉光 + 唯美调色；异常则回退直渲，永不黑屏）
     this.beautyPost = null;
     this.beautyPostUserEnabled = true;
     try {
@@ -147,11 +146,10 @@ export class DesktopBoxSpaceEngine {
       this.beautyPost = null;
     }
 
-    // Stage 13b 唯美氛围：盒型空间内的呼吸尘埃（加色混合，永不遮挡头模）
     this.atmosphere = null;
     try {
       this.atmosphere = createBokehDust({
-        bounds: { x: [-58, 58], y: [-30, 30], z: [-112, -4] },
+        bounds: { x: [-58, 58], y: [-30, 30], z: [-95, -4] },
       });
       this.scene.add(this.atmosphere.group);
     } catch (err) {
@@ -165,7 +163,6 @@ export class DesktopBoxSpaceEngine {
   getBoxBounds() {
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
     if (this.settings.boxFitScreen !== false) {
-      // 前框贴屏：以相机到前框(Z=0)的距离反推可视半高/半宽，前框四边与屏幕四边重合
       const dist = Math.max(1, this.cameraZ || 115);
       const halfH = Math.tan(THREE.MathUtils.degToRad((this.settings.fov || 42) * 0.5)) * dist;
       const halfW = halfH * aspect;
@@ -176,8 +173,8 @@ export class DesktopBoxSpaceEngine {
         minY: -halfH,
         maxY: halfH,
         minZ: -maxDepthCm,
-        // Stage 22 Macro Close-Up Zone: allow scrolling forward up to Z = +78 cm (37 cm from camera!)
-        maxZ: 78
+        // Stage 28 Strict Border Constraint: keep Z <= +18 cm so heads NEVER burst outside the 3D box frame!
+        maxZ: 18
       };
     }
     const halfH = this.settings.boxHeightCm * 0.5;
@@ -189,46 +186,67 @@ export class DesktopBoxSpaceEngine {
       minY: -halfH,
       maxY: halfH,
       minZ: -maxDepthCm,
-      maxZ: 78
+      maxZ: 18
     };
   }
 
   /**
-   * Stage 22 · Computes perspective-accurate X/Y boundaries at any depth `z` so the head
-   * can be dragged smoothly all the way to the true left/right/top/bottom screen edges at any depth.
+   * Stage 28 · Strict 3D Box & Screen-Border Clamping ("而且你头就是空间不要超出边框")
+   * Subtracts the full physical 3D head radius (`marginX`), crown height (`marginTop`), and neck base (`marginBottom`)
+   * from the intersection of the 3D Box Frame (`Bounded3DBoxSpace`) and the Camera Frustum at depth `z`.
    */
   getBoxBoundsAtZ(z = 0, petScale = 0.76) {
     const base = this.getBoxBounds();
+    const clampedZ = Math.max(base.minZ + 6, Math.min(base.maxZ, z));
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    const distFromCam = Math.max(26, (this.cameraZ || 115) - z);
+    const distFromCam = Math.max(45, (this.cameraZ || 115) - clampedZ);
     const fovRad = THREE.MathUtils.degToRad((this.camera?.fov || this.settings.fov || 42) * 0.5);
     const frustumHalfH = distFromCam * Math.tan(fovRad);
     const frustumHalfW = frustumHalfH * aspect;
 
-    const widthScale = this.settings.boxFitScreen !== false ? 1.0 : Math.max(0.75, (this.settings.boxWidthCm || 96) / 96);
-    const heightScale = this.settings.boxFitScreen !== false ? 1.0 : Math.max(0.75, (this.settings.boxHeightCm || 56) / 56);
-    const halfW = frustumHalfW * widthScale;
-    const halfH = frustumHalfH * heightScale;
+    // Intersect 3D box frame bounds with camera frustum bounds so the head NEVER exceeds either border!
+    const rawHalfW = Math.min(Math.abs(base.maxX), frustumHalfW);
+    const rawHalfH = Math.min(Math.abs(base.maxY), frustumHalfH);
 
-    // Gentle edge padding so the head never disappears completely off-screen,
-    // while letting you place it right up against any screen edge or corner!
-    const padX = Math.min(halfW * 0.08, 2.4 * petScale);
-    const padY = Math.min(halfH * 0.10, 2.8 * petScale);
+    const s = Math.max(0.55, Number(petScale) || 0.76);
+    const marginX = Math.min(rawHalfW * 0.42, 12.6 * s);
+    const marginTop = Math.min(rawHalfH * 0.46, 16.4 * s);
+    const marginBottom = Math.min(rawHalfH * 0.38, 11.2 * s);
 
     return {
-      minX: -(halfW - padX),
-      maxX: halfW - padX,
-      minY: -(halfH - padY),
-      maxY: halfH - padY,
-      minZ: base.minZ,
+      minX: -(rawHalfW - marginX),
+      maxX: rawHalfW - marginX,
+      minY: Math.max(base.minY + 1.8 + marginBottom, -(rawHalfH - marginBottom)),
+      maxY: Math.min(base.maxY - marginTop, rawHalfH - marginTop),
+      minZ: base.minZ + 6,
       maxZ: base.maxZ
     };
   }
 
+  clampPetToBounds(pet) {
+    if (!pet) return;
+    const scale = Math.max(pet.currentScale || 0.76, pet.targetScale || 0.76);
+    const bz = this.getBoxBoundsAtZ(pet.pos.z, scale);
+    pet.pos.z = Math.max(bz.minZ, Math.min(bz.maxZ, pet.pos.z));
+    pet.pos.x = Math.max(bz.minX, Math.min(bz.maxX, pet.pos.x));
+    pet.pos.y = Math.max(bz.minY, Math.min(bz.maxY, pet.pos.y));
+  }
+
+  clampStructureToBounds(struct) {
+    if (!struct) return;
+    const scale = Math.max(0.65, Number(struct.scale) || 0.76);
+    const bz = this.getBoxBoundsAtZ(struct.pos.z, scale);
+    struct.pos.z = Math.max(bz.minZ, Math.min(bz.maxZ, struct.pos.z));
+    struct.pos.x = Math.max(bz.minX, Math.min(bz.maxX, struct.pos.x));
+    const baseB = this.getBoxBounds();
+    const minStructY = baseB.minY + 1.8;
+    const maxStructY = struct.occupiedByPetId ? (bz.maxY - 13.5 * scale) : (baseB.maxY - 6.0);
+    struct.pos.y = Math.max(minStructY, Math.min(Math.max(minStructY, maxStructY), struct.pos.y));
+  }
+
   computeMacroTargetScale(zCm, baseScale = 0.76) {
-    // Smoothly boosts scale up to 1.52x when scrolled into the close-up zone (z > -15 up to +76)
-    const macroT = Math.max(0, Math.min(1, (zCm + 15) / 91));
-    return baseScale * (1.0 + macroT * 0.52);
+    const macroT = Math.max(0, Math.min(1, (zCm + 25) / 43));
+    return baseScale * (1.0 + macroT * 0.36);
   }
 
   updateCameraProjection() {
@@ -247,6 +265,11 @@ export class DesktopBoxSpaceEngine {
     this.camera.updateProjectionMatrix();
   }
 
+  rebuildStageGroup() {
+    this.initBoxWireframe();
+    this.wakeRender(1.5, true);
+  }
+
   initBoxWireframe() {
     if (this.boxGroup) {
       this.scene.remove(this.boxGroup);
@@ -259,8 +282,8 @@ export class DesktopBoxSpaceEngine {
     const linePositions = [];
     const lineColors = [];
 
-    const cFront = new THREE.Color('#38bdf8');
-    const cBack = new THREE.Color('#6366f1');
+    const cFront = new THREE.Color('#d4af37');
+    const cBack = new THREE.Color('#78624c');
 
     const pushSeg = (x1, y1, z1, x2, y2, z2, col1, col2) => {
       linePositions.push(x1, y1, z1, x2, y2, z2);
@@ -284,7 +307,7 @@ export class DesktopBoxSpaceEngine {
       pushSeg(rx, ry, 0, rx, ry, b.minZ, cFront, cBack);
     }
 
-    const vpCol = new THREE.Color('#4f46e5').multiplyScalar(0.65);
+    const vpCol = new THREE.Color('#8c7355').multiplyScalar(0.55);
     pushSeg(b.minX * 0.35, b.minY * 0.35, b.minZ, b.maxX * 0.35, b.maxY * 0.35, b.minZ, vpCol, vpCol);
     pushSeg(b.minX * 0.35, b.maxY * 0.35, b.minZ, b.maxX * 0.35, b.minY * 0.35, b.minZ, vpCol, vpCol);
 
@@ -295,7 +318,7 @@ export class DesktopBoxSpaceEngine {
     this.boxLinesMat = new THREE.LineBasicMaterial({
       vertexColors: true,
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.22,
       depthWrite: false
     });
     const lines = new THREE.LineSegments(geom, this.boxLinesMat);
@@ -303,9 +326,9 @@ export class DesktopBoxSpaceEngine {
 
     const backWallGeo = new THREE.PlaneGeometry(b.maxX - b.minX, b.maxY - b.minY);
     this.backWallMat = new THREE.MeshBasicMaterial({
-      color: '#0f172a',
+      color: '#120d0a',
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.14,
       depthWrite: false
     });
     const backWallMesh = new THREE.Mesh(backWallGeo, this.backWallMat);
@@ -314,19 +337,49 @@ export class DesktopBoxSpaceEngine {
 
     this.scene.add(this.boxGroup);
 
-    // Stage 23/27: Build Clear 3D Floor Stage, Screen-Space Shelves, Rainy Study Window & Independent Scene Decor Props
+    // Remove previous stage-bound movable props from `this.structures` before rebuilding stage
+    for (const [sid, s] of Array.from(this.structures.entries())) {
+      if (s.isStageGenerated) {
+        this.structures.delete(sid);
+      }
+    }
+
     if (this.stageGroup) {
       this.scene.remove(this.stageGroup);
     }
-    const { group: stageGroup, platforms } = buildScreenSpaceStageGroup(b, {
+    const { group: stageGroup, platforms, movableProps = [] } = buildScreenSpaceStageGroup(b, {
       floorStyle: this.settings.floorStyle || 'walnut_desk',
       shelfLayout: this.settings.shelfLayout || 'study_side_rack',
       decorStyle: this.settings.defaultDecorStyle || 'study_tomes',
-      rainyWindowEnabled: this.settings.rainyWindowEnabled !== false,
     });
     this.stageGroup = stageGroup;
-    this.stagePlatforms = platforms;
+    this.stagePlatforms = platforms.filter((p) => !this.deletedStagePropIds.has(`SHELF-${p.id}`));
     this.scene.add(this.stageGroup);
+
+    // Stage 28: Register every shelf & desk prop into `this.structures` so ALL buildings/shelves/props can be dragged or deleted!
+    for (const propNode of movableProps) {
+      const sid = propNode.userData?.structureId;
+      if (!sid) continue;
+      if (this.deletedStagePropIds.has(sid)) {
+        if (propNode.parent) propNode.parent.remove(propNode);
+        continue;
+      }
+      this.structures.set(sid, {
+        id: sid,
+        containerStyle: propNode.userData.containerStyle || 'stage_prop',
+        label: propNode.userData.label || '场景建筑',
+        fullLabel: propNode.userData.fullLabel || propNode.userData.label || '场景建筑',
+        node: propNode,
+        pos: propNode.position.clone(),
+        scale: propNode.scale.x || 1.0,
+        occupiedByPetId: null,
+        isStageGenerated: true,
+        isShelfStructure: Boolean(propNode.userData.isShelfStructure),
+        isDecorProp: Boolean(propNode.userData.isDecorProp),
+        platformRef: propNode.userData.platformRef || null,
+      });
+    }
+    this.onStructuresUpdate(this.getPlacedStructuresList());
   }
 
   /**
@@ -356,9 +409,7 @@ export class DesktopBoxSpaceEngine {
   }
 
   /**
-   * Stage 27 · Places an Independent 3D Specimen Container Structure (`可放置的头颅收纳建筑`) in the 3D scene.
-   * Not bound to any character! Any severed head dropped near it magnetically snaps onto its neck socket,
-   * and dragging the head lifts the pure severed head right back out.
+   * Stage 27/28 · Places an Independent 3D Specimen Container Structure (`可放置/可拖动/可删除的头颅收纳建筑`) in the 3D scene.
    */
   placeContainerStructure(containerStyle = 'glass_bell_jar', options = {}) {
     if (!containerStyle || containerStyle === 'none') return null;
@@ -371,15 +422,15 @@ export class DesktopBoxSpaceEngine {
     const baseB = this.getBoxBounds();
     const floorY = baseB.minY + 1.8;
 
-    const count = this.structures.size;
+    const containerCount = Array.from(this.structures.values()).filter((s) => !s.isStageGenerated).length;
     const defaultSlots = [
       { x: -18, y: floorY, z: -15 },
       { x: 18, y: floorY, z: -15 },
       { x: 0, y: floorY, z: -14 },
-      { x: -32, y: floorY, z: -16 },
-      { x: 32, y: floorY, z: -16 },
+      { x: -30, y: floorY, z: -16 },
+      { x: 30, y: floorY, z: -16 },
     ];
-    const slot = defaultSlots[count % defaultSlots.length];
+    const slot = defaultSlots[containerCount % defaultSlots.length];
     const startZ = options.z ?? slot.z;
     const scale = this.computeMacroTargetScale(startZ, 0.76);
     const bz = this.getBoxBoundsAtZ(startZ, scale);
@@ -400,7 +451,10 @@ export class DesktopBoxSpaceEngine {
       pos: new THREE.Vector3(startX, supportY, startZ),
       scale,
       occupiedByPetId: null,
+      isContainerBuilding: true,
     };
+    this.clampStructureToBounds(structEntry);
+    node.position.copy(structEntry.pos);
     this.structures.set(structureId, structEntry);
 
     if (options.playSound !== false) {
@@ -418,10 +472,24 @@ export class DesktopBoxSpaceEngine {
     if (struct.occupiedByPetId && this.pets.has(struct.occupiedByPetId)) {
       this.unsnapHeadFromStructure(this.pets.get(struct.occupiedByPetId));
     }
-    this.scene.remove(struct.node);
+    if (struct.isStageGenerated) {
+      this.deletedStagePropIds.add(structureId);
+    }
+    if (struct.platformRef && this.stagePlatforms) {
+      this.stagePlatforms = this.stagePlatforms.filter((p) => p !== struct.platformRef);
+    }
+    if (struct.node && struct.node.parent) {
+      struct.node.parent.remove(struct.node);
+    } else if (struct.node) {
+      this.scene.remove(struct.node);
+    }
     this.structures.delete(structureId);
+    if (this.selectedStructureId === structureId) {
+      this.selectedStructureId = null;
+      this.onStructureSelect(null);
+    }
     if (playSound) soundEngine.playSummon(false);
-    this.wakeRender(1.6, true);
+    this.wakeRender(1.8, true);
     this.onStructuresUpdate(this.getPlacedStructuresList());
     this.onPetStateUpdate(this.getSummonedList());
   }
@@ -431,11 +499,11 @@ export class DesktopBoxSpaceEngine {
       this.removeContainerStructure(id, false);
     }
     soundEngine.playSummon(false);
-    this.wakeRender(1.6, true);
+    this.wakeRender(1.8, true);
   }
 
   snapHeadIntoStructure(pet, struct, playSound = true) {
-    if (!pet || !struct) return;
+    if (!pet || !struct || struct.isShelfStructure || struct.isDecorProp) return;
     if (pet.snappedStructureId && pet.snappedStructureId !== struct.id) {
       this.unsnapHeadFromStructure(pet);
     }
@@ -447,11 +515,15 @@ export class DesktopBoxSpaceEngine {
     struct.occupiedByPetId = pet.id;
     struct.node.userData.occupiedByPetId = pet.id;
 
+    this.clampStructureToBounds(struct);
+    struct.node.position.copy(struct.pos);
+
     const socketLocalY = struct.node.userData.headSocketLocalY ?? 13.5;
     pet.pos.x = struct.pos.x;
     pet.pos.z = struct.pos.z;
     pet.targetScale = struct.scale;
     pet.pos.y = struct.pos.y + socketLocalY * struct.scale;
+    this.clampPetToBounds(pet);
     pet.vel.set(0, 0, 0);
     pet.dropDistance = 0;
     pet.isGrounded = true;
@@ -464,6 +536,9 @@ export class DesktopBoxSpaceEngine {
     this.wakeRender(1.8, true);
     this.onStructuresUpdate(this.getPlacedStructuresList());
     this.onPetStateUpdate(this.getSummonedList());
+    if (this.selectedStructureId === struct.id) {
+      this.refreshSelectedStructureHUD();
+    }
   }
 
   unsnapHeadFromStructure(pet) {
@@ -476,13 +551,36 @@ export class DesktopBoxSpaceEngine {
       updateContainerStructureState(struct.node, false);
     }
     this.onStructuresUpdate(this.getPlacedStructuresList());
+    if (struct && this.selectedStructureId === struct.id) {
+      this.refreshSelectedStructureHUD();
+    }
+  }
+
+  ejectHeadFromStructure(structureId) {
+    const struct = this.structures.get(structureId);
+    if (!struct || !struct.occupiedByPetId) return;
+    const pet = this.pets.get(struct.occupiedByPetId);
+    if (!pet) return;
+    this.unsnapHeadFromStructure(pet);
+    const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+    const offsetSide = struct.pos.x <= 0 ? 15.5 : -15.5;
+    pet.pos.x = Math.max(bz.minX, Math.min(bz.maxX, struct.pos.x + offsetSide));
+    pet.pos.y = Math.min(bz.maxY, struct.pos.y + 14.0);
+    pet.vel.set(offsetSide * 0.08, 1.5, 0);
+    pet.isGrounded = false;
+    pet.dropDistance = 6.0;
+    soundEngine.playPickup(pet.pos.x / Math.max(1, bz.maxX));
+    this.wakeRender(2.0, true);
+    this.onStructuresUpdate(this.getPlacedStructuresList());
+    this.onPetStateUpdate(this.getSummonedList());
+    this.refreshSelectedStructureHUD();
   }
 
   findNearestAvailableStructure(pos, maxDist = 14.5) {
     let best = null;
     let bestDist = maxDist;
     for (const struct of this.structures.values()) {
-      if (struct.occupiedByPetId) continue;
+      if (struct.occupiedByPetId || struct.isShelfStructure || struct.isDecorProp) continue;
       const socketY = struct.pos.y + (struct.node.userData.headSocketLocalY ?? 13.5) * struct.scale;
       const dx = pos.x - struct.pos.x;
       const dy = (pos.y - socketY) * 0.65;
@@ -506,6 +604,8 @@ export class DesktopBoxSpaceEngine {
         fullLabel: s.fullLabel,
         occupiedByPetId: s.occupiedByPetId,
         occupiedByName: occPet ? occPet.collectible.name : null,
+        isShelfStructure: Boolean(s.isShelfStructure),
+        isDecorProp: Boolean(s.isDecorProp),
         x: Math.round(s.pos.x),
         y: Math.round(s.pos.y),
         zMm: Math.round(s.pos.z * 10),
@@ -936,6 +1036,27 @@ export class DesktopBoxSpaceEngine {
     });
   }
 
+  refreshSelectedStructureHUD() {
+    if (!this.selectedStructureId || !this.structures.has(this.selectedStructureId)) {
+      this.onStructureSelect(null);
+      return;
+    }
+    const s = this.structures.get(this.selectedStructureId);
+    const occPet = s.occupiedByPetId ? this.pets.get(s.occupiedByPetId) : null;
+    const screenPt = this.worldToScreen(s.pos.clone().add(new THREE.Vector3(0, s.isShelfStructure ? 3.5 : 8.5, 0)));
+    this.onStructureSelect({
+      id: s.id,
+      label: s.label,
+      fullLabel: s.fullLabel,
+      occupiedByPetId: s.occupiedByPetId,
+      occupiedByName: occPet ? occPet.collectible.name : null,
+      isShelfStructure: Boolean(s.isShelfStructure),
+      isDecorProp: Boolean(s.isDecorProp),
+      screenX: screenPt.x,
+      screenY: screenPt.y,
+    });
+  }
+
   /**
    * Returns true if the pointer event target is an interactive UI control or inside a window when pets are NOT on top
    */
@@ -943,7 +1064,7 @@ export class DesktopBoxSpaceEngine {
     if (document.body.classList.contains('real-desktop-manager')) return true;
     const target = e.target;
     if (!target || !(target instanceof Element)) return false;
-    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud')) {
+    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud, #structure-floating-hud')) {
       return true;
     }
     if (target.closest('button, input, select, textarea, label, a, #window-titlebar, .nav-tab, .os-icon, .archive-folder-item')) {
@@ -958,6 +1079,32 @@ export class DesktopBoxSpaceEngine {
   bindEvents() {
     window.addEventListener('resize', () => this.resize());
 
+    // Stage 28: Right-Click on any 3D Building / Container Structure / Shelf / Prop immediately deletes it!
+    window.addEventListener('contextmenu', (e) => {
+      this.updateMouseCoords(e);
+      if (this.isBlockedByUI(e)) return;
+      const hitStructInfo = this.pickStructureAtCursor();
+      const hitPet = this.pickPetAtCursor();
+      const structToDelete = hitStructInfo?.struct || (hitPet?.snappedStructureId ? this.structures.get(hitPet.snappedStructureId) : null);
+      if (structToDelete) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.removeContainerStructure(structToDelete.id, true);
+      }
+    }, true);
+
+    // Stage 28: Delete / Backspace key deletes the currently selected 3D Structure / Shelf / Prop!
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const activeTag = document.activeElement?.tagName?.toLowerCase();
+        if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+        if (this.selectedStructureId && this.structures.has(this.selectedStructureId)) {
+          e.preventDefault();
+          this.removeContainerStructure(this.selectedStructureId, true);
+        }
+      }
+    });
+
     window.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       this.updateMouseCoords(e);
@@ -966,25 +1113,28 @@ export class DesktopBoxSpaceEngine {
       const hitPet = this.pickPetAtCursor();
       const hitStructInfo = this.pickStructureAtCursor();
 
-      // If clicking on the pedestal base of an occupied container structure (or on any empty container structure),
-      // drag the Container Structure itself! If clicking on the Severed Head, drag the pure Severed Head (lifting it out)!
+      // Stage 28 Fix ("建筑拖动没法移动，没法删除？最好建筑那些都可以删除"):
+      // 1. If clicking any Structure/Shelf/Prop directly, OR clicking a head that is inside a Container Structure
+      //    (unless Alt/Shift is held or the head is in 360° rotation mode), drag the Structure (carrying the head with it)!
+      // 2. Holding Alt/Shift while dragging an enclosed head (or clicking `[📤 取出头颅]` on the floating HUD) lifts the pure head out!
       let dragStructure = null;
-      if (hitStructInfo) {
-        const s = hitStructInfo.struct;
-        const clickNearPedestal = hitStructInfo.hitPoint.y <= s.pos.y + 4.2 * s.scale;
-        if (!hitPet || !s.occupiedByPetId || clickNearPedestal) {
-          dragStructure = s;
-        }
+      const forceExtractHead = Boolean(e.altKey || e.shiftKey);
+      if (hitStructInfo && (!hitPet || !forceExtractHead)) {
+        dragStructure = hitStructInfo.struct;
+      } else if (hitPet && hitPet.snappedStructureId && !hitPet.isRotationMode && !forceExtractHead) {
+        dragStructure = this.structures.get(hitPet.snappedStructureId) || null;
       }
 
       if (dragStructure) {
         e.stopPropagation();
+        this.selectedStructureId = dragStructure.id;
+        this.refreshSelectedStructureHUD();
         this.interactionHighlightTimer = 1.5;
         this.wakeRender(2.0, true);
         const hitWorld = this.getMouseWorldAtZ(dragStructure.pos.z);
         this.pointerDownInfo = {
           structure: dragStructure,
-          pet: null,
+          pet: hitPet || null,
           startX: e.clientX,
           startY: e.clientY,
           lastX: e.clientX,
@@ -994,6 +1144,11 @@ export class DesktopBoxSpaceEngine {
           pickupSoundPlayed: false
         };
         return;
+      }
+
+      if (this.selectedStructureId) {
+        this.selectedStructureId = null;
+        this.onStructureSelect(null);
       }
 
       if (!hitPet) return;
@@ -1030,9 +1185,9 @@ export class DesktopBoxSpaceEngine {
         this.interactionHighlightTimer = 1.2;
         this.wakeRender(1.6, true);
 
-        // Case A: Dragging an Independent 3D Container Structure (`可放置的头颅收纳建筑`)
+        // Case A: Dragging an Independent 3D Container Structure, Shelf, or Desk Prop
         if (info.structure) {
-          if (info.movedDist > 4) {
+          if (info.movedDist > 3) {
             const struct = info.structure;
             const bz = this.getBoxBoundsAtZ(struct.pos.z, struct.scale);
             if (!info.pickupSoundPlayed) {
@@ -1040,25 +1195,58 @@ export class DesktopBoxSpaceEngine {
               soundEngine.playPickup(struct.pos.x / Math.max(1, bz.maxX));
             }
             const worldTarget = this.getMouseWorldAtZ(struct.pos.z).add(info.grabOffset);
+            const baseB = this.getBoxBounds();
             const clampedX = Math.max(bz.minX, Math.min(bz.maxX, worldTarget.x));
-            const clampedY = Math.max(bz.minY, Math.min(bz.maxY, worldTarget.y));
-            const supportY = this.settings.enableGravity
-              ? this.getSupportSurfaceY(clampedX, clampedY + 4, struct.pos.z, struct.scale, 0)
-              : clampedY;
+            const clampedY = Math.max(baseB.minY + 1.8, Math.min(baseB.maxY - 4.0, worldTarget.y));
 
-            struct.pos.x = clampedX;
-            struct.pos.y = supportY;
+            const prevShelfY = struct.pos.y;
+            const prevShelfX = struct.pos.x;
+
+            if (struct.isShelfStructure || !this.settings.enableGravity) {
+              struct.pos.x = clampedX;
+              struct.pos.y = clampedY;
+            } else {
+              const supportY = this.getSupportSurfaceY(clampedX, clampedY + 5, struct.pos.z, struct.scale, 0);
+              struct.pos.x = clampedX;
+              struct.pos.y = supportY;
+            }
+            this.clampStructureToBounds(struct);
             struct.node.position.copy(struct.pos);
 
-            // If a severed head is stored inside this structure, carry it along!
+            // If this is a 3D Shelf (`isShelfStructure`), update its landing platform bounds & carry any pets/containers on it!
+            if (struct.isShelfStructure && struct.platformRef) {
+              const plat = struct.platformRef;
+              const deltaX = struct.pos.x - prevShelfX;
+              const deltaY = struct.pos.y - prevShelfY;
+              plat.centerX = struct.pos.x;
+              plat.surfaceY = struct.pos.y;
+              plat.minX = struct.pos.x - (plat.halfW || 14);
+              plat.maxX = struct.pos.x + (plat.halfW || 14);
+              for (const p of this.pets.values()) {
+                if (!p.snappedStructureId && Math.abs((p.pos.y + (p.node.userData.baseBottomOffset ?? -10.8) * p.targetScale) - prevShelfY) < 2.2 &&
+                    p.pos.x >= plat.minX - 6 && p.pos.x <= plat.maxX + 6) {
+                  p.pos.x += deltaX;
+                  p.pos.y += deltaY;
+                  this.clampPetToBounds(p);
+                  p.node.position.copy(p.pos);
+                }
+              }
+            }
+
+            // If a severed head is stored inside this Container Structure, carry it along seamlessly!
             if (struct.occupiedByPetId && this.pets.has(struct.occupiedByPetId)) {
               const occPet = this.pets.get(struct.occupiedByPetId);
               const socketLocalY = struct.node.userData.headSocketLocalY ?? 13.5;
               occPet.pos.x = struct.pos.x;
               occPet.pos.z = struct.pos.z;
               occPet.pos.y = struct.pos.y + socketLocalY * struct.scale;
+              this.clampPetToBounds(occPet);
               occPet.node.position.copy(occPet.pos);
+              if (this.hoveredPetId === occPet.id) {
+                this.refreshHoverHUD();
+              }
             }
+            this.refreshSelectedStructureHUD();
             this.needsShadowRefresh = true;
           }
           return;
@@ -1076,7 +1264,6 @@ export class DesktopBoxSpaceEngine {
           } else {
             if (!info.pickupSoundPlayed) {
               info.pickupSoundPlayed = true;
-              // Lift the pure severed head right out of its container structure if it was inside one!
               if (pet.snappedStructureId) {
                 this.unsnapHeadFromStructure(pet);
               }
@@ -1092,6 +1279,7 @@ export class DesktopBoxSpaceEngine {
             );
             pet.pos.x = clampedX;
             pet.pos.y = clampedY;
+            this.clampPetToBounds(pet);
 
             const speedNorm = Math.min(1, Math.hypot(dx, dy) / 34);
             soundEngine.updateDragWhoosh(speedNorm, pet.pos.x / Math.max(1, bz.maxX));
@@ -1115,15 +1303,15 @@ export class DesktopBoxSpaceEngine {
       }
 
       const hitPet = this.pickPetAtCursor();
-      const hitStruct = !hitPet ? this.pickStructureAtCursor() : null;
+      const hitStruct = this.pickStructureAtCursor();
       const newId = hitPet ? hitPet.id : null;
       if (newId !== this.hoveredPetId) {
         this.hoveredPetId = newId;
         this.wakeRender(0.8);
       }
-      document.body.style.cursor = hitPet
-        ? (hitPet.isRotationMode ? 'grab' : 'pointer')
-        : (hitStruct ? 'move' : '');
+      document.body.style.cursor = hitStruct
+        ? 'move'
+        : (hitPet ? (hitPet.isRotationMode ? 'grab' : 'pointer') : '');
       if (this.hoveredPetId) {
         this.refreshHoverHUD();
       } else {
@@ -1142,8 +1330,11 @@ export class DesktopBoxSpaceEngine {
       if (info.structure) {
         const struct = info.structure;
         const bz = this.getBoxBoundsAtZ(struct.pos.z, struct.scale);
-        // If this empty container structure was dropped onto a free severed head, snap that head into it!
-        if (!struct.occupiedByPetId) {
+        // If clicked without dragging on an occupied structure's head, toggle rotation mode on that head
+        if (info.movedDist <= 4 && info.pet) {
+          this.toggleRotationMode(info.pet.id);
+        } else if (!struct.occupiedByPetId && !struct.isShelfStructure && !struct.isDecorProp) {
+          // If this empty container structure was dropped onto a free severed head, snap that head into it!
           for (const p of this.pets.values()) {
             if (!p.snappedStructureId && Math.hypot(p.pos.x - struct.pos.x, p.pos.z - struct.pos.z) < 13.5) {
               this.snapHeadIntoStructure(p, struct, true);
@@ -1152,6 +1343,7 @@ export class DesktopBoxSpaceEngine {
           }
         }
         soundEngine.playRelease(struct.pos.x / Math.max(1, bz.maxX));
+        this.refreshSelectedStructureHUD();
         this.onStructuresUpdate(this.getPlacedStructuresList());
         this.onPetStateUpdate(this.getSummonedList());
         return;
@@ -1163,7 +1355,6 @@ export class DesktopBoxSpaceEngine {
       if (info.movedDist <= 5) {
         this.toggleRotationMode(pet.id);
       } else if (info.pickupSoundPlayed) {
-        // Check if the severed head was dropped near an unoccupied placed Container Structure!
         const targetStruct = this.findNearestAvailableStructure(pet.pos, 14.8);
         if (targetStruct) {
           this.snapHeadIntoStructure(pet, targetStruct, true);
@@ -1182,27 +1373,25 @@ export class DesktopBoxSpaceEngine {
       const hitPet = this.pickPetAtCursor() || (this.hoveredPetId ? this.pets.get(this.hoveredPetId) : null);
       if (!hitPet) return;
 
-      // Only intercept wheel if cursor is actually over a 3D head pet!
       e.preventDefault();
       e.stopPropagation();
       this.interactionHighlightTimer = 1.6;
       this.wakeRender(1.8, true);
 
       const baseB = this.getBoxBounds();
-      // Stage 22 Macro Close-Up Wheel Step: smooth, generous step up to Z = +76 cm (39 cm from camera!)
-      const mag = Math.min(13.5, Math.max(6.2, Math.abs(e.deltaY) * 0.075));
+      const mag = Math.min(11.5, Math.max(5.0, Math.abs(e.deltaY) * 0.065));
       const stepCm = (e.deltaY > 0 ? -mag : mag) * this.settings.wheelDepthStep;
       const nextZ = hitPet.pos.z + stepCm;
       const bz = this.getBoxBoundsAtZ(nextZ, hitPet.targetScale);
       const panX = hitPet.pos.x / Math.max(1, bz.maxX);
 
-      if (nextZ < baseB.minZ + 4) {
-        hitPet.pos.z = baseB.minZ + 4;
+      if (nextZ < bz.minZ) {
+        hitPet.pos.z = bz.minZ;
         hitPet.vel.z = 1.2;
         soundEngine.playBoxWallCollision(0.75, 'back_wall', panX);
         this.onBoxCollisionVisual('back');
-      } else if (nextZ > baseB.maxZ - 2) {
-        hitPet.pos.z = baseB.maxZ - 2;
+      } else if (nextZ > bz.maxZ) {
+        hitPet.pos.z = bz.maxZ;
         hitPet.vel.z = -1.2;
         soundEngine.playBoxWallCollision(0.85, 'front_glass', panX);
         this.onBoxCollisionVisual('front');
@@ -1213,26 +1402,25 @@ export class DesktopBoxSpaceEngine {
         soundEngine.playDepthTick(depthRatio, panX);
       }
 
-      // Update macro close-up scale boost and clamp X/Y smoothly to the new depth's screen frustum
       hitPet.targetScale = this.computeMacroTargetScale(hitPet.pos.z, hitPet.baseScale || 0.76);
-      const newBounds = this.getBoxBoundsAtZ(hitPet.pos.z, hitPet.targetScale);
-      hitPet.pos.x = Math.max(newBounds.minX, Math.min(newBounds.maxX, hitPet.pos.x));
-      hitPet.pos.y = Math.max(newBounds.minY, Math.min(newBounds.maxY, hitPet.pos.y));
+      this.clampPetToBounds(hitPet);
 
-      // If the head is stored inside a Container Structure, move/scale the Container Structure along with it!
       if (hitPet.snappedStructureId && this.structures.has(hitPet.snappedStructureId)) {
         const struct = this.structures.get(hitPet.snappedStructureId);
         struct.pos.z = hitPet.pos.z;
         struct.pos.x = hitPet.pos.x;
         struct.scale = hitPet.targetScale;
         struct.pos.y = this.getSupportSurfaceY(struct.pos.x, struct.pos.y + 4, struct.pos.z, struct.scale, 0);
+        this.clampStructureToBounds(struct);
         struct.node.position.copy(struct.pos);
         struct.node.scale.setScalar(struct.scale);
         const socketLocalY = struct.node.userData.headSocketLocalY ?? 13.5;
         hitPet.pos.y = struct.pos.y + socketLocalY * struct.scale;
+        this.clampPetToBounds(hitPet);
       }
 
       this.refreshHoverHUD();
+      this.refreshSelectedStructureHUD();
       this.onStructuresUpdate(this.getPlacedStructuresList());
       this.onPetStateUpdate(this.getSummonedList());
     }, { passive: false, capture: true });
@@ -1487,13 +1675,13 @@ export class DesktopBoxSpaceEngine {
         pet.vel.x = -Math.abs(pet.vel.x) * 0.65;
       }
 
-      if (!this.settings.enableGravity && pet.pos.y < bz.minY) {
+      if (pet.pos.y < bz.minY) {
         pet.pos.y = bz.minY;
-        if (Math.abs(pet.vel.y) > 0.25) {
+        if (!this.settings.enableGravity && Math.abs(pet.vel.y) > 0.25) {
           soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.5), 'side', panX);
           this.onBoxCollisionVisual('bottom');
         }
-        pet.vel.y = Math.abs(pet.vel.y) * 0.65;
+        pet.vel.y = Math.max(0, pet.vel.y);
       } else if (pet.pos.y > bz.maxY) {
         pet.pos.y = bz.maxY;
         if (Math.abs(pet.vel.y) > 0.25) {
@@ -1503,13 +1691,7 @@ export class DesktopBoxSpaceEngine {
         pet.vel.y = -Math.abs(pet.vel.y) * 0.65;
       }
 
-      if (pet.pos.z < bz.minZ + 4) {
-        pet.pos.z = bz.minZ + 4;
-        pet.vel.z = Math.abs(pet.vel.z) * 0.5;
-      } else if (pet.pos.z > bz.maxZ - 2) {
-        pet.pos.z = bz.maxZ - 2;
-        pet.vel.z = -Math.abs(pet.vel.z) * 0.5;
-      }
+      this.clampPetToBounds(pet);
 
       // Lifeless specimen mode: no lively vertical bobbing ("不要眨眼，而且头不要跟随鼠标旋转，就是死人表情默认那种感觉")
       pet.node.position.set(pet.pos.x, pet.pos.y, pet.pos.z);

@@ -241,27 +241,158 @@ function fitImportedHead(scene) {
 }
 
 const PRESET_MORPH_BIASES = {
-  fangyaoping:      { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.14, noseBridge: 0.06, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.04 },
-  user_photo:       { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-  chuxia:           { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-  female_realistic: { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
-  linxi:            { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
-  female_2:         { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-  suwan:            { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-  female_3:         { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-  qianxue:          { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-  female_gentle:    { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
-  shenzhiwei:       { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
+  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', jawVLine: 0.08, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.04, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.04 },
+  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', jawVLine: -0.18, chinLength: -0.22, cheekSoftness: 0.28, noseBridge: 0.02, eyeAlmond: 0.18, eyeTilt: -0.08, lipFullness: 0.12 },
+  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', jawVLine: -0.18, chinLength: -0.22, cheekSoftness: 0.28, noseBridge: 0.02, eyeAlmond: 0.18, eyeTilt: -0.08, lipFullness: 0.12 },
+  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', jawVLine: 0.24, chinLength: -0.04, cheekSoftness: 0.16, noseBridge: 0.22, eyeAlmond: 0.12, eyeTilt: 0.16, lipFullness: 0.10 },
+  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', jawVLine: 0.24, chinLength: -0.04, cheekSoftness: 0.16, noseBridge: 0.22, eyeAlmond: 0.12, eyeTilt: 0.16, lipFullness: 0.10 },
+  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', jawVLine: 0.22, chinLength: 0.04, cheekSoftness: 0.04, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.10, lipFullness: 0.06 },
+  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', jawVLine: 0.22, chinLength: 0.04, cheekSoftness: 0.04, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.10, lipFullness: 0.06 },
+  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', jawVLine: 0.26, chinLength: -0.16, cheekSoftness: 0.22, noseBridge: 0.10, eyeAlmond: 0.20, eyeTilt: -0.04, lipFullness: 0.16 },
+  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', jawVLine: 0.26, chinLength: -0.16, cheekSoftness: 0.22, noseBridge: 0.10, eyeAlmond: 0.20, eyeTilt: -0.04, lipFullness: 0.16 },
+  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', jawVLine: 0.16, chinLength: 0.14, cheekSoftness: -0.12, noseBridge: 0.20, eyeAlmond: 0.04, eyeTilt: 0.14, lipFullness: 0.02 },
+  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', jawVLine: 0.16, chinLength: 0.14, cheekSoftness: -0.12, noseBridge: 0.20, eyeAlmond: 0.04, eyeTilt: 0.14, lipFullness: 0.02 },
 };
+
+const eyebrowTextureCache = new Map();
+
+/**
+ * Stage 28 · 8 款中韩根根分明真毛流眉形生成器 (`buildEyebrowTextureForStyle`)
+ * Directly matches MakeHuman's Eyebrows UV layout:
+ * - Left Brow (`x > 0`): `u` from `0.03` (inner head) -> `0.95` (outer tail), `v` centered at `0.405` (`0.318..0.490`)
+ * - Right Brow (`x < 0`): `u` from `0.96` (inner head) -> `0.03` (outer tail), `v` centered at `0.670` (`0.580..0.760`)
+ */
+export function buildEyebrowTextureForStyle(styleId = 'cn_scholar_natural', hairColorHex = '#181416') {
+  if (typeof document === 'undefined') return null;
+  const cacheKey = `${styleId}_${hairColorHex}`;
+  if (eyebrowTextureCache.has(cacheKey)) {
+    return eyebrowTextureCache.get(cacheKey);
+  }
+
+  const w = 1024;
+  const h = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+
+  // Style parameters: thickness, archPeak (in v), tailSlope, lengthFactor, mistAlpha, strokeCount, wildHead
+  const STYLE_PARAMS = {
+    cn_scholar_natural:  { thick: 1.00, arch: 0.016, tailDrop: 0.010, len: 0.94, mist: 0.34, strokes: 480, wild: 0.35, color: [34, 27, 25] },
+    kr_straight_mist:    { thick: 1.16, arch: 0.002, tailDrop: -0.004, len: 0.92, mist: 0.48, strokes: 440, wild: 0.15, color: [62, 46, 40] },
+    kr_idol_arch:        { thick: 0.86, arch: 0.028, tailDrop: 0.022, len: 0.98, mist: 0.36, strokes: 520, wild: 0.40, color: [42, 32, 30] },
+    cn_willow_classical: { thick: 0.54, arch: 0.038, tailDrop: 0.028, len: 0.98, mist: 0.26, strokes: 420, wild: 0.10, color: [28, 24, 26] },
+    kr_sweet_droop:      { thick: 0.96, arch: -0.008, tailDrop: 0.032, len: 0.90, mist: 0.42, strokes: 450, wild: 0.25, color: [68, 48, 42] },
+    cn_cold_sword:       { thick: 0.92, arch: 0.014, tailDrop: -0.026, len: 0.98, mist: 0.38, strokes: 540, wild: 0.45, color: [24, 20, 22] },
+    kr_wild_feathered:   { thick: 1.22, arch: 0.022, tailDrop: 0.012, len: 0.96, mist: 0.24, strokes: 640, wild: 0.85, color: [30, 24, 22] },
+    cn_tang_moth:        { thick: 0.82, arch: -0.012, tailDrop: 0.018, len: 0.76, mist: 0.44, strokes: 380, wild: 0.20, color: [32, 28, 30] },
+  };
+  const sp = STYLE_PARAMS[styleId] || STYLE_PARAMS.cn_scholar_natural;
+  const [cr, cg, cb] = sp.color;
+
+  const drawSingleBrowStrip = (uHead, uTail, vCenter) => {
+    const dir = uTail > uHead ? 1 : -1;
+    const spanU = Math.abs(uTail - uHead) * sp.len;
+
+    const getSpineV = (t) => {
+      // t = 0 (inner head) -> 1 (outer tail)
+      // Note: in Eyebrow UV, smaller v is HIGHER on the forehead!
+      const archCurve = Math.sin(Math.pow(t, 0.85) * Math.PI) * sp.arch;
+      const tailShift = Math.pow(Math.max(0, t - 0.55) / 0.45, 1.5) * sp.tailDrop;
+      return vCenter - archCurve + tailShift;
+    };
+
+    const getHalfThickV = (t) => {
+      const headTaper = Math.pow(Math.min(1, t / 0.16), 0.7);
+      const tailTaper = Math.pow(Math.max(0, 1 - Math.max(0, (t - 0.58) / 0.42)), 1.25);
+      return 0.036 * sp.thick * headTaper * tailTaper;
+    };
+
+    // 1. Soft airbrushed brow-powder mist base
+    for (let step = 0; step < 65; step++) {
+      const t = step / 64;
+      const u = uHead + dir * t * spanU;
+      const v = getSpineV(t);
+      const rx = w * 0.022;
+      const ry = Math.max(2, h * getHalfThickV(t) * 1.15);
+      ctx.save();
+      ctx.translate(u * w, v * h);
+      ctx.scale(1, ry / rx);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      const a = sp.mist * Math.sin(t * Math.PI) * 0.18;
+      g.addColorStop(0, `rgba(${cr}, ${cg}, ${cb}, ${a})`);
+      g.addColorStop(1, `rgba(${cr}, ${cg}, ${cb}, 0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 2. 500+ individual tapered Bezier hair strokes (根根分明真毛流)
+    let seed = (styleId.charCodeAt(0) * 997 + styleId.charCodeAt(3) * 131 + (dir > 0 ? 17 : 53)) >>> 0;
+    const rnd = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+
+    ctx.lineCap = 'round';
+    for (let i = 0; i < sp.strokes; i++) {
+      const t = Math.pow(rnd(), 0.92) * 0.97;
+      const u0 = uHead + dir * t * spanU;
+      const spineV = getSpineV(t);
+      const ht = getHalfThickV(t);
+      const offsetNorm = (rnd() - 0.5) * 1.65;
+      const v0 = spineV + offsetNorm * ht;
+
+      // Hair growth angle: inner head hairs brush upward (`-v`), mid/tail hairs stream outward along spine
+      const isInnerHead = t < 0.20;
+      const strokeLenU = (0.042 + rnd() * 0.048) * (1.0 - t * 0.32);
+      const u1 = u0 + dir * strokeLenU * (isInnerHead ? (0.45 + 0.55 * (t / 0.20)) : 1.0);
+      const spineV1 = getSpineV(Math.min(1, t + strokeLenU));
+      const upBrush = isInnerHead ? (-0.028 * (1.0 - t / 0.20) * (0.6 + sp.wild)) : 0;
+      const convergeToSpine = spineV1 + offsetNorm * ht * (t > 0.65 ? 0.25 : 0.72) + upBrush;
+
+      const cpU = (u0 + u1) * 0.5 + dir * 0.008;
+      const cpV = (v0 + convergeToSpine) * 0.5 - 0.006 * (1 - t);
+
+      const alpha = (0.38 + rnd() * 0.52) * Math.min(1, t / 0.06) * Math.min(1, (1 - t) / 0.08);
+      const shade = 0.82 + rnd() * 0.34;
+      ctx.strokeStyle = `rgba(${Math.round(cr * shade)}, ${Math.round(cg * shade)}, ${Math.round(cb * shade)}, ${alpha.toFixed(3)})`;
+      ctx.lineWidth = (0.85 + rnd() * 1.25) * (t > 0.75 ? 0.72 : 1.0);
+
+      ctx.beginPath();
+      ctx.moveTo(u0 * w, v0 * h);
+      ctx.quadraticCurveTo(cpU * w, cpV * h, u1 * w, convergeToSpine * h);
+      ctx.stroke();
+    }
+  };
+
+  // Left Brow (u: 0.04 -> 0.94, vCenter: 0.408) & Right Brow (u: 0.95 -> 0.05, vCenter: 0.672)
+  drawSingleBrowStrip(0.045, 0.945, 0.408);
+  drawSingleBrowStrip(0.945, 0.045, 0.672);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  eyebrowTextureCache.set(cacheKey, tex);
+  return tex;
+}
 
 const characterSkinOverlayCache = new Map();
 
-function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
+/**
+ * Stage 28 · 6 位角色专属中韩少女皮肤肌理、骨相修容、卧蚕/黑眼圈、腮红、唇妆与特征痣贴图生成器
+ * Uses the EXACT verified MakeHuman face UV coordinates (`u: 0.78..0.95` top-to-bottom, `v: 0.44..0.59` left-to-right, midline `v = 0.5168`)!
+ */
+function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo', eyebrowStyle = '') {
   if (!baseSkinMap?.image || typeof document === 'undefined') return baseSkinMap;
   const img = baseSkinMap.image;
   const w = img.width || 1536;
   const h = img.height || 1536;
-  const cacheKey = `${presetKey}_${w}x${h}`;
+  const cacheKey = `v28_${presetKey}_${eyebrowStyle}_${w}x${h}`;
   if (characterSkinOverlayCache.has(cacheKey)) {
     return characterSkinOverlayCache.get(cacheKey);
   }
@@ -272,60 +403,155 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
 
-  // Subtle post-mortem anatomical depth & dermal micro-variation (告别模拟人生平涂感与硅胶娃娃塑料感)
-  const paintSoftZone = (u, v, rx, ry, colInner, colOuter = 'rgba(0,0,0,0)') => {
+  // Helper: paint an elliptical soft radial gradient in MakeHuman face UV space
+  // Remember: `u` is vertical (forehead 0.802 -> chin 0.946), `v` is horizontal (left cheek 0.460 <- midline 0.5168 -> right cheek 0.573)
+  const paintFaceUV = (u, v, ru, rv, colInner, colMid = null, colOuter = 'rgba(0,0,0,0)') => {
     ctx.save();
     ctx.translate(u * w, v * h);
-    ctx.scale(1, ry / Math.max(rx, 1e-4));
-    const g = ctx.createRadialGradient(0, 0, rx * w * 0.05, 0, 0, rx * w);
+    ctx.scale(1, (rv * h) / Math.max(ru * w, 1e-4));
+    const rad = ru * w;
+    const g = ctx.createRadialGradient(0, 0, rad * 0.04, 0, 0, rad);
     g.addColorStop(0, colInner);
+    if (colMid) g.addColorStop(0.52, colMid);
     g.addColorStop(1, colOuter);
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.arc(0, 0, rx * w, 0, Math.PI * 2);
+    ctx.arc(0, 0, rad, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   };
 
-  // Cool post-mortem infraorbital / tear-trough depth under lower eyelids & eye sockets
-  paintSoftZone(0.415, 0.432, 0.048, 0.024, 'rgba(68, 42, 58, 0.14)');
-  paintSoftZone(0.585, 0.432, 0.048, 0.024, 'rgba(68, 42, 58, 0.14)');
-  // Alar nasal wing & sub-nasal philtrum shadow
-  paintSoftZone(0.468, 0.496, 0.024, 0.020, 'rgba(72, 36, 34, 0.16)');
-  paintSoftZone(0.532, 0.496, 0.024, 0.020, 'rgba(72, 36, 34, 0.16)');
-  paintSoftZone(0.500, 0.512, 0.018, 0.022, 'rgba(78, 40, 38, 0.13)');
-  // Sub-labial chin hollow & temple cool pallor
-  paintSoftZone(0.500, 0.592, 0.036, 0.018, 'rgba(64, 36, 38, 0.14)');
-  paintSoftZone(0.320, 0.390, 0.065, 0.075, 'rgba(145, 162, 188, 0.08)');
-  paintSoftZone(0.680, 0.390, 0.065, 0.075, 'rgba(145, 162, 188, 0.08)');
+  // 1. Softly neutralize the baked-in Western eyebrow on the base skin texture (at u=0.8252, v=0.4815 & 0.5522)
+  // so our 8 custom East Asian eyebrow styles have zero ghosting underneath!
+  paintFaceUV(0.8250, 0.4815, 0.0085, 0.022, 'rgba(232, 196, 176, 0.72)', 'rgba(232, 196, 176, 0.38)');
+  paintFaceUV(0.8250, 0.5522, 0.0085, 0.022, 'rgba(232, 196, 176, 0.72)', 'rgba(232, 196, 176, 0.38)');
 
-  const paintMole = (u, v, radPx = 2.4, alpha = 0.72) => {
+  // 2. Character-Specific Complexion Undertone, Blush, Eye Makeup, Aegyo-sal/Dark Circles, Nose & Lip Tint
+  const isChuxia = presetKey === 'user_photo' || presetKey === 'chuxia';
+  const isFang = presetKey === 'fangyaoping';
+  const isLinxi = presetKey === 'female_realistic' || presetKey === 'linxi';
+  const isSuwan = presetKey === 'female_2' || presetKey === 'suwan';
+  const isQianxue = presetKey === 'female_3' || presetKey === 'qianxue';
+  const isShen = presetKey === 'female_gentle' || presetKey === 'shenzhiwei';
+
+  if (isChuxia) {
+    // 🍑 初夏 (19岁中式圆润娃娃脸 · 蜜桃粉白婴儿肌 + 饱满圆润蜜桃腮红 + 卧蚕高光 + 水润蜜桃咬唇)
+    paintFaceUV(0.865, 0.5168, 0.115, 0.088, 'rgba(255, 242, 238, 0.24)', 'rgba(255, 236, 232, 0.12)');
+    // Plump round baby-face peach apple-cheek blush (苹果肌大面积蜜桃粉红晕)
+    paintFaceUV(0.8625, 0.4740, 0.019, 0.022, 'rgba(244, 114, 138, 0.36)', 'rgba(248, 148, 164, 0.18)');
+    paintFaceUV(0.8625, 0.5596, 0.019, 0.022, 'rgba(244, 114, 138, 0.36)', 'rgba(248, 148, 164, 0.18)');
+    // Cute pinky nose-tip & chin blush (幼态鼻头与下巴微粉)
+    paintFaceUV(0.8682, 0.5168, 0.0075, 0.0085, 'rgba(240, 110, 128, 0.30)');
+    paintFaceUV(0.9380, 0.5168, 0.0110, 0.0130, 'rgba(240, 120, 138, 0.22)');
+    // Sweet Aegyo-sal (卧蚕珠光提亮 + 卧蚕下缘浅影)
+    paintFaceUV(0.8458, 0.4835, 0.0032, 0.013, 'rgba(255, 246, 240, 0.42)');
+    paintFaceUV(0.8458, 0.5501, 0.0032, 0.013, 'rgba(255, 246, 240, 0.42)');
+    paintFaceUV(0.8492, 0.4835, 0.0028, 0.013, 'rgba(135, 78, 76, 0.22)');
+    paintFaceUV(0.8492, 0.5501, 0.0028, 0.013, 'rgba(135, 78, 76, 0.22)');
+    // Juicy peach-strawberry gradient petal lips (蜜桃粉嫩咬唇妆)
+    paintFaceUV(0.8935, 0.5168, 0.0052, 0.021, 'rgba(228, 78, 104, 0.55)', 'rgba(238, 118, 136, 0.25)');
+    paintFaceUV(0.9002, 0.5168, 0.0058, 0.020, 'rgba(224, 72, 98, 0.58)', 'rgba(238, 118, 136, 0.26)');
+  } else if (isFang) {
+    // 📖 方尧平 (19岁广东怀集高考女状元 · 岭南暖象牙素颜学生肌 + 熬夜刷题淡青眼圈 + 素颜淡粉唇)
+    paintFaceUV(0.865, 0.5168, 0.115, 0.088, 'rgba(248, 222, 198, 0.20)', 'rgba(242, 214, 190, 0.10)');
+    // Late-night study infraorbital dark circles (高三熬夜刷题淡青紫黑眼圈)
+    paintFaceUV(0.8485, 0.4840, 0.0065, 0.015, 'rgba(76, 56, 78, 0.26)', 'rgba(92, 68, 86, 0.12)');
+    paintFaceUV(0.8485, 0.5496, 0.0065, 0.015, 'rgba(76, 56, 78, 0.26)', 'rgba(92, 68, 86, 0.12)');
+    // Barely-there natural student cheek warmth
+    paintFaceUV(0.8640, 0.4730, 0.015, 0.016, 'rgba(215, 128, 122, 0.15)');
+    paintFaceUV(0.8640, 0.5606, 0.015, 0.016, 'rgba(215, 128, 122, 0.15)');
+    // Un-made-up natural pale rose student lips
+    paintFaceUV(0.8935, 0.5168, 0.0048, 0.020, 'rgba(188, 104, 110, 0.36)');
+    paintFaceUV(0.9000, 0.5168, 0.0052, 0.019, 'rgba(184, 98, 106, 0.38)');
+  } else if (isLinxi) {
+    // ✨ 林汐 (21岁韩系财阀千金V脸 · 韩系冷白水光瓷肌 + 立体鼻影山根高光 + 烟熏大地眼尾 + 冷调梅子浆果唇)
+    paintFaceUV(0.865, 0.5168, 0.115, 0.088, 'rgba(245, 240, 252, 0.28)', 'rgba(238, 232, 248, 0.14)');
+    // Korean high nose-bridge highlight & bilateral nose contour shadow (韩式高光山根与立体鼻影)
+    paintFaceUV(0.8480, 0.5168, 0.0180, 0.0032, 'rgba(255, 252, 255, 0.46)');
+    paintFaceUV(0.8675, 0.5168, 0.0042, 0.0042, 'rgba(255, 250, 252, 0.52)');
+    paintFaceUV(0.8420, 0.5085, 0.0140, 0.0040, 'rgba(92, 68, 64, 0.24)');
+    paintFaceUV(0.8420, 0.5251, 0.0140, 0.0040, 'rgba(92, 68, 64, 0.24)');
+    // Korean smoky champagne-taupe outer eyelid & upturned cat-eye liner shadow
+    paintFaceUV(0.8365, 0.4755, 0.0065, 0.014, 'rgba(72, 44, 52, 0.38)', 'rgba(110, 72, 78, 0.18)');
+    paintFaceUV(0.8365, 0.5581, 0.0065, 0.014, 'rgba(72, 44, 52, 0.38)', 'rgba(110, 72, 78, 0.18)');
+    // Plump Korean Aegyo-sal highlight
+    paintFaceUV(0.8458, 0.4835, 0.0028, 0.013, 'rgba(255, 248, 245, 0.45)');
+    paintFaceUV(0.8458, 0.5501, 0.0028, 0.013, 'rgba(255, 248, 245, 0.45)');
+    // High oblique cheekbone cool rose-mauve blush
+    paintFaceUV(0.8580, 0.4675, 0.015, 0.018, 'rgba(198, 92, 128, 0.26)');
+    paintFaceUV(0.8580, 0.5661, 0.015, 0.018, 'rgba(198, 92, 128, 0.26)');
+    // Rich Korean velvet plum-berry lip tint (韩系冷调梅子玫瑰唇釉)
+    paintFaceUV(0.8935, 0.5168, 0.0052, 0.021, 'rgba(152, 34, 66, 0.68)', 'rgba(178, 58, 88, 0.32)');
+    paintFaceUV(0.9002, 0.5168, 0.0058, 0.020, 'rgba(142, 28, 58, 0.72)', 'rgba(178, 58, 88, 0.35)');
+  } else if (isSuwan) {
+    // 🌸 苏晚 (20岁江南古典瓜子脸 · 温润羊脂暖玉肌 + 杏粉远山眼影 + 古典花瓣点绛唇)
+    paintFaceUV(0.865, 0.5168, 0.115, 0.088, 'rgba(255, 244, 228, 0.24)', 'rgba(252, 238, 218, 0.12)');
+    // Classical warm cinnabar-apricot upper lid & outer corner tint
+    paintFaceUV(0.8355, 0.4795, 0.0060, 0.014, 'rgba(186, 88, 82, 0.28)');
+    paintFaceUV(0.8355, 0.5541, 0.0060, 0.014, 'rgba(186, 88, 82, 0.28)');
+    // Gentle classical apricot cheek flush
+    paintFaceUV(0.8635, 0.4725, 0.016, 0.018, 'rgba(224, 118, 108, 0.26)');
+    paintFaceUV(0.8635, 0.5611, 0.016, 0.018, 'rgba(224, 118, 108, 0.26)');
+    // Classical Chinese inner-lip cinnabar gradient ("点绛唇"：唇心浓朱砂、唇周柔和)
+    paintFaceUV(0.8962, 0.5168, 0.0045, 0.013, 'rgba(196, 38, 48, 0.75)', 'rgba(212, 82, 88, 0.32)');
+  } else if (isQianxue) {
+    // 💖 千雪 (18岁韩系初恋甜美心形脸 / 古典舞首席 · 舞台雪瓷肌 + 眼下桃花红晕 + 浓郁山茶红唇)
+    paintFaceUV(0.865, 0.5168, 0.115, 0.088, 'rgba(255, 248, 250, 0.32)', 'rgba(255, 242, 246, 0.16)');
+    // Dramatic stage cherry-blossom eye corner & high under-eye blush (舞台桃花眼尾与眼下微醺红晕)
+    paintFaceUV(0.8390, 0.4730, 0.0075, 0.015, 'rgba(218, 52, 82, 0.42)');
+    paintFaceUV(0.8390, 0.5606, 0.0075, 0.015, 'rgba(218, 52, 82, 0.42)');
+    paintFaceUV(0.8555, 0.4745, 0.016, 0.020, 'rgba(236, 88, 114, 0.38)', 'rgba(244, 128, 148, 0.18)');
+    paintFaceUV(0.8555, 0.5591, 0.016, 0.020, 'rgba(236, 88, 114, 0.38)', 'rgba(244, 128, 148, 0.18)');
+    // Vibrant camellia-crimson stage lips
+    paintFaceUV(0.8935, 0.5168, 0.0054, 0.021, 'rgba(208, 28, 52, 0.74)', 'rgba(224, 64, 84, 0.36)');
+    paintFaceUV(0.9002, 0.5168, 0.0060, 0.020, 'rgba(198, 24, 48, 0.78)', 'rgba(224, 64, 84, 0.38)');
+  } else if (isShen) {
+    // ❄️ 沈知微 (23岁中式清冷高智御姐脸 · 冷调象牙橄榄肌 + 深邃大地修容 + 干枯玫瑰哑光唇)
+    paintFaceUV(0.865, 0.5168, 0.115, 0.088, 'rgba(236, 222, 210, 0.22)');
+    // Deep intellectual eye-socket & cheekbone hollow contour (高智感眼窝与颊凹修容)
+    paintFaceUV(0.8345, 0.4820, 0.0070, 0.016, 'rgba(86, 56, 48, 0.34)');
+    paintFaceUV(0.8345, 0.5516, 0.0070, 0.016, 'rgba(86, 56, 48, 0.34)');
+    paintFaceUV(0.8780, 0.4610, 0.018, 0.014, 'rgba(96, 64, 54, 0.24)');
+    paintFaceUV(0.8780, 0.5726, 0.018, 0.014, 'rgba(96, 64, 54, 0.24)');
+    // Dried-rose matte lips (干枯玫瑰哑光豆沙唇)
+    paintFaceUV(0.8935, 0.5168, 0.0050, 0.021, 'rgba(148, 58, 68, 0.62)', 'rgba(168, 82, 90, 0.28)');
+    paintFaceUV(0.9002, 0.5168, 0.0056, 0.020, 'rgba(142, 54, 64, 0.65)', 'rgba(168, 82, 90, 0.30)');
+  }
+
+  // 3. Universal realistic anatomical micro-depth on TRUE face UV coordinates (alar wings, philtrum dimple, sub-labial crease)
+  paintFaceUV(0.8729, 0.5008, 0.0055, 0.0055, 'rgba(78, 38, 34, 0.22)');
+  paintFaceUV(0.8729, 0.5329, 0.0055, 0.0055, 'rgba(78, 38, 34, 0.22)');
+  paintFaceUV(0.8825, 0.5168, 0.0055, 0.0040, 'rgba(88, 46, 42, 0.16)');
+  paintFaceUV(0.9120, 0.5168, 0.0055, 0.0110, 'rgba(74, 42, 40, 0.18)');
+
+  // 4. Signature Beauty Marks (特征美人痣)
+  const paintMole = (u, v, radPx = 2.4, alpha = 0.78) => {
     const cx = u * w;
     const cy = v * h;
     const grad = ctx.createRadialGradient(cx, cy, 0.2, cx, cy, radPx);
-    grad.addColorStop(0.0, `rgba(42, 24, 20, ${alpha})`);
-    grad.addColorStop(0.55, `rgba(62, 38, 30, ${alpha * 0.65})`);
-    grad.addColorStop(1.0, 'rgba(62, 38, 30, 0.0)');
+    grad.addColorStop(0.0, `rgba(38, 20, 16, ${alpha})`);
+    grad.addColorStop(0.55, `rgba(58, 34, 26, ${alpha * 0.65})`);
+    grad.addColorStop(1.0, 'rgba(58, 34, 26, 0.0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(cx, cy, radPx, 0, Math.PI * 2);
     ctx.fill();
   };
 
-  if (presetKey === 'user_photo' || presetKey === 'chuxia') {
-    paintMole(0.8847, 0.5543, w * 0.0014, 0.72);
-    paintMole(0.8895, 0.5640, w * 0.0015, 0.75);
-    paintMole(0.9042, 0.5718, w * 0.0014, 0.72);
-  } else if (presetKey === 'fangyaoping') {
-    paintMole(0.8510, 0.4510, w * 0.0012, 0.62);
-  } else if (presetKey === 'female_realistic' || presetKey === 'linxi') {
-    paintMole(0.8475, 0.4685, w * 0.0014, 0.76);
-  } else if (presetKey === 'female_2' || presetKey === 'suwan') {
-    paintMole(0.8492, 0.5562, w * 0.0013, 0.74);
-  } else if (presetKey === 'female_3' || presetKey === 'qianxue') {
-    paintMole(0.8615, 0.5138, w * 0.0013, 0.75);
-  } else if (presetKey === 'female_gentle' || presetKey === 'shenzhiwei') {
-    paintMole(0.8915, 0.4775, w * 0.0014, 0.74);
+  if (isChuxia) {
+    paintMole(0.8847, 0.5543, w * 0.0015, 0.78);
+    paintMole(0.8895, 0.5640, w * 0.0016, 0.82);
+    paintMole(0.9042, 0.5718, w * 0.0015, 0.78);
+  } else if (isFang) {
+    paintMole(0.8510, 0.4510, w * 0.0013, 0.68);
+  } else if (isLinxi) {
+    paintMole(0.8475, 0.4685, w * 0.0016, 0.85);
+  } else if (isSuwan) {
+    paintMole(0.8492, 0.5562, w * 0.0015, 0.82);
+  } else if (isQianxue) {
+    paintMole(0.8585, 0.5168, w * 0.0016, 0.85);
+  } else if (isShen) {
+    paintMole(0.8885, 0.4765, w * 0.0016, 0.82);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -445,12 +671,302 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   });
 }
 
+/**
+ * Stage 28 · 中韩青年女头型 3D 骨相与软组织精雕引擎 (`applyEastAsianCraniofacialSculpt`)
+ * 1. Baseline De-American-Asian (`去美式亚裔高颧骨方腮修正`):
+ *    - Narrows protruding lateral zygomatic arches (`|x| in [0.040, 0.078], y in [-0.020, 0.028], z in [0.008, 0.078]`)
+ *    - Softens angular square gonial jaw corners (`|x| in [0.034, 0.068], y in [-0.065, -0.020]`)
+ *    - Smooths heavy outer brow bone & lifts East Asian high cranial crown (`高颅顶`)
+ * 2. Applies 6 Distinct Chinese & Korean Young Female Face Archetypes (`faceArchetype`):
+ *    - `cn_round_babyface` (`🍑 中式幼态圆润娃娃脸` — 初夏): Plump round baby-fat cheeks, short rounded moon-chin, round puppy eyes
+ *    - `kr_idol_vline` (`✨ 韩系财阀千金V脸` — 林汐): Narrow Korean face, contoured V-jaw, plump anterior apple muscles + aegyo-sal, upturned nose & cat eyes
+ *    - `cn_oval_scholar` (`📖 中式清秀书卷鹅蛋脸` — 方尧平): Authentic southern Chinese 19yo female student oval face
+ *    - `cn_classical_melon` (`🌸 江南古典瓜子脸` — 苏晚): Narrow temples, smooth upper cheeks tapering to slender melon-seed chin, phoenix eyes
+ *    - `kr_sweet_heart` (`💖 韩系甜美心形脸` — 千雪): Full heart-shaped upper apple cheeks tapering to compact petite chin, dewy eyes & fuller lips
+ *    - `cn_cold_royal` (`❄️ 中式清冷高智御姐脸` — 沈知微): Slightly elongated intellectual proportion, sculpted cheeks, high straight nose bridge
+ * 3. Sculpt 3D `Eyebrows` mesh geometry to match the selected `eyebrowStyle` arch/droop/sword slope.
+ */
+export function applyEastAsianCraniofacialSculpt(rootGroup, faceArchetype = 'cn_oval_scholar', eyebrowStyle = 'cn_scholar_natural') {
+  const dazContainer = rootGroup?.getObjectByName('RealDazHeadContainer');
+  if (!dazContainer) return;
+
+  const smoothBell = (val, center, halfWidth) => {
+    const d = Math.abs(val - center) / Math.max(halfWidth, 1e-5);
+    if (d >= 1.0) return 0.0;
+    const t = 1.0 - d * d;
+    return t * t;
+  };
+
+  dazContainer.traverse((child) => {
+    if (!child.isMesh || !child.geometry?.attributes?.position) return;
+    const geo = child.geometry;
+    const posAttr = geo.attributes.position;
+    if (!geo.userData.rawDazPositions) {
+      geo.userData.rawDazPositions = Float32Array.from(posAttr.array);
+    }
+    const base = geo.userData.rawDazPositions;
+    const out = posAttr.array;
+    const count = posAttr.count;
+    const isBrowMesh = child.name === 'Eyebrows' || child.material?.name === 'Eyebrow';
+
+    for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
+      let x = base[i3];
+      let y = base[i3 + 1];
+      let z = base[i3 + 2];
+      const absX = Math.abs(x);
+      const signX = x >= 0 ? 1.0 : -1.0;
+
+      // Neck protection weight: keep C4/C5 neck base (`y < -0.072`) anchored cleanly
+      const wHead = Math.min(1.0, Math.max(0.0, (y + 0.075) / 0.025));
+
+      if (wHead > 0.001) {
+        // ====================================================================
+        // STEP A: Baseline De-American-Asian Refinement (去美式亚裔高颧骨方腮基底)
+        // ====================================================================
+        // 1. Tuck protruding lateral zygomatic arch (外扩高颧弓内推)
+        const wZygoY = smoothBell(y, 0.002, 0.028);
+        const wZygoZ = smoothBell(z, 0.046, 0.040);
+        const wZygoX = Math.min(1.0, Math.max(0.0, (absX - 0.036) / 0.032));
+        const wZygo = wZygoY * wZygoZ * wZygoX * wHead;
+        x -= signX * (absX - 0.034) * 0.145 * wZygo;
+
+        // 2. Soften wide square mandibular gonial angle (去方腮/柔和下颌角)
+        const wGonY = smoothBell(y, -0.042, 0.026);
+        const wGonZ = smoothBell(z, 0.034, 0.042);
+        const wGonX = Math.min(1.0, Math.max(0.0, (absX - 0.030) / 0.032));
+        const wGon = wGonY * wGonZ * wGonX * wHead;
+        x -= signX * (absX - 0.028) * 0.135 * wGon;
+
+        // 3. Soften heavy Western lateral brow ridge & fill smooth East Asian forehead
+        const wBrowY = smoothBell(y, 0.028, 0.016);
+        const wBrowZ = Math.min(1.0, Math.max(0.0, (z - 0.055) / 0.035));
+        const wBrowOuter = smoothBell(absX, 0.042, 0.022);
+        z -= 0.0026 * wBrowY * wBrowZ * wBrowOuter * wHead;
+        const wForeheadCenter = smoothBell(y, 0.052, 0.028) * smoothBell(absX, 0.0, 0.046) * Math.min(1.0, Math.max(0.0, (z - 0.045) / 0.045));
+        z += 0.0030 * wForeheadCenter * wHead;
+
+        // 4. East Asian High Cranial Crown (中韩头包脸高颅顶)
+        if (y > 0.048) {
+          const wCrown = Math.min(1.0, (y - 0.048) / 0.065);
+          y += 0.0065 * wCrown;
+          x *= 1.0 + 0.032 * wCrown;
+        }
+
+        // ====================================================================
+        // STEP B: 6 Distinct Chinese & Korean Young Female Face Archetypes
+        // ====================================================================
+        if (faceArchetype === 'cn_round_babyface') {
+          // 🍑 中式幼态圆润娃娃脸 (初夏):
+          // - Shorten lower face & chin (`y < 0.008` lifted upward)
+          // - Round out chin tip (widen narrow chin tip & soften point so it's a round moon face)
+          // - Plump soft round buccal baby-fat cheeks (`婴儿肥脸颊与苹果肌饱满外扩`)
+          if (y < 0.010) {
+            const wLower = Math.min(1.0, (0.010 - y) / 0.080) * wHead;
+            y += 0.0082 * wLower;
+          }
+          // Plump round buccal & apple cheeks (饱满圆润脸颊 + 婴儿肥)
+          const wBabyCheekY = smoothBell(y, -0.024, 0.034);
+          const wBabyCheekZ = Math.min(1.0, Math.max(0.0, (z - 0.018) / 0.055));
+          const wBabyCheekX = smoothBell(absX, 0.046, 0.030);
+          const wBabyCheek = wBabyCheekY * wBabyCheekZ * wBabyCheekX * wHead;
+          x += signX * 0.0072 * wBabyCheek;
+          z += 0.0058 * wBabyCheek;
+
+          // Round out the chin so it is a cute circular arc, never sharp
+          const wChinTip = smoothBell(y, -0.058, 0.018) * Math.min(1.0, Math.max(0.0, (z - 0.045) / 0.045)) * wHead;
+          x *= 1.0 + 0.14 * wChinTip;
+          z -= 0.0022 * wChinTip * smoothBell(absX, 0.0, 0.016);
+
+          // Rounder, larger puppy eyes
+          const wEyeZone = smoothBell(y, 0.012, 0.014) * smoothBell(absX, 0.031, 0.018) * Math.min(1.0, Math.max(0.0, (z - 0.055) / 0.030));
+          y += (y - 0.012) * 0.18 * wEyeZone;
+        } else if (faceArchetype === 'kr_idol_vline') {
+          // ✨ 韩系财阀千金鹅蛋V脸 (林汐):
+          // - Sleek narrower overall face width
+          // - Strong V-line jaw contour tapering to a dainty upturned Korean V-chin
+          // - Plump anterior Korean apple muscles + Aegyo-sal + high upturned nose + cat-eye tilt
+          x *= 1.0 - 0.075 * wHead;
+          const wVJaw = smoothBell(y, -0.038, 0.028) * Math.min(1.0, Math.max(0.0, (absX - 0.018) / 0.045)) * wHead;
+          x -= signX * (absX - 0.016) * 0.165 * wVJaw;
+
+          // Dainty upturned Korean V-chin tip
+          const wKrChin = smoothBell(y, -0.060, 0.016) * smoothBell(absX, 0.0, 0.022) * Math.min(1.0, Math.max(0.0, (z - 0.050) / 0.040)) * wHead;
+          z += 0.0038 * wKrChin;
+          y += 0.0024 * wKrChin;
+          x *= 1.0 - 0.12 * wKrChin;
+
+          // Plump anterior Korean apple muscle (韩系饱满前苹果肌与卧蚕)
+          const wApple = smoothBell(y, -0.006, 0.018) * smoothBell(absX, 0.028, 0.018) * Math.min(1.0, Math.max(0.0, (z - 0.055) / 0.035)) * wHead;
+          z += 0.0052 * wApple;
+
+          // High straight Korean nose bridge & upturned tip
+          const wNose = smoothBell(y, -0.002, 0.022) * smoothBell(absX, 0.0, 0.014) * Math.min(1.0, Math.max(0.0, (z - 0.075) / 0.035)) * wHead;
+          z += 0.0046 * wNose;
+          if (y < -0.004) y += 0.0018 * wNose;
+
+          // Upturned cat-eye outer corner
+          const wOuterEye = smoothBell(y, 0.012, 0.014) * smoothBell(absX, 0.044, 0.014) * Math.min(1.0, Math.max(0.0, (z - 0.055) / 0.030)) * wHead;
+          y += 0.0026 * wOuterEye;
+        } else if (faceArchetype === 'cn_oval_scholar') {
+          // 📖 中式清秀书卷鹅蛋脸 (方尧平):
+          // - Balanced southern Chinese 19yo female student oval contour
+          // - Soft natural cheek curve, modest southern nose, calm horizontal almond eyes
+          const wOvalCheek = smoothBell(y, -0.022, 0.030) * smoothBell(absX, 0.045, 0.026) * Math.min(1.0, Math.max(0.0, (z - 0.020) / 0.055)) * wHead;
+          x += signX * 0.0028 * wOvalCheek;
+          z += 0.0024 * wOvalCheek;
+          if (y < 0.005) {
+            const wLower = Math.min(1.0, (0.005 - y) / 0.075) * wHead;
+            y += 0.0032 * wLower;
+          }
+        } else if (faceArchetype === 'cn_classical_melon') {
+          // 🌸 江南古典瓜子脸 (苏晚):
+          // - Narrow upper temples, smooth upper cheeks tapering gracefully to a classical melon-seed chin
+          x *= 1.0 - 0.055 * wHead;
+          const wMelonTaper = Math.min(1.0, Math.max(0.0, (-0.010 - y) / 0.055)) * Math.min(1.0, Math.max(0.0, (z - 0.015) / 0.060)) * wHead;
+          x *= 1.0 - 0.145 * wMelonTaper;
+          // Classical phoenix eye tilt
+          const wOuterEye = smoothBell(y, 0.012, 0.014) * smoothBell(absX, 0.044, 0.014) * Math.min(1.0, Math.max(0.0, (z - 0.055) / 0.030)) * wHead;
+          y += 0.0018 * wOuterEye;
+        } else if (faceArchetype === 'kr_sweet_heart') {
+          // 💖 韩系初恋甜美心形脸 (千雪):
+          // - Full heart-shaped upper apple cheeks tapering rapidly below the mouth to a petite short chin
+          const wHeartUpper = smoothBell(y, -0.004, 0.022) * smoothBell(absX, 0.042, 0.024) * Math.min(1.0, Math.max(0.0, (z - 0.035) / 0.045)) * wHead;
+          x += signX * 0.0048 * wHeartUpper;
+          z += 0.0045 * wHeartUpper;
+
+          const wHeartLower = Math.min(1.0, Math.max(0.0, (-0.020 - y) / 0.048)) * wHead;
+          x *= 1.0 - 0.165 * wHeartLower;
+          y += 0.0055 * wHeartLower;
+
+          // Plump pouty lips
+          const wLips = smoothBell(y, -0.034, 0.012) * smoothBell(absX, 0.0, 0.024) * Math.min(1.0, Math.max(0.0, (z - 0.065) / 0.035)) * wHead;
+          z += 0.0032 * wLips;
+        } else if (faceArchetype === 'cn_cold_royal') {
+          // ❄️ 中式清冷高智御姐脸 (沈知微):
+          // - Slightly elongated intellectual mid/lower face, narrow sculpted buccal cheeks, high straight nose bridge
+          x *= 1.0 - 0.065 * wHead;
+          if (y < 0.005 && y > -0.068) {
+            const wElong = smoothBell(y, -0.032, 0.035) * wHead;
+            y -= 0.0036 * wElong;
+          }
+          const wBuccalHollow = smoothBell(y, -0.026, 0.020) * smoothBell(absX, 0.044, 0.020) * Math.min(1.0, Math.max(0.0, (z - 0.025) / 0.050)) * wHead;
+          x -= signX * 0.0042 * wBuccalHollow;
+          const wNose = smoothBell(y, 0.002, 0.024) * smoothBell(absX, 0.0, 0.014) * Math.min(1.0, Math.max(0.0, (z - 0.072) / 0.038)) * wHead;
+          z += 0.0044 * wNose;
+        }
+
+        // ====================================================================
+        // STEP C: 3D Eyebrow Mesh & Supraorbital Brow Shaping (`eyebrowStyle`)
+        // ====================================================================
+        const wBrowRegion = smoothBell(y, 0.027, 0.012) * Math.min(1.0, Math.max(0.0, (z - 0.062) / 0.032)) * smoothBell(absX, 0.032, 0.028);
+        if (wBrowRegion > 0.001 || isBrowMesh) {
+          const tBrow = Math.min(1.0, Math.max(0.0, (absX - 0.010) / 0.044)); // 0 = inner head, 1 = outer tail
+          const mult = isBrowMesh ? 1.0 : wBrowRegion * 0.55;
+          if (eyebrowStyle === 'kr_straight_mist') {
+            // Flatten arch into a straight Korean mist brow
+            const archFlatten = Math.sin(tBrow * Math.PI) * -0.0024 + tBrow * 0.0012;
+            y += archFlatten * mult;
+          } else if (eyebrowStyle === 'cn_willow_classical') {
+            // High graceful classical willow arch
+            const willowArch = Math.sin(Math.pow(tBrow, 0.85) * Math.PI) * 0.0038 - Math.pow(Math.max(0, tBrow - 0.65) / 0.35, 1.5) * 0.0025;
+            y += willowArch * mult;
+          } else if (eyebrowStyle === 'kr_sweet_droop') {
+            // Gentle downward puppy/innocent outer brow tail
+            const droop = -Math.pow(tBrow, 1.35) * 0.0042;
+            y += droop * mult;
+          } else if (eyebrowStyle === 'cn_cold_sword') {
+            // Ascending heroic sword brow
+            const sword = Math.pow(tBrow, 1.15) * 0.0046 - (1.0 - tBrow) * 0.0012;
+            y += sword * mult;
+          } else if (eyebrowStyle === 'kr_idol_arch') {
+            // Korean idol meteor arch
+            const meteor = Math.sin(Math.pow(tBrow, 0.9) * Math.PI) * 0.0026 - Math.pow(Math.max(0, tBrow - 0.6) / 0.4, 1.4) * 0.0022;
+            y += meteor * mult;
+          } else if (eyebrowStyle === 'cn_tang_moth') {
+            // Short compact classical moth brow
+            if (isBrowMesh && absX > 0.036) {
+              x -= signX * (absX - 0.036) * 0.32;
+            }
+          }
+        }
+      }
+
+      out[i3] = x;
+      out[i3 + 1] = y;
+      out[i3 + 2] = z;
+    }
+
+    posAttr.needsUpdate = true;
+  });
+}
+
+export function setHeadEyebrowStyle(rootGroup, eyebrowStyle = 'cn_scholar_natural') {
+  if (!rootGroup) return;
+  rootGroup.userData.eyebrowStyle = eyebrowStyle;
+  rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), eyebrowStyle };
+
+  const browTex = buildEyebrowTextureForStyle(eyebrowStyle, rootGroup.userData.hairColor || '#181416');
+  rootGroup.traverse((child) => {
+    if (!child.isMesh) return;
+    const matName = child.material?.name || '';
+    if (child.name === 'Eyebrows' || matName === 'Eyebrow' || child.userData?.isEyebrowMesh) {
+      child.userData.isEyebrowMesh = true;
+      if (browTex && child.material) {
+        child.material.map = browTex;
+        child.material.alphaTest = 0.02;
+        child.material.transparent = true;
+        child.material.needsUpdate = true;
+      }
+    }
+  });
+
+  applyEastAsianCraniofacialSculpt(
+    rootGroup,
+    rootGroup.userData.faceArchetype || 'cn_oval_scholar',
+    eyebrowStyle,
+  );
+}
+
+export function setHeadFaceArchetype(rootGroup, faceArchetype = 'cn_oval_scholar') {
+  if (!rootGroup) return;
+  rootGroup.userData.faceArchetype = faceArchetype;
+  rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), faceArchetype };
+  applyEastAsianCraniofacialSculpt(
+    rootGroup,
+    faceArchetype,
+    rootGroup.userData.eyebrowStyle || 'cn_scholar_natural',
+  );
+}
+
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   if (!rootGroup) return;
   rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), ...morphs };
   const m = rootGroup.userData.currentMorphs;
   const presetKey = rootGroup.userData.basePreset || 'user_photo';
   const bias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.user_photo;
+
+  const faceArchetype = m.faceArchetype || rootGroup.userData.faceArchetype || bias.faceArchetype || 'cn_oval_scholar';
+  const eyebrowStyle = m.eyebrowStyle || rootGroup.userData.eyebrowStyle || bias.eyebrowStyle || 'cn_scholar_natural';
+  const prevEyebrowStyle = rootGroup.userData.eyebrowStyle;
+  rootGroup.userData.faceArchetype = faceArchetype;
+  rootGroup.userData.eyebrowStyle = eyebrowStyle;
+
+  if (eyebrowStyle !== prevEyebrowStyle) {
+    const browTex = buildEyebrowTextureForStyle(eyebrowStyle, rootGroup.userData.hairColor || '#181416');
+    rootGroup.traverse((child) => {
+      if (!child.isMesh) return;
+      if (child.name === 'Eyebrows' || child.userData?.isEyebrowMesh) {
+        child.userData.isEyebrowMesh = true;
+        if (browTex && child.material) {
+          child.material.map = browTex;
+          child.material.needsUpdate = true;
+        }
+      }
+    });
+  }
+
+  applyEastAsianCraniofacialSculpt(rootGroup, faceArchetype, eyebrowStyle);
 
   const clampHarmony = (val, maxAbs = 0.36) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
 
@@ -555,9 +1071,10 @@ export function triggerCollectibleBlink() {
 
 function computeSkinTintColor(skinToneHex = '#ffe8df') {
   const c = new THREE.Color(skinToneHex || '#ffe8df');
-  const r = Math.min(1.04, Math.max(0.86, 0.78 + c.r * 0.24));
-  const g = Math.min(1.03, Math.max(0.84, 0.78 + c.g * 0.24));
-  const b = Math.min(1.03, Math.max(0.83, 0.78 + c.b * 0.25));
+  // Preserve distinct warm/cool/porcelain/peach character skin tones without washing them out
+  const r = Math.min(1.06, Math.max(0.82, 0.42 + c.r * 0.60));
+  const g = Math.min(1.05, Math.max(0.78, 0.42 + c.g * 0.60));
+  const b = Math.min(1.06, Math.max(0.76, 0.42 + c.b * 0.60));
   return new THREE.Color(r, g, b);
 }
 
@@ -989,12 +1506,19 @@ export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
   rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
   rootGroup.userData.collectibleId = config.id || 'StudioDraft';
-  rootGroup.userData.basePreset = config.basePreset || 'user_photo';
+  const presetKey = config.basePreset || 'user_photo';
+  const presetBias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.user_photo;
+  rootGroup.userData.basePreset = presetKey;
+  rootGroup.userData.faceArchetype = config.faceArchetype || config.morphs?.faceArchetype || presetBias.faceArchetype || 'cn_oval_scholar';
+  rootGroup.userData.eyebrowStyle = config.eyebrowStyle || config.morphs?.eyebrowStyle || presetBias.eyebrowStyle || 'cn_scholar_natural';
+  rootGroup.userData.hairColor = config.hairColor || config.materials?.hairColorHex || '#121216';
   rootGroup.userData.deadExpression = config.deadExpression || config.morphs?.deadExpression || 'dead_calm';
   rootGroup.userData.neckClearance = Number(config.neckClearance ?? 0.45);
 
   const morphs = {
     ...(config.morphs || {}),
+    faceArchetype: rootGroup.userData.faceArchetype,
+    eyebrowStyle: rootGroup.userData.eyebrowStyle,
     deadExpression: config.deadExpression || config.morphs?.deadExpression || 'dead_calm',
   };
   const materials = config.materials || {};
@@ -1057,7 +1581,11 @@ export async function buildCollectibleHeadNode(config = {}) {
         rawSkinMap.colorSpace = THREE.SRGBColorSpace;
         rawSkinMap.anisotropy = 8;
       }
-      const skinMap = buildCharacterSkinOverlayMap(rawSkinMap, rootGroup.userData.basePreset || 'user_photo');
+      const skinMap = buildCharacterSkinOverlayMap(
+        rawSkinMap,
+        rootGroup.userData.basePreset || 'user_photo',
+        rootGroup.userData.eyebrowStyle || 'cn_scholar_natural',
+      );
       const skinMicro = createSkinMicroMaps();
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
@@ -1139,19 +1667,24 @@ export async function buildCollectibleHeadNode(config = {}) {
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
-      const browMap = child.material?.map || null;
+      child.userData.isEyebrowMesh = true;
+      const customBrowMap = buildEyebrowTextureForStyle(
+        rootGroup.userData.eyebrowStyle || 'cn_scholar_natural',
+        rootGroup.userData.hairColor || '#181416',
+      );
+      const browMap = customBrowMap || child.material?.map || null;
       if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        alphaTest: 0.04,
+        alphaTest: 0.02,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.58,
-        envMapIntensity: 0.45,
+        roughness: 0.56,
+        envMapIntensity: 0.35,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {

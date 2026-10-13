@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 
 /**
- * Stage 13b · 唯美氛围：呼吸尘埃 (Bokeh Dust) + 工坊背幕光晕 (Studio Backdrop Glow)
- * - 全部程序化 Canvas 纹理，零外部资源，file:// 离线兼容
- * - 加色混合 + 关闭深度写入：只增氛围，永不遮挡头模/断面
- * - 每帧 CPU 更新仅数百点位移，开销可忽略；可随时开关
+ * Stage 28 · 唯美老照片丁达尔体积光束 (Volumetric Tyndall God-Rays) + 暖金胶片浮尘 (Bokeh Dust) + 工坊背幕光晕
+ * - 零外部资源，纯 GLSL 体积光帷幕与程序化 Canvas 纹理
+ * - 加色混合 + 关闭深度写入：营造诗意老照片斜阳/窗光丁达尔效应，永不遮挡头模/断面
  */
 
 let _dustSpriteCache = null;
@@ -16,10 +15,10 @@ function getDustSprite() {
   canvas.height = s;
   const ctx = canvas.getContext('2d');
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.35, 'rgba(255,255,255,0.55)');
-  g.addColorStop(0.7, 'rgba(255,255,255,0.12)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
+  g.addColorStop(0, 'rgba(255,250,238,1)');
+  g.addColorStop(0.32, 'rgba(255,236,200,0.68)');
+  g.addColorStop(0.68, 'rgba(245,214,170,0.18)');
+  g.addColorStop(1, 'rgba(245,214,170,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, s, s);
   const tex = new THREE.CanvasTexture(canvas);
@@ -28,7 +27,7 @@ function getDustSprite() {
   return tex;
 }
 
-const DUST_PALETTE = ['#cfe8ff', '#ffe9d6', '#e6d6ff', '#ffffff', '#ffd9e6'];
+const DUST_PALETTE = ['#fff3d6', '#ffe4b8', '#f7e7ce', '#e6eefc', '#ffd9c2'];
 
 function buildDustLayer({ count, size, opacity, bounds, seed }) {
   const positions = new Float32Array(count * 3);
@@ -36,7 +35,6 @@ function buildDustLayer({ count, size, opacity, bounds, seed }) {
   const base = new Float32Array(count * 3);
   const phase = new Float32Array(count * 2);
   const color = new THREE.Color();
-  // 确定性伪随机：同一参数每次生成一致，避免抽帧闪烁感
   let s = seed >>> 0 || 1;
   const rnd = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -55,10 +53,12 @@ function buildDustLayer({ count, size, opacity, bounds, seed }) {
     phase[i * 2] = rnd() * Math.PI * 2;
     phase[i * 2 + 1] = rnd() * Math.PI * 2;
     color.set(DUST_PALETTE[(rnd() * DUST_PALETTE.length) | 0]);
-    const dim = 0.55 + rnd() * 0.45;
-    colors[i * 3] = color.r * dim;
-    colors[i * 3 + 1] = color.g * dim;
-    colors[i * 3 + 2] = color.b * dim;
+    // Boost brightness for dust motes along the diagonal Tyndall light path
+    const inBeam = Math.exp(-Math.pow((x * 0.65 - y * 0.85 - 6.0) / 28.0, 2.0));
+    const dim = (0.48 + rnd() * 0.52) * (0.72 + 0.65 * inBeam);
+    colors[i * 3] = Math.min(1, color.r * dim);
+    colors[i * 3 + 1] = Math.min(1, color.g * dim);
+    colors[i * 3 + 2] = Math.min(1, color.b * dim);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
@@ -88,26 +88,126 @@ function buildDustLayer({ count, size, opacity, bounds, seed }) {
 }
 
 /**
- * 创建多层呼吸尘埃。返回 { group, update(dt, elapsed) }。
- * bounds: { x:[min,max], y:[min,max], z:[min,max] } 世界坐标范围
+ * 构建 3D 丁达尔体积光束帷幕 (Volumetric Tyndall Light Shafts)
+ * 斜射穿过书房上空与头模周遭，呈现唯美老照片的空气感与光束感
+ */
+function buildTyndallLightShafts() {
+  const group = new THREE.Group();
+  group.name = 'TyndallLightShaftsGroup';
+
+  const uniforms = {
+    uTime: { value: 0 },
+    uIntensity: { value: 0.82 },
+    uBeamColor: { value: new THREE.Color('#ffebd2') },
+    uBeamAngle: { value: -0.58 },
+  };
+
+  const shaftMat = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+      void main() {
+        vUv = uv;
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform float uIntensity;
+      uniform vec3 uBeamColor;
+      uniform float uBeamAngle;
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+
+      void main() {
+        // Rotate UV to create diagonal volumetric light shafts from upper window
+        vec2 p = vUv - vec2(0.58, 0.72);
+        float c = cos(uBeamAngle);
+        float s = sin(uBeamAngle);
+        vec2 rot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
+
+        // Multi-ray window slat interference pattern (Tyndall shafts)
+        float ray1 = exp(-pow((rot.x + 0.14) * 5.8, 2.0));
+        float ray2 = exp(-pow((rot.x - 0.02) * 4.4, 2.0)) * 0.92;
+        float ray3 = exp(-pow((rot.x - 0.19) * 6.5, 2.0)) * 0.76;
+        float ray4 = exp(-pow((rot.x + 0.29) * 8.2, 2.0)) * 0.52;
+        float fineSlats = 0.78 + 0.22 * sin(rot.x * 46.0 + sin(uTime * 0.25) * 0.4);
+
+        // Longitudinal attenuation from upper window source down to desk
+        float along = clamp(1.0 - (0.72 - vUv.y) * 0.92, 0.0, 1.0);
+        float topSoft = smoothstep(0.99, 0.82, vUv.y);
+        float bottomSoft = smoothstep(0.01, 0.26, vUv.y);
+        float edgeMask = smoothstep(0.02, 0.22, vUv.x) * smoothstep(0.98, 0.78, vUv.x);
+
+        float alpha = (ray1 + ray2 + ray3 + ray4) * fineSlats * along * topSoft * bottomSoft * edgeMask;
+        alpha *= 0.105 * uIntensity;
+
+        gl_FragColor = vec4(uBeamColor, clamp(alpha, 0.0, 0.36));
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+
+  // 3 layered depth curtains for true 3D parallax volumetric depth (never occluding heads)
+  const depths = [
+    { z: -32, w: 138, h: 78, scaleI: 1.0 },
+    { z: -18, w: 124, h: 72, scaleI: 0.72 },
+    { z: -6,  w: 112, h: 66, scaleI: 0.45 },
+  ];
+  depths.forEach((d, idx) => {
+    const planeGeo = new THREE.PlaneGeometry(d.w, d.h);
+    const mat = idx === 0 ? shaftMat : shaftMat.clone();
+    mat.uniforms.uIntensity = uniforms.uIntensity;
+    mat.uniforms.uBeamColor = uniforms.uBeamColor;
+    mat.uniforms.uBeamAngle = uniforms.uBeamAngle;
+    mat.uniforms.uTime = uniforms.uTime;
+    const mesh = new THREE.Mesh(planeGeo, mat);
+    mesh.position.set(0, 2, d.z);
+    mesh.renderOrder = 4;
+    mesh.raycast = () => {}; // Never intercept mouse clicks!
+    group.add(mesh);
+  });
+
+  group.userData.uniforms = uniforms;
+  return group;
+}
+
+/**
+ * 创建多层呼吸尘埃 + 丁达尔体积光束。返回 { group, update(dt, elapsed), setTyndallConfig(cfg) }。
  */
 export function createBokehDust(options = {}) {
-  const rawBounds = options.bounds || { x: [-58, 58], y: [-30, 30], z: [-112, -28] };
+  const rawBounds = options.bounds || { x: [-58, 58], y: [-30, 30], z: [-95, -4] };
   const bounds = {
     x: rawBounds.x,
     y: rawBounds.y,
-    z: [rawBounds.z[0], Math.min(-28, rawBounds.z[1])],
+    z: [rawBounds.z[0], Math.min(-6, rawBounds.z[1])],
   };
   const group = new THREE.Group();
   group.name = 'BokehDustAtmosphere';
+
+  const tyndallGroup = buildTyndallLightShafts();
+  group.add(tyndallGroup);
+
   const layers = [
-    buildDustLayer({ count: options.far ?? 100, size: options.farSize ?? 1.4, opacity: 0.16, bounds, seed: 1234567 }),
-    buildDustLayer({ count: options.mid ?? 64, size: options.midSize ?? 2.1, opacity: 0.12, bounds, seed: 7654321 }),
-    buildDustLayer({ count: options.near ?? 24, size: options.nearSize ?? 2.8, opacity: 0.08, bounds, seed: 2468135 }),
+    buildDustLayer({ count: options.far ?? 130, size: options.farSize ?? 1.55, opacity: 0.24, bounds, seed: 1234567 }),
+    buildDustLayer({ count: options.mid ?? 85, size: options.midSize ?? 2.25, opacity: 0.19, bounds, seed: 7654321 }),
+    buildDustLayer({ count: options.near ?? 36, size: options.nearSize ?? 3.10, opacity: 0.14, bounds, seed: 2468135 }),
   ];
-  for (const layer of layers) group.add(layer.points);
+  for (const layer of layers) {
+    layer.points.raycast = () => {};
+    group.add(layer.points);
+  }
 
   function update(_dt, elapsed) {
+    if (tyndallGroup.userData.uniforms) {
+      tyndallGroup.userData.uniforms.uTime.value = elapsed;
+    }
     for (let li = 0; li < layers.length; li++) {
       const layer = layers[li];
       const arr = layer.points.geometry.attributes.position.array;
@@ -123,13 +223,29 @@ export function createBokehDust(options = {}) {
       layer.points.geometry.attributes.position.needsUpdate = true;
     }
   }
-  return { group, update };
+
+  function setTyndallConfig(cfg = {}) {
+    const u = tyndallGroup.userData.uniforms;
+    if (!u) return;
+    if (cfg.intensity !== undefined) {
+      u.uIntensity.value = Math.max(0, Math.min(2.0, Number(cfg.intensity)));
+      tyndallGroup.visible = u.uIntensity.value > 0.01;
+    }
+    if (cfg.color) {
+      u.uBeamColor.value.set(cfg.color);
+    }
+    if (cfg.azimuthDeg !== undefined) {
+      const az = Number(cfg.azimuthDeg) || 44;
+      u.uBeamAngle.value = THREE.MathUtils.degToRad(az >= 0 ? -32 : 32);
+    }
+  }
+
+  return { group, tyndallGroup, update, setTyndallConfig };
 }
 
 let _backdropCache = null;
 /**
- * 工坊背幕光晕：头模身后的柔和冷调径向辉光盘，增强纵深与唯美感。
- * MeshBasicMaterial（不受灯光影响，效果确定），透明边缘融入页面背景。
+ * 工坊背幕光晕：头模身后的柔和复古暖金/冷银径向辉光盘，增强纵深与唯美感。
  */
 export function createStudioBackdrop(width = 150, height = 110) {
   if (!_backdropCache) {
@@ -139,11 +255,11 @@ export function createStudioBackdrop(width = 150, height = 110) {
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    const g = ctx.createRadialGradient(w / 2, h * 0.46, 8, w / 2, h * 0.46, w * 0.52);
-    g.addColorStop(0, 'rgba(148,197,255,0.55)');
-    g.addColorStop(0.45, 'rgba(125,180,245,0.22)');
-    g.addColorStop(0.75, 'rgba(110,150,220,0.07)');
-    g.addColorStop(1, 'rgba(100,140,210,0)');
+    const g = ctx.createRadialGradient(w * 0.54, h * 0.42, 8, w * 0.50, h * 0.46, w * 0.54);
+    g.addColorStop(0, 'rgba(255,232,198,0.48)');
+    g.addColorStop(0.42, 'rgba(218,188,152,0.22)');
+    g.addColorStop(0.75, 'rgba(130,115,105,0.08)');
+    g.addColorStop(1, 'rgba(90,80,75,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
     const tex = new THREE.CanvasTexture(canvas);
@@ -154,7 +270,7 @@ export function createStudioBackdrop(width = 150, height = 110) {
   const mat = new THREE.MeshBasicMaterial({
     map: _backdropCache,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.88,
     depthWrite: false,
   });
   const mesh = new THREE.Mesh(geo, mat);

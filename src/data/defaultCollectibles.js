@@ -276,6 +276,102 @@ export const REAL_HAIR_CATALOG = [
 ];
 
 /**
+ * Stage 28 · 6 大中韩青年女性真实头型骨相流派 (彻底消除美式亚裔高颧骨方腮感)
+ */
+export const FACE_ARCHETYPE_CATALOG = [
+  {
+    id: 'cn_round_babyface',
+    shortLabel: '🍑 中式圆润娃娃脸',
+    label: '🍑 中式幼态圆润娃娃脸 · 珠圆玉润婴儿肥满月骨相 (初夏同款)',
+    desc: '缩短中下庭与下巴、饱满婴儿肥圆脸颊与圆润下颌线、饱满圆额头与无辜圆鹿眼'
+  },
+  {
+    id: 'kr_idol_vline',
+    shortLabel: '✨ 韩系财阀千金脸',
+    label: '✨ 韩系财阀千金V脸 · 内推窄颧骨+立体苹果肌+韩式小翘鼻 (林汐同款)',
+    desc: '韩式内推窄颧弓、精致流畅V字小下巴、饱满前突苹果肌与卧蚕、高挺盒型微翘鼻与狐狸微挑眼'
+  },
+  {
+    id: 'cn_oval_scholar',
+    shortLabel: '📖 中式书卷鹅蛋脸',
+    label: '📖 中式清秀书卷鹅蛋脸 · 广东南方青年女学生原生头型 (方尧平同款)',
+    desc: '标准中国南方19岁青年女学生鹅蛋脸、高颅顶头包脸、柔和内收颧弓与温婉杏眼'
+  },
+  {
+    id: 'cn_classical_melon',
+    shortLabel: '🌸 江南古典瓜子脸',
+    label: '🌸 中式江南古典瓜子脸 · 窄太阳穴纤巧尖颏仕女骨相 (苏晚同款)',
+    desc: '古典东方仕女瓜子脸、清瘦双颊与秀气尖下巴、古典微挑丹凤眼型'
+  },
+  {
+    id: 'kr_sweet_heart',
+    shortLabel: '💖 韩系甜美心形脸',
+    label: '💖 韩系初恋甜美心形脸 · 饱满卧蚕苹果肌配短巧尖下巴 (千雪同款)',
+    desc: '韩系初恋感心形脸、上庭与苹果肌饱满圆润、下巴短巧收尖、大眼嘟润M唇'
+  },
+  {
+    id: 'cn_cold_royal',
+    shortLabel: '❄️ 中式清冷御姐脸',
+    label: '❄️ 中式清冷高智御姐脸 · 修长窄脸高鼻梁智感骨相 (沈知微同款)',
+    desc: '东方清冷高智感窄长脸型、利落收窄面颊、高直山根鼻梁与狭长冷艳眼型'
+  }
+];
+
+/**
+ * Stage 28 · 8 款根根分明中韩真毛流眉形库 (告别单一眉形)
+ */
+export const EYEBROW_STYLE_CATALOG = [
+  {
+    id: 'cn_scholar_natural',
+    shortLabel: '🌿 中式原生书卷眉',
+    label: '🌿 中式原生清秀眉 · 自然野生书卷毛流 (方尧平默认)',
+    desc: '未经刻意修剃的中国女学生原生自然眉，眉头绒毛轻盈、眉峰柔和自然'
+  },
+  {
+    id: 'kr_straight_mist',
+    shortLabel: '🍑 韩式平直一字雾眉',
+    label: '🍑 韩式平直一字幼态雾眉 · 柔雾无辜感 (初夏默认)',
+    desc: '韩系甜妹标志性平直一字柔雾眉，降低眉峰弧度，拉宽幼态圆润面中比例'
+  },
+  {
+    id: 'kr_idol_arch',
+    shortLabel: '✨ 韩系女团流星眉',
+    label: '✨ 韩系女团精致流星落尾眉 · 微挑利落 (林汐默认)',
+    desc: '韩国财阀千金与女团同款流星眉，前段柔和、后三分之一处精致微挑落尾'
+  },
+  {
+    id: 'cn_willow_classical',
+    shortLabel: '🌙 江南古典柳叶细眉',
+    label: '🌙 江南古典远山柳叶细眉 · 纤细弯月 (苏晚默认)',
+    desc: '中式古典仕女纤细弯月柳叶眉，眉身极细、弧度温婉悠长'
+  },
+  {
+    id: 'kr_sweet_droop',
+    shortLabel: '💖 韩系初恋无辜微垂眉',
+    label: '💖 韩系初恋楚楚可怜微垂眉 · 柔顺八字感 (千雪默认)',
+    desc: '眉尾自然微垂、眉头微扬的无辜幼态眉形，令死前神态更显楚楚可怜'
+  },
+  {
+    id: 'cn_cold_sword',
+    shortLabel: '❄️ 中式清冷英气剑眉',
+    label: '❄️ 中式清冷高智感微扬剑眉 · 利落上挑 (沈知微默认)',
+    desc: '下缘干净利落、眉尾向鬓角英气斜飞的御姐剑眉'
+  },
+  {
+    id: 'kr_wild_feathered',
+    shortLabel: '🪶 根根分明野生毛流眉',
+    label: '🪶 画报级根根分明立体野生毛流眉',
+    desc: '眉头毛流根根向上耸立、眉身浓密交织的高定野生眉'
+  },
+  {
+    id: 'cn_tang_moth',
+    shortLabel: '🌺 古典微蹙短巧蛾眉',
+    label: '🌺 古典哀怨微蹙短巧蛾眉',
+    desc: '眉形短巧精致、眉头微蹙聚拢的古典东方蛾眉'
+  }
+];
+
+/**
  * Character-Bound Study Companion Functional Roles ("功能和角色绑定，给角色分配功能，辅助学习加强学习动力")
  */
 export const STUDY_ROLE_CATALOG = [
@@ -334,16 +430,18 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '广东怀集十九岁理科女状元 · 校服领口上的断头学神 · 考前押题镇纸首选',
     grade: 'UR · 状元首级孤品',
     basePreset: 'fangyaoping',
+    faceArchetype: 'cn_oval_scholar',
+    eyebrowStyle: 'cn_scholar_natural',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/fang_yaoping_ref.jpg',
     lifePhotoCaption: '📸 生前最后留影：19岁广东怀集高考女状元方尧平（放榜那天在母校紫荆树下抿嘴浅笑，当时她还以为自己有大把光阴可以挥霍）',
     studyRole: 'gaokao_pomodoro',
     studyGoalNote: '方尧平正安静立在你的练习册旁：她考了全县第一都没命去读，你还不好好刷完这套题？',
-    skinTone: '#ffece2',
-    blushIntensity: 0.28,
-    lipColor: '#c66872',
-    irisColor: '#382015',
+    skinTone: '#fadfd0',
+    blushIntensity: 0.16,
+    lipColor: '#c47478',
+    irisColor: '#301b12',
     hairStyle: 'daz_hair_air_bangs_long',
     hairColor: '#121216',
     hairSheen: 0.90,
@@ -405,15 +503,17 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '音乐学院十九岁首席甜妹 · 右颊三颗小痣 · 最适合捧在掌心把玩的娇气包',
     grade: 'UR · 甜妹首级孤品',
     basePreset: 'user_photo',
+    faceArchetype: 'cn_round_babyface',
+    eyebrowStyle: 'kr_straight_mist',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/user_photo_ref.jpg',
     lifePhotoCaption: '📸 生前最后留影：19岁音乐学院竖琴首席初夏（演出后台被偷拍的回眸，右脸颊三颗小痣清晰可见，半小时后她就彻底失去了身体）',
     studyRole: 'survivor_motivator',
     studyGoalNote: '初夏就搁在你手边：生前追她的人排到校门口，现在整颗脑袋只属于你的书桌。',
-    skinTone: '#ffe9df',
-    blushIntensity: 0.25,
-    lipColor: '#c46470',
+    skinTone: '#fff0eb',
+    blushIntensity: 0.42,
+    lipColor: '#e2687c',
     irisColor: '#3b2014',
     hairStyle: 'hair_bob01',
     hairColor: '#121216',
@@ -476,15 +576,17 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '华尔街最年轻常春藤女分析师 · 左眼尾冷艳泪痣 · 昔日高岭之花如今任人摆布',
     grade: 'SSR · 高岭之花首级',
     basePreset: 'linxi',
+    faceArchetype: 'kr_idol_vline',
+    eyebrowStyle: 'kr_idol_arch',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'linxi',
     lifePhotoCaption: '📸 生前最后留影：21岁华尔街投行天才分析师林汐（生前在苏黎世私人停机坪前的冷傲抓拍，左眼尾泪痣带着惯有的轻蔑）',
     studyRole: 'sprint_invigilator',
     studyGoalNote: '林汐那双生前瞧不起平庸者的冷眼正盯着你：用实力证明活人永远比死人强！',
-    skinTone: '#ffe8df',
-    blushIntensity: 0.22,
-    lipColor: '#b85c68',
+    skinTone: '#f6edf5',
+    blushIntensity: 0.24,
+    lipColor: '#9e3b52',
     irisColor: '#5c3422',
     hairStyle: 'hair_long01',
     hairColor: '#111216',
@@ -547,15 +649,17 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '书香门第独女 · 右眼下温柔卧蚕痣 · 半睁失神微启朱唇的古典尤物',
     grade: 'SSR · 世家千金首级',
     basePreset: 'suwan',
+    faceArchetype: 'cn_classical_melon',
+    eyebrowStyle: 'cn_willow_classical',
     deadExpression: 'dead_half_open',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'suwan',
     lifePhotoCaption: '📸 生前最后留影：20岁江南藏书楼千金苏晚（生前在私家园林修复宋版孤本时的温婉留影，右眼下卧蚕痣楚楚动人）',
     studyRole: 'memory_anchor',
     studyGoalNote: '把苏晚压在难背的书页上：连藏书世家的千金都在替你镇纸，还有什么背不下来？',
-    skinTone: '#fff0e8',
+    skinTone: '#fcf0e1',
     blushIntensity: 0.30,
-    lipColor: '#c96b76',
+    lipColor: '#c94c54',
     irisColor: '#693c26',
     hairStyle: 'hair_braid01',
     hairColor: '#141318',
@@ -618,15 +722,17 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '国家级舞剧团最年轻女一号 · 鼻梁朱砂美人痣 · 定格于谢幕断头瞬间的惊恐绝色',
     grade: 'UR · 绝代舞姬首级',
     basePreset: 'qianxue',
+    faceArchetype: 'kr_sweet_heart',
+    eyebrowStyle: 'kr_sweet_droop',
     deadExpression: 'dead_shock',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'qianxue',
     lifePhotoCaption: '📸 生前最后留影：18岁古典舞首席领舞千雪（首演谢幕前最后一支独舞定妆照，三分钟后舞台钢索就削断了她的脖子）',
     studyRole: 'survivor_motivator',
     studyGoalNote: '千雪那双死前惊恐圆睁的眼睛正望着你：她连谢幕掌声都没听完就成了标本，你还有什么理由懈怠？',
-    skinTone: '#fff3ed',
-    blushIntensity: 0.34,
-    lipColor: '#bf5462',
+    skinTone: '#fff5f4',
+    blushIntensity: 0.44,
+    lipColor: '#d9384a',
     irisColor: '#4a291a',
     hairStyle: 'daz_hair_hime',
     hairColor: '#0f1015',
@@ -689,15 +795,17 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '顶尖法学院全额奖学金首席学姐 · 港风大波浪 · 挂着诡异浅笑的律政美人头',
     grade: 'SSR · 首席学姐首级',
     basePreset: 'shenzhiwei',
+    faceArchetype: 'cn_cold_royal',
+    eyebrowStyle: 'cn_cold_sword',
     deadExpression: 'dead_smile',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'shenzhiwei',
     lifePhotoCaption: '📸 生前最后留影：23岁法学院首席毕业代表沈知微（模拟法庭夺冠夜举杯微笑，两小时后她的头颅就落在了敞篷跑车后座）',
     studyRole: 'brain_siphon',
     studyGoalNote: '沈知微嘴角还挂着生前胜券在握的浅笑：把这位法学首席的脑力榨干，替她去赢下考场！',
-    skinTone: '#ffede6',
-    blushIntensity: 0.26,
-    lipColor: '#c06975',
+    skinTone: '#f4e6dc',
+    blushIntensity: 0.22,
+    lipColor: '#9c4852',
     irisColor: '#5e3622',
     hairStyle: 'daz_hair_curtain_wave',
     hairColor: '#141318',

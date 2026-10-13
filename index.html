@@ -108,6 +108,18 @@
     </div>
   </div>
 
+  <!-- Stage 28: Floating 3D Structure / Shelf / Prop Action HUD (Appears when clicking/selecting any 3D structure) -->
+  <div id="structure-floating-hud" class="hidden" style="position:fixed;z-index:10020;transform:translate(-50%,-100%);background:rgba(15,12,10,0.92);border:1px solid rgba(217,179,130,0.55);border-radius:10px;padding:7px 11px;box-shadow:0 10px 28px rgba(0,0,0,0.68);backdrop-filter:blur(10px);color:#f5ebd9;font-size:12px;pointer-events:auto;white-space:nowrap;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <strong id="struct-hud-title" style="color:#fde68a;font-size:12px;">🧪 维多利亚玻璃钟罩座</strong>
+      <button type="button" id="btn-struct-hud-eject" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(56,189,248,0.22);border-color:rgba(56,189,248,0.55);color:#bae6fd;display:none;">📤 取出头颅</button>
+      <button type="button" id="btn-struct-hud-delete" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(244,63,94,0.25);border-color:rgba(244,63,94,0.6);color:#fecdd3;">🗑️ 删除此建筑/摆件</button>
+    </div>
+    <div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;opacity:0.88;">
+      💡 左键按住直接平滑拖动移位（Alt+左键单独拎出人头）· 右键单击或按 Delete 键秒删
+    </div>
+  </div>
+
   <!-- =========================================================================
        LAYER 2: TOP-RIGHT DESKTOP OVERLAY CONTROLLER BAR (Always visible on screen)
        ========================================================================= -->
@@ -241,14 +253,24 @@
 
         <div class="vcd-sliders">
           <div class="slider-row">
+            <span>✨ 丁达尔体积光束感 (Tyndall Light Shafts)</span>
+            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.95" />
+            <span id="val-vc-tyndall">95%</span>
+          </div>
+          <div class="slider-row">
+            <span>🎞️ 唯美老照片胶片感 (Vintage Old Photo)</span>
+            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.86" />
+            <span id="val-vc-vintage-photo">86%</span>
+          </div>
+          <div class="slider-row">
             <span>🌓 光影明暗差分强度 (Chiaroscuro 暗部深邃感)</span>
-            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.6" step="0.05" value="1.25" />
-            <span id="val-vc-chiaroscuro">125%</span>
+            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.6" step="0.05" value="1.28" />
+            <span id="val-vc-chiaroscuro">128%</span>
           </div>
           <div class="slider-row">
             <span>🪟 窗户透光格栅阴影浓度 (Window Gobo)</span>
-            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.74" />
-            <span id="val-vc-window-gobo-strength">74%</span>
+            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.76" />
+            <span id="val-vc-window-gobo-strength">76%</span>
           </div>
           <div class="slider-row">
             <span>☀️ 窗光/主光水平入射角 (Azimuth)</span>
@@ -262,66 +284,62 @@
           </div>
           <div class="slider-row">
             <span>💡 主光雕刻强度</span>
-            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="2.15" />
-            <span id="val-vc-key-intensity">2.15</span>
+            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="2.18" />
+            <span id="val-vc-key-intensity">2.18</span>
           </div>
           <div class="slider-row">
             <span>🌙 背部发丝冷雨轮廓光 (Rim)</span>
-            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.52" />
-            <span id="val-vc-rim-intensity">1.52</span>
+            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.38" />
+            <span id="val-vc-rim-intensity">1.38</span>
           </div>
           <div class="slider-row">
             <span>🩸 真皮明暗交界线次表面血色感 (SSS)</span>
-            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.28" />
-            <span id="val-vc-sss">128%</span>
+            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.32" />
+            <span id="val-vc-sss">132%</span>
           </div>
           <div class="slider-row">
             <span>🧴 尸皮哑光真皮感 ↔ 湿润防腐液感 (默认哑光零硅胶)</span>
-            <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.18" />
-            <span id="val-vc-wet-gloss">18%</span>
+            <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.16" />
+            <span id="val-vc-wet-gloss">16%</span>
           </div>
           <div class="slider-row">
             <span>🔪 微距毛孔/皮沟/发丝锐化 (Sharpen)</span>
-            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.05" value="0.56" />
-            <span id="val-vc-sharpen">56%</span>
+            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.05" value="0.58" />
+            <span id="val-vc-sharpen">58%</span>
           </div>
           <div class="slider-row">
             <span>🎞️ 画面电影级对比度 (Contrast)</span>
-            <input type="range" id="vc-contrast" min="0.80" max="1.45" step="0.02" value="1.24" />
-            <span id="val-vc-contrast">1.24</span>
+            <input type="range" id="vc-contrast" min="0.80" max="1.45" step="0.02" value="1.26" />
+            <span id="val-vc-contrast">1.26</span>
           </div>
           <div class="slider-row">
             <span>🌡️ 色温冷暖偏移 (Warmth)</span>
-            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.02" />
-            <span id="val-vc-warmth">+0.02</span>
+            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.12" />
+            <span id="val-vc-warmth">+0.12</span>
           </div>
           <div class="slider-row">
             <span>✨ 暗房柔光辉光强度 (Bloom)</span>
-            <input type="range" id="vc-bloom" min="0.0" max="0.90" step="0.02" value="0.04" />
-            <span id="val-vc-bloom">4%</span>
+            <input type="range" id="vc-bloom" min="0.0" max="0.90" step="0.02" value="0.08" />
+            <span id="val-vc-bloom">8%</span>
           </div>
         </div>
       </div>
 
       <!-- 2. Rainy Study Atmosphere, Gravity System, Clear 3D Floor & Shelves -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🌧️ 2. 雨夜书房小雨伴学环境 · 重力落地 · 书桌与层架</div>
+        <div class="vcd-sec-title">🌧️ 2. 淅沥小雨伴学高保真音效 · 重力落地 · 书桌与层架</div>
         <label class="checkbox-row vcd-highlight-check">
           <input type="checkbox" id="chk-rain-study-audio" checked />
-          <span>🌧️ <strong>开启窗外淅沥小雨伴学白噪音 (ASMR)</strong>（真实合成窗玻璃细雨声与屋檐水滴声，沉浸静心刷题）</span>
+          <span>🌧️ <strong>开启窗外立体声淅沥雨声 + 屋檐雨滴敲击音效 (ASMR)</strong>（高清晰度多轨雨声，点击页面任意处自动播放）</span>
         </label>
         <div class="slider-row" style="margin:6px 0 8px 0;">
-          <span>🔊 窗外小雨伴学音量</span>
-          <input type="range" id="vc-rain-volume" min="0.05" max="1.0" step="0.05" value="0.45" />
-          <span id="val-vc-rain-volume">45%</span>
+          <span>🔊 窗外雨声伴学音量 (已大幅增强)</span>
+          <input type="range" id="vc-rain-volume" min="0.05" max="1.0" step="0.05" value="0.88" />
+          <span id="val-vc-rain-volume">88%</span>
         </div>
-        <label class="checkbox-row" style="margin-bottom:8px;">
-          <input type="checkbox" id="chk-rain-window-3d" checked />
-          <span>🪟 <strong>显示 3D 雨夜书房木格窗、窗外飘雨粒子与绿罩伴学台灯</strong></span>
-        </label>
         <label class="checkbox-row">
           <input type="checkbox" id="chk-enable-gravity" checked />
-          <span>⚓ <strong>开启物理重力落地系统</strong>（纯人头受强重力下落并稳固压在书桌/试卷或收纳建筑内）</span>
+          <span>⚓ <strong>开启物理重力落地系统</strong>（纯人头受强重力下落并稳固压在书桌/试卷或收纳建筑内，绝不超出边框）</span>
         </label>
 
         <div class="field-row" style="margin-top:8px;">
@@ -371,11 +389,43 @@
           <button class="chip-btn" data-place-structure="guillotine_plinth">➕🪓 建造断头木托座</button>
         </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span style="font-size:11.5px;color:#cbd5e1;font-weight:600;">🏛️ 场景已放置的收纳建筑列表：</span>
-          <button id="btn-clear-all-structures" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#fda4af;">🗑️ 清空全部收纳建筑</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:6px;flex-wrap:wrap;">
+          <span style="font-size:11.5px;color:#cbd5e1;font-weight:600;">🏛️ 场景可移动/可删除建筑、层架与摆件列表 (右键单击模型也可秒删)：</span>
+          <div style="display:flex;gap:6px;">
+            <button id="btn-restore-stage-props" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#a7f3d0;">🔄 恢复默认层架/摆件</button>
+            <button id="btn-clear-all-structures" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#fda4af;">🗑️ 全部清空删除</button>
+          </div>
         </div>
         <div id="placed-structures-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px;"></div>
+
+        <!-- Stage 28: Quick Desktop Active Head Face Shape & Eyebrow Style Switcher -->
+        <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:8px;">
+          <div class="vcd-sec-title" style="margin-bottom:6px;">👩 4. 当前选中头颅 · 中韩青年女头型 (圆润脸/韩国脸) & 8款眉形秒切</div>
+          <div class="field-row" style="margin-bottom:6px;">
+            <label>🍑 切换当前头颅的中韩骨相脸型 (告别美式亚裔方腮高颧骨)</label>
+            <select id="vcd-sel-face-archetype">
+              <option value="cn_round_babyface">🍑 中式幼态圆润娃娃脸 (初夏同款 · 饱满婴儿肥+短圆下巴)</option>
+              <option value="kr_idol_vline">✨ 韩系财阀千金鹅蛋V脸 (林汐同款 · 韩国柔滑V脸+饱满前苹果肌)</option>
+              <option value="cn_oval_scholar">📖 中式清秀书卷鹅蛋脸 (方尧平同款 · 岭南19岁女状元柔和鹅蛋脸)</option>
+              <option value="cn_classical_melon">🌸 江南古典温婉瓜子脸 (苏晚同款 · 柔润上庭+古典瓜子下巴)</option>
+              <option value="kr_sweet_heart">💖 韩系初恋甜美心形脸 (千雪同款 · 甜美心形苹果肌+短俏下巴)</option>
+              <option value="cn_cold_royal">❄️ 中式清冷高智御姐脸 (沈知微同款 · 高智感修长鹅蛋脸+挺拔鼻梁)</option>
+            </select>
+          </div>
+          <div class="field-row" style="margin-bottom:6px;">
+            <label>✒️ 切换当前头颅的眉形 (8款根根分明中韩真毛流眉形)</label>
+            <select id="vcd-sel-eyebrow-style">
+              <option value="cn_scholar_natural">🌿 中式原生书卷眉 (方尧平 · 自然微弯柔顺学生眉)</option>
+              <option value="kr_straight_mist">☁️ 韩式温柔一字雾眉 (初夏 · 减龄平眉+柔雾绒毛感)</option>
+              <option value="kr_idol_arch">✨ 韩系女团柔弧流星眉 (林汐 · 精致微挑眉峰+利落眉尾)</option>
+              <option value="cn_willow_classical">🌙 江南古典弯弯柳叶眉 (苏晚 · 纤细柔美古典仕女眉)</option>
+              <option value="kr_sweet_droop">🥺 韩系无辜八字微垂眉 (千雪 · 楚楚可怜小鹿下垂眉尾)</option>
+              <option value="cn_cold_sword">⚔️ 中式清冷英气剑眉 (沈知微 · 斜飞入鬓高智御姐眉)</option>
+              <option value="kr_wild_feathered">🪶 根根分明野生毛流眉 (韩系画报感立体眉头立毛)</option>
+              <option value="cn_tang_moth">🌸 古典短巧远山蛾眉 (传统东方含蓄短眉)</option>
+            </select>
+          </div>
+        </div>
 
         <div class="field-row" style="display:none;">
           <select id="sel-container-style">
@@ -612,20 +662,68 @@
 
           <!-- Right Column: Daz Morph Sliders, Forensic Post-Mortem Expressions, Realistic Hair & Dossier Save -->
           <div class="studio-col studio-col-right">
-            <!-- A. Base, Forensic Dead Expressions & Facial Morphs -->
+            <!-- A. Base, Face Archetype, Eyebrow Style, Forensic Dead Expressions & Facial Morphs -->
             <div class="card-block">
-              <h3>👩 步骤 2：亚洲女性基底、死人尸相表情与骨相精调</h3>
+              <h3>👩 步骤 2：中韩青年女头型流派、8款眉形、尸相与骨相精调</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>亚洲女性六款骨相基底模型 (含19岁高考女状元方尧平)</label>
+                  <label>中韩青年女六款角色基底 (独立皮肤贴图 + 专属妆容 + 美人痣)</label>
                   <select id="sel-base-preset">
-                    <option value="fangyaoping">★ 方尧平 · 广东怀集19岁高考女状元 (齐刘海学霸束发 + 青春鹅蛋脸 + 生前校服照)</option>
-                    <option value="user_photo">① 初夏 · 幼态甜妹鹅蛋脸 (饱满苹果肌 + 短圆下巴 + 右颊三颗特征痣)</option>
-                    <option value="linxi">② 林汐 · 清冷超模折角方圆脸 (清晰下颌折角 + 高颧弓盒型鼻 + 左眼尾泪痣)</option>
-                    <option value="suwan">③ 苏晚 · 江南古典尖俏瓜子V脸 (流畅V型下颌 + 精致尖翘下巴 + 右眼下美人痣)</option>
-                    <option value="qianxue">④ 千雪 · 甜酷猫系短下庭V脸 (短缩下庭 + 上挑猫眼 + 鼻梁甜酷小痣)</option>
-                    <option value="shenzhiwei">⑤ 沈知微 · 知性御姐修长菱形脸 (修长下庭 + 立体微收面颊 + 左颊美人痣)</option>
+                    <option value="fangyaoping">★ 方尧平 · 广东怀集19岁高考女状元 (岭南清秀鹅蛋脸 + 素颜学生肌 + 生前校服照)</option>
+                    <option value="user_photo">① 初夏 · 19岁中式幼态圆润娃娃脸 (珠圆玉润婴儿肥 + 蜜桃粉白肌 + 右颊三颗痣)</option>
+                    <option value="linxi">② 林汐 · 21岁韩系财阀千金鹅蛋V脸 (韩国柔滑小V脸 + 冷白水光肌 + 左眼尾泪痣)</option>
+                    <option value="suwan">③ 苏晚 · 20岁江南古典温婉瓜子脸 (古典瓜子脸 + 温润暖玉肌 + 右眼下卧蚕痣)</option>
+                    <option value="qianxue">④ 千雪 · 18岁韩系初恋甜美心形脸 (甜美心形苹果肌 + 雪瓷桃花肌 + 鼻梁美人痣)</option>
+                    <option value="shenzhiwei">⑤ 沈知微 · 23岁中式清冷高智御姐脸 (修长清冷鹅蛋脸 + 冷调象牙肌 + 左唇角痣)</option>
                   </select>
+                </div>
+
+                <div class="field-row">
+                  <label>🍑 6款中韩青年女头型 3D 骨相流派 (彻底告别美式亚裔高颧骨方腮)</label>
+                  <select id="sel-face-archetype">
+                    <option value="cn_oval_scholar">📖 中式清秀书卷鹅蛋脸 (方尧平 · 岭南学霸清秀鹅蛋脸)</option>
+                    <option value="cn_round_babyface">🍑 中式幼态圆润娃娃脸 (初夏 · 饱满婴儿肥满月脸 + 短圆下巴)</option>
+                    <option value="kr_idol_vline">✨ 韩系财阀千金鹅蛋V脸 (林汐 · 韩国柔滑鹅蛋V脸 + 饱满前苹果肌)</option>
+                    <option value="cn_classical_melon">🌸 江南古典温婉瓜子脸 (苏晚 · 柔润上庭 + 古典瓜子尖俏下巴)</option>
+                    <option value="kr_sweet_heart">💖 韩系初恋甜美心形脸 (千雪 · 甜美心形苹果肌 + 短俏翘下巴)</option>
+                    <option value="cn_cold_royal">❄️ 中式清冷高智御姐脸 (沈知微 · 高智感修长鹅蛋脸 + 挺拔鼻梁)</option>
+                  </select>
+                </div>
+
+                <div class="preset-photo-row" id="face-archetype-quick-chips" style="margin-bottom:4px;flex-wrap:wrap;gap:4px;">
+                  <span>头型秒切:</span>
+                  <button type="button" class="chip-btn" data-face-arch="cn_round_babyface">🍑 中式圆润娃娃脸</button>
+                  <button type="button" class="chip-btn" data-face-arch="kr_idol_vline">✨ 韩国千金鹅蛋V脸</button>
+                  <button type="button" class="chip-btn active" data-face-arch="cn_oval_scholar">📖 中式书卷鹅蛋脸</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_classical_melon">🌸 江南古典瓜子脸</button>
+                  <button type="button" class="chip-btn" data-face-arch="kr_sweet_heart">💖 韩系甜美心形脸</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_cold_royal">❄️ 中式清冷御姐脸</button>
+                </div>
+
+                <div class="field-row">
+                  <label>✒️ 8款中韩根根分明真毛流眉形 (3D眉骨弧度 + 500根手绘级毛流贴图)</label>
+                  <select id="sel-eyebrow-style">
+                    <option value="cn_scholar_natural">🌿 中式原生书卷眉 (自然微弯柔顺学生眉 · 方尧平同款)</option>
+                    <option value="kr_straight_mist">☁️ 韩式温柔一字雾眉 (减龄幼态平眉 · 初夏同款)</option>
+                    <option value="kr_idol_arch">✨ 韩系女团柔弧流星眉 (精致微挑眉峰 · 林汐同款)</option>
+                    <option value="cn_willow_classical">🌙 江南古典弯弯柳叶眉 (纤细柔美仕女眉 · 苏晚同款)</option>
+                    <option value="kr_sweet_droop">🥺 韩系无辜八字微垂眉 (楚楚可怜小鹿眉 · 千雪同款)</option>
+                    <option value="cn_cold_sword">⚔️ 中式清冷英气剑眉 (斜飞入鬓御姐眉 · 沈知微同款)</option>
+                    <option value="kr_wild_feathered">🪶 根根分明野生毛流眉 (韩系画报感立体眉头立毛)</option>
+                    <option value="cn_tang_moth">🌸 古典短巧远山蛾眉 (传统东方含蓄短巧蛾眉)</option>
+                  </select>
+                </div>
+
+                <div class="preset-photo-row" id="eyebrow-style-quick-chips" style="margin-bottom:4px;flex-wrap:wrap;gap:4px;">
+                  <span>8款眉形:</span>
+                  <button type="button" class="chip-btn active" data-brow-style="cn_scholar_natural">🌿 原生书卷眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_straight_mist">☁️ 韩式一字雾眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_idol_arch">✨ 韩系流星眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="cn_willow_classical">🌙 古典柳叶眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_sweet_droop">🥺 无辜微垂眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="cn_cold_sword">⚔️ 清冷英气剑眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_wild_feathered">🪶 根根野生眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="cn_tang_moth">🌸 远山短蛾眉</button>
                 </div>
 
                 <div class="field-row">

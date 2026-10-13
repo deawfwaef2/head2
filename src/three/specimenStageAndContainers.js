@@ -234,17 +234,16 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
   const group = new THREE.Group();
   group.name = 'ScreenSpaceStageGroup';
   const platforms = [];
+  const movableProps = [];
 
   const boxW = bounds.maxX - bounds.minX;
   const boxH = bounds.maxY - bounds.minY;
-  // Extend floor from back wall (minZ) all the way into the close-up zone (+42 cm)
   const floorMinZ = bounds.minZ;
   const floorMaxZ = 42;
   const floorDepth = floorMaxZ - floorMinZ;
   const floorCenterZ = (floorMinZ + floorMaxZ) * 0.5;
   const floorSurfaceY = bounds.minY + 1.8;
 
-  // Always register the main bottom floor as a landing platform
   platforms.push({
     id: 'main_floor',
     label: '底部主展台桌面',
@@ -257,7 +256,7 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
   });
 
   if (floorStyle === 'none') {
-    return { stageGroup: group, group, shelves: platforms, platforms };
+    return { stageGroup: group, group, shelves: platforms, platforms, movableProps };
   }
 
   const floorTex = getFloorTexture(floorStyle);
@@ -280,46 +279,46 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
     metalness: 0.82,
   });
 
-  // 1. Main Bottom Floor Slab
   const mainSlabGeo = new THREE.BoxGeometry(boxW * 1.16, slabThickness, floorDepth);
   const mainSlab = new THREE.Mesh(mainSlabGeo, floorMat);
   mainSlab.position.set(0, floorSurfaceY - slabThickness * 0.5, floorCenterZ);
   mainSlab.receiveShadow = true;
   group.add(mainSlab);
 
-  // Front Molding / Brass Edge Bar so the front of the floor is super crisp
   const frontBarGeo = new THREE.BoxGeometry(boxW * 1.16, slabThickness * 1.08, 1.4);
   const frontBar = new THREE.Mesh(frontBarGeo, trimMat);
   frontBar.position.set(0, floorSurfaceY - slabThickness * 0.48, 2.0);
   frontBar.receiveShadow = true;
   group.add(frontBar);
 
-  // Helper to add an elevated 3D shelf or podium
+  // Stage 28: Every shelf & podium is built as an individually draggable & deletable 3D structure!
   const addShelfPlatform = (id, label, cx, surfaceY, cz, w, d, hThickness = 1.6, isColumn = false) => {
+    const shelfNode = new THREE.Group();
+    shelfNode.name = `StageShelf_${id}`;
+    shelfNode.position.set(cx, surfaceY, cz);
+
     const slabGeo = isColumn
       ? new THREE.CylinderGeometry(w * 0.5, w * 0.54, hThickness, 32)
       : new THREE.BoxGeometry(w, hThickness, d);
     const slab = new THREE.Mesh(slabGeo, floorMat);
-    slab.position.set(cx, surfaceY - hThickness * 0.5, cz);
+    slab.position.set(0, -hThickness * 0.5, 0);
     slab.castShadow = true;
     slab.receiveShadow = true;
-    group.add(slab);
+    shelfNode.add(slab);
 
     if (!isColumn) {
       const lipGeo = new THREE.BoxGeometry(w + 0.4, hThickness * 0.65, 0.9);
       const lip = new THREE.Mesh(lipGeo, trimMat);
-      lip.position.set(cx, surfaceY - hThickness * 0.35, cz + d * 0.5);
-      group.add(lip);
+      lip.position.set(0, -hThickness * 0.35, d * 0.5);
+      shelfNode.add(lip);
 
-      // Sleek brass support brackets underneath
       for (const side of [-1, 1]) {
         const brkGeo = new THREE.BoxGeometry(0.8, 3.6, d * 0.82);
         const brk = new THREE.Mesh(brkGeo, trimMat);
-        brk.position.set(cx + side * (w * 0.42), surfaceY - hThickness - 1.6, cz - d * 0.05);
-        group.add(brk);
+        brk.position.set(side * (w * 0.42), -hThickness - 1.6, -d * 0.05);
+        shelfNode.add(brk);
       }
     } else {
-      // Fluted dark obsidian column shaft down to the main floor
       const shaftH = Math.max(2, surfaceY - hThickness - floorSurfaceY);
       if (shaftH > 2) {
         const shaftGeo = new THREE.CylinderGeometry(w * 0.34, w * 0.40, shaftH, 24);
@@ -329,22 +328,24 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
           metalness: 0.25,
         });
         const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-        shaft.position.set(cx, floorSurfaceY + shaftH * 0.5, cz);
+        shaft.position.set(0, -hThickness - shaftH * 0.5, 0);
         shaft.castShadow = true;
         shaft.receiveShadow = true;
-        group.add(shaft);
+        shelfNode.add(shaft);
 
         const ringGeo = new THREE.TorusGeometry(w * 0.46, 0.38, 12, 32);
         ringGeo.rotateX(Math.PI / 2);
         const topRing = new THREE.Mesh(ringGeo, trimMat);
-        topRing.position.set(cx, surfaceY - hThickness, cz);
-        group.add(topRing);
+        topRing.position.set(0, -hThickness, 0);
+        shelfNode.add(topRing);
       }
     }
 
-    platforms.push({
+    const platEntry = {
       id,
       label,
+      halfW: w * 0.56,
+      halfD: d * 0.65,
       minX: cx - w * 0.56,
       maxX: cx + w * 0.56,
       minZ: cz - d * 0.65,
@@ -352,11 +353,24 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
       surfaceY,
       centerX: cx,
       centerZ: cz,
-    });
+    };
+    platforms.push(platEntry);
+
+    shelfNode.userData = {
+      isPlaceableStructure: true,
+      isShelfStructure: true,
+      structureId: `SHELF-${id}`,
+      containerStyle: 'stage_shelf',
+      label: `🪵 ${label}`,
+      fullLabel: `🪵 可移动/可删除展架 · ${label}`,
+      platformRef: platEntry,
+      freeVerticalDrag: true,
+    };
+    group.add(shelfNode);
+    movableProps.push(shelfNode);
   };
 
   if (shelfLayout === 'study_side_rack') {
-    // Left & Right Floating Display Shelves so the center of the screen stays clear for studying!
     const shelfW = Math.max(22, boxW * 0.26);
     const shelfD = 32;
     const leftX = bounds.minX + shelfW * 0.52;
@@ -369,7 +383,6 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
     addShelfPlatform('shelf_left_high', '左上伴学高层展架', leftX, highY, -24, shelfW * 0.92, shelfD);
     addShelfPlatform('shelf_right_high', '右上伴学高层展架', rightX, highY, -24, shelfW * 0.92, shelfD);
   } else if (shelfLayout === 'stepped_altar') {
-    // 3-Tiered Pyramid Altar in the center/sides
     const centerY = floorSurfaceY + boxH * 0.30;
     const sideY = floorSurfaceY + boxH * 0.16;
     addShelfPlatform('altar_center_top', '中央加冕主祭坛', 0, centerY, -22, 28, 30, 2.2);
@@ -386,7 +399,6 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
     addShelfPlatform('pedestal_L2', '左内高立柱台', innerLX, floorSurfaceY + 25, -28, colW, colW, 1.8, true);
     addShelfPlatform('pedestal_R2', '右内高立柱台', innerRX, floorSurfaceY + 25, -28, colW, colW, 1.8, true);
   } else if (shelfLayout === 'bottom_gallery') {
-    // Decorative brass coasters along the bottom desk
     const coasterPositions = [-boxW * 0.36, -boxW * 0.18, 0, boxW * 0.18, boxW * 0.36];
     for (let i = 0; i < coasterPositions.length; i++) {
       const cx = coasterPositions[i];
@@ -398,48 +410,39 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
     }
   }
 
-  // Stage 24: Place Independent 3D Decorative Props directly on the 3D Desk Floor & Shelves (NOT bound to characters!)
+  // Stage 28: Make every Decorative Prop on the Desk & Shelves individually draggable & deletable!
   const decorStyle = options.decorStyle || 'trophy_candles';
   if (decorStyle && decorStyle !== 'none') {
-    const stageDecorRoot = new THREE.Group();
-    stageDecorRoot.name = 'StageSceneDecorGroup';
-
-    // Place props at curated desk corners and shelf edges so they never move when heads are dragged
+    const decorLabelMap = {
+      study_tomes: '📚 状元古籍错题本摆件',
+      trophy_candles: '🕯️ 祭坛红烛玫瑰摆件',
+      soul_siphon: '⚡ 灵魂汲取导管摆件',
+      forensic_evidence: '🏷️ 法医物证标尺摆件',
+    };
     const propAnchors = [
-      { x: -boxW * 0.41, y: floorSurfaceY, z: -12, scale: 0.92, rotY: 0.15 },
-      { x: boxW * 0.41, y: floorSurfaceY, z: -12, scale: 0.92, rotY: -0.25 },
-      { x: -boxW * 0.19, y: floorSurfaceY, z: -10, scale: 0.85, rotY: 0.32 },
-      { x: boxW * 0.19, y: floorSurfaceY, z: -10, scale: 0.85, rotY: -0.18 },
+      { x: -boxW * 0.38, y: floorSurfaceY, z: -12, scale: 0.92, rotY: 0.15 },
+      { x: boxW * 0.38, y: floorSurfaceY, z: -12, scale: 0.92, rotY: -0.25 },
     ];
-    for (const p of platforms) {
-      if (!p.isMainFloor) {
-        propAnchors.push({
-          x: p.centerX + (p.centerX < 0 ? -4.5 : 4.5),
-          y: p.surfaceY,
-          z: p.centerZ + 3.0,
-          scale: 0.72,
-          rotY: p.centerX < 0 ? 0.2 : -0.2,
-        });
-      }
-    }
-
+    let propIdx = 1;
     for (const anchor of propAnchors) {
       const propInstance = buildSpecimenDecorGroup(decorStyle, 0);
       propInstance.position.set(anchor.x, anchor.y, anchor.z);
       propInstance.scale.setScalar(anchor.scale);
       propInstance.rotation.y = anchor.rotY;
-      stageDecorRoot.add(propInstance);
+      propInstance.userData = {
+        isPlaceableStructure: true,
+        isDecorProp: true,
+        structureId: `PROP-${propIdx++}`,
+        containerStyle: `prop_${decorStyle}`,
+        label: decorLabelMap[decorStyle] || '📚 书房桌面摆件',
+        fullLabel: `${decorLabelMap[decorStyle] || '书房摆件'} #${propIdx - 1}`,
+      };
+      group.add(propInstance);
+      movableProps.push(propInstance);
     }
-    group.add(stageDecorRoot);
   }
 
-  // Stage 27: Rainy-Night Study Window + Falling Rain Streaks + Banker's Study Lamp (雨夜书房伴学环境)
-  if (options.rainyWindowEnabled !== false) {
-    const rainyBackdrop = buildRainyStudyWindowGroup(bounds, floorSurfaceY);
-    group.add(rainyBackdrop);
-  }
-
-  return { stageGroup: group, group, shelves: platforms, platforms };
+  return { stageGroup: group, group, shelves: platforms, platforms, movableProps };
 }
 
 let rainyWindowPaneTex = null;

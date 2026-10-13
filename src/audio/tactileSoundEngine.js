@@ -13,7 +13,7 @@ class TactileSoundEngine {
   constructor() {
     this.ctx = null;
     this.enabled = true;
-    this.masterVolume = 0.75;
+    this.masterVolume = 0.85;
     this.pickupVolume = 0.85;
     this.dragVolume = 0.70;
     this.collisionVolume = 0.90;
@@ -26,12 +26,25 @@ class TactileSoundEngine {
     this.lastDepthTickTime = 0;
     this.lastCollisionTime = 0;
 
-    // Rainy Study Room ASMR Soundscape state
+    // Rainy Study Room ASMR Soundscape state (Stage 28: clearly audible, rich multi-layered rain)
     this.rainEnabled = true;
-    this.rainVolume = 0.42;
+    this.rainVolume = 0.88;
     this.rainSource = null;
     this.rainGain = null;
     this.rainDropTimer = null;
+
+    if (typeof window !== 'undefined') {
+      const unlockAndStartRain = () => {
+        if (!this.enabled) return;
+        const ctx = this.ensureContext();
+        if (ctx && this.rainEnabled && !this.rainSource) {
+          this.startRainAmbience();
+        }
+      };
+      window.addEventListener('pointerdown', unlockAndStartRain, { passive: true, capture: true });
+      window.addEventListener('wheel', unlockAndStartRain, { passive: true, capture: true });
+      window.addEventListener('keydown', unlockAndStartRain, { passive: true, capture: true });
+    }
   }
 
   ensureContext() {
@@ -369,27 +382,33 @@ class TactileSoundEngine {
   }
 
   /**
-   * 9. Cozy Rainy-Night Study Ambience ASMR (窗外淅沥小雨声 + 窗台水滴轻叩 + 远雷伴学白噪音)
+   * 9. Cozy Rainy-Night Study Ambience ASMR (窗外清晰淅沥雨声 + 屋檐水滴敲击伴学白噪音)
+   * Stage 28: High-presence 6s stereo buffer with baked raindrop impacts & water splashes so it is clearly audible!
    */
   startRainAmbience() {
     if (!this.rainEnabled) return;
     const ctx = this.ensureContext();
     if (!ctx) return;
+    const targetGainVal = Math.min(1.85, Math.max(0.0, this.rainVolume * this.masterVolume * 1.45));
     if (this.rainSource) {
       if (this.rainGain) {
-        this.rainGain.gain.setTargetAtTime(this.rainVolume * this.masterVolume * 0.35, ctx.currentTime, 0.25);
+        this.rainGain.gain.setTargetAtTime(targetGainVal, ctx.currentTime, 0.15);
       }
       return;
     }
 
-    // Create 4-second looping pink/brown rain noise buffer
+    // Create 6-second looping stereo rain shower + crisp raindrop patter buffer
     const sr = ctx.sampleRate;
-    const len = sr * 4;
+    const len = sr * 6;
     const buffer = ctx.createBuffer(2, len, sr);
     for (let ch = 0; ch < 2; ch++) {
       const data = buffer.getChannelData(ch);
       let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
       for (let i = 0; i < len; i++) {
+        const t = i / sr;
+        // Gentle breathing rain gust envelope
+        const gust = 0.84 + 0.16 * Math.sin(t * Math.PI * 2 / 6.0 + ch * 1.1)
+                          + 0.08 * Math.cos(t * Math.PI * 4 / 6.0);
         const white = Math.random() * 2 - 1;
         b0 = 0.99886 * b0 + white * 0.0555179;
         b1 = 0.99332 * b1 + white * 0.0750759;
@@ -397,8 +416,26 @@ class TactileSoundEngine {
         b3 = 0.86650 * b3 + white * 0.3104856;
         b4 = 0.55000 * b4 + white * 0.5329522;
         b5 = -0.7616 * b5 - white * 0.0168980;
-        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.035;
+        // Rich, warm pink-noise rain shower bed (8x stronger than Stage 27)
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.65) * 0.145 * gust;
         b6 = white * 0.115926;
+      }
+
+      // Bake 340 crisp individual raindrop impacts & water splashes per channel across the 6s loop
+      for (let d = 0; d < 340; d++) {
+        const startIdx = Math.floor(Math.random() * (len - 2400));
+        const dropDur = Math.floor(sr * (0.008 + Math.random() * 0.024));
+        const freq = 680 + Math.random() * 1650;
+        const pitchSlide = 1.18 + Math.random() * 0.28;
+        const amp = (0.14 + Math.random() * 0.24) * (Math.random() < 0.25 ? 1.35 : 0.85);
+        for (let k = 0; k < dropDur && (startIdx + k) < len; k++) {
+          const u = k / dropDur;
+          const env = Math.sin(u * Math.PI) * Math.exp(-u * 3.8);
+          const instFreq = freq * (1.0 + u * (pitchSlide - 1.0));
+          const tone = Math.sin(2 * Math.PI * instFreq * (k / sr));
+          const splash = (Math.random() * 2 - 1) * Math.exp(-u * 6.5) * 0.65;
+          data[startIdx + k] = Math.max(-0.98, Math.min(0.98, data[startIdx + k] + (tone * 0.55 + splash * 0.45) * amp * env));
+        }
       }
     }
 
@@ -406,18 +443,18 @@ class TactileSoundEngine {
     src.buffer = buffer;
     src.loop = true;
 
-    // Bandpass + Lowpass to shape warm windowpane rain patter
+    // Warm acoustic shaping (preserves crisp raindrop transients up to 3.4 kHz)
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
-    lp.frequency.value = 1350;
+    lp.frequency.value = 3400;
 
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass';
-    hp.frequency.value = 240;
+    hp.frequency.value = 150;
 
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(this.rainVolume * this.masterVolume * 0.35, ctx.currentTime + 1.2);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(targetGainVal, ctx.currentTime + 0.45);
 
     src.connect(hp);
     hp.connect(lp);
@@ -428,7 +465,7 @@ class TactileSoundEngine {
     this.rainSource = src;
     this.rainGain = gain;
 
-    // Stochastic soft windowpane raindrops & occasional distant muffled thunder
+    // Live stochastic eaves water droplets & windowpane patters
     if (this.rainDropTimer) clearInterval(this.rainDropTimer);
     this.rainDropTimer = setInterval(() => {
       if (!this.rainEnabled || !this.enabled || !this.ctx || this.ctx.state !== 'running') return;
@@ -436,23 +473,23 @@ class TactileSoundEngine {
       const v = this.rainVolume * this.masterVolume;
       if (v <= 0.01) return;
 
-      // Soft raindrop tap on glass windowpane
-      if (Math.random() < 0.72) {
+      // Distinct water droplet hitting study windowsill
+      if (Math.random() < 0.85) {
         const dropOsc = this.ctx.createOscillator();
         const dropGain = this.ctx.createGain();
-        const pan = this.createPanner(this.ctx, (Math.random() - 0.5) * 1.4);
-        const baseFreq = 920 + Math.random() * 880;
+        const pan = this.createPanner(this.ctx, (Math.random() - 0.5) * 1.5);
+        const baseFreq = 780 + Math.random() * 1120;
         dropOsc.type = 'sine';
         dropOsc.frequency.setValueAtTime(baseFreq, now);
-        dropOsc.frequency.exponentialRampToValueAtTime(baseFreq * 1.32, now + 0.028);
-        dropGain.gain.setValueAtTime(0.018 * v, now);
-        dropGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.035);
+        dropOsc.frequency.exponentialRampToValueAtTime(baseFreq * 1.38, now + 0.036);
+        dropGain.gain.setValueAtTime(0.095 * v, now);
+        dropGain.gain.exponentialRampToValueAtTime(0.0008, now + 0.045);
         dropOsc.connect(dropGain);
         dropGain.connect(pan);
         dropOsc.start(now);
-        dropOsc.stop(now + 0.04);
+        dropOsc.stop(now + 0.05);
       }
-    }, 280);
+    }, 190);
   }
 
   stopRainAmbience() {
@@ -481,9 +518,10 @@ class TactileSoundEngine {
   }
 
   setRainVolume(vol) {
-    this.rainVolume = Math.max(0, Math.min(1, Number(vol) || 0));
+    this.rainVolume = Math.max(0, Math.min(1.5, Number(vol) || 0));
     if (this.rainGain && this.ctx) {
-      this.rainGain.gain.setTargetAtTime(this.rainVolume * this.masterVolume * 0.35, this.ctx.currentTime, 0.12);
+      const targetGainVal = Math.min(1.85, Math.max(0.0, this.rainVolume * this.masterVolume * 1.45));
+      this.rainGain.gain.setTargetAtTime(targetGainVal, this.ctx.currentTime, 0.08);
     }
   }
 }
