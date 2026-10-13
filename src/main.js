@@ -1350,6 +1350,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateVpHudPosition();
   });
 
+  document.getElementById('chk-box-fit-screen')?.addEventListener('change', (e) => {
+    desktopEngine.updateSettings({ boxFitScreen: e.target.checked });
+    showToast(e.target.checked ? '🖥️ 盒型空间已贴满屏幕边缘' : '📐 已切换为自定义盒型宽/高');
+  });
+
   document.getElementById('set-box-width').addEventListener('input', (e) => {
     const v = parseInt(e.target.value, 10);
     document.getElementById('val-set-box-width').textContent = `${v} cm`;

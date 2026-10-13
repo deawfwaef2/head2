@@ -40,6 +40,7 @@ export class DesktopBoxSpaceEngine {
       fov: 42,
       vanishingPointOffsetX: 0,
       vanishingPointOffsetY: 0,
+      boxFitScreen: true, // Stage 18: 默认盒型空间前框(Z=0)四边正好贴满电脑屏幕边缘
       boxWidthCm: 88,
       boxHeightCm: 52,
       boxMaxDepthMm: 1200,
@@ -128,6 +129,14 @@ export class DesktopBoxSpaceEngine {
 
   getBoxBounds() {
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    if (this.settings.boxFitScreen !== false) {
+      // 前框贴屏：以相机到前框(Z=0)的距离反推可视半高/半宽，前框四边与屏幕四边重合
+      const dist = Math.max(1, this.cameraZ || 115);
+      const halfH = Math.tan(THREE.MathUtils.degToRad((this.settings.fov || 42) * 0.5)) * dist;
+      const halfW = halfH * aspect;
+      const maxDepthCm = this.settings.boxMaxDepthMm / 10;
+      return { minX: -halfW, maxX: halfW, minY: -halfH, maxY: halfH, minZ: -maxDepthCm, maxZ: 0 };
+    }
     const halfH = this.settings.boxHeightCm * 0.5;
     const halfW = halfH * aspect * (this.settings.boxWidthCm / 82);
     const maxDepthCm = this.settings.boxMaxDepthMm / 10;

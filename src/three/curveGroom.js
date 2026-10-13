@@ -148,7 +148,7 @@ function makeRootLayer(head, color, style) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const phi = Math.atan2(x, z + .014), front = Math.max(0, Math.cos(phi));
     const photo = style === 'groom_photo_tied';
-    const hairline = -.026 + (photo ? .060 : .084) * front;
+    const hairline = -.038 + (photo ? .060 : .084) * front; // Stage 18: 覆盖下扩，表情拉动额头时不露头皮
     let a = THREE.MathUtils.smoothstep(y, hairline, hairline + (photo ? .037 : .026));
     if (style === 'groom_center_long' && y > .065) a *= 1 - 0.82 * Math.exp(-Math.pow(x / .00055, 2));
     const ear = THREE.MathUtils.smoothstep(Math.abs(x), .058, .070) * (1 - THREE.MathUtils.smoothstep(y, .025, .044)) * THREE.MathUtils.smoothstep(z, -.02, .015);

@@ -371,3 +371,10 @@
 ### [2026-10-13 Stage 15 merge bridge / Groom checkpoint]
 - 远端又前进5689dfe（2070S档、Ultra、动态分辨率与方案文档）。正常合并保留新档位/默认/各向异性/方案，不覆盖另一Agent工作。硬件MSAA采用已有能力上限版本，原始Alpha修正仍保留。软件始终DPR<=1、HDR不创建，并不参与2070动态分辨率，以保证原生Groom可玩降级。新增方案中的DLSS市场事实不是本Groom轮次外部核查结果，不借此宣称真实DLSS实现。
 - 最终范围以GROOM_QA_RESULTS.json为准；真实2070S/MSAA/动态分辨率仍需用户设备验证。软件测试帧率被QA限流，不能作为GPU帧率。
+
+### [2026-10-13 Stage 18] 真人皮肤（去硅胶感）+ 表情换头皮同步 + 盒空间默认贴满屏幕
+- 用户反馈：皮肤要最高级且像真人（现像硅胶）、换表情常露头皮、要求默认 3D 空间边缘=电脑屏幕。
+- 皮肤去硅胶：上轮为对标实体硅胶参考加的 clearcoat .20 是硅胶油亮主因，本轮降到 .05/ccRough .55；roughness 回 .62 真人区间；微观贴图 1024→2048 + aniso 16 + bumpScale .042，靠毛孔/皮纹而非油光出质感。诚实边界：内置示例 albedo 仍 1K、无真 SSS，照片级真人仍需用户导入 4K PBR 高模（见 DLSS5_QUALITY_PLAN 资产线）。
+- 露头皮根因：表情/脸型 morph 只驱动 HeadSkinMesh 的 GPU morph，发际根层 Groom_ScalpRootDensity 是静态拷贝，额头一动就错位。新增 `syncScalpRootLayerToMorphs()`：每次 applyHeadMorphsToGroup 后用同一组权重 CPU 重算根层顶点（4494点×权重，成本可忽略）；同时 makeRootLayer 发际覆盖下扩（-.026→-.038）。发丝管/发量层为静态发型外形，不随面部 morph（符合真实：表情不动发顶）。
+- 盒空间贴屏：DesktopBoxSpaceEngine 新增 `boxFitScreen:true` 默认开，getBoxBounds 以相机距离×tan(fov/2) 反推前框半宽高，前框(Z=0)四边与屏幕四边重合；设置页新增开关 `chk-box-fit-screen`，关后回落原宽/高滑杆。深度仍由 boxMaxDepthMm 控制。
+- 先行存档：本轮开始前已将工作区 Stage17 合并半成品提交 42d36e5，避免中断丢失。

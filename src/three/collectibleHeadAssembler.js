@@ -275,6 +275,36 @@ const PRESET_MORPH_BIASES = {
  * Applies facial bone morphs, forensic dead-person expressions ("死人各种表情"),
  * and 3D hair morphs across all morph-enabled meshes inside `rootGroup`.
  */
+
+// Stage 18 · 头皮根层跟随头部 Morph：换表情/捏脸时，Groom_ScalpRootDensity 必须和
+// HeadSkinMesh 用同一组 morph 权重重算顶点，否则额头皮肤动了、发际层不动 -> 露头皮。
+function syncScalpRootLayerToMorphs(rootGroup) {
+  const head = rootGroup.getObjectByName('HeadSkinMesh');
+  const root = rootGroup.getObjectByName('Groom_ScalpRootDensity');
+  if (!head || !root) return;
+  const hg = head.geometry, rg = root.geometry;
+  const hp = hg?.attributes?.position, rp = rg?.attributes?.position;
+  if (!hp || !rp || hp.count !== rp.count) return;
+  if (!rg.userData.basePositions) rg.userData.basePositions = Float32Array.from(rp.array);
+  const out = rp.array;
+  out.set(rg.userData.basePositions);
+  const morphAttrs = hg.morphAttributes?.position || [];
+  const dict = head.morphTargetDictionary, infl = head.morphTargetInfluences;
+  if (dict && infl) {
+    for (const [name, idx] of Object.entries(dict)) {
+      const w = infl[idx];
+      if (!w) continue;
+      const ma = morphAttrs[idx];
+      if (!ma) continue;
+      const arr = ma.array;
+      const n = Math.min(out.length, arr.length);
+      for (let i = 0; i < n; i++) out[i] += arr[i] * w;
+    }
+  }
+  rp.needsUpdate = true;
+  rg.computeBoundingSphere();
+}
+
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   if (!rootGroup) return;
   rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), ...morphs };
@@ -365,6 +395,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   });
 
   applyCurveGroomShape(rootGroup, m);
+  syncScalpRootLayerToMorphs(rootGroup);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
@@ -727,18 +758,18 @@ export async function buildCollectibleHeadNode(config = {}) {
         normalScale: new THREE.Vector2(0.50, 0.50),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.028,
+        bumpScale: 0.042,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.55),
+        roughness: Number(materials.skinRoughness ?? 0.62),
         metalness: 0.0,
         sheen: 0.16,
         sheenRoughness: 0.62,
         sheenColor: new THREE.Color('#e8a49b'),
-        clearcoat: 0.20,
-        clearcoatRoughness: 0.38,
-        specularIntensity: 0.46,
+        clearcoat: 0.05,
+        clearcoatRoughness: 0.55,
+        specularIntensity: 0.38,
         ior: 1.42,
-        envMapIntensity: 0.38,
+        envMapIntensity: 0.34,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
