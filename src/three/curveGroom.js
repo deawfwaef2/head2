@@ -80,8 +80,8 @@ function pointAt(source, strand, t, target) {
 
 function buildStrands(source, indices, steps, sides, desktop) {
   const vertices = indices.length * steps * sides;
-  const positions = new Float32Array(vertices * 3), normals = new Float32Array(vertices * 3);
-  const tangents = new Float32Array(vertices * 4), colors = new Float32Array(vertices * 3), uvs = new Float32Array(vertices * 2);
+  const positions = new Float32Array(vertices * 3), normals = new Int8Array(vertices * 3);
+  const tangents = new Int16Array(vertices * 4), colors = new Uint8Array(vertices * 3), uvs = new Uint16Array(vertices * 2);
   const triangles = new Uint32Array(indices.length * (steps - 1) * sides * 6);
   const p = new THREE.Vector3(), before = new THREE.Vector3(), after = new THREE.Vector3(), tangent = new THREE.Vector3();
   const normal = new THREE.Vector3(), binormal = new THREE.Vector3(), radial = new THREE.Vector3();
@@ -90,7 +90,7 @@ function buildStrands(source, indices, steps, sides, desktop) {
     const strand = encoded % source.count, child = Math.floor(encoded / source.count);
     const start = vi;
     normal.set(1, 0, 0);
-    const pigment = .72 + source.pigment[strand] / 255 * .54;
+    const pigment = .61 + source.pigment[strand] / 255 * .39;
     for (let j = 0; j < steps; j++) {
       const t = j / (steps - 1);
       pointAt(source, strand, t, p);
@@ -115,10 +115,10 @@ function buildStrands(source, indices, steps, sides, desktop) {
         radial.copy(normal).multiplyScalar(Math.cos(angle)).addScaledVector(binormal, Math.sin(angle));
         const i = vi * 3;
         positions[i] = p.x + radial.x * radius; positions[i + 1] = p.y + radial.y * radius; positions[i + 2] = p.z + radial.z * radius;
-        normals[i] = radial.x; normals[i + 1] = radial.y; normals[i + 2] = radial.z;
-        tangents[vi * 4] = tangent.x; tangents[vi * 4 + 1] = tangent.y; tangents[vi * 4 + 2] = tangent.z; tangents[vi * 4 + 3] = 1;
-        colors[i] = pigment; colors[i + 1] = pigment * .95; colors[i + 2] = pigment * .90;
-        uvs[vi * 2] = k / sides; uvs[vi * 2 + 1] = t;
+        normals[i] = Math.round(radial.x * 127); normals[i + 1] = Math.round(radial.y * 127); normals[i + 2] = Math.round(radial.z * 127);
+        tangents[vi * 4] = Math.round(tangent.x * 32767); tangents[vi * 4 + 1] = Math.round(tangent.y * 32767); tangents[vi * 4 + 2] = Math.round(tangent.z * 32767); tangents[vi * 4 + 3] = 32767;
+        colors[i] = pigment * 255; colors[i + 1] = pigment * .95 * 255; colors[i + 2] = pigment * .90 * 255;
+        uvs[vi * 2] = k / sides * 65535; uvs[vi * 2 + 1] = t * 65535;
         if (j < steps - 1) {
           const a = start + j * sides + k, b = start + j * sides + (k + 1) % sides;
           triangles[ti++] = a; triangles[ti++] = b; triangles[ti++] = a + sides;
@@ -130,10 +130,10 @@ function buildStrands(source, indices, steps, sides, desktop) {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
-  g.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4));
-  g.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  g.setAttribute('normal', new THREE.BufferAttribute(normals, 3, true));
+  g.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4, true));
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 3, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2, true));
   g.setIndex(new THREE.BufferAttribute(triangles, 1));
   g.computeBoundingBox(); g.computeBoundingSphere();
   return g;
@@ -151,6 +151,8 @@ function makeRootLayer(head, color, style) {
     const hairline = -.026 + (photo ? .060 : .084) * front;
     let a = THREE.MathUtils.smoothstep(y, hairline, hairline + (photo ? .037 : .026));
     if (style === 'groom_center_long' && y > .065) a *= 1 - Math.exp(-Math.pow(x / .0011, 2));
+    const ear = THREE.MathUtils.smoothstep(Math.abs(x), .058, .070) * (1 - THREE.MathUtils.smoothstep(y, .025, .044)) * THREE.MathUtils.smoothstep(z, -.02, .015);
+    a *= 1 - ear; // A scalp-density layer must never paint the pinna as hair.
     for (let k = 0; k < 3; k++) {
       const v = k === 0 ? x : k === 1 ? y : z;
       const nn = k === 0 ? n.getX(i) : k === 1 ? n.getY(i) : n.getZ(i);
@@ -192,7 +194,7 @@ export async function buildCurveGroom(style, head, config = {}) {
   const rendered = families.reduce((n, family) => n + family.length, 0);
   const group = new THREE.Group(); group.name = 'HairGroup';
   const base = new THREE.Color(config.hairColor || config.materials?.hairColorHex || '#191518');
-  base.lerp(new THREE.Color('#31231e'), .16);
+  base.lerp(new THREE.Color('#31231e'), .16).multiplyScalar(1.14);
   const names = ['GuideFlow', 'FeatheredFringe', 'TempleWisps', 'Flyaways'];
   const root = makeRootLayer(head, base, id); if (root) group.add(root);
   let triangles = 0;

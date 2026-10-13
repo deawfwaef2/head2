@@ -116,7 +116,10 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   if (!renderer || !scene) return lvl;
 
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-  renderer.setPixelRatio(Math.min(dpr, cfg.pixelRatioCap));
+  // Portrait supersampling reduces subpixel hair shimmer on DPR=1 displays.
+  // Desktop stays native DPR to avoid quadrupling the full-screen render cost.
+  const ratio = lvl === 'high' && engine.controls ? Math.max(dpr, 2) : dpr;
+  renderer.setPixelRatio(Math.min(ratio, cfg.pixelRatioCap));
 
   const key = engine.keyLight;
   if (key && key.shadow) {

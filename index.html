@@ -440,10 +440,10 @@
                   </select>
                 </div>
 
-                <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">新 Groom 来自可编辑 Blender Hair Curves：真实引导曲线、立体渐细发丝、独立碎鬓与飞发，无旧 Alpha 发片。桌宠使用 3,000 根 LOD；工坊可显示全部 12,000 根。Cycles 源工程与浏览器实时材质不同，质量以实际效果验收。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>
+                <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">新 Groom 来自可编辑 Blender Hair Curves：真实引导曲线、立体渐细发丝、独立碎鬓与飞发，无旧 Alpha 发片。桌宠使用 3,000 根 LOD；工坊可显示全部 12,000 引导曲线与插值子丝；默认 6,000 引导采样减少显存占用。Cycles 源工程与浏览器实时材质不同，质量以实际效果验收。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>
                 <div class="field-row">
                   <label>新 Groom 工坊密度（只影响预览；桌宠自动 LOD）</label>
-                  <select id="sel-groom-density"><option value="3000">流畅 · 3,000 根</option><option value="6000">细致 · 6,000 根</option><option value="12000" selected>完整 · 12,000 根</option></select>
+                  <select id="sel-groom-density"><option value="3000">流畅 · 3,000 引导采样</option><option value="6000" selected>细致 · 6,000 引导采样</option><option value="12000">完整 · 12,000 引导采样（需较强GPU）</option></select>
                   <p id="groom-quality-status" class="hint-text">正在准备新 Groom…</p>
                 </div>
                 <div class="slider-row">

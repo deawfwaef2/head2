@@ -179,6 +179,10 @@ def make_root_density(collection,style):
     photo=style=='photo_tied';line=-.026+(.060 if photo else .084)*front
     a=np.clip((p[:,1]-line)/(.037 if photo else .026),0,1);a=a*a*(3-2*a)
     if style=='center_long':a*=np.where(p[:,1]>.065,1-np.exp(-(p[:,0]/.0011)**2),1)
+    def ss(v,lo,hi):
+        t=np.clip((v-lo)/(hi-lo),0,1);return t*t*(3-2*t)
+    ear=ss(np.abs(p[:,0]),.058,.070)*(1-ss(p[:,1],.025,.044))*ss(p[:,2],-.02,.015)
+    a*=1-ear
     faces=tri[np.sum(a[tri],axis=1)>.03]
     p+=n*.00014
     coords=np.stack([p[:,0],-p[:,2],p[:,1]],axis=-1)

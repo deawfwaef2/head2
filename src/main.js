@@ -49,7 +49,7 @@ const state = {
     lipColor: '#bf6872',
     irisColor: '#3b2014',
     hairStyle: 'groom_photo_tied',
-    groomDensity: 12000,
+    groomDensity: 6000,
     hairColor: '#191518',
     hairSheen: 0.88,
     neckClearance: 0.55,
@@ -570,7 +570,7 @@ function loadCollectibleIntoStudio(col) {
     lipColor: col.lipColor || '#bf6872',
     irisColor: col.irisColor || '#3b2014',
     hairStyle: col.hairStyle || 'groom_photo_tied',
-    groomDensity: col.groomDensity || 12000,
+    groomDensity: col.groomDensity || 6000,
     hairColor: col.hairColor || '#191518',
     hairSheen: col.hairSheen ?? 0.90,
     neckClearance: col.neckClearance ?? 0.38,
@@ -591,6 +591,7 @@ function loadCollectibleIntoStudio(col) {
 
   document.getElementById('sel-base-preset').value = state.studioDraft.basePreset;
   document.getElementById('sel-hair-style').value = state.studioDraft.hairStyle;
+  document.getElementById('sel-groom-density').value = String(state.studioDraft.groomDensity || 6000);
   syncStudioExpressionUI(deadExpr);
   document.getElementById('col-skin').value = state.studioDraft.skinTone;
   document.getElementById('col-lip').value = state.studioDraft.lipColor;
@@ -1255,7 +1256,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       lipColor: state.studioDraft.lipColor,
       irisColor: state.studioDraft.irisColor,
       hairStyle: state.studioDraft.hairStyle,
-      groomDensity: state.studioDraft.groomDensity || 12000,
+      groomDensity: state.studioDraft.groomDensity || 6000,
       hairColor: state.studioDraft.hairColor,
       hairSheen: state.studioDraft.hairSheen,
       neckClearance: state.studioDraft.neckClearance,
