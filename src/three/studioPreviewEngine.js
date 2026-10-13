@@ -34,7 +34,7 @@ export class StudioPreviewEngine {
     const w = this.canvas.clientWidth || 540;
     const h = this.canvas.clientHeight || 480;
     this.camera = new THREE.PerspectiveCamera(34, w / h, 1, 300);
-    this.camera.position.set(0, -6.5, 41);
+    this.camera.position.set(0, -7.0, 58);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -46,7 +46,7 @@ export class StudioPreviewEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
     // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
-    applyBaseRendererSettings(this.renderer, 1.06);
+    applyBaseRendererSettings(this.renderer, 0.94);
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -139,20 +139,20 @@ export class StudioPreviewEngine {
   setCameraPreset(preset) {
     this.autoRotate = false;
     if (preset === 'front') {
-      this.camera.position.set(0, -6.5, 41);
+      this.camera.position.set(0, -7.0, 58);
       this.controls.target.set(0, -1.5, 0.5);
     } else if (preset === 'three_quarter') {
-      this.camera.position.set(18, -5.0, 36);
+      this.camera.position.set(21, -5.0, 53);
       this.controls.target.set(0, -1.5, 0.5);
     } else if (preset === 'anatomy_bottom') {
       // Dramatic upward inspection view directly looking at the C4/C5 Medical Anatomical Neck Cross-Section!
       this.camera.position.set(0, -34, 15);
       this.controls.target.set(0, -12.2, -0.8);
     } else if (preset === 'profile') {
-      this.camera.position.set(42, 0.0, 0.5);
+      this.camera.position.set(58, 0.0, 0.5);
       this.controls.target.set(0, -0.8, 0.5);
     } else if (preset === 'turntable') {
-      this.camera.position.set(16, -1.5, 38);
+      this.camera.position.set(22, -4.0, 54);
       this.controls.target.set(0, -1.0, 0.5);
       this.autoRotate = true;
     }

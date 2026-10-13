@@ -518,9 +518,31 @@ function update2DAnatomyInspector() {
   });
 }
 
+function formatAssetQuality(stats) {
+  if (!stats) return '未取得模型信息';
+  const tris = (stats.triangles || 0).toLocaleString('zh-HK');
+  const texture = stats.maxTextureSize
+    ? (stats.maxTextureSize >= 1024 ? `${(stats.maxTextureSize / 1024).toFixed(stats.maxTextureSize % 1024 ? 1 : 0)}K` : `${stats.maxTextureSize}px`)
+    : '无可读贴图';
+  if (stats.source === 'built-in-demo') {
+    return `内置演示头模 · ${tris} 三角面 · 源贴图最大 ${texture} · 非 DAZ/扫描级资产`;
+  }
+  const maps = [
+    stats.hasNormalMap ? '法线图' : '无内嵌法线图',
+    stats.hasRoughnessMap ? '粗糙度图' : '无粗糙度图',
+    stats.hasDisplacementMap ? '置换图' : '无置换图',
+  ].join(' / ');
+  return `用户 GLB · ${tris} 三角面 · 最大贴图 ${texture} · 保留原 PBR（${maps}）`;
+}
+
 async function refreshStudio3DModel() {
   if (!studioEngine) return;
   await studioEngine.loadOrRebuild(state.studioDraft);
+  const status = document.getElementById('custom-model-status');
+  if (status) {
+    status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats);
+    status.title = '实时 PBR 的最终细节受原始网格密度、贴图分辨率和材质图完整度限制。';
+  }
   update2DAnatomyInspector();
 }
 
@@ -992,14 +1014,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('studio-photo-overlay').style.opacity = String(v);
   });
 
-  document.getElementById('slider-photo-uv-blend').addEventListener('input', async (e) => {
-    const v = parseFloat(e.target.value);
-    document.getElementById('val-photo-uv-blend').textContent = `${Math.round(v * 100)}%`;
-    state.studioDraft.photoElement = state.studioDraft.photoElement || refPhotoCanvas;
-    state.studioDraft.photoBlend = v;
-    await refreshStudio3DModel();
-  });
-
   // 8. External Daz GLB/OBJ Import & Test Scan GLB Button
   document.getElementById('input-model-upload').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
@@ -1026,7 +1040,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('sel-hair-style').value = 'none';
       await refreshStudio3DModel();
       const saved = isPrivateModel(reference);
-      document.getElementById('custom-model-status').textContent = `已预览：${file.name}（${saved ? '原件保存在本浏览器私人仓库' : '仅当前会话'}；须自行确认颈口）`;
+      const stats = studioEngine.headNode?.userData?.assetStats;
+      document.getElementById('custom-model-status').textContent = `${file.name} · ${formatAssetQuality(stats)} · ${saved ? '已存本机 IndexedDB' : '仅当前会话'}`;
+      document.getElementById('custom-model-status').title = '已统一头部显示尺寸并保留原 GLB 材质/贴图；请检查方向、颈口和所有贴图是否正确。';
       showToast(`已预览「${file.name}」。${saved ? '本浏览器可恢复；仍请保留原文件备份。' : '浏览器存储失败，关闭页面后需重新选择。'}`);
     } catch (error) {
       state.studioDraft.customModelUrl = previous;
@@ -1035,14 +1051,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (reference?.startsWith('blob:')) URL.revokeObjectURL(reference);
       e.target.value = '';
       console.warn('头部 GLB 导入失败', error);
-      showToast('GLB 导入失败：请检查文件、贴图及导出坐标。');
+      const reason = String(error?.message || '文件无法解析').replace(/[<>]/g, '').slice(0, 150);
+      document.getElementById('custom-model-status').textContent = `导入失败：${reason}`;
+      showToast(`GLB 导入失败：${reason}`);
     }
   });
 
   const REAL_HAIRS = [
     { id: 'hair_user_photo', name: '照片同款 · 空气碎刘海露耳束发 (5,029v)' },
     { id: 'hair_short02', name: 'O4saken · 中式空气刘海微卷波波 (12,547v)' },
-    { id: 'hair_long01', name: 'Elvs Lara · 殿堂级中分柔顺长发 (17,360v)' },
+    { id: 'hair_long01', name: 'Elvs Lara · 中分长发样例 (17,360v)' },
     { id: 'hair_braid01', name: 'Elvs Adrienne · 法式蓬松微卷盘发 (9,352v)' },
     { id: 'hair_short04', name: 'Elvs Daisy · 千金感斜刘海半束发 (6,721v)' },
     { id: 'hair_ponytail01', name: 'Elvs Hazel · 利落偏分高颅顶束发 (4,891v)' },
@@ -1056,7 +1074,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const picked = REAL_HAIRS[hairCycleIdx];
     state.studioDraft.hairStyle = picked.id;
     document.getElementById('sel-hair-style').value = picked.id;
-    document.getElementById('custom-model-status').textContent = `当前使用：真实3D头模(daz_asian_head_base.glb) + ${picked.name}`;
+    document.getElementById('custom-model-status').textContent = `内置演示头模 + ${picked.name}`;
     await refreshStudio3DModel();
     soundEngine.playSummon(true);
     showToast(`💇‍♀️ 已切换 MhcloFit 高精 3D 发型：${picked.name} (${picked.id}.glb)`);
@@ -1127,7 +1145,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.studioDraft.morphs.deadExpression = presetExprMap[e.target.value];
       syncStudioExpressionUI(presetExprMap[e.target.value]);
     }
-    document.getElementById('custom-model-status').textContent = `当前使用：真实3D亚洲女性高精头模 (${e.target.value} + ${state.studioDraft.hairStyle}.glb)`;
+    document.getElementById('custom-model-status').textContent = `内置演示头模 (${e.target.value} + ${state.studioDraft.hairStyle}.glb)`;
     await refreshStudio3DModel();
   });
 

@@ -9,7 +9,10 @@ const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
 
 const arrayBufferCache = new Map();
+const BUILTIN_HEAD_URL = '/models/daz_asian_head_base.glb';
 const BUST_WORLD_SCALE = 115.0;
+const CANONICAL_HEAD_HEIGHT = 0.58;
+const CANONICAL_HEAD_CENTER_Y = -0.035;
 
 /**
  * 7 Forensic Post-Mortem / Dead-Person Expression Presets ("死人各种表情")
@@ -89,8 +92,8 @@ export const HIGH_POLY_HAIR_CATALOG = [
   },
   {
     id: 'hair_long01',
-    label: 'Elvs Lara · 高精中分柔顺长发 (17,360v)',
-    desc: '1.7万顶点殿堂级垂顺长发，颈部切口上方自然收束不遮挡断面',
+    label: 'Elvs Lara · 中分长发样例 (17,360v)',
+    desc: '内置发型演示网格；实际细节取决于该 GLB 的拓扑和纹理分辨率',
   },
   {
     id: 'hair_ponytail01',
@@ -147,6 +150,113 @@ function parseGlbBuffer(buffer) {
   return new Promise((resolve, reject) => {
     gltfLoader.parse(buffer.slice(0), '', (gltf) => resolve(gltf), (err) => reject(err));
   });
+}
+
+function textureDimensions(texture) {
+  const image = texture?.image || texture?.source?.data;
+  return {
+    width: Number(image?.naturalWidth || image?.videoWidth || image?.width || 0),
+    height: Number(image?.naturalHeight || image?.videoHeight || image?.height || 0),
+  };
+}
+
+/** Preserve a user's glTF PBR material. Only annotate texture color spaces and
+ * sampling quality; never replace DAZ/Blender maps with the built-in demo skin. */
+function prepareImportedMaterial(material) {
+  if (!material) return;
+  const colorTextureSlots = [
+    'map', 'emissiveMap', 'specularColorMap', 'sheenColorMap',
+  ];
+  for (const slot of colorTextureSlots) {
+    const texture = material[slot];
+    if (!texture?.isTexture) continue;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    texture.needsUpdate = true;
+  }
+  // glTF data maps (normal/roughness/metalness/AO/height) intentionally stay linear.
+  for (const key of Object.keys(material)) {
+    const value = material[key];
+    if (!value?.isTexture || colorTextureSlots.includes(key)) continue;
+    value.colorSpace = THREE.NoColorSpace;
+    value.anisotropy = 8;
+    value.needsUpdate = true;
+  }
+}
+
+function inspectSceneAsset(scene) {
+  const seenMaterials = new Set();
+  const seenTextures = new Set();
+  const stats = {
+    meshes: 0,
+    vertices: 0,
+    triangles: 0,
+    materials: 0,
+    textures: 0,
+    maxTextureSize: 0,
+    hasNormalMap: false,
+    hasRoughnessMap: false,
+    hasDisplacementMap: false,
+  };
+
+  scene.traverse((object) => {
+    if (!object.isMesh) return;
+    stats.meshes += 1;
+    const geometry = object.geometry;
+    stats.vertices += geometry?.attributes?.position?.count || 0;
+    stats.triangles += geometry?.index
+      ? Math.floor(geometry.index.count / 3)
+      : Math.floor((geometry?.attributes?.position?.count || 0) / 3);
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      if (!material) continue;
+      seenMaterials.add(material);
+      stats.hasNormalMap ||= Boolean(material.normalMap);
+      stats.hasRoughnessMap ||= Boolean(material.roughnessMap);
+      stats.hasDisplacementMap ||= Boolean(material.displacementMap);
+      for (const key of Object.keys(material)) {
+        const texture = material[key];
+        if (!texture?.isTexture) continue;
+        seenTextures.add(texture);
+        const { width, height } = textureDimensions(texture);
+        stats.maxTextureSize = Math.max(stats.maxTextureSize, width, height);
+      }
+    }
+  });
+  stats.materials = seenMaterials.size;
+  stats.textures = seenTextures.size;
+  return stats;
+}
+
+function fitImportedHead(scene) {
+  const sourceBounds = new THREE.Box3().setFromObject(scene);
+  const sourceSize = sourceBounds.getSize(new THREE.Vector3());
+  const largestCrossSection = Math.max(sourceSize.x, sourceSize.z);
+  if (!Number.isFinite(sourceSize.y) || sourceSize.y < 0.025 || largestCrossSection < 0.025) {
+    throw new Error('模型尺寸无效或过小；请确认 GLB 中包含已裁切的头部网格。');
+  }
+  const aspect = sourceSize.y / largestCrossSection;
+  if (aspect > 3.2) {
+    throw new Error('模型比例像是完整人体而不是单独头部；请先在 Blender/DAZ 中裁成头部并封好颈口，再导入。');
+  }
+
+  const fitGroup = new THREE.Group();
+  fitGroup.name = 'ImportedHeadFit';
+  fitGroup.add(scene);
+  fitGroup.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(fitGroup);
+  const size = bounds.getSize(new THREE.Vector3());
+  const center = bounds.getCenter(new THREE.Vector3());
+  const fitScale = CANONICAL_HEAD_HEIGHT / Math.max(size.y, 1e-4);
+  fitGroup.scale.setScalar(fitScale);
+  fitGroup.position.set(
+    -center.x * fitScale,
+    CANONICAL_HEAD_CENTER_Y - center.y * fitScale,
+    -center.z * fitScale,
+  );
+  fitGroup.userData.fitScale = fitScale;
+  fitGroup.userData.sourceAspect = aspect;
+  return fitGroup;
 }
 
 // Subtle bone-structure biases per preset — NOTE: lipFullness is 0.0 across all presets so mouth is NEVER pouty ("嘟嘟嘴")!
@@ -340,8 +450,9 @@ export async function attachRealHairModel(rootGroup, config = {}) {
 
     const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#191518';
     const baseColor = new THREE.Color(hairColorHex);
-    // Stage 8 High-Contrast Strand Tint: keeps dark hair rich & dimensional so embedded strand textures never crush to flat black
-    const displayColor = baseColor.clone().lerp(new THREE.Color(0x6e605c), 0.34);
+    // Keep black/brown hair dark; a heavy grey tint + clearcoat made the demo
+    // hair read as a grey plastic helmet under the studio environment.
+    const displayColor = baseColor.clone().lerp(new THREE.Color(0x493a3c), 0.18);
     const sheenIntensity = Number(config.hairSheen ?? 0.88);
 
     gltf.scene.traverse((child) => {
@@ -355,20 +466,20 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         const isMask = origMat?.alphaMode === 'MASK' || resolvedStyle === 'hair_short02';
         // Stage 8 发丝去灰：深色发必须压低环境反射/釉面/绒光，否则 RoomEnvironment 会把黑发洗成灰白塑料感
         const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
-        const hairEnvI = 0.32 + Math.min(0.55, hairLum * 0.85);
-        const hairSheen = Math.min(0.30, sheenIntensity * 0.30);
+        const hairEnvI = 0.16 + Math.min(0.30, hairLum * 0.48);
+        const hairSheen = Math.min(0.16, sheenIntensity * 0.18);
         child.material = new THREE.MeshPhysicalMaterial({
           map: mapTex,
           color: displayColor,
-          roughness: Math.max(0.30, 0.58 - sheenIntensity * 0.22),
+          roughness: Math.max(0.40, 0.64 - sheenIntensity * 0.13),
           metalness: 0.0,
           sheen: hairSheen,
-          sheenRoughness: 0.42,
-          sheenColor: displayColor.clone().multiplyScalar(1.15),
-          anisotropy: 0.60,
-          clearcoat: 0.22,
-          clearcoatRoughness: 0.42,
-          specularIntensity: 0.70,
+          sheenRoughness: 0.56,
+          sheenColor: displayColor.clone().multiplyScalar(1.08),
+          anisotropy: 0.72,
+          clearcoat: 0.08,
+          clearcoatRoughness: 0.48,
+          specularIntensity: 0.42,
           envMapIntensity: hairEnvI,
           transparent: isMask,
           alphaTest: isMask ? 0.18 : 0.0,
@@ -414,8 +525,9 @@ function buildGimbalOverlayGroup() {
 }
 
 /**
- * Builds the complete High-Precision Collectible Head Bust Node
- * (`只有头 + 切口真实血迹 + 高亮度 C4/C5 医学解剖断面 + 8款高精MhcloFit真实3D发型 + 7种法医死人表情 + 3D牙齿与舌头`)
+ * Builds a collectible head node from either the bundled demo GLB or a user's
+ * head-only GLB. User materials are retained; custom assets are uniformly fit
+ * to the studio viewport without promising automatic photo-to-3D reconstruction.
  */
 export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
@@ -451,12 +563,14 @@ export async function buildCollectibleHeadNode(config = {}) {
   const customUrl = config.customModelUrl || config.modelUrl;
   const isCustomObj = customUrl && (config.customModelType === 'obj' || customUrl.endsWith('.obj'));
   const targetGlbUrl = (!customUrl || isCustomObj || customUrl.includes('daz_asian_female_'))
-    ? '/models/daz_asian_head_base.glb'
+    ? BUILTIN_HEAD_URL
     : customUrl;
+  const isBuiltInAsset = targetGlbUrl === BUILTIN_HEAD_URL;
 
   const buf = await fetchGlbArrayBuffer(targetGlbUrl);
   const gltf = await parseGlbBuffer(buf);
 
+  const sourceAssetStats = inspectSceneAsset(gltf.scene);
   let headSkinMesh = null;
   let neckCapMesh = null;
 
@@ -466,6 +580,15 @@ export async function buildCollectibleHeadNode(config = {}) {
     child.receiveShadow = true;
 
     const matName = child.material?.name || child.name;
+    if (!isBuiltInAsset) {
+      // Keep user-owned DAZ/Blender glTF PBR maps intact. Replacing these with the
+      // demo material was flattening high-resolution skin into a pale, waxy look.
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      materials.forEach(prepareImportedMaterial);
+      if (!headSkinMesh) headSkinMesh = child;
+      return;
+    }
+
     if (matName === 'Skin' || child.name === 'HeadSkin') {
       child.name = 'HeadSkinMesh';
       headSkinMesh = child;
@@ -484,23 +607,23 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.material = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.45, 0.45),
+        normalScale: new THREE.Vector2(0.50, 0.50),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.03,
+        bumpScale: 0.055,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.62),
+        roughness: Number(materials.skinRoughness ?? 0.68),
         metalness: 0.0,
-        sheen: 0.35,
-        sheenRoughness: 0.55,
-        sheenColor: new THREE.Color('#ffb3a7'),
-        clearcoat: 0.14,
-        clearcoatRoughness: 0.50,
-        specularIntensity: 0.60,
-        ior: 1.46,
-        envMapIntensity: 0.90,
-        emissive: new THREE.Color('#2a0f0c'),
-        emissiveIntensity: 0.15,
+        sheen: 0.12,
+        sheenRoughness: 0.72,
+        sheenColor: new THREE.Color('#e0a198'),
+        clearcoat: 0.03,
+        clearcoatRoughness: 0.65,
+        specularIntensity: 0.34,
+        ior: 1.42,
+        envMapIntensity: 0.42,
+        emissive: new THREE.Color('#000000'),
+        emissiveIntensity: 0.0,
       });
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
       child.name = 'NeckCrossSectionCap';
@@ -513,15 +636,17 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.74,
+        // A faint lift prevents the underside going black, while avoiding the
+        // self-lit neon-red disk produced by the former 0.74 setting.
+        emissiveIntensity: 0.08,
         bumpMap: bumpTex,
-        bumpScale: 0.004,
-        roughness: Math.max(0.06, 1.0 - wetness * 0.90),
-        metalness: 0.02,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.08,
-        specularIntensity: 0.70,
-        envMapIntensity: 0.75,
+        bumpScale: 0.006,
+        roughness: Math.max(0.28, 0.62 - wetness * 0.30),
+        metalness: 0.0,
+        clearcoat: 0.26,
+        clearcoatRoughness: 0.22,
+        specularIntensity: 0.48,
+        envMapIntensity: 0.42,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -613,7 +738,18 @@ export async function buildCollectibleHeadNode(config = {}) {
     }
   });
 
-  modelContainer.add(gltf.scene);
+  rootGroup.userData.assetStats = {
+    ...sourceAssetStats,
+    source: isBuiltInAsset ? 'built-in-demo' : 'user-glb',
+  };
+
+  if (isBuiltInAsset) {
+    modelContainer.add(gltf.scene);
+  } else {
+    // DAZ exports can be centimeters/meters and use a different origin. Fit a
+    // head-only GLB into the studio's known head scale without changing its aspect.
+    modelContainer.add(fitImportedHead(gltf.scene));
+  }
 
   await attachRealHairModel(rootGroup, config);
   applyHeadMorphsToGroup(rootGroup, morphs);
