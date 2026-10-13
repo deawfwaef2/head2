@@ -290,41 +290,39 @@ function syncScalpRootLayerToMorphs(rootGroup) {
   out.set(rg.userData.basePositions);
   const morphAttrs = hg.morphAttributes?.position || [];
   const dict = head.morphTargetDictionary, infl = head.morphTargetInfluences;
-  // Stage 19 紧急修复：morph 属性可能是相对位移(glTF)也可能是绝对坐标，
-  // 必须统一换算成位移再叠加；且单分量位移钳制在 ±0.03（头部局部单位），
-  // 任何异常权重都不得把头皮层顶点炸出头部范围（曾致巨大黑多边形盖屏）。
   const relative = hg.morphTargetsRelative !== false;
-  const baseHead = hp.array;
+  const vCount = hp.count;
   if (dict && infl) {
-    for (const [name, idx] of Object.entries(dict)) {
+    for (const [, idx] of Object.entries(dict)) {
       const w = infl[idx];
-      if (!w || !Number.isFinite(w)) continue;
+      if (!w || !Number.isFinite(w) || Math.abs(w) < 1e-5) continue;
       const ma = morphAttrs[idx];
-      if (!ma) continue;
-      const arr = ma.array;
-      const n = Math.min(out.length, arr.length);
-      for (let i = 0; i < n; i++) {
-        let d = relative ? arr[i] : arr[i] - baseHead[i];
-        if (!Number.isFinite(d)) continue;
-        d = Math.max(-0.03, Math.min(0.03, d));
-        out[i] += d * w;
+      if (!ma || ma.count < vCount) continue;
+      // CRITICAL FIX (Stage 20): `ma` in `daz_asian_head_base.glb` is an InterleavedBufferAttribute
+      // with normalized Int16Array (stride=4). Using `ma.getX(v)/getY(v)/getZ(v)` properly
+      // de-interleaves and denormalizes (/32767.0) instead of reading raw Int16 with stride 3!
+      for (let v = 0; v < vCount; v++) {
+        let dx = relative ? ma.getX(v) : ma.getX(v) - hp.getX(v);
+        let dy = relative ? ma.getY(v) : ma.getY(v) - hp.getY(v);
+        let dz = relative ? ma.getZ(v) : ma.getZ(v) - hp.getZ(v);
+        if (!Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(dz)) continue;
+        dx = Math.max(-0.025, Math.min(0.025, dx));
+        dy = Math.max(-0.025, Math.min(0.025, dy));
+        dz = Math.max(-0.025, Math.min(0.025, dz));
+        const i3 = v * 3;
+        out[i3] += dx * w;
+        out[i3 + 1] += dy * w;
+        out[i3 + 2] += dz * w;
       }
     }
   }
-  // 安全阀：结果超出头部合理范围（局部坐标 >0.6）立即回退静态基底，永不盖屏
   let maxAbs = 0;
   for (let i = 0; i < out.length; i++) maxAbs = Math.max(maxAbs, Math.abs(out[i]));
   if (!Number.isFinite(maxAbs) || maxAbs > 0.6) {
     out.set(rg.userData.basePositions);
-    console.warn('Scalp root morph sync out of range; reverted to base scalp layer.');
   }
   rp.needsUpdate = true;
   rg.computeBoundingSphere();
-  if (rg.boundingSphere && rg.boundingSphere.radius > 1) {
-    out.set(rg.userData.basePositions);
-    rp.needsUpdate = true;
-    rg.computeBoundingSphere();
-  }
 }
 
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
@@ -455,21 +453,40 @@ function computeSkinTintColor(skinToneHex = '#ffe8df') {
 }
 
 export function resolveRealHairStyle(styleName = 'groom_photo_tied') {
-  if (['groom_photo_tied','groom_center_long','groom_low_chignon'].includes(styleName)) return styleName;
+  if (
+    [
+      'groom_photo_tied',
+      'groom_center_long',
+      'groom_low_chignon',
+      'groom_air_bob',
+      'groom_clavicle_bob',
+      'groom_hime_cut',
+      'groom_high_ponytail',
+      'groom_pixie_short',
+    ].includes(styleName)
+  ) {
+    return styleName;
+  }
   if (styleName === 'none') return 'none';
+  const stripped = String(styleName).replace(/^real_/, '');
   const legacyMap = {
     user_bangs: 'hair_user_photo',
     photo_tied_wisps: 'hair_user_photo',
     long_straight: 'hair_long01',
-    long_waves: 'hair_long01',
-    hime_cut: 'hair_user_photo',
+    long_waves: 'hair_short04',
+    hime_cut: 'groom_hime_cut',
+    hair_hime_cut: 'groom_hime_cut',
+    clavicle_layer: 'groom_clavicle_bob',
+    hair_clavicle_layer: 'groom_clavicle_bob',
+    butterfly_halfup: 'groom_center_long',
+    hair_butterfly_halfup: 'groom_center_long',
     sleek_bob: 'hair_bob01',
     short_bob: 'hair_bob02',
-    low_chignon: 'hair_ponytail01',
+    low_chignon: 'hair_braid01',
     high_ponytail: 'hair_ponytail01',
     soft_waves: 'hair_braid01',
   };
-  const mapped = legacyMap[styleName] || styleName;
+  const mapped = legacyMap[stripped] || legacyMap[styleName] || stripped;
   const valid = new Set([
     'hair_user_photo',
     'hair_long01',
@@ -479,8 +496,107 @@ export function resolveRealHairStyle(styleName = 'groom_photo_tied') {
     'hair_braid01',
     'hair_short02',
     'hair_short04',
+    'groom_photo_tied',
+    'groom_center_long',
+    'groom_low_chignon',
+    'groom_air_bob',
+    'groom_clavicle_bob',
+    'groom_hime_cut',
+    'groom_high_ponytail',
+    'groom_pixie_short',
   ]);
   return valid.has(mapped) ? mapped : 'hair_user_photo';
+}
+
+function resolveUnderlayerGlbName(styleName) {
+  const map = {
+    groom_photo_tied: 'hair_user_photo',
+    hair_user_photo: 'hair_user_photo',
+    groom_center_long: 'hair_short04',
+    hair_short04: 'hair_short04',
+    hair_long01: 'hair_long01',
+    groom_low_chignon: 'hair_braid01',
+    hair_braid01: 'hair_braid01',
+    groom_air_bob: 'hair_bob01',
+    hair_bob01: 'hair_bob01',
+    groom_clavicle_bob: 'hair_bob02',
+    hair_bob02: 'hair_bob02',
+    groom_hime_cut: 'hair_bob02',
+    groom_high_ponytail: 'hair_ponytail01',
+    hair_ponytail01: 'hair_ponytail01',
+    groom_pixie_short: 'hair_short02',
+    hair_short02: 'hair_short02',
+  };
+  return map[styleName] || 'hair_user_photo';
+}
+
+async function buildHairVolumeUnderlayer(resolvedStyle, config = {}) {
+  const glbName = resolveUnderlayerGlbName(resolvedStyle);
+  const hairUrl = `/models/${glbName}.glb`;
+  const buf = await fetchGlbArrayBuffer(hairUrl);
+  const gltf = await parseGlbBuffer(buf);
+  const underGroup = new THREE.Group();
+  underGroup.name = 'Groom_VolumeUnderlayer';
+  // Slightly inset so outer 3D silk curve ribbons layer seamlessly above the volume shell
+  underGroup.scale.set(0.992, 0.994, 0.992);
+
+  const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#191518';
+  const baseColor = new THREE.Color(hairColorHex);
+  const displayColor = baseColor.clone().lerp(new THREE.Color(0x3a2b2d), 0.16);
+  const sheenIntensity = Number(config.hairSheen ?? 0.88);
+
+  gltf.scene.traverse((child) => {
+    if (!child.isMesh) return;
+    child.userData.normalRepair = repairHairNormals(child.geometry);
+    const origMat = child.material;
+    let mapTex = origMat?.map || null;
+    let roughTex = null;
+    if (mapTex) {
+      mapTex.colorSpace = THREE.SRGBColorSpace;
+      mapTex.anisotropy = 8;
+      try {
+        const img = mapTex.image;
+        const iw = img ? img.width || img.naturalWidth || 0 : 0;
+        if (img && iw > 0) {
+          const detail = getHairStrandTextures(mapTex, `${hairUrl}|${origMat.name}|${mapTex.name}`);
+          mapTex = detail.map;
+          roughTex = detail.roughnessMap;
+        }
+      } catch (_) {
+        roughTex = null;
+      }
+    }
+    const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
+    const hairEnvI = 0.28 + Math.min(0.32, hairLum * 0.50);
+    child.material = new THREE.MeshPhysicalMaterial({
+      map: mapTex,
+      roughnessMap: roughTex,
+      color: displayColor,
+      roughness: roughTex ? 1.0 : Math.max(0.40, 0.64 - sheenIntensity * 0.16),
+      metalness: 0.0,
+      sheen: Math.min(0.26, sheenIntensity * 0.28),
+      sheenRoughness: 0.52,
+      sheenColor: displayColor.clone().multiplyScalar(1.12),
+      anisotropy: 0.45 + sheenIntensity * 0.30,
+      anisotropyRotation: Math.PI / 2,
+      clearcoat: 0.06,
+      clearcoatRoughness: 0.44,
+      specularIntensity: 0.55,
+      envMapIntensity: hairEnvI,
+      transparent: false,
+      alphaTest: mapTex ? 0.14 : 0.0,
+      alphaToCoverage: true,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+    });
+    child.material.userData.builtInHair = true;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    child.renderOrder = 1;
+  });
+
+  underGroup.add(gltf.scene);
+  return underGroup;
 }
 
 /** Dispose an assembled tree without invalidating shared procedural textures. */

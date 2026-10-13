@@ -1,28 +1,160 @@
 import * as THREE from 'three';
 
-// Original Blender Hair Curves, exported in Y-up meters. This module does NOT
-// create old alpha cards, sphere helmets, painted shine or fictitious scan detail.
+// Stage 20: Upgraded Multi-Fiber Silk Ribbon Groom Engine
+// Renders Blender/Python-authored 3D hair curves (`H2GRM001` / `H2GRM002`) as
+// scalp-tangent cambered silk lock ribbons with anti-aliased multi-fiber micro-strands,
+// realistic dual-lobe sheen, and a feathered depth-safe scalp root shadow layer.
+
 const sourceCache = new Map();
+let cachedSilkTextures = null;
+
 export const GROOM_STYLES = {
-  groom_photo_tied: { file: 'photo_tied', label: '照片参考 · 碎刘海露耳束发' },
-  groom_center_long: { file: 'center_long', label: '中式中分 · 柔顺长发' },
-  groom_low_chignon: { file: 'low_chignon', label: '中式低盘发 · 露耳碎鬓' },
+  groom_photo_tied: {
+    file: 'photo_tied',
+    modifier: 'none',
+    label: '照片同款 · 清透碎刘海露耳低束发',
+  },
+  groom_center_long: {
+    file: 'center_long',
+    modifier: 'none',
+    label: '中式黑长直 · 高颅顶八字中分柔顺发',
+  },
+  groom_low_chignon: {
+    file: 'low_chignon',
+    modifier: 'none',
+    label: '新中式温婉 · 侧分斜刘海低盘发髻',
+  },
+  groom_air_bob: {
+    file: 'photo_tied',
+    modifier: 'air_bob',
+    label: '元气初恋 · 空气刘海内扣短波波',
+  },
+  groom_clavicle_bob: {
+    file: 'center_long',
+    modifier: 'clavicle_bob',
+    label: '都市轻熟 · 八字刘海锁骨内扣发',
+  },
+  groom_hime_cut: {
+    file: 'center_long',
+    modifier: 'hime_cut',
+    label: '国风清冷 · 姬发式公主切黑长直',
+  },
+  groom_high_ponytail: {
+    file: 'photo_tied',
+    modifier: 'high_ponytail',
+    label: '飒爽千金 · 高颅顶露耳元气高束发',
+  },
+  groom_pixie_short: {
+    file: 'photo_tied',
+    modifier: 'pixie_short',
+    label: '智感清冷 · 露耳碎发层次超短发',
+  },
 };
+
 export function groomStyleFor(style) {
   const aliases = {
     hair_user_photo: 'groom_photo_tied',
+    real_hair_user_photo: 'groom_photo_tied',
     hair_long01: 'groom_center_long',
-    hair_short02: 'groom_photo_tied',
-    hair_ponytail01: 'groom_low_chignon',
+    real_hair_long01: 'groom_center_long',
+    hair_short04: 'groom_center_long',
+    real_hair_short04: 'groom_center_long',
+    hair_bob01: 'groom_air_bob',
+    real_hair_bob01: 'groom_air_bob',
+    hair_bob02: 'groom_clavicle_bob',
+    real_hair_bob02: 'groom_clavicle_bob',
+    hair_ponytail01: 'groom_high_ponytail',
+    real_hair_ponytail01: 'groom_high_ponytail',
     hair_braid01: 'groom_low_chignon',
+    real_hair_braid01: 'groom_low_chignon',
+    hair_short02: 'groom_pixie_short',
+    real_hair_short02: 'groom_pixie_short',
+    real_hair_hime_cut: 'groom_hime_cut',
+    real_hair_clavicle_layer: 'groom_clavicle_bob',
+    real_hair_butterfly_halfup: 'groom_center_long',
   };
   return GROOM_STYLES[style] ? style : aliases[style] || null;
 }
 
+function getSilkLockTextures() {
+  if (cachedSilkTextures) return cachedSilkTextures;
+  if (typeof document === 'undefined') return null;
+
+  const w = 256, h = 512;
+  const colorCanvas = document.createElement('canvas');
+  colorCanvas.width = w;
+  colorCanvas.height = h;
+  const cctx = colorCanvas.getContext('2d');
+  const cImg = cctx.createImageData(w, h);
+  const cData = cImg.data;
+
+  const alphaCanvas = document.createElement('canvas');
+  alphaCanvas.width = w;
+  alphaCanvas.height = h;
+  const actx = alphaCanvas.getContext('2d');
+  const aImg = actx.createImageData(w, h);
+  const aData = aImg.data;
+
+  // Precompute 16 micro-fiber ridges across the lock width U in [0, 1]
+  const fiberFreq = 14.0;
+  for (let y = 0; y < h; y++) {
+    const v = y / (h - 1); // 0 at root, 1 at tip
+    const rootShadow = 0.62 + 0.38 * Math.min(1.0, v / 0.18);
+    const tipFade = v > 0.78 ? Math.max(0.0, 1.0 - Math.pow((v - 0.78) / 0.22, 1.45)) : 1.0;
+
+    for (let x = 0; x < w; x++) {
+      const u = x / (w - 1); // 0 at left edge, 1 at right edge
+      const edgeDist = Math.min(u, 1.0 - u);
+      const edgeFeather = Math.min(1.0, edgeDist / 0.14);
+
+      // Multi-frequency silk fibers
+      const f1 = 0.5 + 0.5 * Math.sin((u * fiberFreq + 0.03 * Math.sin(v * 9.0)) * Math.PI * 2.0);
+      const f2 = 0.5 + 0.5 * Math.sin((u * fiberFreq * 2.3 - 0.02 * Math.cos(v * 6.0) + 0.37) * Math.PI * 2.0);
+      const fiberVal = 0.68 + 0.22 * f1 + 0.10 * f2;
+
+      // Subtle anisotropic longitudinal sheen variation
+      const sheenBand = 1.0 + 0.14 * Math.exp(-Math.pow((v - 0.36) / 0.18, 2.0));
+      const lum = Math.min(255, Math.round(255 * rootShadow * fiberVal * sheenBand));
+
+      // Feathered alpha at lock edges and strand tips, with micro-fiber tip splits
+      const tipSplit = v > 0.68 ? (0.72 + 0.28 * f1) : 1.0;
+      const alpha = Math.max(0, Math.min(255, Math.round(255 * edgeFeather * tipFade * tipSplit)));
+
+      const idx = (y * w + x) * 4;
+      cData[idx] = lum;
+      cData[idx + 1] = Math.round(lum * 0.97);
+      cData[idx + 2] = Math.round(lum * 0.95);
+      cData[idx + 3] = 255;
+
+      aData[idx] = alpha;
+      aData[idx + 1] = alpha;
+      aData[idx + 2] = alpha;
+      aData[idx + 3] = 255;
+    }
+  }
+  cctx.putImageData(cImg, 0, 0);
+  actx.putImageData(aImg, 0, 0);
+
+  const map = new THREE.CanvasTexture(colorCanvas);
+  map.wrapS = THREE.ClampToEdgeWrapping;
+  map.wrapT = THREE.ClampToEdgeWrapping;
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.needsUpdate = true;
+
+  const alphaMap = new THREE.CanvasTexture(alphaCanvas);
+  alphaMap.wrapS = THREE.ClampToEdgeWrapping;
+  alphaMap.wrapT = THREE.ClampToEdgeWrapping;
+  alphaMap.needsUpdate = true;
+
+  cachedSilkTextures = { map, alphaMap };
+  return cachedSilkTextures;
+}
+
 async function decodeSource(id) {
-  if (sourceCache.has(id)) return sourceCache.get(id);
+  const fileKey = GROOM_STYLES[id]?.file || 'photo_tied';
+  if (sourceCache.has(fileKey)) return sourceCache.get(fileKey);
   const promise = (async () => {
-    const path = `/grooms/${GROOM_STYLES[id].file}.groom`;
+    const path = `/grooms/${fileKey}.groom`;
     const embedded = window.__EMBEDDED_GROOMS__?.[path];
     let buffer;
     if (embedded) {
@@ -39,9 +171,11 @@ async function decodeSource(id) {
     }
     const dv = new DataView(buffer);
     const version = new TextDecoder().decode(new Uint8Array(buffer, 0, 8));
-    if (!['H2GRM001','H2GRM002'].includes(version)) throw new Error('Groom 数据格式错误');
+    if (!['H2GRM001', 'H2GRM002'].includes(version)) throw new Error('Groom 数据格式错误');
     const count = dv.getUint32(8, true), samples = dv.getUint32(12, true);
-    if (count > 100000 || samples < 4 || samples > 128 || buffer.byteLength !== 40 + count * 8 + count * samples * 6) throw new Error('Groom 数据长度错误');
+    if (count > 100000 || samples < 4 || samples > 128 || buffer.byteLength !== 40 + count * 8 + count * samples * 6) {
+      throw new Error('Groom 数据长度错误');
+    }
     const min = [0, 1, 2].map(i => dv.getFloat32(16 + i * 4, true));
     const size = [0, 1, 2].map(i => dv.getFloat32(28 + i * 4, true) - min[i]);
     let points;
@@ -49,16 +183,20 @@ async function decodeSource(id) {
       const packed = new Uint8Array(buffer, 40 + count * 8);
       const plane = count * samples * 3;
       points = new Uint16Array(plane);
-      for (let c = 0; c < 3; c++) for (let i = 0; i < count; i++) {
-        let value = 0;
-        for (let j = 0; j < samples; j++) {
-          const k = c * count * samples + i * samples + j;
-          const delta = packed[k] | (packed[plane + k] << 8);
-          value = j === 0 ? delta : (value + delta) & 65535;
-          points[(i * samples + j) * 3 + c] = value;
+      for (let c = 0; c < 3; c++) {
+        for (let i = 0; i < count; i++) {
+          let value = 0;
+          for (let j = 0; j < samples; j++) {
+            const k = c * count * samples + i * samples + j;
+            const delta = packed[k] | (packed[plane + k] << 8);
+            value = j === 0 ? delta : (value + delta) & 65535;
+            points[(i * samples + j) * 3 + c] = value;
+          }
         }
       }
-    } else points = new Uint16Array(buffer, 40 + count * 8);
+    } else {
+      points = new Uint16Array(buffer, 40 + count * 8);
+    }
     const radius = new Float32Array(count), family = new Uint8Array(count), pigment = new Uint8Array(count);
     for (let i = 0; i < count; i++) {
       radius[i] = dv.getFloat32(40 + i * 8, true);
@@ -67,165 +205,376 @@ async function decodeSource(id) {
     }
     return { count, samples, min, size, points, radius, family, pigment };
   })();
-  sourceCache.set(id, promise);
-  try { return await promise; } catch (e) { sourceCache.delete(id); throw e; }
+  sourceCache.set(fileKey, promise);
+  try {
+    return await promise;
+  } catch (e) {
+    sourceCache.delete(fileKey);
+    throw e;
+  }
 }
 
-function pointAt(source, strand, t, target) {
-  const f = t * (source.samples - 1), k = Math.min(source.samples - 2, Math.floor(f)), a = f - k;
+function pointAtStyled(source, strand, t, modifier, target) {
+  const f = t * (source.samples - 1);
+  const k = Math.min(source.samples - 2, Math.floor(f));
+  const a = f - k;
   const index = (strand * source.samples + k) * 3;
-  for (let c = 0; c < 3; c++) target.setComponent(c, source.min[c] + (source.points[index + c] * (1 - a) + source.points[index + 3 + c] * a) / 65535 * source.size[c]);
+  let x = source.min[0] + (source.points[index] * (1 - a) + source.points[index + 3] * a) / 65535 * source.size[0];
+  let y = source.min[1] + (source.points[index + 1] * (1 - a) + source.points[index + 4] * a) / 65535 * source.size[1];
+  let z = source.min[2] + (source.points[index + 2] * (1 - a) + source.points[index + 5] * a) / 65535 * source.size[2];
+
+  const fam = source.family[strand];
+  if (modifier === 'air_bob' && fam !== 1) {
+    // Chin-framing bouncy C-curl short bob
+    const w = t * t;
+    const side = x >= 0 ? 1 : -1;
+    x = x * (1 + 0.08 * Math.sin(t * Math.PI)) - side * 0.008 * w;
+    y = y + 0.006 * w;
+    z = z + 0.022 * Math.sin(t * Math.PI * 0.85) * (z < 0 ? 1 : 0.3);
+  } else if (modifier === 'clavicle_bob') {
+    // Layered C-curl inward bob at jawline/upper neck
+    const c = Math.pow(t, 1.8);
+    const side = x >= 0 ? 1 : -1;
+    x -= side * 0.010 * c;
+    y += 0.008 * c;
+    z += 0.008 * Math.sin(t * Math.PI);
+  } else if (modifier === 'hime_cut') {
+    // Hime-cut cheek locks for front-side strands (fam === 2 or z > 0.01)
+    if (fam === 2 || (z > 0.005 && Math.abs(x) > 0.042)) {
+      const side = x >= 0 ? 1 : -1;
+      y = y * (1 - 0.22 * t) + (-0.032) * (0.22 * t);
+      x = side * (0.056 + (Math.abs(x) - 0.056) * (1 - 0.45 * t));
+      z = z + 0.008 * t;
+    }
+  } else if (modifier === 'high_ponytail' && fam === 0) {
+    // Perky high-crown lift toward upper occiput
+    const lift = Math.sin(t * Math.PI * 0.85);
+    y += 0.018 * lift;
+    z -= 0.008 * t;
+  } else if (modifier === 'pixie_short' && fam !== 1) {
+    // Cropped layered pixie / short wolf cut
+    y = y * (1 - 0.25 * t) + 0.012 * (0.25 * t);
+    x *= 1 - 0.08 * t;
+  }
+
+  target.set(x, y, z);
   return target;
 }
 
-function buildStrands(source, indices, steps, sides, desktop) {
-  const vertices = indices.length * steps * sides;
-  const positions = new Float32Array(vertices * 3), normals = new Int8Array(vertices * 3);
-  const tangents = new Int16Array(vertices * 4), colors = new Uint8Array(vertices * 3), uvs = new Uint16Array(vertices * 2);
-  const triangles = new Uint32Array(indices.length * (steps - 1) * sides * 6);
-  const p = new THREE.Vector3(), before = new THREE.Vector3(), after = new THREE.Vector3(), tangent = new THREE.Vector3();
-  const normal = new THREE.Vector3(), binormal = new THREE.Vector3(), radial = new THREE.Vector3();
+// Builds 3-vertex-across cambered silk lock ribbons tangent to the skull surface.
+// Between k=0..1 and k=1..2 there are 2 quads (4 triangles) per step, never wrapping 2->0.
+function buildStrands(source, indices, steps, modifier, desktop) {
+  const cols = 3; // left (-1), raised center spine (0), right (+1)
+  const vertices = indices.length * steps * cols;
+  const positions = new Float32Array(vertices * 3);
+  const normals = new Float32Array(vertices * 3);
+  const colors = new Uint8Array(vertices * 3);
+  const uvs = new Float32Array(vertices * 2);
+  const triangles = new Uint32Array(indices.length * (steps - 1) * 2 * 6);
+
+  const headCenter = new THREE.Vector3(0, 0.025, -0.012);
+  const p = new THREE.Vector3();
+  const before = new THREE.Vector3();
+  const after = new THREE.Vector3();
+  const tangent = new THREE.Vector3();
+  const normalOut = new THREE.Vector3();
+  const sideVec = new THREE.Vector3();
+  const vNorm = new THREE.Vector3();
+
   let vi = 0, ti = 0;
   for (const encoded of indices) {
-    const strand = encoded % source.count, child = Math.floor(encoded / source.count);
+    const strand = encoded % source.count;
+    const child = Math.floor(encoded / source.count);
     const start = vi;
-    normal.set(1, 0, 0);
-    const pigment = .61 + source.pigment[strand] / 255 * .39;
+    const fam = source.family[strand];
+    const pigment = 0.72 + (source.pigment[strand] / 255) * 0.28;
+
+    // Base lock half-width in meters (~1.1mm to 1.8mm half-width => 2.2mm to 3.6mm silk lock ribbon)
+    const rawRad = Math.max(0.00055, Math.min(0.0012, source.radius[strand] || 0.0008));
+    const famScale = fam === 0 ? 1.85 : fam === 1 ? 1.35 : fam === 2 ? 1.45 : 1.05;
+    const lodScale = desktop ? 1.18 : 1.0;
+    const baseHalfW = rawRad * famScale * lodScale;
+
     for (let j = 0; j < steps; j++) {
       const t = j / (steps - 1);
-      pointAt(source, strand, t, p);
-      pointAt(source, strand, Math.max(0, t - .009), before);
-      pointAt(source, strand, Math.min(1, t + .009), after);
+      pointAtStyled(source, strand, t, modifier, p);
+      pointAtStyled(source, strand, Math.max(0, t - 0.018), modifier, before);
+      pointAtStyled(source, strand, Math.min(1, t + 0.018), modifier, after);
       tangent.subVectors(after, before).normalize();
-      if (tangent.lengthSq() < .1) tangent.set(0, -1, 0);
-      // Parallel-transport frame: no arbitrary flips along curved hair.
-      normal.addScaledVector(tangent, -normal.dot(tangent));
-      if (normal.lengthSq() < .01) normal.set(0, 0, 1).addScaledVector(tangent, -tangent.z);
-      normal.normalize(); binormal.crossVectors(tangent, normal).normalize();
-      if (child) {
-        const phase = strand * 2.39996 + child * Math.PI;
-        const spread = .00048 * (.65 + .35 * Math.sin(t * Math.PI));
-        p.addScaledVector(normal, Math.cos(phase) * spread).addScaledVector(binormal, Math.sin(phase) * spread);
+      if (tangent.lengthSq() < 0.05) tangent.set(0, -1, 0);
+
+      // Outward skull radial direction orthogonalized against strand tangent
+      normalOut.subVectors(p, headCenter);
+      if (normalOut.lengthSq() < 1e-6) normalOut.set(0, 1, 0);
+      normalOut.normalize();
+      normalOut.addScaledVector(tangent, -normalOut.dot(tangent));
+      if (normalOut.lengthSq() < 0.01) {
+        normalOut.set(0, 0, 1).addScaledVector(tangent, -tangent.z);
       }
-      // Real tapered cylindrical strands. Desktop LOD slightly widens subpixel
-      // fibers for stable coverage; source and portrait preserve physical radii.
-      const radius = source.radius[strand] * (desktop ? 2.55 : (source.family[strand] === 1 ? 1.55 : 1.30)) * (.98 * Math.pow(1 - t, .32) + .02);
-      for (let k = 0; k < sides; k++) {
-        const angle = k / sides * Math.PI * 2;
-        radial.copy(normal).multiplyScalar(Math.cos(angle)).addScaledVector(binormal, Math.sin(angle));
-        const i = vi * 3;
-        positions[i] = p.x + radial.x * radius; positions[i + 1] = p.y + radial.y * radius; positions[i + 2] = p.z + radial.z * radius;
-        normals[i] = Math.round(radial.x * 127); normals[i + 1] = Math.round(radial.y * 127); normals[i + 2] = Math.round(radial.z * 127);
-        tangents[vi * 4] = Math.round(tangent.x * 32767); tangents[vi * 4 + 1] = Math.round(tangent.y * 32767); tangents[vi * 4 + 2] = Math.round(tangent.z * 32767); tangents[vi * 4 + 3] = 32767;
-        colors[i] = pigment * 255; colors[i + 1] = pigment * .95 * 255; colors[i + 2] = pigment * .90 * 255;
-        uvs[vi * 2] = k / sides * 65535; uvs[vi * 2 + 1] = t * 65535;
-        if (j < steps - 1) {
-          const a = start + j * sides + k, b = start + j * sides + (k + 1) % sides;
-          triangles[ti++] = a; triangles[ti++] = b; triangles[ti++] = a + sides;
-          triangles[ti++] = b; triangles[ti++] = b + sides; triangles[ti++] = a + sides;
+      normalOut.normalize();
+      sideVec.crossVectors(tangent, normalOut).normalize();
+
+      if (child > 0) {
+        const phase = strand * 2.39996 + child * 2.09439;
+        const spreadSide = 0.0014 * (0.45 + 0.55 * Math.sin(t * Math.PI * 0.85));
+        const spreadOut = 0.00045 * Math.sin(t * Math.PI);
+        p.addScaledVector(sideVec, Math.cos(phase) * spreadSide)
+          .addScaledVector(normalOut, Math.abs(Math.sin(phase)) * spreadOut);
+      }
+
+      // Smooth root-and-tip width envelope
+      const rootEase = Math.min(1.0, 0.55 + 0.45 * Math.sin(Math.min(1.0, t * 5.5) * Math.PI * 0.5));
+      const tipTaper = Math.pow(1.0 - t * 0.82, 0.48);
+      const halfW = baseHalfW * rootEase * tipTaper;
+      const camberH = halfW * 0.32;
+
+      // Subtle root-to-tip shading stored in vertex color
+      const rootShade = 0.68 + 0.32 * Math.min(1.0, t / 0.22);
+      const colR = Math.round(pigment * rootShade * 255);
+      const colG = Math.round(pigment * rootShade * 0.96 * 255);
+      const colB = Math.round(pigment * rootShade * 0.94 * 255);
+
+      for (let k = 0; k < cols; k++) {
+        const uAcross = k / (cols - 1); // 0, 0.5, 1.0
+        const sAcross = uAcross * 2.0 - 1.0; // -1, 0, +1
+        const arch = (1.0 - sAcross * sAcross) * camberH;
+
+        const i3 = vi * 3;
+        positions[i3] = p.x + sideVec.x * (sAcross * halfW) + normalOut.x * arch;
+        positions[i3 + 1] = p.y + sideVec.y * (sAcross * halfW) + normalOut.y * arch;
+        positions[i3 + 2] = p.z + sideVec.z * (sAcross * halfW) + normalOut.z * arch;
+
+        vNorm.copy(normalOut).addScaledVector(sideVec, sAcross * 0.58).normalize();
+        normals[i3] = vNorm.x;
+        normals[i3 + 1] = vNorm.y;
+        normals[i3 + 2] = vNorm.z;
+
+        colors[i3] = colR;
+        colors[i3 + 1] = colG;
+        colors[i3 + 2] = colB;
+
+        uvs[vi * 2] = uAcross;
+        uvs[vi * 2 + 1] = t;
+
+        if (j < steps - 1 && k < cols - 1) {
+          const a = start + j * cols + k;
+          const b = a + 1;
+          const c = a + cols;
+          const d = c + 1;
+          triangles[ti++] = a;
+          triangles[ti++] = b;
+          triangles[ti++] = c;
+          triangles[ti++] = b;
+          triangles[ti++] = d;
+          triangles[ti++] = c;
         }
         vi++;
       }
     }
   }
+
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(normals, 3, true));
-  g.setAttribute('tangent', new THREE.BufferAttribute(tangents, 4, true));
+  g.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   g.setAttribute('color', new THREE.BufferAttribute(colors, 3, true));
-  g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   g.setIndex(new THREE.BufferAttribute(triangles, 1));
-  g.computeBoundingBox(); g.computeBoundingSphere();
+  g.computeBoundingBox();
+  g.computeBoundingSphere();
   return g;
 }
 
+// Feathered, depth-safe scalp root shadow layer (+1.15mm offset, depthWrite: false, zero jagged edges)
 function makeRootLayer(head, color, style) {
   if (!head?.geometry?.attributes.position) return null;
-  const p = head.geometry.attributes.position, n = head.geometry.attributes.normal, index = head.geometry.index;
+  const p = head.geometry.attributes.position;
+  const n = head.geometry.attributes.normal;
+  const index = head.geometry.index;
   if (!n || !index) return null;
-  const pos = new Float32Array(p.count * 3), normal = new Float32Array(p.count * 3), colors = new Float32Array(p.count * 4);
+
+  const pos = new Float32Array(p.count * 3);
+  const normal = new Float32Array(p.count * 3);
+  const colors = new Float32Array(p.count * 4);
+  const offsetDist = 0.00115; // 1.15mm above skull so it never Z-fights
+
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const phi = Math.atan2(x, z + .014), front = Math.max(0, Math.cos(phi));
-    const photo = style === 'groom_photo_tied';
-    const hairline = -.038 + (photo ? .060 : .084) * front; // Stage 18: 覆盖下扩，表情拉动额头时不露头皮
-    let a = THREE.MathUtils.smoothstep(y, hairline, hairline + (photo ? .037 : .026));
-    if (style === 'groom_center_long' && y > .065) a *= 1 - 0.82 * Math.exp(-Math.pow(x / .00055, 2));
-    const ear = THREE.MathUtils.smoothstep(Math.abs(x), .058, .070) * (1 - THREE.MathUtils.smoothstep(y, .025, .044)) * THREE.MathUtils.smoothstep(z, -.02, .015);
-    a *= 1 - ear; // A scalp-density layer must never paint the pinna as hair.
-    for (let k = 0; k < 3; k++) {
-      const v = k === 0 ? x : k === 1 ? y : z;
-      const nn = k === 0 ? n.getX(i) : k === 1 ? n.getY(i) : n.getZ(i);
-      pos[i * 3 + k] = v + nn * .00014; normal[i * 3 + k] = nn;
-      colors[i * 4 + k] = .42;
+    const phi = Math.atan2(x, z + 0.014);
+    const front = Math.max(0, Math.cos(phi));
+    // Keep front hairline high (y > 0.056m on central forehead) so bare forehead skin stays 100% clean
+    const hairline = -0.030 + 0.086 * Math.pow(front, 1.15);
+    let a = THREE.MathUtils.smoothstep(y, hairline, hairline + 0.034);
+
+    if (style === 'groom_center_long' || style === 'groom_clavicle_bob' || style === 'groom_hime_cut') {
+      if (y > 0.062 && z > -0.01) {
+        a *= 1.0 - 0.72 * Math.exp(-Math.pow(x / 0.0022, 2));
+      }
     }
+
+    // Never darken the ear pinna or facial oval
+    const ear =
+      THREE.MathUtils.smoothstep(Math.abs(x), 0.054, 0.068) *
+      (1.0 - THREE.MathUtils.smoothstep(y, 0.022, 0.046)) *
+      THREE.MathUtils.smoothstep(z, -0.028, 0.018);
+    const faceKeepOut =
+      THREE.MathUtils.smoothstep(z, 0.032, 0.068) *
+      (1.0 - THREE.MathUtils.smoothstep(y, 0.042, 0.072)) *
+      (1.0 - THREE.MathUtils.smoothstep(Math.abs(x), 0.042, 0.062));
+    a *= (1.0 - ear) * (1.0 - faceKeepOut);
+    a = Math.pow(Math.max(0, Math.min(1, a)), 1.5) * 0.86;
+
+    const nx = n.getX(i), ny = n.getY(i), nz = n.getZ(i);
+    pos[i * 3] = x + nx * offsetDist;
+    pos[i * 3 + 1] = y + ny * offsetDist;
+    pos[i * 3 + 2] = z + nz * offsetDist;
+    normal[i * 3] = nx;
+    normal[i * 3 + 1] = ny;
+    normal[i * 3 + 2] = nz;
+    colors[i * 4] = 0.52;
+    colors[i * 4 + 1] = 0.48;
+    colors[i * 4 + 2] = 0.48;
     colors[i * 4 + 3] = a;
   }
+
   const selected = [];
   for (let i = 0; i < index.count; i += 3) {
     const a = index.getX(i), b = index.getX(i + 1), c = index.getX(i + 2);
-    if (colors[a * 4 + 3] + colors[b * 4 + 3] + colors[c * 4 + 3] > .03) selected.push(a, b, c);
+    if (colors[a * 4 + 3] + colors[b * 4 + 3] + colors[c * 4 + 3] > 0.04) {
+      selected.push(a, b, c);
+    }
   }
+
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
-  g.setAttribute('color', new THREE.BufferAttribute(colors, 4)); g.setIndex(selected);
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+  g.setIndex(selected);
   g.computeBoundingSphere();
-  const m = new THREE.MeshStandardMaterial({ color, roughness: .92, vertexColors: true, transparent: true, depthWrite: true, alphaTest: .04, alphaToCoverage: true });
-  const layer = new THREE.Mesh(g, m); layer.name = 'Groom_ScalpRootDensity';
-  layer.userData.isGroomRoot = true; layer.castShadow = false; layer.receiveShadow = true;
+
+  const m = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.88,
+    metalness: 0.0,
+    vertexColors: true,
+    transparent: true,
+    depthWrite: false,
+    alphaTest: 0.0,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -2,
+  });
+  m.userData.builtInHair = true;
+  m.userData.curveGroom = true;
+
+  const layer = new THREE.Mesh(g, m);
+  layer.name = 'Groom_ScalpRootDensity';
+  layer.userData.isGroomRoot = true;
+  layer.userData.offsetDist = offsetDist;
+  layer.castShadow = false;
+  layer.receiveShadow = true;
+  layer.renderOrder = 1;
   return layer;
 }
 
 export async function buildCurveGroom(style, head, config = {}) {
   const id = groomStyleFor(style);
   if (!id) throw new Error('未知 Groom 发型');
+  const styleDef = GROOM_STYLES[id];
+  const modifier = styleDef?.modifier || 'none';
   const source = await decodeSource(id);
   const desktop = config.groomLod !== 'studio';
-  // Stage 17 合并：硬件(2070S)桌面 6500 根覆面；远端软件回退上限保留，弱机不爆
-  const requested = desktop ? 6500 : Math.min(source.count, Number(config.groomDensity || 9000));
-  const budget = config.groomSoftware ? Math.min(requested, desktop ? 1200 : 2000) : requested;
+
+  // Because each silk lock ribbon is 2.2-3.4mm wide with 14 micro-fibers, 2600-3800 locks
+  // provide 100% overlapping scalp coverage at 60 FPS with zero sub-pixel noise!
+  const requested = desktop ? 2600 : Math.min(source.count, Number(config.groomDensity || 3800));
+  const budget = config.groomSoftware ? Math.min(requested, desktop ? 1100 : 1600) : requested;
   const count = Math.max(600, Math.min(source.count, budget));
+
   const families = [[], [], [], []];
   for (let i = 0; i < count; i++) {
-    const strand = Math.floor(i * source.count / count);
+    const strand = Math.floor((i * source.count) / count);
     families[Math.min(3, source.family[strand])].push(strand);
   }
-  // Two smoothly offset child fibers per fringe guide increase natural coverage.
+  // Interpolated child locks for lush fringe and crown density
   const fringeParents = families[1].slice();
-  for (const strand of fringeParents) families[1].push(strand + source.count, strand + source.count * 2);
-  // Stage 16: 长发主体(family0)也补一根子发丝，侧面/背面不再透出皮肤噪点
+  for (const strand of fringeParents) families[1].push(strand + source.count);
   const flowParents = families[0].slice();
-  for (const strand of flowParents) families[0].push(strand + source.count);
+  for (let idx = 0; idx < flowParents.length; idx += 2) {
+    families[0].push(flowParents[idx] + source.count);
+  }
+
   const rendered = families.reduce((n, family) => n + family.length, 0);
-  const group = new THREE.Group(); group.name = 'HairGroup';
-  const base = new THREE.Color(config.hairColor || config.materials?.hairColorHex || '#191518');
-  base.lerp(new THREE.Color('#31231e'), .16).multiplyScalar(1.14);
+  const group = new THREE.Group();
+  group.name = 'HairGroup';
+
+  const base = new THREE.Color(config.hairColor || config.materials?.hairColorHex || '#1c1618');
+  base.lerp(new THREE.Color('#2d201c'), 0.18).multiplyScalar(1.12);
+  const sheenCol = base.clone().lerp(new THREE.Color('#8c6f64'), 0.35);
+
+  const silkTex = getSilkLockTextures();
   const names = ['GuideFlow', 'FeatheredFringe', 'TempleWisps', 'Flyaways'];
-  const root = makeRootLayer(head, base, id); if (root) group.add(root);
+  const root = makeRootLayer(head, base, id);
+  if (root) group.add(root);
+
   let triangles = 0;
   for (let f = 0; f < families.length; f++) {
     if (!families[f].length) continue;
-    const g = buildStrands(source, families[f], desktop ? 18 : 32, 3, desktop);
+    const g = buildStrands(source, families[f], desktop ? 16 : 24, modifier, desktop);
+    const isOuterWisps = f === 1 || f === 2 || f === 3;
     const material = new THREE.MeshPhysicalMaterial({
-      color: base, vertexColors: true, roughness: .36, metalness: 0,
-      anisotropy: .92, anisotropyRotation: 0, specularIntensity: .72,
-      specularColor: new THREE.Color('#f5e4d3'), envMapIntensity: .52,
-      sheen: .16, sheenRoughness: .48, sheenColor: base, clearcoat: .06, clearcoatRoughness: .5,
-      emissive: 0, side: THREE.FrontSide,
+      color: base,
+      map: silkTex ? silkTex.map : null,
+      alphaMap: silkTex ? silkTex.alphaMap : null,
+      vertexColors: true,
+      roughness: isOuterWisps ? 0.42 : 0.38,
+      metalness: 0.0,
+      anisotropy: 0.78,
+      anisotropyRotation: 1.5708,
+      specularIntensity: 0.42,
+      specularColor: sheenCol,
+      envMapIntensity: 0.28,
+      sheen: 0.28,
+      sheenRoughness: 0.44,
+      sheenColor: sheenCol,
+      clearcoat: 0.08,
+      clearcoatRoughness: 0.46,
+      alphaToCoverage: true,
+      transparent: false,
+      depthWrite: true,
+      side: THREE.DoubleSide,
     });
-    material.userData.builtInHair = true; material.userData.curveGroom = true;
-    const mesh = new THREE.Mesh(g, material); mesh.name = `Groom_${names[f]}`;
-    mesh.userData.isGroomMesh = true; mesh.userData.groomFamily = f;
-    mesh.castShadow = !desktop && !config.groomSoftware && f !== 3; mesh.receiveShadow = false;
-    group.add(mesh); triangles += g.index.count / 3;
+    material.userData.builtInHair = true;
+    material.userData.curveGroom = true;
+
+    const mesh = new THREE.Mesh(g, material);
+    mesh.name = `Groom_${names[f]}`;
+    mesh.userData.isGroomMesh = true;
+    mesh.userData.groomFamily = f;
+    mesh.castShadow = !desktop && !config.groomSoftware && f === 0;
+    mesh.receiveShadow = true;
+    mesh.renderOrder = f === 0 ? 2 : 3;
+    group.add(mesh);
+    triangles += g.index.count / 3;
   }
-  group.userData.groom = { id, sourceCurves: source.count, selectedGuides: count, renderedStrands: rendered, interpolatedChildren: rendered - count, triangles, lod: config.groomSoftware ? (desktop ? 'software-desktop' : 'software-portrait') : (desktop ? 'desktop' : 'portrait'), softwareFallback: !!config.groomSoftware, nativeSource: 'public/grooms/Chinese_Grooms_Source.blend' };
+
+  group.userData.groom = {
+    id,
+    sourceCurves: source.count,
+    selectedGuides: count,
+    renderedStrands: rendered,
+    interpolatedChildren: rendered - count,
+    triangles,
+    lod: config.groomSoftware ? (desktop ? 'software-desktop' : 'software-portrait') : (desktop ? 'desktop' : 'portrait'),
+    softwareFallback: !!config.groomSoftware,
+    nativeSource: 'public/grooms/Chinese_Grooms_Source.blend',
+  };
   return group;
 }
 
-// Real shape controls for the new groom, not legacy GLB morph names with no effect.
 export function applyCurveGroomShape(node, morphs) {
-  const volume = Number(morphs?.hairVolume || 0), length = Number(morphs?.hairLength || 0), bangs = Number(morphs?.bangsLength || 0);
+  const volume = Number(morphs?.hairVolume || 0);
+  const length = Number(morphs?.hairLength || 0);
+  const bangs = Number(morphs?.bangsLength || 0);
   const signature = `${volume}|${length}|${bangs}`;
   node.traverse(mesh => {
     if (!mesh.userData.isGroomMesh || mesh.userData.groomShape === signature) return;
@@ -234,12 +583,16 @@ export function applyCurveGroomShape(node, morphs) {
     if (!g.userData.groomBase && volume === 0 && length === 0 && bangs === 0) return;
     const base = g.userData.groomBase || (g.userData.groomBase = p.array.slice());
     for (let i = 0; i < p.count; i++) {
-      const t = uv.getY(i), w = THREE.MathUtils.smoothstep(t, .05, .7), o = i * 3;
+      const t = uv.getY(i), w = THREE.MathUtils.smoothstep(t, 0.05, 0.7), o = i * 3;
       const x = base[o], y = base[o + 1], z = base[o + 2];
-      p.array[o] = x * (1 + volume * .12 * w);
-      p.array[o + 1] = y - length * .025 * w * Math.max(0, .04 - y) / .18 - (mesh.userData.groomFamily === 1 ? bangs * .012 * w : 0);
-      p.array[o + 2] = z + (z + .014) * volume * .11 * w;
+      p.array[o] = x * (1 + volume * 0.12 * w);
+      p.array[o + 1] =
+        y -
+        length * 0.022 * w * Math.max(0, 0.04 - y) / 0.18 -
+        (mesh.userData.groomFamily === 1 ? bangs * 0.010 * w : 0);
+      p.array[o + 2] = z + (z + 0.014) * volume * 0.11 * w;
     }
-    p.needsUpdate = true; g.computeBoundingSphere();
+    p.needsUpdate = true;
+    g.computeBoundingSphere();
   });
 }

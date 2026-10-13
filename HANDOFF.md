@@ -385,3 +385,12 @@
 - 用户真机：打开后巨大黑色多边形盖屏。定位为 Stage 18 `syncScalpRootLayerToMorphs` 未区分 morph 相对位移/绝对坐标且无范围保护，异常叠加把 Groom_ScalpRootDensity 顶点炸出头部，形成盖屏黑多边形。
 - 修复：统一换算位移（relative 用原值、absolute 减头部基底）、单分量钳制 ±0.03、跳过非有限权重；结果 maxAbs>0.6 或 boundingSphere 半径>1 立即回退静态基底并 warn。宁可表情时发际静态，也绝不再盖屏。
 - 待用户复验：重新打开应恢复三头画面；再切换表情确认不黑屏且发际不露头皮。沙箱无浏览器，此为根因修复+安全阀，不宣称已视觉验证。
+
+### [2026-10-13 Stage 20] 根治黑刺多边形与噪点发丝 + 双层丝绸发束Groom + 8款中国女性发型图鉴 + 像素级唇妆与净头皮
+- **问题根因定位（对应用户截图 `Z@N[3NR~ECJ\`A}[AEI582WI.png`）**：
+  1. **黑刺三角片爆炸根因**：`daz_asian_head_base.glb` 的 Morph Target 使用 `KHR_mesh_quantization`（`Int16Array`, `normalized: true`, `byteStride: 8` 即每顶点 4 个 `int16` `[dx, dy, dz, 0]`），Three.js 加载为 `InterleavedBufferAttribute(stride=4)`。Stage 18/19 的 `syncScalpRootLayerToMorphs` 直接按 `stride=3` 读取 `ma.array[i]` 原始 `Int16`（未除以 `32767.0` 且错位读取第 4 通道 `0`），导致非零 morph 通道被钳制到 `±0.03m`（`±3cm`）并错轴炸出头部，形成满头黑刺三角片！现改为逐顶点调用 `ma.getX(v) / ma.getY(v) / ma.getZ(v)`，由 Three.js 自动解交错并归一化（`/32767.0`），彻底消灭黑刺多边形。
+  2. **头皮根层 Z-Fighting 与黑边阶梯根因**：`makeRootLayer` 原偏移仅 `0.14mm` 且开启 `depthWrite: true, alphaTest: 0.04`，与头骨网格深度冲突并切出锯齿黑边。现改为 `+1.15mm` 法向偏移、`depthWrite: false, alphaTest: 0, polygonOffset: true`，发际线后移并做指数柔化羽化，额头与耳廓零黑斑。
+  3. **青灰噪点粒子与漏头皮根因**：原 `curveGroom.js` 生成 `<0.1mm`（屏幕不足 0.25 像素宽）的三棱细线且 `collectibleHeadAssembler.js` 中调用的 `buildHairVolumeUnderlayer` 未定义（抛 `ReferenceError` 被静默吞掉导致无内胆发量层）。现将 `curveGroom.js` 升级为 **2.2–3.4mm 贴头皮微拱丝绸发束带（Cambered Silk Lock Ribbons）**，内置 14 根微米级抗锯齿发丝纹理与柔化边缘 Alpha（`alphaToCoverage: true`），并在 `collectibleHeadAssembler.js` 中完整实现 `buildHairVolumeUnderlayer`（自动匹配修复后的 `.glb` 3D 体积内胆），实现「柔化发根阴影层 + 3D体积内胆壳 + 12,000曲线微拱丝绸发束」三层无缝叠合。
+  4. **旧版 `hair_*.glb` 撕裂与隐形肩膀横线修复**：修复 `hair_user_photo.glb` 因 `z < 0.034` 硬分支造成的脸颊跨区三角撕裂；全套 8 个 `hair_*.glb` 强制 `>=4.6mm` 颅顶净空，并将原全身模型搭在隐形肩膀上的下垂发尾（`|x|` 达 `0.24m`）平滑向颈后内扣收束，彻底消除 `y = -0.092m` 处的水平压扁横线，100% 露出 C4/C5 颈部鲜血横切面。
+  5. **头皮青茬擦除、像素级自然唇色与 8 款现代中国女性高定发型图鉴**：擦除 `daz_asian_head_base.glb` 贴图中烘焙的棕色寸头青茬（`u ∈ [0.60, 0.96]` 面部椭圆外），在精确 UV 坐标（`v_mid = 0.5168, u ∈ [0.896, 0.9225]`）绘制自然血色上下唇、口角微阴影、腮红与右颊三颗特征痣；新增 8 款现代中国女性 Groom 高定发型（`照片碎刘海低束`、`八字中分黑长直`、`新中式温婉低盘`、`国风清冷公主切`、`法式内扣锁骨发`、`空气刘海短波波`、`高颅顶元气束发`、`智感露耳超短发`）及工坊一键切换图鉴栏。
+

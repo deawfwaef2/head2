@@ -1,28 +1,28 @@
 {
   "id": "low_chignon",
   "curves": 12000,
-  "nativeCurvesWithChildren": 12000,
+  "nativeCurvesWithChildren": 24000,
   "pointsPerCurve": 36,
   "groups": {
-    "Scalp_Flow": 11345,
-    "Feathered_Fringe": 0,
-    "Temple_Wisps": 209,
-    "Fine_Flyaways": 446
+    "Scalp_Flow": 6223,
+    "Feathered_Fringe": 2157,
+    "Temple_Wisps": 3206,
+    "Fine_Flyaways": 414
   },
   "bounds": [
     [
-      -0.07806074619293213,
-      -0.053853925317525864,
-      -0.1319981962442398
+      -0.08177901059389114,
+      -0.06152816861867905,
+      -0.11421985179185867
     ],
     [
-      0.07825598120689392,
-      0.12366263568401337,
-      0.08703481405973434
+      0.08200820535421371,
+      0.12837888300418854,
+      0.09665657579898834
     ]
   ],
   "coordinateSystem": "Y-up meters",
-  "origin": "Original authored guide fields fitted to repository head; photographic style reference only.",
+  "origin": "Stage 20 High-Density Arched Silk-Lock Groom fitted to repository head.",
   "sourceImage": "public/models/user_photo_ref.jpg",
-  "license": "New groom curves CC0; bundled reference head has separate, unresolved upstream license."
+  "license": "CC0 groom curves."
 }

@@ -423,21 +423,38 @@
               <h3>💇‍♀️ 步骤 3：曲线 Groom 发型与颈部断面</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>新曲线 Groom（非旧发片） / 旧版兼容发型</label>
+                  <label>现代中国女性 Groom 高定发型库（双层真发丝 + 体积内胆）</label>
                   <select id="sel-hair-style">
-                    <option value="groom_photo_tied">新 Groom · 照片碎刘海露耳束发 · 12,000 曲线</option>
-                    <option value="groom_center_long">新 Groom · 中式中分柔顺长发 · 12,000 曲线</option>
-                    <option value="groom_low_chignon">新 Groom · 中式低盘发露耳碎鬓 · 12,000 曲线</option>
-                    <option value="hair_user_photo">照片同款 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)</option>
-                    <option value="hair_short02">O4saken · 中式空气刘海多层微卷波波 (hair_short02.glb · 12,547顶点)</option>
-                    <option value="hair_long01">Elvs Lara · 中分长发样例 (hair_long01.glb · 17,360顶点)</option>
-                    <option value="hair_braid01">Elvs Adrienne · 法式蓬松微卷刘海盘发 (hair_braid01.glb · 9,352顶点)</option>
-                    <option value="hair_short04">Elvs Daisy · 千金感斜刘海半束发 (hair_short04.glb · 6,721顶点)</option>
-                    <option value="hair_ponytail01">Elvs Hazel · 利落偏分高颅顶束发 (hair_ponytail01.glb · 4,891顶点)</option>
-                    <option value="hair_bob02">Toigo · 日系层次内卷短波波 (hair_bob02.glb · 3,031顶点)</option>
-                    <option value="hair_bob01">Toigo · 经典齐刘海内扣学生波波 (hair_bob01.glb · 2,806顶点)</option>
+                    <option value="groom_photo_tied">✨ 照片同款 · 清透碎刘海露耳低束发 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_center_long">✨ 中式黑长直 · 高颅顶八字中分柔顺发 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_low_chignon">✨ 新中式温婉 · 侧分斜刘海低盘发髻 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_hime_cut">✨ 国风清冷 · 姬发式公主切高定长发 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_clavicle_bob">✨ 都市轻熟 · 法式八字刘海内扣锁骨发 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_air_bob">✨ 元气初恋 · 空气刘海甜美内扣短波波 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_high_ponytail">✨ 飒爽千金 · 高颅顶露耳元气高束发 (12,000 曲线 + 内胆)</option>
+                    <option value="groom_pixie_short">✨ 智感清冷 · 露耳碎发层次超短发 (12,000 曲线 + 内胆)</option>
+                    <option value="hair_user_photo">经典网格 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)</option>
+                    <option value="hair_short02">经典网格 · O4saken 中式空气刘海波波 (hair_short02.glb · 12,547顶点)</option>
+                    <option value="hair_long01">经典网格 · Elvs Lara 中分束发样例 (hair_long01.glb · 17,360顶点)</option>
+                    <option value="hair_braid01">经典网格 · Elvs Adrienne 法式微卷盘发 (hair_braid01.glb · 9,352顶点)</option>
+                    <option value="hair_short04">经典网格 · Elvs Daisy 千金感斜刘海半束发 (hair_short04.glb · 6,721顶点)</option>
+                    <option value="hair_ponytail01">经典网格 · Elvs Hazel 利落偏分高颅顶束发 (hair_ponytail01.glb · 4,891顶点)</option>
+                    <option value="hair_bob02">经典网格 · Toigo 日系层次内卷短波波 (hair_bob02.glb · 3,031顶点)</option>
+                    <option value="hair_bob01">经典网格 · Toigo 经典齐刘海内扣学生波波 (hair_bob01.glb · 2,806顶点)</option>
                     <option value="none">无发模式 (纯医学头颈骨相标本展示)</option>
                   </select>
+                </div>
+
+                <div class="preset-photo-row" id="hair-style-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                  <span>中国女性发型图鉴:</span>
+                  <button type="button" class="chip-btn active" data-hair-preset="groom_photo_tied">照片碎刘海低束</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_center_long">八字中分黑长直</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_low_chignon">新中式温婉低盘</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_hime_cut">国风清冷公主切</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_clavicle_bob">法式内扣锁骨发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_air_bob">空气刘海短波波</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_high_ponytail">高颅顶元气束发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="groom_pixie_short">智感露耳超短发</button>
                 </div>
 
                 <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">新 Groom 来自可编辑 Blender Hair Curves：真实引导曲线、立体渐细发丝、独立碎鬓与飞发，无旧 Alpha 发片。桌宠使用 3,000 根 LOD；工坊可显示全部 12,000 引导曲线与插值子丝；默认 6,000 引导采样减少显存占用。Cycles 源工程与浏览器实时材质不同，质量以实际效果验收。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>

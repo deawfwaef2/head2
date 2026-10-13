@@ -2,57 +2,113 @@
 
 export const REAL_HAIR_CATALOG = [
   {
+    id: 'groom_photo_tied',
+    label: '照片同款 · 清透碎刘海露耳低束发 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_user_photo.glb',
+    verts: 12000,
+    desc: '还原参考照片气质：轻盈微斜空气碎刘海 + 双颊修颜龙须碎鬓 + 露耳脑后低挽发髻，双层丝绸发束与底层体积壳无缝贴合'
+  },
+  {
+    id: 'groom_center_long',
+    label: '中式黑长直 · 高颅顶八字刘海柔顺发 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_short04.glb',
+    verts: 12000,
+    desc: '经典东方高颅顶中分八字刘海配垂顺内扣长发，发尾于颈部 C4/C5 切缘上方自然内扣收束，绝不遮挡血迹断面'
+  },
+  {
+    id: 'groom_low_chignon',
+    label: '新中式温婉 · 侧分斜刘海低盘发髻 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_braid01.glb',
+    verts: 12000,
+    desc: '温婉千金感三七侧分斜掠刘海配脑后饱满低盘发髻，完整展露修长天鹅颈与底部解剖断面'
+  },
+  {
+    id: 'groom_hime_cut',
+    label: '国风清冷 · 姬发式公主切高定长发 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_bob02.glb',
+    verts: 12000,
+    desc: '现代国风清冷感一刀切面颊姬发鬓角 + 顺滑高颅顶长发，极具东方古典与现代二次元冷艳骨相感'
+  },
+  {
+    id: 'groom_clavicle_bob',
+    label: '都市轻熟 · 法式八字刘海内扣锁骨波波 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_bob02.glb',
+    verts: 12000,
+    desc: '修饰颧弓与下颌角的法式微卷八字刘海配内扣波波发尾，干练轻熟，360° 展现颈部切口环'
+  },
+  {
+    id: 'groom_air_bob',
+    label: '元气初恋 · 空气刘海内扣短波波 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_bob01.glb',
+    verts: 12000,
+    desc: '清透齐眉空气碎刘海配蓬松耳下内扣短波波，凸显幼态鹅蛋脸骨相与精致五官'
+  },
+  {
+    id: 'groom_high_ponytail',
+    label: '飒爽千金 · 高颅顶露耳元气高束发 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_ponytail01.glb',
+    verts: 12000,
+    desc: '蓬松高颅顶提拉骨相 + 利落露耳后挽高束发，完整展露双耳轮廓、下颌折角与 C4/C5 断面'
+  },
+  {
+    id: 'groom_pixie_short',
+    label: '智感清冷 · 露耳碎发层次超短发 (Groom + Volume · 12,000曲线)',
+    url: '/models/hair_short02.glb',
+    verts: 12000,
+    desc: '清爽日杂/中式少年感多层次碎发短发，轻盈贴合头骨，零遮挡呈现颈部横切面解剖细节'
+  },
+  {
     id: 'hair_user_photo',
-    label: '照片同款 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)',
+    label: '经典网格 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)',
     url: '/models/hair_user_photo.glb',
     verts: 5029,
-    desc: '基于 MhcloFit 精确拟合头骨的空气感齐眉碎刘海 + 脸颊修颜碎发 + 露耳后挽发髻，还原参考照片气质'
+    desc: '基于 MhcloFit 精确拟合头骨的空气感齐眉碎刘海 + 脸颊修颜碎发 + 露耳后挽发髻'
   },
   {
     id: 'hair_short02',
-    label: 'O4saken · 中式空气刘海多层微卷波波 (hair_short02.glb · 12,547顶点)',
+    label: '经典网格 · 中式空气刘海微卷波波 (hair_short02.glb · 12,547顶点)',
     url: '/models/hair_short02.glb',
     verts: 12547,
-    desc: '1.25万顶点超精细多层 Alpha 发片交织，真实还原轻盈发丝层次与微卷内扣轮廓'
+    desc: '1.25万顶点精细多层发片交织，还原轻盈发丝层次与微卷内扣轮廓'
   },
   {
     id: 'hair_long01',
-    label: 'Elvs Lara · 殿堂级中分柔顺长发 (hair_long01.glb · 17,360顶点)',
+    label: '经典网格 · 殿堂级中分柔顺束发 (hair_long01.glb · 17,360顶点)',
     url: '/models/hair_long01.glb',
     verts: 17360,
-    desc: '1.73万顶点高精雕琢垂顺长发，于 C4/C5 颈部切口上方自然收束，绝不遮挡血迹断面'
+    desc: '1.73万顶点高精雕琢垂顺发丝，于 C4/C5 颈部切口上方自然收束'
   },
   {
     id: 'hair_braid01',
-    label: 'Elvs Adrienne · 法式蓬松微卷刘海盘发 (hair_braid01.glb · 9,352顶点)',
+    label: '经典网格 · 法式蓬松微卷刘海盘发 (hair_braid01.glb · 9,352顶点)',
     url: '/models/hair_braid01.glb',
     verts: 9352,
-    desc: '9,352顶点浪漫微卷前额碎发与立体盘发纹理，360° 展现修长天鹅颈与切口断面'
+    desc: '9,352顶点浪漫微卷前额碎发与立体盘发纹理，360° 展现天鹅颈与切口断面'
   },
   {
     id: 'hair_short04',
-    label: 'Elvs Daisy · 千金感斜刘海半束发 (hair_short04.glb · 6,721顶点)',
+    label: '经典网格 · 千金感斜刘海半束发 (hair_short04.glb · 6,721顶点)',
     url: '/models/hair_short04.glb',
     verts: 6721,
     desc: '6,721顶点柔和斜分刘海搭配双侧修颜发缕，极具东方温婉标本气质'
   },
   {
     id: 'hair_ponytail01',
-    label: 'Elvs Hazel · 利落偏分高颅顶束发 (hair_ponytail01.glb · 4,891顶点)',
+    label: '经典网格 · 利落偏分高颅顶束发 (hair_ponytail01.glb · 4,891顶点)',
     url: '/models/hair_ponytail01.glb',
     verts: 4891,
     desc: '4,891顶点气质偏分刘海配脑后挽发，完整展露耳廓、下颌骨相与颈部断面'
   },
   {
     id: 'hair_bob02',
-    label: 'Toigo · 日系层次内卷短波波 (hair_bob02.glb · 3,031顶点)',
+    label: '经典网格 · 日系层次内卷短波波 (hair_bob02.glb · 3,031顶点)',
     url: '/models/hair_bob02.glb',
     verts: 3031,
     desc: '3,031顶点斜分层次感内卷短波波，清爽干练，完整展露颈部血迹环'
   },
   {
     id: 'hair_bob01',
-    label: 'Toigo · 经典齐刘海内扣学生波波 (hair_bob01.glb · 2,806顶点)',
+    label: '经典网格 · 经典齐刘海内扣学生波波 (hair_bob01.glb · 2,806顶点)',
     url: '/models/hair_bob01.glb',
     verts: 2806,
     desc: '2,806顶点饱满齐眉刘海配下颌内扣发尾，修饰幼态鹅蛋脸骨相'
@@ -176,7 +232,7 @@ export const DEFAULT_COLLECTIBLES = [
     blushIntensity: 0.22,
     lipColor: '#b8626c',
     irisColor: '#4a2a1c',
-    hairStyle: 'groom_photo_tied',
+    hairStyle: 'groom_low_chignon',
     hairColor: '#151824',
     hairSheen: 0.94,
     neckClearance: 0.50,

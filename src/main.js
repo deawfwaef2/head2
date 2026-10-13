@@ -558,6 +558,14 @@ function syncStudioExpressionUI(exprId) {
   });
 }
 
+function syncStudioHairUI(hairStyle) {
+  const sel = document.getElementById('sel-hair-style');
+  if (sel) sel.value = hairStyle;
+  document.querySelectorAll('[data-hair-preset]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.hairPreset === hairStyle);
+  });
+}
+
 function loadCollectibleIntoStudio(col) {
   const deadExpr = col.deadExpression || col.morphs?.deadExpression || 'dead_calm';
   state.studioDraft = JSON.parse(JSON.stringify({
@@ -590,7 +598,7 @@ function loadCollectibleIntoStudio(col) {
   }));
 
   document.getElementById('sel-base-preset').value = state.studioDraft.basePreset;
-  document.getElementById('sel-hair-style').value = state.studioDraft.hairStyle;
+  syncStudioHairUI(state.studioDraft.hairStyle);
   document.getElementById('sel-groom-density').value = String(state.studioDraft.groomDensity || 6000);
   syncStudioExpressionUI(deadExpr);
   document.getElementById('col-skin').value = state.studioDraft.skinTone;
@@ -1138,11 +1146,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customModelUrl = null;
     state.studioDraft.basePreset = e.target.value;
     const presetHairMap = {
-      user_photo: 'hair_user_photo',
-      linxi: 'hair_long01',
-      suwan: 'hair_short02',
-      qianxue: 'hair_ponytail01',
-      shenzhiwei: 'hair_braid01'
+      user_photo: 'groom_photo_tied',
+      linxi: 'groom_center_long',
+      suwan: 'groom_air_bob',
+      qianxue: 'groom_high_ponytail',
+      shenzhiwei: 'groom_low_chignon'
     };
     const presetExprMap = {
       user_photo: 'dead_calm',
@@ -1153,14 +1161,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
-      document.getElementById('sel-hair-style').value = state.studioDraft.hairStyle;
+      syncStudioHairUI(state.studioDraft.hairStyle);
     }
     if (presetExprMap[e.target.value]) {
       state.studioDraft.deadExpression = presetExprMap[e.target.value];
       state.studioDraft.morphs.deadExpression = presetExprMap[e.target.value];
       syncStudioExpressionUI(presetExprMap[e.target.value]);
     }
-    document.getElementById('custom-model-status').textContent = `内置演示头模 (${e.target.value} + ${state.studioDraft.hairStyle}.glb)`;
+    document.getElementById('custom-model-status').textContent = `内置演示头模 (${e.target.value} + ${state.studioDraft.hairStyle})`;
     await refreshStudio3DModel();
   });
 
@@ -1207,7 +1215,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   document.getElementById('sel-hair-style').addEventListener('change', async (e) => {
     state.studioDraft.hairStyle = e.target.value;
+    syncStudioHairUI(state.studioDraft.hairStyle);
     await refreshStudio3DModel();
+  });
+  document.querySelectorAll('[data-hair-preset]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      state.studioDraft.hairStyle = btn.dataset.hairPreset;
+      syncStudioHairUI(state.studioDraft.hairStyle);
+      const item = REAL_HAIR_CATALOG.find(x => x.id === state.studioDraft.hairStyle);
+      if (item) showToast(`💇‍♀️ 已切换中国女性高定发型：${item.label}`);
+      await refreshStudio3DModel();
+    });
   });
 
   document.getElementById('slider-hair-sheen').addEventListener('input', (e) => {
