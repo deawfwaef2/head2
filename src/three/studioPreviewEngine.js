@@ -9,6 +9,7 @@ import {
 } from './collectibleHeadAssembler.js';
 import {
   applyBaseRendererSettings,
+  isSoftwareRenderer,
   ensureSceneEnvironment,
   buildStudioLightRig,
   applyRenderQualityToEngine
@@ -49,6 +50,7 @@ export class StudioPreviewEngine {
     });
     this.renderer.setSize(w, h, false);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
     // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
     applyBaseRendererSettings(this.renderer, 0.88);
@@ -70,8 +72,8 @@ export class StudioPreviewEngine {
     this.beautyPost = null;
     this.beautyPostUserEnabled = true;
     try {
-      this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
-      this.beautyPost.setEnabled(true);
+      if (!this.softwareRenderer) this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
+      this.beautyPost?.setEnabled(true);
     } catch (err) {
       console.warn('后期链初始化失败，已回退直渲:', err);
       this.beautyPost = null;
@@ -163,16 +165,28 @@ export class StudioPreviewEngine {
   async loadOrRebuild(config) {
     const request = (this.loadRequest || 0) + 1;
     this.loadRequest = request;
+    const previousGroomId = this.headNode?.userData?.groomStats?.id;
     this.currentConfig = JSON.parse(JSON.stringify(config));
     if (config.photoElement) {
       this.currentConfig.photoElement = config.photoElement;
     }
 
-    const newNode = await buildCollectibleHeadNode({ ...this.currentConfig, groomLod: 'studio' });
+    // Curved hair has large geometry. Release the previous built-in preview
+    // before constructing its replacement; external import still stays atomic.
+    if (!config.customModelUrl && this.headNode?.userData?.groomStats) {
+      disposeHeadNode(this.headNode); this.headNode = null;
+      this.renderer.renderLists.dispose();
+      this.renderer.render(this.scene, this.camera);
+      await new Promise(resolve => setTimeout(resolve, 16));
+      if (request !== this.loadRequest) return this.headNode;
+    }
+    const newNode = await buildCollectibleHeadNode({ ...this.currentConfig, groomLod: 'studio', groomSoftware: this.softwareRenderer });
     if (request !== this.loadRequest) { disposeHeadNode(newNode); return this.headNode; }
     disposeHeadNode(this.headNode);
     this.headNode = newNode;
     this.scene.add(this.headNode);
+    const newGroomId = this.headNode.userData?.groomStats?.id;
+    if (newGroomId !== previousGroomId && (newGroomId === 'groom_center_long' || previousGroomId === 'groom_center_long')) this.setCameraPreset('front');
     this.updateCutHelperPosition(config.morphs);
     return newNode;
   }
@@ -195,6 +209,7 @@ export class StudioPreviewEngine {
 
   setCameraPreset(preset) {
     this.autoRotate = false;
+    const longHair = this.headNode?.userData?.groomStats?.id === 'groom_center_long';
     if (preset === 'front') {
       this.camera.position.set(0, -7.0, 58);
       this.controls.target.set(0, -1.5, 0.5);
@@ -212,6 +227,11 @@ export class StudioPreviewEngine {
       this.camera.position.set(22, -4.0, 54);
       this.controls.target.set(0, -1.0, 0.5);
       this.autoRotate = true;
+    }
+    if (longHair && preset !== 'anatomy_bottom') {
+      this.camera.position.multiplyScalar(1.35);
+      this.camera.position.y = -6;
+      this.controls.target.y = -6;
     }
     this.controls.update();
   }

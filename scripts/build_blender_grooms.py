@@ -256,7 +256,7 @@ for style in STYLES:
         obj=bpy.data.objects.new(style+'_'+label,data);collection.objects.link(obj)
         obj.hide_render=style!=STYLES[0];obj.hide_set(style!=STYLES[0])
         obj['source']='Original guide-field groom, authored for this project; not photo reconstruction.'
-        obj['family']=label;obj['strand_count']=len(selected)
+        obj['family']=label;obj['guide_count']=int(mask.sum());obj['strand_count']=len(selected)
     meta={'id':style,'curves':COUNT,'nativeCurvesWithChildren':native_count,'pointsPerCurve':SAMPLES,'groups':{group_names[g]:int(np.count_nonzero(np.asarray(groups)==g)) for g in group_names},'bounds':[lo.tolist(),hi.tolist()], 'coordinateSystem':'Y-up meters','origin':'Original authored guide fields fitted to repository head; photographic style reference only.', 'sourceImage':'public/models/user_photo_ref.jpg','license':'New groom curves CC0; bundled reference head has separate, unresolved upstream license.'}
     (OUT/(style+'.json')).write_text(json.dumps(meta,ensure_ascii=False,indent=2))
     all_metadata.append(meta)
@@ -274,6 +274,17 @@ area('Hair_Rim',(.18,.28,.35),5,.20,(.85,.91,1))
 camera_data=bpy.data.cameras.new('Groom_Review_Camera');camera=bpy.data.objects.new('Groom_Review_Camera',camera_data)
 bpy.context.scene.collection.objects.link(camera);camera.location=(.14,-.53,.10);aim(camera,(0,0,.015))
 camera_data.type='ORTHO';camera_data.ortho_scale=.35;bpy.context.scene.camera=camera
+# Imported glTF cornea was opaque in Cycles; it must transmit to the iris.
+cornea=bpy.data.materials.get('Cornea')
+if cornea and cornea.use_nodes:
+    for node in cornea.node_tree.nodes:
+        if node.type=='BSDF_PRINCIPLED':
+            node.inputs['Base Color'].default_value=(1,1,1,1)
+            node.inputs['Metallic'].default_value=0
+            node.inputs['Roughness'].default_value=.025
+            node.inputs['IOR'].default_value=1.376
+            node.inputs['Transmission Weight'].default_value=1
+
 scene=bpy.context.scene;scene.render.engine='CYCLES';scene.cycles.samples=32
 scene.cycles.use_denoising=False;scene.render.resolution_x=900;scene.render.resolution_y=1000;scene.render.resolution_percentage=100
 scene.world.color=(.08,.08,.08);scene.render.film_transparent=True

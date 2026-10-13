@@ -10,6 +10,7 @@ import {
 import { soundEngine } from '../audio/tactileSoundEngine.js';
 import {
   applyBaseRendererSettings,
+  isSoftwareRenderer,
   ensureSceneEnvironment,
   buildDesktopLightRig,
   applyRenderQualityToEngine
@@ -39,6 +40,7 @@ export class DesktopBoxSpaceEngine {
       fov: 42,
       vanishingPointOffsetX: 0,
       vanishingPointOffsetY: 0,
+      boxFitScreen: true, // Stage 18: 默认盒型空间前框(Z=0)四边正好贴满电脑屏幕边缘
       boxWidthCm: 88,
       boxHeightCm: 52,
       boxMaxDepthMm: 1200,
@@ -85,6 +87,7 @@ export class DesktopBoxSpaceEngine {
     });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
     // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
     applyBaseRendererSettings(this.renderer, 0.82);
@@ -102,8 +105,8 @@ export class DesktopBoxSpaceEngine {
     this.beautyPost = null;
     this.beautyPostUserEnabled = true;
     try {
-      this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
-      this.beautyPost.setEnabled(true);
+      if (!this.softwareRenderer) this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
+      this.beautyPost?.setEnabled(true);
     } catch (err) {
       console.warn('后期链初始化失败，已回退直渲:', err);
       this.beautyPost = null;
@@ -126,6 +129,14 @@ export class DesktopBoxSpaceEngine {
 
   getBoxBounds() {
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    if (this.settings.boxFitScreen !== false) {
+      // 前框贴屏：以相机到前框(Z=0)的距离反推可视半高/半宽，前框四边与屏幕四边重合
+      const dist = Math.max(1, this.cameraZ || 115);
+      const halfH = Math.tan(THREE.MathUtils.degToRad((this.settings.fov || 42) * 0.5)) * dist;
+      const halfW = halfH * aspect;
+      const maxDepthCm = this.settings.boxMaxDepthMm / 10;
+      return { minX: -halfW, maxX: halfW, minY: -halfH, maxY: halfH, minZ: -maxDepthCm, maxZ: 0 };
+    }
     const halfH = this.settings.boxHeightCm * 0.5;
     const halfW = halfH * aspect * (this.settings.boxWidthCm / 82);
     const maxDepthCm = this.settings.boxMaxDepthMm / 10;
@@ -240,7 +251,7 @@ export class DesktopBoxSpaceEngine {
       this.recallCollectible(collectible.id, false);
     }
 
-    const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop' });
+    const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
     const b = this.getBoxBounds();
 
     const startX = Math.max(b.minX + 10, Math.min(b.maxX - 10, collectible.boxPosition?.x ?? 0));
@@ -328,7 +339,7 @@ export class DesktopBoxSpaceEngine {
     const pet = this.pets.get(id);
     if (!pet || !pet.node) return;
     pet.collectible.hairStyle = hairStyle;
-    await attachRealHairModel(pet.node, pet.collectible);
+    await attachRealHairModel(pet.node, { ...pet.collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
     soundEngine.playPickup(0);
     this.onPetStateUpdate(this.getSummonedList());
   }

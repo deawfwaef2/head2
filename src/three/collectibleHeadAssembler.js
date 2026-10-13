@@ -275,6 +275,58 @@ const PRESET_MORPH_BIASES = {
  * Applies facial bone morphs, forensic dead-person expressions ("死人各种表情"),
  * and 3D hair morphs across all morph-enabled meshes inside `rootGroup`.
  */
+
+// Stage 18 · 头皮根层跟随头部 Morph：换表情/捏脸时，Groom_ScalpRootDensity 必须和
+// HeadSkinMesh 用同一组 morph 权重重算顶点，否则额头皮肤动了、发际层不动 -> 露头皮。
+function syncScalpRootLayerToMorphs(rootGroup) {
+  const head = rootGroup.getObjectByName('HeadSkinMesh');
+  const root = rootGroup.getObjectByName('Groom_ScalpRootDensity');
+  if (!head || !root) return;
+  const hg = head.geometry, rg = root.geometry;
+  const hp = hg?.attributes?.position, rp = rg?.attributes?.position;
+  if (!hp || !rp || hp.count !== rp.count) return;
+  if (!rg.userData.basePositions) rg.userData.basePositions = Float32Array.from(rp.array);
+  const out = rp.array;
+  out.set(rg.userData.basePositions);
+  const morphAttrs = hg.morphAttributes?.position || [];
+  const dict = head.morphTargetDictionary, infl = head.morphTargetInfluences;
+  // Stage 19 紧急修复：morph 属性可能是相对位移(glTF)也可能是绝对坐标，
+  // 必须统一换算成位移再叠加；且单分量位移钳制在 ±0.03（头部局部单位），
+  // 任何异常权重都不得把头皮层顶点炸出头部范围（曾致巨大黑多边形盖屏）。
+  const relative = hg.morphTargetsRelative !== false;
+  const baseHead = hp.array;
+  if (dict && infl) {
+    for (const [name, idx] of Object.entries(dict)) {
+      const w = infl[idx];
+      if (!w || !Number.isFinite(w)) continue;
+      const ma = morphAttrs[idx];
+      if (!ma) continue;
+      const arr = ma.array;
+      const n = Math.min(out.length, arr.length);
+      for (let i = 0; i < n; i++) {
+        let d = relative ? arr[i] : arr[i] - baseHead[i];
+        if (!Number.isFinite(d)) continue;
+        d = Math.max(-0.03, Math.min(0.03, d));
+        out[i] += d * w;
+      }
+    }
+  }
+  // 安全阀：结果超出头部合理范围（局部坐标 >0.6）立即回退静态基底，永不盖屏
+  let maxAbs = 0;
+  for (let i = 0; i < out.length; i++) maxAbs = Math.max(maxAbs, Math.abs(out[i]));
+  if (!Number.isFinite(maxAbs) || maxAbs > 0.6) {
+    out.set(rg.userData.basePositions);
+    console.warn('Scalp root morph sync out of range; reverted to base scalp layer.');
+  }
+  rp.needsUpdate = true;
+  rg.computeBoundingSphere();
+  if (rg.boundingSphere && rg.boundingSphere.radius > 1) {
+    out.set(rg.userData.basePositions);
+    rp.needsUpdate = true;
+    rg.computeBoundingSphere();
+  }
+}
+
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   if (!rootGroup) return;
   rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), ...morphs };
@@ -365,6 +417,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   });
 
   applyCurveGroomShape(rootGroup, m);
+  syncScalpRootLayerToMorphs(rootGroup);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
@@ -497,6 +550,13 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(groom); return null; }
       disposeHeadNode(oldHair);
       modelContainer.add(groom);
+      try {
+        const underlayer = await buildHairVolumeUnderlayer(resolvedStyle, config);
+        if (underlayer) {
+          if (rootGroup.userData.hairRequestSerial !== request) disposeHeadNode(underlayer);
+          else groom.add(underlayer);
+        }
+      } catch (_) { /* 发量层失败则纯发丝呈现 */ }
       rootGroup.userData.currentHairStyle = groomId;
       rootGroup.userData.groomStats = groom.userData.groom;
       if (rootGroup.userData.currentMorphs) applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
@@ -720,18 +780,18 @@ export async function buildCollectibleHeadNode(config = {}) {
         normalScale: new THREE.Vector2(0.50, 0.50),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.028,
+        bumpScale: 0.042,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.68),
+        roughness: Number(materials.skinRoughness ?? 0.62),
         metalness: 0.0,
-        sheen: 0.12,
-        sheenRoughness: 0.72,
-        sheenColor: new THREE.Color('#e0a198'),
-        clearcoat: 0.03,
-        clearcoatRoughness: 0.65,
-        specularIntensity: 0.27,
+        sheen: 0.16,
+        sheenRoughness: 0.62,
+        sheenColor: new THREE.Color('#e8a49b'),
+        clearcoat: 0.05,
+        clearcoatRoughness: 0.55,
+        specularIntensity: 0.38,
         ior: 1.42,
-        envMapIntensity: 0.30,
+        envMapIntensity: 0.34,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -779,14 +839,16 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.15,
-        roughness: 0.02,
+        // Linear HDR composites highlights before tonemapping; a thick white
+        // overlay would wash out the iris in the post chain.
+        opacity: 0.04,
+        roughness: 0.04,
         metalness: 0.0,
-        clearcoat: 1.0,
+        clearcoat: 0.40,
         clearcoatRoughness: 0.01,
-        specularIntensity: 1.0,
+        specularIntensity: 0.65,
         ior: 1.38,
-        envMapIntensity: 2.20,
+        envMapIntensity: 0.35,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {

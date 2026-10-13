@@ -544,7 +544,7 @@ async function refreshStudio3DModel() {
     const groom = studioEngine.headNode?.userData?.groomStats;
     status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (groom ? ` · 新Groom：源 ${groom.sourceCurves.toLocaleString()} 曲线 / 实时 ${groom.renderedStrands.toLocaleString()} 发丝` : '');
     const groomStatus = document.getElementById('groom-quality-status');
-    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
+    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面${groom.softwareFallback ? ' · 检测到软件渲染，已保守降级并关闭HDR后期；完整效果需开启硬件加速' : ''}` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
     status.title = '实时 PBR 的最终细节受原始网格密度、贴图分辨率和材质图完整度限制。';
   }
   update2DAnatomyInspector();
@@ -1350,6 +1350,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateVpHudPosition();
   });
 
+  document.getElementById('chk-box-fit-screen')?.addEventListener('change', (e) => {
+    desktopEngine.updateSettings({ boxFitScreen: e.target.checked });
+    showToast(e.target.checked ? '🖥️ 盒型空间已贴满屏幕边缘' : '📐 已切换为自定义盒型宽/高');
+  });
+
   document.getElementById('set-box-width').addEventListener('input', (e) => {
     const v = parseInt(e.target.value, 10);
     document.getElementById('val-set-box-width').textContent = `${v} cm`;
@@ -1437,8 +1442,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (postChk) {
     let savedPost = true;
     try { savedPost = localStorage.getItem(POST_KEY) !== 'off'; } catch (_) {}
-    postChk.checked = savedPost;
-    applyPostToggle(savedPost);
+    const softwarePostDisabled = !!(desktopEngine?.softwareRenderer || studioEngine?.softwareRenderer);
+    postChk.checked = savedPost && !softwarePostDisabled;
+    postChk.disabled = softwarePostDisabled;
+    if (softwarePostDisabled) postChk.title = '软件WebGL已关闭HDR后期以保证可玩性；请开启浏览器硬件加速。';
+    applyPostToggle(savedPost && !softwarePostDisabled);
     postChk.addEventListener('change', (e) => {
       applyPostToggle(e.target.checked);
       try { localStorage.setItem(POST_KEY, e.target.checked ? 'on' : 'off'); } catch (_) {}

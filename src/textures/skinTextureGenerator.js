@@ -458,7 +458,7 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
  * 注意：数据贴图必须保持线性色彩空间（不设 SRGB），否则粗糙度会偏亮失真。
  */
 let _skinMicroCache = null;
-export function createSkinMicroMaps(size = 1024) {
+export function createSkinMicroMaps(size = 2048) {
   if (_skinMicroCache) return _skinMicroCache;
   // 斑点/皮纹数量按面积缩放、尺寸按边长缩放，保证 1024 与 512 观感密度一致
   const unit = size / 512;
@@ -516,7 +516,7 @@ export function createSkinMicroMaps(size = 1024) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 8; // Stage 13c：掠射角毛孔更锐利
+  tex.anisotropy = 16; // Stage 18：2048 毛孔 + 16x 过滤，近看不糊
   tex.needsUpdate = true;
   _skinMicroCache = { roughnessMap: tex, bumpMap: tex };
   return _skinMicroCache;
