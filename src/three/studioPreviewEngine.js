@@ -12,7 +12,8 @@ import {
   isSoftwareRenderer,
   ensureSceneEnvironment,
   buildStudioLightRig,
-  applyRenderQualityToEngine
+  applyRenderQualityToEngine,
+  requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
 import { createBokehDust, createStudioBackdrop } from './atmosphere.js';
@@ -26,10 +27,30 @@ export class StudioPreviewEngine {
     this.clock = new THREE.Clock();
     this.pointerNdc = { x: 0, y: 0 };
 
+    this.lastFrameTime = performance.now();
+    this.renderWakeUntil = performance.now() + 2500;
+    this.needsShadowRefresh = true;
+
     this.initScene();
     this.bindPointerTracking();
     this.animate = this.animate.bind(this);
     this.animId = requestAnimationFrame(this.animate);
+  }
+
+  wakeRender(durationSeconds = 1.6, refreshShadow = false) {
+    const until = performance.now() + durationSeconds * 1000;
+    if (until > this.renderWakeUntil) {
+      this.renderWakeUntil = until;
+    }
+    if (refreshShadow) {
+      this.needsShadowRefresh = true;
+    }
+  }
+
+  isCanvasVisible() {
+    if (!this.canvas || document.hidden) return false;
+    if (this.canvas.offsetParent === null) return false;
+    return this.canvas.clientWidth > 4 && this.canvas.clientHeight > 4;
   }
 
   initScene() {
@@ -44,7 +65,7 @@ export class StudioPreviewEngine {
       canvas: this.canvas,
       alpha: true,
       antialias: true,
-      powerPreference: 'high-performance',
+      powerPreference: 'default',
       stencil: false,
       preserveDrawingBuffer: true
     });
@@ -52,17 +73,24 @@ export class StudioPreviewEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
-    // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
-    applyBaseRendererSettings(this.renderer, 0.88);
+    // Stage 22 唯美写实管线：ACES + sRGB + 静态阴影缓存 + 环形眼神光离线 IBL
+    applyBaseRendererSettings(this.renderer, 0.90);
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.target.set(0, -1.5, 0.5);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
-    this.controls.minDistance = 16;
-    this.controls.maxDistance = 85;
+    // Allow closer macro zoom (11 cm) for pore/iris/cross-section inspection
+    this.controls.minDistance = 11;
+    this.controls.maxDistance = 95;
     this.controls.update();
+    this.controls.addEventListener('change', () => {
+      this.wakeRender(1.2);
+    });
+    this.controls.addEventListener('start', () => {
+      this.wakeRender(2.0);
+    });
 
     // Stage 7 写实 5 点灯阵（主光带柔和阴影 + 底部解剖检查灯 + 背部轮廓光）
     this.lightRig = buildStudioLightRig(this.scene);
@@ -119,10 +147,15 @@ export class StudioPreviewEngine {
         this.pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         this.pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
       }
+      this.wakeRender(1.2);
     });
     this.canvas.addEventListener('pointerdown', () => {
+      this.wakeRender(2.0);
       if (this.headNode) triggerCollectibleBlink(this.headNode);
     });
+    this.canvas.addEventListener('wheel', () => {
+      this.wakeRender(1.5);
+    }, { passive: true });
   }
 
   resize() {
@@ -133,6 +166,7 @@ export class StudioPreviewEngine {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h, false);
       if (this.beautyPost) this.beautyPost.syncSize(w, h, this.renderer.getPixelRatio());
+      this.wakeRender(1.5, true);
     }
   }
 
@@ -144,6 +178,7 @@ export class StudioPreviewEngine {
       this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled !== false);
     }
     this.resize();
+    this.wakeRender(1.5, true);
   }
 
   /** Stage 13a：用户可随时开关辉光后期（设置页持久化） */
@@ -153,6 +188,7 @@ export class StudioPreviewEngine {
       const lvl = this.currentRenderQuality || 'high';
       this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled);
     }
+    this.wakeRender(1.2);
   }
 
   /** Stage 13b：用户可随时开关氛围（尘埃 + 背幕光晕，设置页持久化） */
@@ -160,6 +196,7 @@ export class StudioPreviewEngine {
     const on = v !== false;
     if (this.atmosphere) this.atmosphere.group.visible = on;
     if (this.backdropMesh) this.backdropMesh.visible = on;
+    this.wakeRender(1.2);
   }
 
   async loadOrRebuild(config) {
@@ -176,7 +213,6 @@ export class StudioPreviewEngine {
     if (!config.customModelUrl && this.headNode?.userData?.groomStats) {
       disposeHeadNode(this.headNode); this.headNode = null;
       this.renderer.renderLists.dispose();
-      this.renderer.render(this.scene, this.camera);
       await new Promise(resolve => setTimeout(resolve, 16));
       if (request !== this.loadRequest) return this.headNode;
     }
@@ -188,6 +224,7 @@ export class StudioPreviewEngine {
     const newGroomId = this.headNode.userData?.groomStats?.id;
     if (newGroomId !== previousGroomId && (newGroomId === 'groom_center_long' || previousGroomId === 'groom_center_long')) this.setCameraPreset('front');
     this.updateCutHelperPosition(config.morphs);
+    this.wakeRender(2.0, true);
     return newNode;
   }
 
@@ -198,6 +235,7 @@ export class StudioPreviewEngine {
     if (!this.headNode) return;
     applyHeadMorphsToGroup(this.headNode, morphs);
     this.updateCutHelperPosition(morphs);
+    this.wakeRender(1.4, true);
   }
 
   updateCutHelperPosition(morphs = {}) {
@@ -234,23 +272,48 @@ export class StudioPreviewEngine {
       this.controls.target.y = -6;
     }
     this.controls.update();
+    this.wakeRender(2.0, true);
   }
 
   animate() {
     this.animId = requestAnimationFrame(this.animate);
-    const dt = Math.min(0.05, this.clock.getDelta());
+
+    // Stage 22 Zero-Fan-Roar Fix: skip completely when Studio tab or Software window is hidden -> 0% GPU!
+    if (!this.isCanvasVisible()) {
+      this.lastFrameTime = performance.now();
+      return;
+    }
+
+    const now = performance.now();
+    const elapsedMs = now - this.lastFrameTime;
+    // Cap Studio Preview at ~60 FPS (15.5 ms) so high-refresh monitors never burn GPU
+    if (elapsedMs < 15.5) return;
+    const dt = Math.min(0.05, elapsedMs / 1000);
+    this.lastFrameTime = now;
+
+    // Smart Idle Sleep: when not auto-rotating and user hasn't interacted recently -> 0% GPU!
+    if (!this.autoRotate && now > this.renderWakeUntil) {
+      return;
+    }
+
     const elapsed = this.clock.getElapsedTime();
     if (this.headNode) {
       if (this.autoRotate) {
         this.headNode.rotation.y += dt * 0.65;
-      } else {
+        this.needsShadowRefresh = true;
+      } else if (Math.abs(this.headNode.rotation.y) > 0.0005) {
         this.headNode.rotation.y *= 0.92;
+        this.needsShadowRefresh = true;
       }
       updateHeadLifeAnimation(this.headNode, dt, this.pointerNdc.x * 0.65, this.pointerNdc.y * 0.55);
     }
     this.controls.update();
     if (this.atmosphere && this.atmosphere.group.visible) {
       this.atmosphere.update(dt, elapsed);
+    }
+    if (this.needsShadowRefresh) {
+      requestShadowUpdate(this.renderer);
+      this.needsShadowRefresh = false;
     }
     if (this.beautyPost && this.beautyPost.enabled) {
       this.beautyPost.render();

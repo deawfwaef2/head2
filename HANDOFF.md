@@ -406,4 +406,18 @@
   4. **消灭桌面眩光火球与香槟暖光摄影棚**：`beautyPostChain.js` 改用 `THREE.UnsignedByteType` 并加入 `NaN/Inf` 护栏与 `clamp(0, 2.0)`，柔化 Bloom（`strength: 0.04, threshold: 0.98`）；`atmosphere.js` 散景微尘后移至 `z <= -28`；`photorealLighting.js` 将刺眼青蓝轮廓光升级为暖香槟柔光（`#f4e8e1`）。
   5. **一键试玩包与工坊联动**：升级 `STORAGE_KEY` 为 `cervix3d-collectibles-stage21-v1`，工坊切换基底预设时同步切换对应骨相、发型与神态；已重新打包 `/home/user/点击开始游戏_CERVIX3D.html`（17.16 MB）并同步 `docs/index.html`。
 
+### [2026-10-13 Stage 22] 零啸叫智能静音 GPU 管线 + 滚轮近距微距特写放大与透视视锥全屏边界 + 唯美次表面散射 (SSS) 与环形眼神光升级
+- **1. 彻底消除打开网页时 GPU 风扇满载轰鸣问题（回应“而且我现在一打开网页GPU引擎轰鸣声音特别大，能不能不要这样”）**：
+  - **静态阴影缓存 (`renderer.shadowMap.autoUpdate = false` + `requestShadowUpdate`)**：禁止双引擎在 144Hz/240Hz 下每帧重绘两张 `2048×2048` 柔和阴影贴图（跨越数万条 Groom 发束与头部网格），改为仅在头模发生位移、缩放、旋转或表情形变时按需更新阴影贴图。
+  - **隐藏画布零消耗与智能按需唤醒休眠 (`isCanvasVisible` + `wakeRender` + 60 FPS 帧率上限)**：
+    - 当工坊标签页（`#tab-studio`）未打开或软件主窗口隐藏时，`StudioPreviewEngine` 完全跳过渲染（**0% GPU 占用**）。
+    - 当屏幕上的桌宠头模完成入场动画并处于静止失活状态（无拖拽、非 360° 旋转模式、速度收敛）时，`DesktopBoxSpaceEngine` 自动进入 **0% GPU 静止休眠**（不调用 `beautyPost.render()` 或 `renderer.render()`），使显卡温度与风扇转速瞬间归于安静；一旦鼠标移动悬停、点击、拖拽、滚轮缩放或切换表情/发型，引擎在 `<1ms` 内瞬时唤醒并以 60 FPS 丝滑渲染。
+- **2. 滚轮近距微距特写放大 + 透视视锥自适应全屏边界（回应“而且现在就是滚轮我想头能更靠近更大，现在边界不是很好”）**：
+  - **微距特写景深扩展 (`maxZ = +78 cm` + `computeMacroTargetScale`)**：将盒型空间前端近景上限从原本的 `Z = 0`（距镜头 `115 cm`）大幅扩展至 `Z = +78 cm`（距镜头仅 `37 cm`），并配合近距特写平滑放大倍率（最高 `1.52x` 额外加成），使滚轮向上滚动时头模可在屏幕上放大至原本的 **4.5 倍以上**，支持贴脸微距鉴赏 2K 冷白皮毛孔、琥珀棕虹膜、花瓣唇、丝绸发束与 C4/C5 解剖断面。
+  - **透视视锥全屏边界 (`getBoxBoundsAtZ(z, petScale)`)**：废除固定 `Z=0` 边界与 `marginX=7.8 / marginY=9.2` 过大内缩边距，改为根据头模当前实际深度 `z` 下的相机透视视锥半宽/半高动态计算四边边界，使头模在远景、中景或微距特写任意深度下均可自由拖拽至屏幕真实四边与四角，绝不卡在屏幕中间隐形墙。
+- **3. 唯美次表面散射 (Pre-Integrated SSS) 与环形美颜眼神光离线 IBL（回应“大规模提升真实感，画质，光影，渲染，材质，贴图……唯美感”）**：
+  - 在 `photorealLighting.js` 的 `ensureSceneEnvironment` 中构建环形美颜眼神光灯 (`RingGeometry`) + 暖玫金主柔光箱 + 香槟珍珠轮廓柔光箱并烘焙至离线 PMREM 环境贴图，零实时开销即可在角膜与虹膜上呈现灵动清澈的环形眼神光。
+  - 新增 `injectAestheticSubsurfaceScattering` 预积分次表面散射着色器注入 `HeadSkinMesh`，在明暗交界线处赋予真皮层蜜桃玫瑰色散射包裹光晕，消除生硬灰暗阴影，实现唯美通透的冷白透粉瓷肌质感。
+
+
 

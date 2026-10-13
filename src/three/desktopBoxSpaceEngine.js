@@ -13,20 +13,18 @@ import {
   isSoftwareRenderer,
   ensureSceneEnvironment,
   buildDesktopLightRig,
-  applyRenderQualityToEngine
+  applyRenderQualityToEngine,
+  requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
 import { createBokehDust } from './atmosphere.js';
 
 /**
  * Full-Screen 3D Perspective Box Space & Desktop Pet Physics/Interaction Engine
- * Implements:
- *  - Screen-Center Vanishing Point (透视消失点) with configurable X/Y offset
- *  - Bounded 3D Box Space (有限深度盒型空间: Front Glass Z=0 to Back Wall Z=-maxDepth)
- *  - Wheel Scroll Z-Depth push/pull along perspective rays toward/from Vanishing Point
- *  - Drag & Drop with tactile velocity inertia, wall collisions, and pet-to-pet physics
- *  - Click once -> Enter 360° Rotation Mode; Click again -> Cancel Rotation Mode
- *  - Real 3D Eyeball Cursor Gaze Follow + Natural Eyelid Blinking + Hover Dossier HUD
+ * Stage 22 Upgrades:
+ *  - Macro Close-Up Scroll-Wheel Zoom (maxZ = +78 cm, up to 4.5x closer/larger on screen for pore/iris/cross-section inspection)
+ *  - True Perspective-Frustum Screen-Edge Boundaries (`getBoxBoundsAtZ`) so pets can be placed anywhere up to the real screen edges at any depth
+ *  - Zero-Fan-Roar Smart On-Demand Rendering (60 FPS cap + 0% GPU idle sleep when pets are stationary + static shadow caching)
  */
 
 export class DesktopBoxSpaceEngine {
@@ -41,8 +39,8 @@ export class DesktopBoxSpaceEngine {
       vanishingPointOffsetX: 0,
       vanishingPointOffsetY: 0,
       boxFitScreen: true, // Stage 18: 默认盒型空间前框(Z=0)四边正好贴满电脑屏幕边缘
-      boxWidthCm: 88,
-      boxHeightCm: 52,
+      boxWidthCm: 96,
+      boxHeightCm: 56,
       boxMaxDepthMm: 1200,
       showBoxGrid: 'always',
       followIntensity: 0.0,
@@ -61,6 +59,10 @@ export class DesktopBoxSpaceEngine {
     this.clock = new THREE.Clock();
     this.interactionHighlightTimer = 0;
 
+    this.lastFrameTime = performance.now();
+    this.renderWakeUntil = performance.now() + 2500;
+    this.needsShadowRefresh = true;
+
     this.initScene();
     this.initBoxWireframe();
     this.bindEvents();
@@ -68,12 +70,22 @@ export class DesktopBoxSpaceEngine {
     this.animFrameId = requestAnimationFrame(this.animate);
   }
 
+  wakeRender(durationSeconds = 1.6, refreshShadow = false) {
+    const until = performance.now() + durationSeconds * 1000;
+    if (until > this.renderWakeUntil) {
+      this.renderWakeUntil = until;
+    }
+    if (refreshShadow) {
+      this.needsShadowRefresh = true;
+    }
+  }
+
   initScene() {
     this.scene = new THREE.Scene();
 
     const w = window.innerWidth;
     const h = window.innerHeight;
-    this.camera = new THREE.PerspectiveCamera(this.settings.fov, w / h, 5, 600);
+    this.camera = new THREE.PerspectiveCamera(this.settings.fov, w / h, 4, 700);
     this.cameraZ = 115;
     this.camera.position.set(0, 0, this.cameraZ);
     this.camera.lookAt(0, 0, -50);
@@ -82,15 +94,15 @@ export class DesktopBoxSpaceEngine {
       canvas: this.canvas,
       alpha: true,
       antialias: true,
-      powerPreference: 'high-performance',
+      powerPreference: 'default',
       stencil: false
     });
     this.renderer.setSize(w, h);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
-    // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
-    applyBaseRendererSettings(this.renderer, 0.82);
+    // Stage 22 唯美写实管线：ACES + sRGB + 静态阴影缓存 + 环形眼神光离线 IBL
+    applyBaseRendererSettings(this.renderer, 0.86);
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     // Stage 7 写实 5 点灯阵（与工坊同色温体系；背部轮廓光改用确定性方向光）
@@ -135,7 +147,15 @@ export class DesktopBoxSpaceEngine {
       const halfH = Math.tan(THREE.MathUtils.degToRad((this.settings.fov || 42) * 0.5)) * dist;
       const halfW = halfH * aspect;
       const maxDepthCm = this.settings.boxMaxDepthMm / 10;
-      return { minX: -halfW, maxX: halfW, minY: -halfH, maxY: halfH, minZ: -maxDepthCm, maxZ: 0 };
+      return {
+        minX: -halfW,
+        maxX: halfW,
+        minY: -halfH,
+        maxY: halfH,
+        minZ: -maxDepthCm,
+        // Stage 22 Macro Close-Up Zone: allow scrolling forward up to Z = +78 cm (37 cm from camera!)
+        maxZ: 78
+      };
     }
     const halfH = this.settings.boxHeightCm * 0.5;
     const halfW = halfH * aspect * (this.settings.boxWidthCm / 82);
@@ -146,8 +166,46 @@ export class DesktopBoxSpaceEngine {
       minY: -halfH,
       maxY: halfH,
       minZ: -maxDepthCm,
-      maxZ: 0
+      maxZ: 78
     };
+  }
+
+  /**
+   * Stage 22 · Computes perspective-accurate X/Y boundaries at any depth `z` so the head
+   * can be dragged smoothly all the way to the true left/right/top/bottom screen edges at any depth.
+   */
+  getBoxBoundsAtZ(z = 0, petScale = 0.76) {
+    const base = this.getBoxBounds();
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    const distFromCam = Math.max(26, (this.cameraZ || 115) - z);
+    const fovRad = THREE.MathUtils.degToRad((this.camera?.fov || this.settings.fov || 42) * 0.5);
+    const frustumHalfH = distFromCam * Math.tan(fovRad);
+    const frustumHalfW = frustumHalfH * aspect;
+
+    const widthScale = this.settings.boxFitScreen !== false ? 1.0 : Math.max(0.75, (this.settings.boxWidthCm || 96) / 96);
+    const heightScale = this.settings.boxFitScreen !== false ? 1.0 : Math.max(0.75, (this.settings.boxHeightCm || 56) / 56);
+    const halfW = frustumHalfW * widthScale;
+    const halfH = frustumHalfH * heightScale;
+
+    // Gentle edge padding so the head never disappears completely off-screen,
+    // while letting you place it right up against any screen edge or corner!
+    const padX = Math.min(halfW * 0.08, 2.4 * petScale);
+    const padY = Math.min(halfH * 0.10, 2.8 * petScale);
+
+    return {
+      minX: -(halfW - padX),
+      maxX: halfW - padX,
+      minY: -(halfH - padY),
+      maxY: halfH - padY,
+      minZ: base.minZ,
+      maxZ: base.maxZ
+    };
+  }
+
+  computeMacroTargetScale(zCm, baseScale = 0.76) {
+    // Smoothly boosts scale up to 1.52x when scrolled into the close-up zone (z > -15 up to +76)
+    const macroT = Math.max(0, Math.min(1, (zCm + 15) / 91));
+    return baseScale * (1.0 + macroT * 0.52);
   }
 
   updateCameraProjection() {
@@ -238,12 +296,13 @@ export class DesktopBoxSpaceEngine {
     Object.assign(this.settings, newPartial);
     this.updateCameraProjection();
     this.initBoxWireframe();
-    const b = this.getBoxBounds();
     for (const pet of this.pets.values()) {
-      pet.pos.x = Math.max(b.minX + 8, Math.min(b.maxX - 8, pet.pos.x));
-      pet.pos.y = Math.max(b.minY + 10, Math.min(b.maxY - 9, pet.pos.y));
-      pet.pos.z = Math.max(b.minZ + 8, Math.min(b.maxZ - 2, pet.pos.z));
+      const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+      pet.pos.z = Math.max(bz.minZ + 4, Math.min(bz.maxZ - 2, pet.pos.z));
+      pet.pos.x = Math.max(bz.minX, Math.min(bz.maxX, pet.pos.x));
+      pet.pos.y = Math.max(bz.minY, Math.min(bz.maxY, pet.pos.y));
     }
+    this.wakeRender(1.6, true);
   }
 
   async summonCollectible(collectible) {
@@ -252,25 +311,28 @@ export class DesktopBoxSpaceEngine {
     }
 
     const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
-    const b = this.getBoxBounds();
+    const baseB = this.getBoxBounds();
+    const rawZCm = (collectible.boxPosition?.z ?? -140) / 10;
+    const startZ = Math.max(baseB.minZ + 6, Math.min(baseB.maxZ - 2, rawZCm));
+    const bz = this.getBoxBoundsAtZ(startZ, 0.76);
 
-    const startX = Math.max(b.minX + 10, Math.min(b.maxX - 10, collectible.boxPosition?.x ?? 0));
-    const startY = Math.max(b.minY + 11, Math.min(b.maxY - 10, collectible.boxPosition?.y ?? 2));
-    const rawZCm = (collectible.boxPosition?.z ?? -160) / 10;
-    const startZ = Math.max(b.minZ + 8, Math.min(b.maxZ - 2, rawZCm));
+    const startX = Math.max(bz.minX, Math.min(bz.maxX, collectible.boxPosition?.x ?? 0));
+    const startY = Math.max(bz.minY, Math.min(bz.maxY, collectible.boxPosition?.y ?? 2));
 
     headNode.position.set(startX, startY, startZ);
     headNode.rotation.set(-0.18, 0, 0);
     headNode.scale.setScalar(0.01);
     this.scene.add(headNode);
 
+    const baseScale = 0.76;
     const entry = {
       id: collectible.id,
       collectible,
       node: headNode,
       pos: new THREE.Vector3(startX, startY, startZ),
       vel: new THREE.Vector3(0, 0, 0),
-      targetScale: 0.72,
+      baseScale,
+      targetScale: this.computeMacroTargetScale(startZ, baseScale),
       currentScale: 0.01,
       isRotationMode: false,
       customRot: new THREE.Euler(-0.18, 0, 0),
@@ -281,6 +343,7 @@ export class DesktopBoxSpaceEngine {
 
     this.pets.set(collectible.id, entry);
     soundEngine.playSummon(true);
+    this.wakeRender(2.4, true);
     this.onPetStateUpdate(this.getSummonedList());
     return entry;
   }
@@ -297,6 +360,7 @@ export class DesktopBoxSpaceEngine {
       this.onHoverChange(null);
     }
     if (playSound) soundEngine.playSummon(false);
+    this.wakeRender(1.4, true);
     this.onPetStateUpdate(this.getSummonedList());
   }
 
@@ -311,9 +375,10 @@ export class DesktopBoxSpaceEngine {
       pet.customRot.set(-0.18, 0, 0);
     }
     triggerCollectibleBlink(pet.node);
-    const b = this.getBoxBounds();
-    const panX = pet.pos.x / Math.max(1, b.maxX);
+    const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+    const panX = pet.pos.x / Math.max(1, bz.maxX);
     soundEngine.playRotationModeToggle(pet.isRotationMode, panX);
+    this.wakeRender(1.8, true);
     this.onPetStateUpdate(this.getSummonedList());
     this.refreshHoverHUD();
   }
@@ -322,6 +387,7 @@ export class DesktopBoxSpaceEngine {
     const pet = this.pets.get(id);
     if (!pet) return;
     pet.customRot.set(-0.18, 0, 0);
+    this.wakeRender(1.5, true);
   }
 
   setPetExpression(id, exprId) {
@@ -331,6 +397,7 @@ export class DesktopBoxSpaceEngine {
     pet.collectible.morphs = { ...(pet.collectible.morphs || {}), deadExpression: exprId };
     applyHeadMorphsToGroup(pet.node, { deadExpression: exprId });
     soundEngine.playPickup(0);
+    this.wakeRender(1.6, true);
     this.onPetStateUpdate(this.getSummonedList());
     this.refreshHoverHUD();
   }
@@ -341,6 +408,7 @@ export class DesktopBoxSpaceEngine {
     pet.collectible.hairStyle = hairStyle;
     await attachRealHairModel(pet.node, { ...pet.collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
     soundEngine.playPickup(0);
+    this.wakeRender(1.8, true);
     this.onPetStateUpdate(this.getSummonedList());
   }
 
@@ -452,6 +520,7 @@ export class DesktopBoxSpaceEngine {
 
       e.stopPropagation();
       this.interactionHighlightTimer = 1.5;
+      this.wakeRender(2.0, true);
       triggerCollectibleBlink(hitPet.node);
 
       const hitWorld = this.getMouseWorldAtZ(hitPet.pos.z);
@@ -479,36 +548,41 @@ export class DesktopBoxSpaceEngine {
         info.lastY = e.clientY;
         info.movedDist += Math.hypot(dx, dy);
         this.interactionHighlightTimer = 1.2;
+        this.wakeRender(1.6, true);
 
         if (info.movedDist > 5) {
+          const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
           if (pet.isRotationMode) {
             pet.customRot.y += dx * 0.013;
             pet.customRot.x = Math.max(-Math.PI * 0.48, Math.min(Math.PI * 0.48, pet.customRot.x + dy * 0.013));
             const speedNorm = Math.min(1, Math.hypot(dx, dy) / 28);
-            const b = this.getBoxBounds();
-            soundEngine.updateDragWhoosh(speedNorm * 0.55, pet.pos.x / Math.max(1, b.maxX));
+            soundEngine.updateDragWhoosh(speedNorm * 0.55, pet.pos.x / Math.max(1, bz.maxX));
           } else {
             if (!info.pickupSoundPlayed) {
               info.pickupSoundPlayed = true;
-              const b = this.getBoxBounds();
-              soundEngine.playPickup(pet.pos.x / Math.max(1, b.maxX));
+              soundEngine.playPickup(pet.pos.x / Math.max(1, bz.maxX));
             }
             const worldTarget = this.getMouseWorldAtZ(pet.pos.z).add(info.grabOffset);
+            const clampedX = Math.max(bz.minX, Math.min(bz.maxX, worldTarget.x));
+            const clampedY = Math.max(bz.minY, Math.min(bz.maxY, worldTarget.y));
             pet.vel.set(
-              (worldTarget.x - pet.pos.x) * 0.48,
-              (worldTarget.y - pet.pos.y) * 0.48,
+              (clampedX - pet.pos.x) * 0.48,
+              (clampedY - pet.pos.y) * 0.48,
               0
             );
-            pet.pos.x = worldTarget.x;
-            pet.pos.y = worldTarget.y;
+            pet.pos.x = clampedX;
+            pet.pos.y = clampedY;
 
             const speedNorm = Math.min(1, Math.hypot(dx, dy) / 34);
-            const b = this.getBoxBounds();
-            soundEngine.updateDragWhoosh(speedNorm, pet.pos.x / Math.max(1, b.maxX));
+            soundEngine.updateDragWhoosh(speedNorm, pet.pos.x / Math.max(1, bz.maxX));
           }
           this.refreshHoverHUD();
         }
         return;
+      }
+
+      if (this.settings.followIntensity > 0.01 && this.pets.size > 0) {
+        this.wakeRender(0.6);
       }
 
       if (this.isBlockedByUI(e)) {
@@ -527,6 +601,7 @@ export class DesktopBoxSpaceEngine {
         document.body.style.cursor = hitPet
           ? (hitPet.isRotationMode ? 'grab' : 'pointer')
           : '';
+        this.wakeRender(0.8);
       }
       if (this.hoveredPetId) {
         this.refreshHoverHUD();
@@ -542,12 +617,14 @@ export class DesktopBoxSpaceEngine {
       this.pointerDownInfo = null;
 
       soundEngine.stopDragWhoosh();
+      this.wakeRender(1.8, true);
 
       if (info.movedDist <= 5) {
         this.toggleRotationMode(pet.id);
       } else if (info.pickupSoundPlayed) {
-        const b = this.getBoxBounds();
-        soundEngine.playRelease(pet.pos.x / Math.max(1, b.maxX));
+        const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+        soundEngine.playRelease(pet.pos.x / Math.max(1, bz.maxX));
+        this.onPetStateUpdate(this.getSummonedList());
       }
     });
 
@@ -562,27 +639,38 @@ export class DesktopBoxSpaceEngine {
       e.preventDefault();
       e.stopPropagation();
       this.interactionHighlightTimer = 1.6;
+      this.wakeRender(1.8, true);
 
-      const b = this.getBoxBounds();
-      const stepCm = (e.deltaY > 0 ? -4.8 : 4.8) * this.settings.wheelDepthStep;
+      const baseB = this.getBoxBounds();
+      // Stage 22 Macro Close-Up Wheel Step: smooth, generous step up to Z = +76 cm (39 cm from camera!)
+      const mag = Math.min(13.5, Math.max(6.2, Math.abs(e.deltaY) * 0.075));
+      const stepCm = (e.deltaY > 0 ? -mag : mag) * this.settings.wheelDepthStep;
       const nextZ = hitPet.pos.z + stepCm;
-      const panX = hitPet.pos.x / Math.max(1, b.maxX);
+      const bz = this.getBoxBoundsAtZ(nextZ, hitPet.targetScale);
+      const panX = hitPet.pos.x / Math.max(1, bz.maxX);
 
-      if (nextZ < b.minZ + 6) {
-        hitPet.pos.z = b.minZ + 6;
-        hitPet.vel.z = 1.4;
+      if (nextZ < baseB.minZ + 4) {
+        hitPet.pos.z = baseB.minZ + 4;
+        hitPet.vel.z = 1.2;
         soundEngine.playBoxWallCollision(0.75, 'back_wall', panX);
         this.onBoxCollisionVisual('back');
-      } else if (nextZ > b.maxZ - 2) {
-        hitPet.pos.z = b.maxZ - 2;
-        hitPet.vel.z = -1.4;
+      } else if (nextZ > baseB.maxZ - 2) {
+        hitPet.pos.z = baseB.maxZ - 2;
+        hitPet.vel.z = -1.2;
         soundEngine.playBoxWallCollision(0.85, 'front_glass', panX);
         this.onBoxCollisionVisual('front');
       } else {
         hitPet.pos.z = nextZ;
-        const depthRatio = Math.abs(hitPet.pos.z) / Math.max(1, Math.abs(b.minZ));
+        const totalRange = Math.max(1, baseB.maxZ - baseB.minZ);
+        const depthRatio = (baseB.maxZ - hitPet.pos.z) / totalRange;
         soundEngine.playDepthTick(depthRatio, panX);
       }
+
+      // Update macro close-up scale boost and clamp X/Y smoothly to the new depth's screen frustum
+      hitPet.targetScale = this.computeMacroTargetScale(hitPet.pos.z, hitPet.baseScale || 0.76);
+      const newBounds = this.getBoxBoundsAtZ(hitPet.pos.z, hitPet.targetScale);
+      hitPet.pos.x = Math.max(newBounds.minX, Math.min(newBounds.maxX, hitPet.pos.x));
+      hitPet.pos.y = Math.max(newBounds.minY, Math.min(newBounds.maxY, hitPet.pos.y));
 
       this.refreshHoverHUD();
       this.onPetStateUpdate(this.getSummonedList());
@@ -603,6 +691,7 @@ export class DesktopBoxSpaceEngine {
     if (this.beautyPost) this.beautyPost.syncSize(w, h, this.renderer.getPixelRatio());
     this.updateCameraProjection();
     this.initBoxWireframe();
+    this.wakeRender(1.5, true);
   }
 
   /** Stage 7：三档写实画质（low/medium/high），由设置页统一调度 */
@@ -618,6 +707,7 @@ export class DesktopBoxSpaceEngine {
       this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled !== false);
     }
     this.resize();
+    this.wakeRender(1.5, true);
   }
 
   /** Stage 13a：用户可随时开关辉光后期（设置页持久化） */
@@ -627,16 +717,49 @@ export class DesktopBoxSpaceEngine {
       const lvl = this.currentRenderQuality || 'high';
       this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled);
     }
+    this.wakeRender(1.2);
   }
 
   /** Stage 13b：用户可随时开关氛围尘埃（设置页持久化） */
   setAtmosphereEnabled(v) {
     if (this.atmosphere) this.atmosphere.group.visible = v !== false;
+    this.wakeRender(1.2);
   }
 
   animate() {
     this.animFrameId = requestAnimationFrame(this.animate);
-    const dt = Math.min(0.05, this.clock.getDelta());
+
+    if (document.hidden) {
+      this.lastFrameTime = performance.now();
+      return;
+    }
+
+    const now = performance.now();
+    const elapsedMs = now - this.lastFrameTime;
+    // Stage 22 Zero-Fan-Roar Fix: cap desktop engine at ~60 FPS (15.5 ms) so high-refresh monitors never cause GPU fan roar
+    if (elapsedMs < 15.5) return;
+    const dt = Math.min(0.05, elapsedMs / 1000);
+    this.lastFrameTime = now;
+
+    const petArray = Array.from(this.pets.values());
+    let anyActiveAnimation = this.interactionHighlightTimer > 0.001 || Boolean(this.pointerDownInfo);
+
+    if (!anyActiveAnimation && now > this.renderWakeUntil) {
+      for (const pet of petArray) {
+        const velSq = pet.vel.lengthSq();
+        const scaleDiff = Math.abs(pet.targetScale - pet.currentScale);
+        if (velSq > 0.0004 || scaleDiff > 0.0008 || pet.isRotationMode) {
+          anyActiveAnimation = true;
+          break;
+        }
+      }
+    }
+
+    // Zero-Fan-Roar Smart Idle Sleep: when all desktop pets are stationary and wake timer has elapsed -> 0% GPU!
+    if (!anyActiveAnimation && now > this.renderWakeUntil) {
+      return;
+    }
+
     // Stage 15: 仅 rtx2070 档启用动态分辨率（其余档行为不变）
     if (this.currentRenderQuality === 'rtx2070' && dt > 0 && this._adaptiveBaseRatio) {
       this._fpsEma = this._fpsEma * 0.95 + (1 / Math.max(dt, 1e-4)) * 0.05;
@@ -654,7 +777,7 @@ export class DesktopBoxSpaceEngine {
       }
     }
     const elapsed = this.clock.getElapsedTime();
-    const b = this.getBoxBounds();
+    const baseB = this.getBoxBounds();
 
     if (this.interactionHighlightTimer > 0) {
       this.interactionHighlightTimer = Math.max(0, this.interactionHighlightTimer - dt);
@@ -671,8 +794,6 @@ export class DesktopBoxSpaceEngine {
       }
     }
 
-    const petArray = Array.from(this.pets.values());
-
     if (this.settings.enablePetCollision && petArray.length > 1) {
       for (let i = 0; i < petArray.length; i++) {
         for (let j = i + 1; j < petArray.length; j++) {
@@ -680,7 +801,7 @@ export class DesktopBoxSpaceEngine {
           const p2 = petArray[j];
           const diff = new THREE.Vector3().subVectors(p1.pos, p2.pos);
           const dist = diff.length();
-          const minDist = p1.radius + p2.radius;
+          const minDist = (p1.radius * p1.currentScale + p2.radius * p2.currentScale) * 1.12;
           if (dist < minDist && dist > 0.001) {
             const overlap = (minDist - dist) * 0.5;
             diff.normalize();
@@ -690,8 +811,9 @@ export class DesktopBoxSpaceEngine {
             const relSpeed = p1.vel.distanceTo(p2.vel);
             p1.vel.addScaledVector(diff, 0.85);
             p2.vel.addScaledVector(diff, -0.85);
+            this.needsShadowRefresh = true;
             if (relSpeed > 0.25) {
-              soundEngine.playBoxWallCollision(Math.min(1, relSpeed * 0.45), 'pet', p1.pos.x / Math.max(1, b.maxX));
+              soundEngine.playBoxWallCollision(Math.min(1, relSpeed * 0.45), 'pet', p1.pos.x / Math.max(1, baseB.maxX));
             }
           }
         }
@@ -699,29 +821,37 @@ export class DesktopBoxSpaceEngine {
     }
 
     for (const pet of petArray) {
-      pet.currentScale += (pet.targetScale - pet.currentScale) * 0.14;
-      pet.node.scale.setScalar(pet.currentScale);
+      const scaleDiff = pet.targetScale - pet.currentScale;
+      if (Math.abs(scaleDiff) > 0.0004) {
+        pet.currentScale += scaleDiff * 0.16;
+        pet.node.scale.setScalar(pet.currentScale);
+        this.needsShadowRefresh = true;
+      }
 
       const isBeingDragged = this.pointerDownInfo && this.pointerDownInfo.pet === pet && this.pointerDownInfo.movedDist > 5 && !pet.isRotationMode;
 
       if (!isBeingDragged) {
-        pet.pos.add(pet.vel);
-        pet.vel.multiplyScalar(0.88);
+        if (pet.vel.lengthSq() > 0.0001) {
+          pet.pos.add(pet.vel);
+          pet.vel.multiplyScalar(0.88);
+          this.needsShadowRefresh = true;
+        } else {
+          pet.vel.set(0, 0, 0);
+        }
       }
 
-      const marginX = 7.8;
-      const marginY = 9.2;
-      const panX = pet.pos.x / Math.max(1, b.maxX);
+      const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.currentScale);
+      const panX = pet.pos.x / Math.max(1, bz.maxX);
 
-      if (pet.pos.x < b.minX + marginX) {
-        pet.pos.x = b.minX + marginX;
+      if (pet.pos.x < bz.minX) {
+        pet.pos.x = bz.minX;
         if (Math.abs(pet.vel.x) > 0.25) {
           soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.x) * 0.5), 'side', -0.9);
           this.onBoxCollisionVisual('left');
         }
         pet.vel.x = Math.abs(pet.vel.x) * 0.65;
-      } else if (pet.pos.x > b.maxX - marginX) {
-        pet.pos.x = b.maxX - marginX;
+      } else if (pet.pos.x > bz.maxX) {
+        pet.pos.x = bz.maxX;
         if (Math.abs(pet.vel.x) > 0.25) {
           soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.x) * 0.5), 'side', 0.9);
           this.onBoxCollisionVisual('right');
@@ -729,15 +859,15 @@ export class DesktopBoxSpaceEngine {
         pet.vel.x = -Math.abs(pet.vel.x) * 0.65;
       }
 
-      if (pet.pos.y < b.minY + marginY) {
-        pet.pos.y = b.minY + marginY;
+      if (pet.pos.y < bz.minY) {
+        pet.pos.y = bz.minY;
         if (Math.abs(pet.vel.y) > 0.25) {
           soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.5), 'side', panX);
           this.onBoxCollisionVisual('bottom');
         }
         pet.vel.y = Math.abs(pet.vel.y) * 0.65;
-      } else if (pet.pos.y > b.maxY - marginY) {
-        pet.pos.y = b.maxY - marginY;
+      } else if (pet.pos.y > bz.maxY) {
+        pet.pos.y = bz.maxY;
         if (Math.abs(pet.vel.y) > 0.25) {
           soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.5), 'side', panX);
           this.onBoxCollisionVisual('top');
@@ -745,11 +875,11 @@ export class DesktopBoxSpaceEngine {
         pet.vel.y = -Math.abs(pet.vel.y) * 0.65;
       }
 
-      if (pet.pos.z < b.minZ + 6) {
-        pet.pos.z = b.minZ + 6;
+      if (pet.pos.z < bz.minZ + 4) {
+        pet.pos.z = bz.minZ + 4;
         pet.vel.z = Math.abs(pet.vel.z) * 0.5;
-      } else if (pet.pos.z > b.maxZ - 2) {
-        pet.pos.z = b.maxZ - 2;
+      } else if (pet.pos.z > bz.maxZ - 2) {
+        pet.pos.z = bz.maxZ - 2;
         pet.vel.z = -Math.abs(pet.vel.z) * 0.5;
       }
 
@@ -798,6 +928,11 @@ export class DesktopBoxSpaceEngine {
 
     if (this.atmosphere && this.atmosphere.group.visible) {
       this.atmosphere.update(dt, elapsed);
+    }
+
+    if (this.needsShadowRefresh) {
+      requestShadowUpdate(this.renderer);
+      this.needsShadowRefresh = false;
     }
 
     if (this.beautyPost && this.beautyPost.enabled) {

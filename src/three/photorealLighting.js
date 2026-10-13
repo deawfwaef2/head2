@@ -17,24 +17,64 @@ export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high', 'ultra', 'rtx2070
 // 每个 WebGLRenderer 只生成一张 PMREM 环境贴图，避免重复烘焙
 const pmremEnvCache = new WeakMap();
 
-export function applyBaseRendererSettings(renderer, exposure = 1.0) {
+export function applyBaseRendererSettings(renderer, exposure = 0.90) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = exposure;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Stage 22 Zero-Fan-Roar Fix: cache shadow maps when static instead of re-rendering 2048x2048 shadows at 144Hz
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+}
+
+export function requestShadowUpdate(renderer) {
+  if (renderer && renderer.shadowMap && renderer.shadowMap.enabled) {
+    renderer.shadowMap.needsUpdate = true;
+  }
 }
 
 /**
- * 为场景挂载离线 IBL 环境（RoomEnvironment 经 PMREM 烘焙，无需任何外部 HDR 文件）。
- * 返回环境贴图；重复调用不会重复烘焙。
+ * 为场景挂载离线唯美美颜柔光箱 IBL 环境（RoomEnvironment + 环形眼神光灯 + 双色温柔光箱经 PMREM 烘焙）。
+ * 返回环境贴图；重复调用不会重复烘焙，零实时光照开销即可赋予眼眸环形眼神光与发丝柔光。
  */
 export function ensureSceneEnvironment(renderer, scene, intensity = 0.85) {
   let envTex = pmremEnvCache.get(renderer);
   if (!envTex) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const room = new RoomEnvironment();
-    envTex = pmrem.fromScene(room, 0.04).texture;
+
+    // Circular Portrait Beauty-Dish Ring Light in front (+Z) for soulful circular eye catchlights (唯美环形眼神光)
+    const ringGeo = new THREE.RingGeometry(1.30, 1.78, 48);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(9.5, 8.9, 8.6),
+      side: THREE.DoubleSide,
+    });
+    const beautyRing = new THREE.Mesh(ringGeo, ringMat);
+    beautyRing.position.set(0.28, 1.15, 4.2);
+    beautyRing.lookAt(0, 0.15, 0);
+    room.add(beautyRing);
+
+    // Warm Rose-Peach Key Softbox Panel (top-right-front)
+    const warmBox = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.4, 3.0),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(6.8, 5.6, 5.3), side: THREE.DoubleSide })
+    );
+    warmBox.position.set(3.1, 2.3, 2.9);
+    warmBox.lookAt(0, 0, 0);
+    room.add(warmBox);
+
+    // Champagne-Pearl Rim Softbox Panel (top-left-back) for silky hair contour sheen
+    const coolBox = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.8, 3.2),
+      new THREE.MeshBasicMaterial({ color: new THREE.Color(5.4, 5.2, 5.8), side: THREE.DoubleSide })
+    );
+    coolBox.position.set(-3.3, 2.2, -3.1);
+    coolBox.lookAt(0, 0, 0);
+    room.add(coolBox);
+
+    envTex = pmrem.fromScene(room, 0.038).texture;
+    room.dispose();
     pmrem.dispose();
     pmremEnvCache.set(renderer, envTex);
   }
@@ -43,6 +83,41 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.85) {
     scene.environmentIntensity = intensity;
   }
   return envTex;
+}
+
+/**
+ * Stage 22 · Pre-Integrated Subsurface Scattering (SSS) Dermis Wrap Shader
+ * Eliminates harsh grey CG shadow terminators on facial skin and adds a delicate
+ * rose-peach dermal translucency glow across cheeks, nose bridge, lips, and ears.
+ */
+export function injectAestheticSubsurfaceScattering(material) {
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <lights_physical_pars_fragment>',
+      `#include <lights_physical_pars_fragment>
+      vec3 computeSubsurfaceWrap(vec3 normal, vec3 lightDir, vec3 lightColor) {
+        float ndl = dot(normal, lightDir);
+        float wrap = clamp((ndl + 0.38) / 1.38, 0.0, 1.0);
+        float scatterBand = smoothstep(-0.36, 0.14, ndl) * (1.0 - smoothstep(0.04, 0.55, ndl));
+        vec3 sssTint = vec3(0.98, 0.32, 0.26) * scatterBand * 0.24 + vec3(1.0, 0.74, 0.70) * (wrap * 0.07);
+        return sssTint * lightColor;
+      }`
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <lights_fragment_end>',
+      `#include <lights_fragment_end>
+      #if ( NUM_DIR_LIGHTS > 0 )
+        vec3 sssAccum = vec3(0.0);
+        #pragma unroll_loop_start
+        for ( int i = 0; i < NUM_DIR_LIGHTS; i ++ ) {
+          sssAccum += computeSubsurfaceWrap( geometryNormal, directionalLights[ i ].direction, directionalLights[ i ].color );
+        }
+        #pragma unroll_loop_end
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * 0.38;
+      #endif`
+    );
+  };
+  material.customProgramCacheKey = () => 'cervix3d-aesthetic-sss-v22';
 }
 
 function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
@@ -164,7 +239,11 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   if ('environmentIntensity' in scene) {
     scene.environmentIntensity = cfg.envIntensity;
   }
+  requestShadowUpdate(renderer);
   engine.currentRenderQuality = lvl;
+  if (typeof engine.wakeRender === 'function') {
+    engine.wakeRender(1.5, true);
+  }
   return lvl;
 }
 

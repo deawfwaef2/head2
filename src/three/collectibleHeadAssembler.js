@@ -7,6 +7,7 @@ import { buildCurveGroom, groomStyleFor, applyCurveGroomShape } from './curveGro
 import { repairHairNormals } from './hairGeometry.js';
 import { getHairStrandTextures } from '../textures/hairStrandTexture.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
+import { injectAestheticSubsurfaceScattering } from './photorealLighting.js';
 
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
@@ -965,7 +966,7 @@ export async function buildCollectibleHeadNode(config = {}) {
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
       }
-      child.material = new THREE.MeshPhysicalMaterial({
+      const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
         normalScale: new THREE.Vector2(0.38, 0.38),
@@ -973,19 +974,21 @@ export async function buildCollectibleHeadNode(config = {}) {
         bumpMap: skinMicro.bumpMap,
         bumpScale: 0.012,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.56),
+        roughness: Number(materials.skinRoughness ?? 0.54),
         metalness: 0.0,
-        sheen: 0.18,
-        sheenRoughness: 0.58,
-        sheenColor: new THREE.Color('#eba8a0'),
-        clearcoat: 0.06,
-        clearcoatRoughness: 0.48,
-        specularIntensity: 0.36,
-        ior: 1.40,
-        envMapIntensity: 0.36,
+        sheen: 0.24,
+        sheenRoughness: 0.52,
+        sheenColor: new THREE.Color('#f2afa6'),
+        clearcoat: 0.08,
+        clearcoatRoughness: 0.44,
+        specularIntensity: 0.42,
+        ior: 1.41,
+        envMapIntensity: 0.42,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
+      injectAestheticSubsurfaceScattering(skinMaterial);
+      child.material = skinMaterial;
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
       child.name = 'NeckCrossSectionCap';
       neckCapMesh = child;
@@ -1016,26 +1019,26 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       child.material = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.06,
+        roughness: 0.05,
         metalness: 0.0,
-        clearcoat: 0.85,
-        clearcoatRoughness: 0.04,
-        specularIntensity: 0.85,
+        clearcoat: 0.94,
+        clearcoatRoughness: 0.02,
+        specularIntensity: 0.95,
         ior: 1.38,
-        envMapIntensity: 1.15,
+        envMapIntensity: 1.32,
       });
     } else if (matName === 'Cornea') {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.03,
-        roughness: 0.04,
+        opacity: 0.04,
+        roughness: 0.02,
         metalness: 0.0,
-        clearcoat: 0.35,
+        clearcoat: 0.65,
         clearcoatRoughness: 0.01,
-        specularIntensity: 0.55,
+        specularIntensity: 0.75,
         ior: 1.38,
-        envMapIntensity: 0.30,
+        envMapIntensity: 0.62,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
