@@ -48,6 +48,20 @@
     "softwareRenderer": true,
     "pets": 3
   },
+  "rendering": {
+    "directCorner": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "postCorner": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
   "full": {
     "id": "groom_photo_tied",
     "sourceCurves": 12000,

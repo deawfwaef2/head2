@@ -2,7 +2,7 @@
 
 ## 本轮交付
 
-- `点击开始游戏_CERVIX3D.html` / `docs/index.html`：同步离线可玩版，约17.74 MiB；三款新 Groom 已嵌入，不需要联网下载头发。
+- `点击开始游戏_CERVIX3D.html` / `docs/index.html`：同步离线可玩版，约17.77 MiB；三款新 Groom 已嵌入，不需要联网下载头发。
 - `public/grooms/Chinese_Grooms_Source.blend`：Blender 4.3.2 原生 Hair Curves、参考头、打包纹理、根层、材质、相机与灯光。约23 MiB。工作区可直接下载。
 - 三个风格：`photo_tied`（项目照片参照的黑发碎刘海、露耳、后束）、`center_long`（中分长发）、`low_chignon`（低盘发）。不是照片自动重建，也不是经过专业梳理师验收的终稿。
 - 每款12,000父曲线。照片款原生源工程还包含7,936条刘海子丝，共19,936条实际曲线；另外两款各12,000条。数字是资产规格，不是“大师级”证明。
@@ -56,3 +56,5 @@ blender -b --factory-startup --python scripts/build_blender_grooms.py
 ## 授权
 
 新作者曲线数据按CC0发布。参考头、纹理、照片继承现有项目素材，完整授权链尚未核验，**整份.blend并非全部CC0，也不是新增或获授权的商业DAZ HD资产**。商业发布前需确认原头/照片权利。自备DAZ或其他商业模型应保持私人导入，不要直接推送到公开仓库。
+
+合并了另一轮Stage13辉光/氛围/1024皮纹更新；软件GPU自动关闭HDR后期（设置显示不可用），保留廉价氛围效果与正常直渲。硬件GPU后期使用离屏MSAA并恢复原始Alpha覆盖；辉光强度调低到0.10、阈值1.0。真机HDR/MSAA画质与性能仍待验收。

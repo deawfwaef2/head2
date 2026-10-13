@@ -302,3 +302,39 @@
 - 完整19,936丝/3,708,096三角面已独立构建并检查全部有限坐标，但未在目标GPU渲染；严禁改写为已测最高画质/FPS。早期6k截图成功也不等于真实GPU基准。
 - README/QA/DAZ文档和BLENDER_GROOM_GUIDE.md更新；不宣称大师级终稿、照片自动重建、商业DAZ授权或浏览器跨应用桌宠。源.blend约23MiB不Git跟踪，当前工作区可下载；全部曲线/生成器/编辑导出器与同步17.74MiB可玩HTML将推送。
 - 未测试真实系统综合回归/真实GPU满密度，需要后续用户艺术验收。保存测试仅用QA浏览器临时档案，不污染默认仓库收藏。
+
+### [2026-10-13 Stage 13a / playable checkpoint] 电影级唯美后期链：阈值辉光 + 暗角调色（双引擎）
+- 用户要求大规模提升真实感/画质/光影/渲染/材质（唯美感、全自动）。本轮是渲染升级包第 1 段；不碰 groom 发丝几何与断面纹理（前轮已反复调优且本轮沙箱无浏览器/Blender可做视觉 QA，只做代码可审查的低风险渲染增强）。
+- 新增 `src/three/beautyPostChain.js`：RenderPass(线性HDR) → UnrealBloomPass(强度0.22/半径0.55/阈值0.85，只让眼球高光·发丝束闪·轮廓光晕开) → 自研 BeautyGrade(暗角0.30/饱和1.07/对比1.05，只压RGB不碰alpha) → OutputPass(ACES+sRGB)。全部 three/addons 随 Vite 内联，file:// 零外部请求；透明背景全程保留。
+- 双引擎接入（studioPreviewEngine + desktopBoxSpaceEngine）：init 末尾 try/catch 创建（异常回退直渲永不黑屏）、resize 同步 composer 尺寸/像素比、animate 按 `beautyPost.enabled` 分流；流畅档(low)强制关闭后期省显存，中/高档默认开启；新增 `setBeautyPostEnabled(v)` 供下段设置页开关接线。
+- 验证：3 文件 node --check 通过；`node scripts/build_standalone_html.mjs` 一次跑通（Vite 2s），根目录 HTML 17.76MB 且与 docs/index.html byte-for-byte 一致；包内指纹 renderTarget1/_outputColorSpace/separableBlurMaterials/uVignette/uSaturation/setBeautyPostEnabled 全命中；无外部脚本引用。
+- 工作区 hygiene：node_modules 移至 /tmp/head2-node_modules 并软链（仿 11c），dist/ 构建后删除，工作区回落 70MB；token 只走内存 header 推送，不进任何文件；本轮未 force-push。
+
+### [2026-10-13 Stage 13b / playable checkpoint] 唯美氛围：呼吸尘埃 + 工坊背幕光晕 + 设置页双开关
+- 新增 `src/three/atmosphere.js`：`createBokehDust`（3 层共 ~236 点加色混合呼吸尘埃，确定性伪随机分布 + 顶点色冷暖点缀，CPU 每帧仅更新 Y/X 正弦漂移）与 `createStudioBackdrop`（头模身后冷调径向辉光盘，Basic 材质效果确定）；全部 Canvas 程序化纹理，depthWrite=false + renderOrder 控制，永不遮挡头模与断面。
+- 桌面引擎接入盒空间大范围尘埃（x±58/y±30/z-112..-4，animate 内随 elapsed 更新）；工坊引擎接入背幕（0,-2,-34）+ 小范围尘埃；双引擎新增 `setAtmosphereEnabled(v)`。
+- 设置页渲染卡新增 `chk-beauty-post`（辉光后期）与 `chk-atmosphere`（氛围）两个 checkbox（`index.html`），`main.js` 接线双引擎同步 + localStorage 持久化（cervix3d-beauty-post / cervix3d-atmosphere）+ Toast 反馈。
+- ⚠️ 环境教训：node_modules 外移到 /tmp 时叶目录名必须仍叫 `node_modules`（如 /tmp/head2-project/node_modules），否则 Node ESM 按字面名向上查找依赖失败（本次曾误命名导致 vite 报 picomatch 缺失，已修复并复现构建成功）。
+- 验证：4 文件 node --check 通过；重建 HTML 17.76MB，双包 byte 一致；指纹 BokehDustAtmosphere/chk-beauty-post/chk-atmosphere/setAtmosphereEnabled/StudioBackdropGlow/uVignette 全命中；无外部脚本；dist 已删。
+
+### [2026-10-13 Stage 13c / final] 轮廓光增强 + 皮肤微观 1024 + 启动页 pill + 交付
+- `photorealLighting.js`：桌面轮廓光 1.50→1.70、工坊轮廓光 0.92→1.05（冷调发丝边缘分离，配合辉光阈值只晕高光，不洗皮肤）。
+- `skinTextureGenerator.js`：`createSkinMicroMaps` 默认 512→1024（斑点/皮纹数量按面积缩放、尺寸按边长缩放，密度观感一致；anisotropy 4→8，掠射角毛孔更锐利；仍单例，一次性生成）。
+- `index.html` 启动页新增特性 pill「🌟 辉光后期 + 氛围尘埃唯美渲染」（功能真实存在，非宣传）。
+- 验证：调用点唯一（assembler 用默认值）；node --check 通过；重建 HTML 17.76MB，双包 byte 一致；指纹全命中；无外部脚本；dist 已删。
+- ⚠️ 本轮沙箱无浏览器/Blender（which 为空、无 playwright），视觉 QA 只能靠用户真机截图回传：重点看辉光是否过强（阈值0.85/强度0.22 可调）、尘埃是否过亮、1024 毛孔近看是否还有蜡感。下一轮若有浏览器，优先做 file:// 截图验收再调参。
+- Stage 13 渲染包三段（13a 后期链 / 13b 氛围+开关 / 13c 灯光+皮肤）全部已推 main，未 force-push；token 未进文件，用后请用户立即撤销。
+
+### [Stage 13 总览 / 给后续 Agent] 本轮未动项与诚实边界
+- 未动：groom 发丝几何/材质、断面纹理与材质、眼/牙/舌材质、 morph/表情系统、物理/音效、Electron 层——前轮已调优且无视觉 QA，不宜盲调。
+- 未做：几何体升级（缺 Blender + 缺用户授权高精资产 + 缺视觉验证，任何“程序化加面数”都是虚假提升，拒绝）；单张照片自动重建（不存在，按 Stage 9 诚实口径）。
+- 实时 WebGL 上限内已做满：ACES + IBL + 柔和阴影 + 阈值辉光 + 暗角调色 + 氛围尘埃 + 1024 微观皮肤。再往上需用户提供合法 DAZ/扫描高精头 + 高分 PBR + 真机截图迭代。
+
+
+### [2026-10-13 Stage 13d / parallel integration] 保留另一Agent渲染工作并做实图修正
+- 推送893bf1a被远端拒绝；fetch发现另一Agent已把Stage13a/b/c推进5a1b8ed。获取共同祖先71592ea，以正常merge保留双方提交与全部handoff/QA日志，无force-push。通过远端handoff完成工作衔接，没有虚构直接Agent通信工具。
+- 保留beautyPostChain/atmosphere/1024皮纹/轮廓灯/设置开关等代码，重建根/docs17.77MiB。实图发现无离屏AA使发丝点状，HDR角膜洗灰；增硬件HDR目标MSAA<=4，降低Bloom至0.10/threshold1，内置角膜覆盖/反射下调，实际截图确认虹膜棕色可见；自备GLB不走内置替材分支。
+- 确认Bloom污染透明度：桌宠角落原始RGBA[0,0,0,0]变[0,0,0,111]。新增一通道原始Alpha捕获/恢复，手动测试恢复为[0,0,0,0]，Bloom受原场景覆盖约束，不假称无损延伸外轮廓光晕。
+- 软件MSAA重复切换曾出现空ProgramLog的GL验证错误；软件1.5x离屏采样又在完整几何测试OOM。最终软件检测路径不创建HDR后期，开关禁用并有说明；保留廉价氛围和正常canvas-AA直渲，2k/1.2k毛发降级。最终连测0错误，原始结果GROOM_QA_RESULTS.json。严禁用软件直渲最终通过认证硬件MSAA后期。
+- 最终代码截图需在此版本再拍；原生Cycles源图不受Stage13修改，仍是96sample离线原生图。真实GPU画质/FPS仍待用户验收，不能把“上限做满”当客观结论。
+- 解决深拉取暂时增大Git存储：删除本Agent过时v2.8 ZIP，gc后工作区回落107MB；当前保持128MB内，源.blend仍可直接下载、未Git跟踪。交付后删除node_modules软链。后续先读handoff再继续，不覆盖并行Agent成果。

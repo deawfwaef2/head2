@@ -14,6 +14,8 @@ import {
   buildStudioLightRig,
   applyRenderQualityToEngine
 } from './photorealLighting.js';
+import { createBeautyPostChain } from './beautyPostChain.js';
+import { createBokehDust, createStudioBackdrop } from './atmosphere.js';
 
 export class StudioPreviewEngine {
   constructor(canvas) {
@@ -64,6 +66,36 @@ export class StudioPreviewEngine {
     this.lightRig = buildStudioLightRig(this.scene);
     this.keyLight = this.lightRig.key;
 
+    // Stage 13a 电影级后期链（辉光 + 唯美调色；异常则回退直渲，永不黑屏）
+    this.beautyPost = null;
+    this.beautyPostUserEnabled = true;
+    try {
+      if (!this.softwareRenderer) this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
+      this.beautyPost?.setEnabled(true);
+    } catch (err) {
+      console.warn('后期链初始化失败，已回退直渲:', err);
+      this.beautyPost = null;
+    }
+
+    // Stage 13b 唯美氛围：背幕光晕 + 少量呼吸尘埃（加色混合，永不遮挡头模）
+    this.atmosphere = null;
+    this.backdropMesh = null;
+    try {
+      this.backdropMesh = createStudioBackdrop(150, 110);
+      this.backdropMesh.position.set(0, -2, -34);
+      this.scene.add(this.backdropMesh);
+      this.atmosphere = createBokehDust({
+        far: 50, mid: 32, near: 14,
+        farSize: 0.9, midSize: 1.5, nearSize: 2.4,
+        bounds: { x: [-24, 24], y: [-18, 14], z: [-30, 10] },
+      });
+      this.scene.add(this.atmosphere.group);
+    } catch (err) {
+      console.warn('氛围初始化失败，已跳过:', err);
+      this.atmosphere = null;
+      this.backdropMesh = null;
+    }
+
     // Subtle circular specimen studio reference ring below the C4/C5 neck cross-section
     const gridGeo = new THREE.RingGeometry(5.2, 5.38, 64);
     gridGeo.rotateX(-Math.PI / 2);
@@ -98,13 +130,34 @@ export class StudioPreviewEngine {
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h, false);
+      if (this.beautyPost) this.beautyPost.syncSize(w, h, this.renderer.getPixelRatio());
     }
   }
 
   /** Stage 7：三档写实画质（low/medium/high），由设置页统一调度 */
   setRenderQuality(level) {
-    applyRenderQualityToEngine(this, level);
+    const lvl = applyRenderQualityToEngine(this, level);
+    if (this.beautyPost) {
+      // 流畅档强制关闭后期（省显存保帧率），其余档位跟随用户开关
+      this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled !== false);
+    }
     this.resize();
+  }
+
+  /** Stage 13a：用户可随时开关辉光后期（设置页持久化） */
+  setBeautyPostEnabled(v) {
+    this.beautyPostUserEnabled = v !== false;
+    if (this.beautyPost) {
+      const lvl = this.currentRenderQuality || 'high';
+      this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled);
+    }
+  }
+
+  /** Stage 13b：用户可随时开关氛围（尘埃 + 背幕光晕，设置页持久化） */
+  setAtmosphereEnabled(v) {
+    const on = v !== false;
+    if (this.atmosphere) this.atmosphere.group.visible = on;
+    if (this.backdropMesh) this.backdropMesh.visible = on;
   }
 
   async loadOrRebuild(config) {
@@ -184,6 +237,7 @@ export class StudioPreviewEngine {
   animate() {
     this.animId = requestAnimationFrame(this.animate);
     const dt = Math.min(0.05, this.clock.getDelta());
+    const elapsed = this.clock.getElapsedTime();
     if (this.headNode) {
       if (this.autoRotate) {
         this.headNode.rotation.y += dt * 0.65;
@@ -193,6 +247,13 @@ export class StudioPreviewEngine {
       updateHeadLifeAnimation(this.headNode, dt, this.pointerNdc.x * 0.65, this.pointerNdc.y * 0.55);
     }
     this.controls.update();
-    this.renderer.render(this.scene, this.camera);
+    if (this.atmosphere && this.atmosphere.group.visible) {
+      this.atmosphere.update(dt, elapsed);
+    }
+    if (this.beautyPost && this.beautyPost.enabled) {
+      this.beautyPost.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }

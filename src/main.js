@@ -544,7 +544,7 @@ async function refreshStudio3DModel() {
     const groom = studioEngine.headNode?.userData?.groomStats;
     status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (groom ? ` · 新Groom：源 ${groom.sourceCurves.toLocaleString()} 曲线 / 实时 ${groom.renderedStrands.toLocaleString()} 发丝` : '');
     const groomStatus = document.getElementById('groom-quality-status');
-    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面${groom.softwareFallback ? ' · 检测到软件渲染，已保守降级；完整效果需开启硬件加速' : ''}` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
+    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面${groom.softwareFallback ? ' · 检测到软件渲染，已保守降级并关闭HDR后期；完整效果需开启硬件加速' : ''}` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
     status.title = '实时 PBR 的最终细节受原始网格密度、贴图分辨率和材质图完整度限制。';
   }
   update2DAnatomyInspector();
@@ -1414,6 +1414,49 @@ window.addEventListener('DOMContentLoaded', async () => {
       try { localStorage.setItem(QUALITY_KEY, lvl); } catch (_) {}
       const label = lvl === 'high' ? '✨ 极致画质' : lvl === 'medium' ? '⚖️ 标准画质' : '🚀 流畅画质';
       showToast(`${label}已生效（工坊预览 + 屏幕桌宠同步切换）`);
+    });
+  }
+
+  // Stage 13a/13b: 辉光后期 + 氛围开关（双引擎同步，持久化）
+  const POST_KEY = 'cervix3d-beauty-post';
+  const ATM_KEY = 'cervix3d-atmosphere';
+  const postChk = document.getElementById('chk-beauty-post');
+  const atmChk = document.getElementById('chk-atmosphere');
+  const applyPostToggle = (on) => {
+    try {
+      if (desktopEngine) desktopEngine.setBeautyPostEnabled(on);
+      if (studioEngine) studioEngine.setBeautyPostEnabled(on);
+    } catch (err) { console.warn('应用辉光后期开关失败:', err); }
+  };
+  const applyAtmToggle = (on) => {
+    try {
+      if (desktopEngine) desktopEngine.setAtmosphereEnabled(on);
+      if (studioEngine) studioEngine.setAtmosphereEnabled(on);
+    } catch (err) { console.warn('应用氛围开关失败:', err); }
+  };
+  if (postChk) {
+    let savedPost = true;
+    try { savedPost = localStorage.getItem(POST_KEY) !== 'off'; } catch (_) {}
+    const softwarePostDisabled = !!(desktopEngine?.softwareRenderer || studioEngine?.softwareRenderer);
+    postChk.checked = savedPost && !softwarePostDisabled;
+    postChk.disabled = softwarePostDisabled;
+    if (softwarePostDisabled) postChk.title = '软件WebGL已关闭HDR后期以保证可玩性；请开启浏览器硬件加速。';
+    applyPostToggle(savedPost && !softwarePostDisabled);
+    postChk.addEventListener('change', (e) => {
+      applyPostToggle(e.target.checked);
+      try { localStorage.setItem(POST_KEY, e.target.checked ? 'on' : 'off'); } catch (_) {}
+      showToast(e.target.checked ? '✨ 辉光后期已开启' : '🌙 辉光后期已关闭（直渲模式）');
+    });
+  }
+  if (atmChk) {
+    let savedAtm = true;
+    try { savedAtm = localStorage.getItem(ATM_KEY) !== 'off'; } catch (_) {}
+    atmChk.checked = savedAtm;
+    applyAtmToggle(savedAtm);
+    atmChk.addEventListener('change', (e) => {
+      applyAtmToggle(e.target.checked);
+      try { localStorage.setItem(ATM_KEY, e.target.checked ? 'on' : 'off'); } catch (_) {}
+      showToast(e.target.checked ? '🌫️ 氛围尘埃已开启' : '🌫️ 氛围尘埃已关闭');
     });
   }
 

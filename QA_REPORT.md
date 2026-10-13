@@ -56,3 +56,18 @@
 曾失败：未识别软件GPU、全密度及强制2x采样导致Target crashed；新增设备识别、软件密度/阴影降级与旧工坊几何提前释放后，最终上述连续测试通过。长发前视自动加大取景，解剖底视保留原近距。
 
 未验证：真实目标GPU全密度画面/FPS/显存、所有旧交互在真实系统的综合回归、Windows/macOS Electron GUI/跨应用叠加、多人艺术审校、照片精确三维重建。旧Stage11报告不能作为新版发型画质认证。
+
+## Stage 13 (2026-10-13) 渲染升级包 QA
+- 构建：vite 6 生产构建通过；`node scripts/build_standalone_html.mjs` 跑通；根目录 `点击开始游戏_CERVIX3D.html` 17.76MB，与 `docs/index.html` byte-for-byte 一致；包内无外部脚本引用。
+- 指纹：renderTarget1 / _outputColorSpace / separableBlurMaterials / uVignette / uSaturation / setBeautyPostEnabled / BokehDustAtmosphere / StudioBackdropGlow / chk-beauty-post / chk-atmosphere / setAtmosphereEnabled 全命中。
+- 语法：新增与改动的 7 个 JS 文件 `node --check` 全过。
+- 未做：浏览器 file:// 实机渲染验证（本轮沙箱无浏览器二进制）——需用户在 Chrome/Edge 双击验证辉光/尘埃/背幕效果并回传截图。
+
+
+## Stage 13d：并行分支合并追加
+
+远端5a1b8ed已有其他Agent的Stage13渲染更新；以真实共同祖先71592ea做合并，保留双分支历史与所有handoff条目，无force-push。同步HTML约17.77MiB。
+
+实测发现旧Bloom使透明角落alpha从0升至111；新增Bloom前原始Alpha捕获、Grade后恢复后，手动后期测试角落0→0。并发现离屏无MSAA使细丝严重像素化，给硬件HDR目标添加最多4xMSAA；软件MSAA重复渲染出现GL验证错误、扩大采样又引发沙箱OOM，**最终软件路径不创建HDR后期**，避免掩盖设备限制。氛围、皮纹、界面开关保留，软件开关明确禁用。原图/少数帧无错误不能代替连续切换测试。
+
+原内置白色角膜在HDR中把虹膜洗灰，降低其覆盖/反射并实际截图确认棕色虹膜重新可读；只调整内置样本，自备GLB在isBuiltInAsset检查外保留PBR。最终GROOM_QA_RESULTS.json重测软件安全路径：三款连续切换/密度/形变/保存/导入/完整几何有限值均通过且0错误。软件不运行后期，所以该最终corner条目不是硬件HDR/MSAA认证；早前手动Alpha修正测试另见本记录。硬件GPU路径仍需真机。

@@ -779,14 +779,16 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.15,
-        roughness: 0.02,
+        // Linear HDR composites highlights before tonemapping; a thick white
+        // overlay would wash out the iris in the post chain.
+        opacity: 0.04,
+        roughness: 0.04,
         metalness: 0.0,
-        clearcoat: 1.0,
+        clearcoat: 0.40,
         clearcoatRoughness: 0.01,
-        specularIntensity: 1.0,
+        specularIntensity: 0.65,
         ior: 1.38,
-        envMapIntensity: 2.20,
+        envMapIntensity: 0.35,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
