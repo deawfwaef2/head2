@@ -12,7 +12,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
  * 引用，保证两处渲染观感一致。所有资源均为程序化生成，file:// 离线直玩兼容。
  */
 
-export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high', 'ultra'];
+export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high', 'ultra', 'rtx2070'];
 
 // 每个 WebGLRenderer 只生成一张 PMREM 环境贴图，避免重复烘焙
 const pmremEnvCache = new WeakMap();
@@ -106,6 +106,10 @@ const QUALITY_CONFIGS = {
   // Stage 14 · 电影 Ultra：WebGL 版的 DLSS 等效上限——以超采样换发丝/皮肤稳定性。
   // 工坊(小画布)可拉到 3x + 4096 阴影；全屏桌宠封顶 2.5x，避免显存爆炸。
   ultra: { pixelRatioCap: 2.5, studioPixelRatioCap: 3, shadowSize: 2048, studioShadowSize: 4096, envIntensity: 0.78, aniso: 16 },
+  // Stage 15 · RTX 2070 Super (Turing 8GB) 专属推荐档：单头桌宠瓶颈是全屏像素/发丝overdraw而非几何。
+  // 原生分辨率起步 + 桌宠封顶1.5x/工坊2x + 2048阴影 + 16x过滤 + 桌面自适应动态分辨率(引擎侧)。
+  // 这是该卡上“清晰度/帧率”甜点；盲目3x超采样只会掉帧并触发驱动降频，反而更糊更卡。
+  rtx2070: { pixelRatioCap: 1.5, studioPixelRatioCap: 2, shadowSize: 2048, studioShadowSize: 2048, envIntensity: 0.75, aniso: 16 },
 };
 
 /**
@@ -123,7 +127,8 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   // Portrait supersampling reduces subpixel hair shimmer on DPR=1 displays.
   // Desktop stays native DPR to avoid quadrupling the full-screen render cost.
   let ratio = dpr;
-  if (lvl === 'ultra') ratio = isStudio ? Math.max(dpr, 2.5) : Math.max(dpr, 1.75);
+  if (lvl === 'rtx2070') ratio = isStudio ? Math.max(dpr, 1.75) : Math.max(dpr, 1.25);
+  else if (lvl === 'ultra') ratio = isStudio ? Math.max(dpr, 2.5) : Math.max(dpr, 1.75);
   else if (lvl === 'high' && isStudio) ratio = Math.max(dpr, 2);
   const cap = isStudio ? (cfg.studioPixelRatioCap || cfg.pixelRatioCap) : cfg.pixelRatioCap;
   renderer.setPixelRatio(Math.min(ratio, cap));

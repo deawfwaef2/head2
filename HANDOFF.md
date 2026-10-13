@@ -325,3 +325,8 @@
 - 现有版画质提升（`photorealLighting.js`/`main.js`/`index.html`/双引擎）：新增 `ultra` 档并设为无存档时默认；工坊超采样最高3x+4096阴影、桌宠最高2.5x、16x 各向异性贴图过滤、环境强度0.78；双 WebGLRenderer 加 `powerPreference:'high-performance'`、关 stencil。UI 新增“🎬 电影 Ultra”选项。
 - 安全：用户在聊天中明文给出的 GitHub token 只可用于本次推送、绝不写入任何文件/远端配置，推送后必须提醒撤销轮换；仓库链接以干净地址 `https://github.com/deawfwaef2/head2` 为准。
 - 下一步：用户选 A/B 后在 `native/` 建原生骨架并迁移资产；选 C 则继续在 WebGL 上做时域重建(velocity/depth TAA类)与资产升级。真实桌面穿透/托盘仍需用户 Windows 实机验证。
+
+### [2026-10-13 Stage 15] RTX 2070 Super 定案：原生+MSAA+自适应，不追 DLSS 5
+- 用户确认显卡 RTX 2070S。定案写入 `DLSS5_QUALITY_PLAN.md`：该卡吃不到帧生成/DLSS5；单头桌宠瓶颈是全屏像素与发丝 overdraw，原生+MSAA 比低分 DLSS SR 放大更锐。最高可行路线=保留 Electron 真桌面桌宠 + WebGL 拉满 + 高资产导入，不重做 UE/Unity。
+- 新增 `rtx2070` 画质档并设为无存档默认：桌宠封顶1.5x/工坊2x、2048阴影、16x aniso、env0.75；`beautyPostChain` 改 WebGL2 HalfFloat+4xMSAA 渲染目标（后期不再冲掉MSAA）；桌面引擎仅在此档启用自适应动态分辨率（<48fps降至0.7x、>57fps恢复，1.25s步进）。Ultra 档保留。
+- UI 新增 2070S 专属选项，main.js 档位白名单/默认/Toast 同步。待真机验证：透明桌宠穿透/托盘/动态分辨率手感需用户 Windows+2070S 实测；沙箱只做语法+构建+指纹。

@@ -56,7 +56,16 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const height = Math.max(2, Math.floor(options.height || 512));
   const pixelRatio = options.pixelRatio || renderer.getPixelRatio();
 
-  const composer = new EffectComposer(renderer);
+  // Stage 15: WebGL2 下给后期链 4x MSAA 渲染目标——这是网页版最接近 DLAA 的一环：
+  // 后期(Bloom/调色)不再把原生 MSAA 抗锯齿结果冲掉，发丝边缘在桌宠透明背景上也不毛糙。
+  let renderTarget;
+  try {
+    renderTarget = new THREE.WebGLRenderTarget(width, height, {
+      type: THREE.HalfFloatType,
+      samples: 4,
+    });
+  } catch (_) { renderTarget = undefined; }
+  const composer = new EffectComposer(renderer, renderTarget);
   composer.setPixelRatio(pixelRatio);
   composer.setSize(width, height);
 

@@ -597,6 +597,11 @@ export class DesktopBoxSpaceEngine {
   /** Stage 7：三档写实画质（low/medium/high），由设置页统一调度 */
   setRenderQuality(level) {
     const lvl = applyRenderQualityToEngine(this, level);
+    // Stage 15: RTX 2070S 自适应动态分辨率——以设定档为上限，帧率不足时逐级降像素比保60fps，回升时恢复。
+    this._adaptiveBaseRatio = this.renderer.getPixelRatio();
+    this._adaptiveScale = 1;
+    this._fpsEma = 60;
+    this._adaptiveTimer = 0;
     if (this.beautyPost) {
       // 流畅档强制关闭后期（省显存保帧率），其余档位跟随用户开关
       this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled !== false);
@@ -621,6 +626,22 @@ export class DesktopBoxSpaceEngine {
   animate() {
     this.animFrameId = requestAnimationFrame(this.animate);
     const dt = Math.min(0.05, this.clock.getDelta());
+    // Stage 15: 仅 rtx2070 档启用动态分辨率（其余档行为不变）
+    if (this.currentRenderQuality === 'rtx2070' && dt > 0 && this._adaptiveBaseRatio) {
+      this._fpsEma = this._fpsEma * 0.95 + (1 / Math.max(dt, 1e-4)) * 0.05;
+      this._adaptiveTimer -= dt;
+      if (this._adaptiveTimer <= 0) {
+        let next = this._adaptiveScale;
+        if (this._fpsEma < 48 && next > 0.7) next = Math.max(0.7, next - 0.15);
+        else if (this._fpsEma > 57 && next < 1) next = Math.min(1, next + 0.1);
+        if (next !== this._adaptiveScale) {
+          this._adaptiveScale = next;
+          this.renderer.setPixelRatio(Math.max(0.75, this._adaptiveBaseRatio * next));
+          this.resize();
+        }
+        this._adaptiveTimer = 1.25;
+      }
+    }
     const elapsed = this.clock.getElapsedTime();
     const b = this.getBoxBounds();
 

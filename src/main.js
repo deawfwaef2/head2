@@ -1398,7 +1398,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const QUALITY_KEY = 'cervix3d-render-quality';
   const qualitySel = document.getElementById('sel-render-quality');
   const applySavedQuality = (level) => {
-    const lvl = ['low', 'medium', 'high', 'ultra'].includes(level) ? level : 'ultra';
+    const lvl = ['low', 'medium', 'high', 'ultra', 'rtx2070'].includes(level) ? level : 'rtx2070';
     try {
       if (desktopEngine) desktopEngine.setRenderQuality(lvl);
       if (studioEngine) studioEngine.setRenderQuality(lvl);
@@ -1406,13 +1406,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     return lvl;
   };
   if (qualitySel) {
-    let savedQuality = 'ultra';
-    try { savedQuality = localStorage.getItem(QUALITY_KEY) || 'ultra'; } catch (_) { /* file:// 隐私模式 */ }
+    let savedQuality = 'rtx2070';
+    try { savedQuality = localStorage.getItem(QUALITY_KEY) || 'rtx2070'; } catch (_) { /* file:// 隐私模式 */ }
     qualitySel.value = applySavedQuality(savedQuality);
     qualitySel.addEventListener('change', (e) => {
       const lvl = applySavedQuality(e.target.value);
       try { localStorage.setItem(QUALITY_KEY, lvl); } catch (_) {}
-      const label = lvl === 'ultra' ? '🎬 电影 Ultra 画质（最高）' : lvl === 'high' ? '✨ 极致画质' : lvl === 'medium' ? '⚖️ 标准画质' : '🚀 流畅画质';
+      const label = lvl === 'rtx2070' ? '🟢 RTX 2070S 专属最佳画质（原生+MSAA+自适应）' : lvl === 'ultra' ? '🎬 电影 Ultra 画质（最高）' : lvl === 'high' ? '✨ 极致画质' : lvl === 'medium' ? '⚖️ 标准画质' : '🚀 流畅画质';
       showToast(`${label}已生效（工坊预览 + 屏幕桌宠同步切换）`);
     });
   }
