@@ -12,7 +12,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
  * 引用，保证两处渲染观感一致。所有资源均为程序化生成，file:// 离线直玩兼容。
  */
 
-export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high'];
+export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high', 'ultra'];
 
 // 每个 WebGLRenderer 只生成一张 PMREM 环境贴图，避免重复烘焙
 const pmremEnvCache = new WeakMap();
@@ -100,9 +100,12 @@ export function buildDesktopLightRig(scene) {
 }
 
 const QUALITY_CONFIGS = {
-  low: { pixelRatioCap: 1, shadowSize: 0, envIntensity: 0.28 },
-  medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.50 },
-  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.70 },
+  low: { pixelRatioCap: 1, shadowSize: 0, envIntensity: 0.28, aniso: 4 },
+  medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.50, aniso: 8 },
+  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.70, aniso: 8 },
+  // Stage 14 · 电影 Ultra：WebGL 版的 DLSS 等效上限——以超采样换发丝/皮肤稳定性。
+  // 工坊(小画布)可拉到 3x + 4096 阴影；全屏桌宠封顶 2.5x，避免显存爆炸。
+  ultra: { pixelRatioCap: 2.5, studioPixelRatioCap: 3, shadowSize: 2048, studioShadowSize: 4096, envIntensity: 0.78, aniso: 16 },
 };
 
 /**
@@ -115,19 +118,35 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   const { renderer, scene } = engine;
   if (!renderer || !scene) return lvl;
 
+  const isStudio = Boolean(engine.controls);
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   // Portrait supersampling reduces subpixel hair shimmer on DPR=1 displays.
   // Desktop stays native DPR to avoid quadrupling the full-screen render cost.
-  const ratio = lvl === 'high' && engine.controls ? Math.max(dpr, 2) : dpr;
-  renderer.setPixelRatio(Math.min(ratio, cfg.pixelRatioCap));
+  let ratio = dpr;
+  if (lvl === 'ultra') ratio = isStudio ? Math.max(dpr, 2.5) : Math.max(dpr, 1.75);
+  else if (lvl === 'high' && isStudio) ratio = Math.max(dpr, 2);
+  const cap = isStudio ? (cfg.studioPixelRatioCap || cfg.pixelRatioCap) : cfg.pixelRatioCap;
+  renderer.setPixelRatio(Math.min(ratio, cap));
 
+  // 最高档把已加载贴图的各向异性过滤拉满，斜视角下皮肤/发丝不再糊成一片。
+  const maxAniso = Math.min(cfg.aniso || 8, renderer.capabilities?.getMaxAnisotropy?.() || 8);
+  scene.traverse?.((obj) => {
+    const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
+    mats.forEach((m) => {
+      ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap'].forEach((k) => {
+        if (m[k]) m[k].anisotropy = maxAniso;
+      });
+    });
+  });
+
+  const shadowSize = isStudio ? (cfg.studioShadowSize || cfg.shadowSize) : cfg.shadowSize;
   const key = engine.keyLight;
   if (key && key.shadow) {
-    key.castShadow = cfg.shadowSize > 0;
-    if (cfg.shadowSize > 0) {
+    key.castShadow = shadowSize > 0;
+    if (shadowSize > 0) {
       const sh = key.shadow;
-      if (sh.mapSize.x !== cfg.shadowSize) {
-        sh.mapSize.set(cfg.shadowSize, cfg.shadowSize);
+      if (sh.mapSize.x !== shadowSize) {
+        sh.mapSize.set(shadowSize, shadowSize);
         if (sh.map) {
           sh.map.dispose();
           sh.map = null;

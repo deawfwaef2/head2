@@ -80,7 +80,8 @@ export class DesktopBoxSpaceEngine {
       canvas: this.canvas,
       alpha: true,
       antialias: true,
-      powerPreference: 'high-performance'
+      powerPreference: 'high-performance',
+      stencil: false
     });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));

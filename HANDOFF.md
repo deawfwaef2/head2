@@ -318,3 +318,10 @@
 - 未动：groom 发丝几何/材质、断面纹理与材质、眼/牙/舌材质、 morph/表情系统、物理/音效、Electron 层——前轮已调优且无视觉 QA，不宜盲调。
 - 未做：几何体升级（缺 Blender + 缺用户授权高精资产 + 缺视觉验证，任何“程序化加面数”都是虚假提升，拒绝）；单张照片自动重建（不存在，按 Stage 9 诚实口径）。
 - 实时 WebGL 上限内已做满：ACES + IBL + 柔和阴影 + 阈值辉光 + 暗角调色 + 氛围尘埃 + 1024 微观皮肤。再往上需用户提供合法 DAZ/扫描高精头 + 高分 PBR + 真机截图迭代。
+
+### [2026-10-13 Stage 14] DLSS 5 方案落盘 + 现有可玩版新增电影 Ultra 最高档（待用户选原生引擎）
+- 用户明确：要真正桌面桌宠、最高质量、唯美感，并问 DLSS 5 方案选项。已新建 `DLSS5_QUALITY_PLAN.md`：A=Unreal5+DX12 真 DLSS（画质最高）、B=Unity6 HDRP 真 DLSS、C=现有 Electron+Three.js 等效最高画质（保底可玩）、D=高模/4K-8K PBR/头发资产路线（决定80%真实感）。等用户回“选A/选B/先C”再开原生工程，未擅自下载数GB引擎。
+- 事实边界：DLSS 5 为 NVIDIA 神经渲染、DX12/NGX/专有DLL、RTX 50 首发；WebGL/Electron 无法调用真 DLSS，现有版只能做超采样/时域等效，严禁冒充 DLSS。DLSS 只放大稳定，不生成模型/贴图细节。
+- 现有版画质提升（`photorealLighting.js`/`main.js`/`index.html`/双引擎）：新增 `ultra` 档并设为无存档时默认；工坊超采样最高3x+4096阴影、桌宠最高2.5x、16x 各向异性贴图过滤、环境强度0.78；双 WebGLRenderer 加 `powerPreference:'high-performance'`、关 stencil。UI 新增“🎬 电影 Ultra”选项。
+- 安全：用户在聊天中明文给出的 GitHub token 只可用于本次推送、绝不写入任何文件/远端配置，推送后必须提醒撤销轮换；仓库链接以干净地址 `https://github.com/deawfwaef2/head2` 为准。
+- 下一步：用户选 A/B 后在 `native/` 建原生骨架并迁移资产；选 C 则继续在 WebGL 上做时域重建(velocity/depth TAA类)与资产升级。真实桌面穿透/托盘仍需用户 Windows 实机验证。
