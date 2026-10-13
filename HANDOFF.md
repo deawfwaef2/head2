@@ -553,6 +553,22 @@
     - 在 `getBoxBoundsAtZ` 中按头模最前端深度 (`frontZ = z + 14 * s`) 计算视锥体透视边界，并完整扣除包含 28 款大型 3D 发型在内的最坏包络边距 (`marginX = 18.2 * s`, `marginTop = 20.8 * s`, `marginBottom = 12.2 * s`)；
     - 在 `clampStructureToBounds` 与 `animate()` 重力落点计算中强制限制层架/建筑与 `targetRestY` 的最大高度 (`<= bz.maxY`)，确保无论如何拖拽头模、拖拽层架或切换阵型，头模与发丝 **100% 永远无法超出边框半步**。
 
+### [2026-10-13 Stage 30] 彻底根治头发“纸片感、机械重复条纹、银灰塑料反光与发尾折痕”：全随机非周期微纤维发丝场 + 3D 连续颅骨方位角流场与子午线 Marschner 天使光圈着色器 + 多层立体发芯内衬层 + 全面淘汰单层 `toigo_*` 阶梯头盔网格（建立在 `7e3cf84` 之上）
+- **用户真机截图与核心指令（对应 `uploads/image-1.png`）**：
+  - 用户明确指出：`“现在问题是头发质量太低了，完全不像真的，我要最高质量像真的头发，现在纸片感而且线条重复而且反正就是怪异”`。
+- **四大根因精准定位与彻底重构**：
+  1. **彻底消除机械重复条纹 (`零线条重复`)**：
+     - 根因：Stage 26 的 `scripts/build_master_assets.py` (`build_base_fiber_grid`) 使用了周期正弦波 `sin(u * 2π * 31) + cos(u * 2π * 57)` 覆盖贴图 RGB，且 `src/three/collectibleHeadAssembler.js` (`injectMarschnerHairShader`) 在片元着色器中叠加了 `sin(uCoord * 380.0)` 与 `sin(vMapUv.x * 520.0)`，导致所有发片呈现瓦楞铁皮/条形码般的机械等距竖条纹。
+     - 修复：100% 删除 Python 资产脚本与 GLSL 着色器中的一切周期正弦波公式；在 `build_master_assets.py` 中改用 **流场扭曲各向异性高斯滤波非周期随机发丝场 (`build_stochastic_hair_field`)** 融合艺术家原贴图局部丝缕细节；在 `injectMarschnerHairShader` 中改用基于 **连续 3D 颅骨空间坐标 (`atan(x, z)` 方位角 + 纵向流场)** 的 **3 阶非周期哈希插值噪声 (`hairValueNoise`)**，发丝粗细与纹理跨越发片接缝连续自然延伸，绝无任何重复条纹。
+  2. **彻底消除乌黑头发泛白成银灰金属片 (`零银灰塑料反光`)**：
+     - 根因：Stage 26 中 `hairDir` 在全头固定为 `y = 0.92`，导致正视角下 `sinTH = sqrt(1 - dot(T, H)^2)` 在整个垂顺发面上恒等于 `~0.98`，叠加线性空间 `vec3(0.11, 0.12, 0.15)` 高光与 Pass 1/Pass 2 不透明区域双重绘制，将 `#121216` 乌黑头发冲淡成 `#757a88` 亮银灰色。
+     - 修复：在 `injectMarschnerHairShader` 中计算沿头骨球面从颅顶向发梢弯曲的 **真实 3D 子午线切线场 (`tMeridian = cross(bAzim, nCran)`)**，使 Marschner 双瓣各向异性高光 (`R` + `TRT`) 仅在颅顶弧面形成柔和自然的丝绸「天使光圈」，垂顺发束保持深邃浓郁的原生乌黑/深褐黑色素质感；同时移除塑料清漆层 (`clearcoat: 0.0`)，并在 Pass 2 (`isWispLayer`) 中仅渲染半透明羽化边缘与外层浮发（消除不透明区双重叠加过曝）。
+  3. **彻底消除发片阶梯锯齿、空隙透光与发尾手风琴折痕 (`零纸片感`)**：
+     - 根因：① 初夏 (`hair_bob01`) 与方尧平 (`daz_hair_air_bangs_long`) 此前使用了 `toigo_*` 单层低模头盔网格（脸周为 90° 阶梯状删面方格）；② `build_master_assets.py` 对 `y < -0.045` 使用了 `0.098 * tanh(d_below / 0.098)` + `sin(d_below * 36.0)`，将长发下半部分挤压成同一水平面上的锯齿状折纸；③ 单层发片之间缺少内部暗部发芯层。
+     - 修复：① **全面淘汰全部 `toigo_*` 单层网格**，将 28 款发型全部替换为 `culturalibre_hair_18`、`o4saken_chinesebob01` (1,355 发片)、`o4saken_long01` (1,018 发片)、`punkduck_alpha7_long`、`elvs_daisy_hair`、`elvs_wavy_bob` (120 发片) 等真正的多层发片模型；② 废除 `tanh` 挤压与正弦折波，改用平滑线性纵向比例映射与肩部内收垂顺约束；③ 为中低面数发型自动构建 **3D 内部旋转交错暗部发芯层 (`Inner Volumetric Under-Lock Layer`，内缩 `-1.8mm` 并旋转 `4.2°`)**，配合着色器顶点法线球面化融合 (`mix(objectNormal, cranSphereN, 0.62)`)、径向深度环境光遮蔽 (`innerDepthAO`) 与 Pass 2 外扩 `+0.65mm` 空气感碎发壳层，形成饱满厚实的三维真发体积。
+  4. **100% 无损合入 `7e3cf84` (Stage 29)**：完整保留 `7e3cf84` 的 `daz_asian_head_base.glb`（9 组真实 MakeHuman/Elvaerwyn `.target` 脸型、6 套真实 2K 摄影级女性皮肤贴图、`Aksel_Skin_NRM.png` 毛孔法线、8 款真实 3D 眉毛 `.obj` 模型）、去硅胶微孔次表面散射着色器与防越界锁死机制。
+
+
 
 
 

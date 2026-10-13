@@ -486,7 +486,12 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const bangsPart = Math.max(-0.6, Math.min(0.6, Number(morphs.bangsParting ?? 0)));
   const hairVol = Math.max(-0.5, Math.min(0.9, Number(morphs.hairVolume ?? 0)));
   const hairLen = Math.max(-0.6, Math.min(0.9, Number(morphs.hairLength ?? 0)));
-  const sideburn = Math.max(-0.6, Math.min(0.7, Number(morphs.sideburnLock ?? 0)));
+  const sideburnRaw = Math.max(-0.6, Math.min(0.7, Number(morphs.sideburnLock ?? morphs.hairSideburnTuck ?? 0)));
+  const faceArchetype = morphs.faceArchetype || rootGroup.userData.faceArchetype || 'cn_oval_scholar';
+  const archCheekClearance = faceArchetype === 'cn_round_babyface' ? -0.08
+    : faceArchetype === 'kr_sweet_heart' ? -0.04
+    : (faceArchetype === 'kr_idol_vline' || faceArchetype === 'cn_classical_melon') ? 0.04 : 0.0;
+  const sideburn = Math.max(-0.6, Math.min(0.7, sideburnRaw + archCheekClearance));
   const hairFlare = Math.max(-0.7, Math.min(0.7, Number(morphs.hairFlare ?? 0)));
   const offX = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetX ?? 0)));
   const offY = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetY ?? 0)));
@@ -829,20 +834,20 @@ export function updateHairSheen(node, value) {
   node?.getObjectByName('HairGroup')?.traverse(child => {
     if (!child.isMesh || !child.material?.userData?.builtInHair) return;
     if (child.name === 'ScalpRootFeatherCap') return;
-    child.material.sheen = Math.min(0.36, sheen * 0.34);
-    child.material.roughness = Math.max(0.26, 0.48 - sheen * 0.18);
-    child.material.anisotropy = 0.55 + sheen * 0.35;
-    child.material.clearcoat = 0.10 + sheen * 0.08;
+    child.material.sheen = Math.min(0.22, sheen * 0.20);
+    child.material.roughness = Math.max(0.36, 0.56 - sheen * 0.16);
+    child.material.anisotropy = 0.72 + sheen * 0.24;
+    child.material.clearcoat = 0.0;
   });
 }
 
 function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
-  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417']);
-  const baseColor = new THREE.Color(legacyDarkSet.has(normalizedHex) ? '#121216' : normalizedHex);
+  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216']);
+  const baseColor = new THREE.Color(legacyDarkSet.has(normalizedHex) ? '#151418' : normalizedHex);
   const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
   if (lum < 0.08) {
-    return new THREE.Color('#191a20');
+    return new THREE.Color('#17161b');
   }
   return baseColor;
 }
@@ -860,25 +865,110 @@ function fitImportedHairScene(scene) {
 }
 
 /**
- * Injects Dual-Lobe Marschner / Kajiya-Kay Anisotropic Micro-Fiber Cuticle Glints
- * and Premultiplied Edge De-Fringing into a MeshPhysicalMaterial.
+ * Stage 30 True 3D Cranial-Flow Stochastic Strand & Meridian Marschner Hair Pipeline:
+ * 1. Spherized Cranial-Blended Normals: Blends flat polygon card normals with smooth 3D cranial dome normals
+ *    so adjacent hair cards shade as one cohesive, soft 3D hair volume (zero paper-card facet seams).
+ * 2. 100% Non-Periodic 3D Cranial-Space Stochastic Micro-Strand Noise: Replaces all periodic sin(u * N)
+ *    stripes with multi-scale continuous 3D cranial-azimuth value noise (zero repeating barcode lines).
+ * 3. True 3D Meridian Hair Flow Tangents: Curves hair tangents from the crown along cranial meridians
+ *    so Marschner R + TRT anisotropic highlights form a natural silk "Angel Ring" arc near the crown
+ *    instead of washing out vertical hair locks into silver-gray metal.
+ * 4. Volumetric Root/Inner Depth AO & 3D-Offset Gossamer Wisp Shell: Darkens deep under-layers and
+ *    crown partings while offsetting Pass 2 wisps +0.65mm outward along the 3D normal.
  */
-function injectMarschnerHairShader(material, sheenIntensity = 0.90) {
-  material.customProgramCacheKey = () => `marschner_hair_v25_${sheenIntensity.toFixed(2)}_${material.transparent ? 'alpha' : 'core'}`;
+function injectMarschnerHairShader(material, sheenIntensity = 0.90, isWispLayer = false) {
+  material.customProgramCacheKey = () => `marschner_hair_v30_${sheenIntensity.toFixed(2)}_${isWispLayer ? 'wisp' : 'core'}`;
   material.onBeforeCompile = (shader) => {
+    shader.vertexShader = `
+      varying vec3 vHairLocalPos;
+      varying vec3 vHairSmoothNormal;
+    ` + shader.vertexShader;
+
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <beginnormal_vertex>',
+      `
+      #include <beginnormal_vertex>
+      vec3 cranCenter = vec3(0.0, 0.015, -0.008);
+      vec3 cranVec = position - cranCenter;
+      vec3 cranSphereN = normalize(vec3(cranVec.x * 1.15, max(-0.22, cranVec.y * 0.95 + 0.035), cranVec.z * 1.05));
+      if (dot(objectNormal, cranSphereN) < 0.0) {
+        objectNormal = -objectNormal;
+      }
+      objectNormal = normalize(mix(objectNormal, cranSphereN, 0.62));
+      vHairSmoothNormal = objectNormal;
+      `
+    );
+
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `
+      #include <begin_vertex>
+      vHairLocalPos = position;
+      ${isWispLayer ? 'transformed += objectNormal * 0.00065;' : ''}
+      `
+    );
+
+    shader.fragmentShader = `
+      varying vec3 vHairLocalPos;
+      varying vec3 vHairSmoothNormal;
+
+      float hairHash21(vec2 p) {
+        p = fract(p * vec2(123.34, 456.21));
+        p += dot(p, p + 45.32);
+        return fract(p.x * p.y);
+      }
+
+      float hairValueNoise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        float a = hairHash21(i);
+        float b = hairHash21(i + vec2(1.0, 0.0));
+        float c = hairHash21(i + vec2(0.0, 1.0));
+        float d = hairHash21(i + vec2(1.0, 1.0));
+        return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+      }
+    ` + shader.fragmentShader;
+
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `
       #include <map_fragment>
       #ifdef USE_MAP
-        float uCoord = vMapUv.x;
-        float vCoord = vMapUv.y;
-        float microStrand = 0.5 + 0.5 * (
-          0.55 * sin(uCoord * 380.0 + sin(vCoord * 18.0) * 0.35) +
-          0.45 * cos(uCoord * 790.0 + 1.4)
-        );
-        float edgeRichness = smoothstep(0.01, 0.42, diffuseColor.a);
-        diffuseColor.rgb *= (0.74 + 0.26 * edgeRichness) * (0.86 + 0.26 * microStrand);
+        // Convert over-bright greyscale hair map into rich melanin strand contrast without washing out dark hair
+        float texLuma = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+        float strandDetail = clamp((texLuma - 0.50) * 1.65 + 0.50, 0.0, 1.0);
+
+        // Continuous 3D cranial-azimuth coordinates for 100% non-periodic stochastic hair fibers
+        float azimAngle = atan(vHairLocalPos.x, vHairLocalPos.z + 0.012);
+        float meridianArc = vHairLocalPos.y * 8.5 + length(vHairLocalPos.xz) * 2.2;
+
+        // 3 octaves of non-periodic anisotropic stochastic strand noise stretched along the hair flow
+        float nCoarse = hairValueNoise(vec2(azimAngle * 28.0 + vMapUv.x * 19.0, meridianArc * 1.4));
+        float nMedium = hairValueNoise(vec2(azimAngle * 74.0 - vMapUv.x * 43.0 + nCoarse * 0.45, meridianArc * 2.6));
+        float nFine   = hairValueNoise(vec2(azimAngle * 168.0 + vMapUv.x * 97.0, meridianArc * 4.2 + vMapUv.y * 3.5));
+        float stochasticFiber = 0.34 * nCoarse + 0.41 * nMedium + 0.25 * nFine;
+
+        // 3D volumetric depth & root-parting ambient occlusion (eliminates flat paper-card look)
+        float rFromCore = length(vHairLocalPos - vec3(0.0, 0.022, -0.008));
+        float innerDepthAO = smoothstep(0.068, 0.098, rFromCore);
+        float crownPartAO = 1.0 - 0.32 * exp(-pow(vHairLocalPos.x / 0.016, 2.0)) * smoothstep(0.045, 0.095, vHairLocalPos.y);
+        float neckNapeAO = smoothstep(-0.085, 0.015, vHairLocalPos.y);
+        float hairVolAO = (0.64 + 0.36 * innerDepthAO) * crownPartAO * (0.72 + 0.28 * neckNapeAO);
+
+        // Combine base melanin color with stochastic fibers & volumetric AO
+        float fiberMod = mix(0.68, 1.24, 0.45 * strandDetail + 0.55 * stochasticFiber);
+        diffuseColor.rgb = diffuse * fiberMod * hairVolAO;
+
+        ${isWispLayer ? `
+          // Pass 2 only renders gossamer feathered edges & outer flyaway wisps (prevents opaque double-overdraw)
+          float wispFeather = smoothstep(0.02, 0.28, diffuseColor.a) * (1.0 - 0.62 * smoothstep(0.76, 0.96, diffuseColor.a));
+          float wispStrandMask = smoothstep(0.28, 0.82, stochasticFiber * 0.65 + strandDetail * 0.35);
+          diffuseColor.a = clamp(wispFeather * (0.55 + 0.45 * wispStrandMask), 0.0, 0.82);
+        ` : `
+          // Pass 1 renders solid volumetric locks with stochastic strand-dithered alpha borders
+          diffuseColor.a = clamp(diffuseColor.a * (0.86 + 0.26 * stochasticFiber), 0.0, 1.0);
+        `}
       #endif
       `
     );
@@ -890,28 +980,48 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.90) {
       #ifdef USE_MAP
         vec3 viewDir = normalize(vViewPosition);
         vec3 surfNorm = normalize(normal);
-        vec3 hairDir = normalize(vec3(-surfNorm.x * 0.28, 0.92, -surfNorm.z * 0.28));
-        float fiberJitter = sin(vMapUv.x * 460.0) * 0.055 + cos(vMapUv.x * 920.0) * 0.035;
-        vec3 lightDir = normalize(vec3(0.28, 0.52, 0.80));
+
+        // True 3D cranial meridian hair flow tangent (curves from crown to tips along the head sphere)
+        vec3 pRel = vHairLocalPos - vec3(0.0, 0.010, -0.010);
+        vec3 nCran = normalize(vec3(pRel.x * 1.15, pRel.y + 0.028, pRel.z * 1.08));
+        vec3 bAzim = normalize(vec3(-nCran.z, 0.0, nCran.x + 1e-5));
+        vec3 tMeridian = normalize(cross(bAzim, nCran));
+        if (tMeridian.y > 0.0) tMeridian = -tMeridian;
+
+        // Subtle per-clump stochastic cuticle tilt (non-periodic, zero sine stripes)
+        float clumpShift = (hairValueNoise(vec2(atan(pRel.x, pRel.z) * 36.0, vHairLocalPos.y * 14.0)) - 0.5) * 0.14;
+        vec3 lightDir = normalize(vec3(0.24, 0.68, 0.69));
         vec3 H = normalize(lightDir + viewDir);
 
-        vec3 T1 = normalize(hairDir - (0.14 + fiberJitter) * surfNorm);
+        // Primary R cuticle glint (shifted toward crown by -6 deg)
+        vec3 T1 = normalize(tMeridian + (-0.11 + clumpShift) * surfNorm);
         float tdoth1 = clamp(dot(T1, H), -1.0, 1.0);
         float sinTH1 = sqrt(max(0.0, 1.0 - tdoth1 * tdoth1));
-        float specR = pow(sinTH1, 56.0) * smoothstep(-0.2, 0.35, dot(surfNorm, lightDir));
+        float LongitudinalR = pow(max(0.0, 1.0 - abs(tdoth1)), 18.0) * pow(sinTH1, 64.0);
 
-        vec3 T2 = normalize(hairDir + (0.20 - fiberJitter * 1.3) * surfNorm);
+        // Secondary TRT warm cortex sheen (shifted toward tips by +10 deg)
+        vec3 T2 = normalize(tMeridian + (0.18 - clumpShift * 1.2) * surfNorm);
         float tdoth2 = clamp(dot(T2, H), -1.0, 1.0);
         float sinTH2 = sqrt(max(0.0, 1.0 - tdoth2 * tdoth2));
-        float specTRT = pow(sinTH2, 20.0) * smoothstep(-0.15, 0.45, dot(surfNorm, lightDir));
+        float LongitudinalTRT = pow(max(0.0, 1.0 - abs(tdoth2)), 9.0) * pow(sinTH2, 24.0);
 
-        float strandMask = 0.45 + 0.55 * (0.5 + 0.5 * sin(vMapUv.x * 520.0 + vMapUv.y * 12.0));
+        // Crown & upper-arch curvature mask so the Angel Ring forms naturally on curved upper locks
+        float crownBand = smoothstep(-0.045, 0.065, vHairLocalPos.y);
+        float ndotl = smoothstep(-0.08, 0.55, dot(surfNorm, lightDir));
+        float strandSparkle = 0.55 + 0.45 * hairValueNoise(vec2(atan(pRel.x, pRel.z) * 140.0 + vMapUv.x * 65.0, vHairLocalPos.y * 22.0));
+
+        vec3 rColor = mix(vec3(0.055, 0.060, 0.072), diffuse * 1.6 + vec3(0.045), 0.35);
+        vec3 trtColor = diffuse * 2.1 + vec3(0.028, 0.022, 0.018);
+
         vec3 anisoGlint = (
-          specR * vec3(0.11, 0.12, 0.15) * strandMask +
-          specTRT * (diffuseColor.rgb * 1.45 + vec3(0.04, 0.045, 0.06)) * (0.65 + 0.35 * strandMask)
-        ) * ${(0.65 + sheenIntensity * 0.55).toFixed(3)};
+          LongitudinalR * rColor * strandSparkle * (0.45 + 0.55 * crownBand) +
+          LongitudinalTRT * trtColor * (0.70 + 0.30 * strandSparkle) * (0.35 + 0.65 * crownBand)
+        ) * ndotl * ${(0.48 + sheenIntensity * 0.42).toFixed(3)};
 
-        reflectedLight.indirectSpecular += anisoGlint;
+        // Attenuate default isotropic plastic PBR specular so hair never looks like glossy plastic sheet
+        reflectedLight.directSpecular *= 0.18;
+        reflectedLight.indirectSpecular *= 0.22;
+        reflectedLight.indirectSpecular += anisoGlint * smoothstep(0.08, 0.65, diffuseColor.a);
       #endif
       `
     );
@@ -1054,24 +1164,24 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         mapTex.needsUpdate = true;
       }
 
-      // Pass 1: Dense Core Depth Pre-Pass (writes depth buffer for solid interior hair locks)
+      // Pass 1: Dense Core Volumetric Locks (writes depth buffer with stochastic strand-dithered borders)
       const coreMat = new THREE.MeshPhysicalMaterial({
         map: mapTex,
         color: displayColor,
-        roughness: Math.max(0.28, 0.48 - sheenIntensity * 0.18),
-        metalness: 0.02,
-        sheen: Math.min(0.36, sheenIntensity * 0.34),
-        sheenRoughness: 0.38,
+        roughness: Math.max(0.38, 0.56 - sheenIntensity * 0.16),
+        metalness: 0.0,
+        sheen: Math.min(0.20, sheenIntensity * 0.18),
+        sheenRoughness: 0.48,
         sheenColor: sheenCol,
-        anisotropy: 0.55 + sheenIntensity * 0.35,
+        anisotropy: 0.72 + sheenIntensity * 0.24,
         anisotropyRotation: Math.PI / 2,
-        clearcoat: 0.10 + sheenIntensity * 0.08,
-        clearcoatRoughness: 0.30,
-        specularIntensity: 0.72,
-        specularColor: isJetBlack ? new THREE.Color('#cfd6e6') : new THREE.Color('#ffffff'),
-        envMapIntensity: isJetBlack ? 0.40 : 0.52,
+        clearcoat: 0.0,
+        clearcoatRoughness: 0.52,
+        specularIntensity: 0.28,
+        specularColor: isJetBlack ? new THREE.Color('#6a7284') : new THREE.Color('#b8b0a8'),
+        envMapIntensity: isJetBlack ? 0.12 : 0.18,
         transparent: false,
-        alphaTest: mapTex ? 0.82 : 0.0,
+        alphaTest: mapTex ? 0.36 : 0.0,
         depthWrite: true,
         polygonOffset: true,
         polygonOffsetFactor: 1,
@@ -1079,7 +1189,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         side: THREE.DoubleSide,
       });
       coreMat.userData.builtInHair = true;
-      injectMarschnerHairShader(coreMat, sheenIntensity);
+      injectMarschnerHairShader(coreMat, sheenIntensity, false);
 
       child.material = coreMat;
       child.castShadow = true;
@@ -1087,22 +1197,22 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       child.renderOrder = 1;
 
       if (mapTex) {
-        // Pass 2: True Alpha-Blended Gossamer Strand & Feathered Bangs Pass
+        // Pass 2: 3D-Offset Gossamer Flyaway & Feathered Edge Shell (+0.65mm along smooth 3D normal)
         const wispMat = new THREE.MeshPhysicalMaterial({
           map: mapTex,
           color: displayColor,
-          roughness: Math.max(0.26, 0.46 - sheenIntensity * 0.18),
-          metalness: 0.02,
-          sheen: Math.min(0.38, sheenIntensity * 0.36),
-          sheenRoughness: 0.36,
+          roughness: Math.max(0.36, 0.54 - sheenIntensity * 0.16),
+          metalness: 0.0,
+          sheen: Math.min(0.22, sheenIntensity * 0.20),
+          sheenRoughness: 0.45,
           sheenColor: sheenCol,
-          anisotropy: 0.58 + sheenIntensity * 0.35,
+          anisotropy: 0.76 + sheenIntensity * 0.22,
           anisotropyRotation: Math.PI / 2,
-          clearcoat: 0.12 + sheenIntensity * 0.08,
-          clearcoatRoughness: 0.28,
-          specularIntensity: 0.76,
-          specularColor: isJetBlack ? new THREE.Color('#d8e0ef') : new THREE.Color('#ffffff'),
-          envMapIntensity: isJetBlack ? 0.42 : 0.54,
+          clearcoat: 0.0,
+          clearcoatRoughness: 0.50,
+          specularIntensity: 0.30,
+          specularColor: isJetBlack ? new THREE.Color('#747c90') : new THREE.Color('#c2bab0'),
+          envMapIntensity: isJetBlack ? 0.14 : 0.20,
           transparent: true,
           opacity: 1.0,
           alphaTest: 0.015,
@@ -1110,7 +1220,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           side: THREE.DoubleSide,
         });
         wispMat.userData.builtInHair = true;
-        injectMarschnerHairShader(wispMat, sheenIntensity);
+        injectMarschnerHairShader(wispMat, sheenIntensity, true);
 
         const wispMesh = new THREE.Mesh(child.geometry, wispMat);
         wispMesh.name = `${child.name || 'Hair'}_SilkyWisps`;
