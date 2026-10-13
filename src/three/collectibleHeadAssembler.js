@@ -241,109 +241,77 @@ function fitImportedHead(scene) {
 }
 
 const PRESET_MORPH_BIASES = {
-  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'young_asian', jawVLine: 0.04, chinLength: -0.02, cheekSoftness: 0.06, noseBridge: 0.02, eyeAlmond: 0.06, eyeTilt: -0.02, lipFullness: 0.02 },
-  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'natural_makeup', jawVLine: -0.06, chinLength: -0.08, cheekSoftness: 0.14, noseBridge: 0.02, eyeAlmond: 0.10, eyeTilt: -0.04, lipFullness: 0.06 },
-  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'natural_makeup', jawVLine: -0.06, chinLength: -0.08, cheekSoftness: 0.14, noseBridge: 0.02, eyeAlmond: 0.10, eyeTilt: -0.04, lipFullness: 0.06 },
-  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'violet_makeup', jawVLine: 0.12, chinLength: -0.02, cheekSoftness: 0.08, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.08, lipFullness: 0.06 },
-  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'violet_makeup', jawVLine: 0.12, chinLength: -0.02, cheekSoftness: 0.08, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.08, lipFullness: 0.06 },
-  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'eurasian', jawVLine: 0.10, chinLength: 0.02, cheekSoftness: 0.02, noseBridge: 0.06, eyeAlmond: 0.05, eyeTilt: 0.06, lipFullness: 0.04 },
-  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'eurasian', jawVLine: 0.10, chinLength: 0.02, cheekSoftness: 0.02, noseBridge: 0.06, eyeAlmond: 0.05, eyeTilt: 0.06, lipFullness: 0.04 },
-  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'glam_makeup', jawVLine: 0.12, chinLength: -0.06, cheekSoftness: 0.12, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.08 },
-  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'glam_makeup', jawVLine: 0.12, chinLength: -0.06, cheekSoftness: 0.12, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.08 },
-  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'zoey', jawVLine: 0.08, chinLength: 0.06, cheekSoftness: -0.06, noseBridge: 0.10, eyeAlmond: 0.02, eyeTilt: 0.08, lipFullness: 0.02 },
-  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'zoey', jawVLine: 0.08, chinLength: 0.06, cheekSoftness: -0.06, noseBridge: 0.10, eyeAlmond: 0.02, eyeTilt: 0.08, lipFullness: 0.02 },
+  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: 0.04, chinLength: -0.02, cheekSoftness: 0.06, noseBridge: 0.02, eyeAlmond: 0.06, eyeTilt: -0.02, lipFullness: 0.02 },
+  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.04, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.02, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.05 },
+  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.04, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.02, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.05 },
+  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.10, chinLength: -0.02, cheekSoftness: 0.08, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.06, lipFullness: 0.05 },
+  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.10, chinLength: -0.02, cheekSoftness: 0.08, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.06, lipFullness: 0.05 },
+  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.08, chinLength: 0.02, cheekSoftness: 0.04, noseBridge: 0.05, eyeAlmond: 0.05, eyeTilt: 0.04, lipFullness: 0.04 },
+  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.08, chinLength: 0.02, cheekSoftness: 0.04, noseBridge: 0.05, eyeAlmond: 0.05, eyeTilt: 0.04, lipFullness: 0.04 },
+  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.10, chinLength: -0.05, cheekSoftness: 0.12, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.06 },
+  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.10, chinLength: -0.05, cheekSoftness: 0.12, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.06 },
+  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.08, chinLength: 0.04, cheekSoftness: -0.04, noseBridge: 0.08, eyeAlmond: 0.04, eyeTilt: 0.06, lipFullness: 0.02 },
+  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.08, chinLength: 0.04, cheekSoftness: -0.04, noseBridge: 0.08, eyeAlmond: 0.04, eyeTilt: 0.06, lipFullness: 0.02 },
 };
 
 /**
- * Stage 29 · Maps UI Eyebrow Style IDs to Official MakeHuman 3D Eyebrow Assets (`eyebrow001..012` .obj + .png)
+ * Stage 30 · Maps UI Eyebrow Style IDs to Official MakeHuman 3D Eyebrow Assets (`eyebrow001..012` .obj + .png)
  */
 const EYEBROW_STYLE_TO_MH_ASSET = {
-  cn_scholar_natural:  { assetId: 'eyebrow001', browDown: 0.0,  browUp: 0.0  },
-  kr_straight_mist:    { assetId: 'eyebrow008', browDown: 0.32, browUp: 0.0  },
-  kr_idol_arch:        { assetId: 'eyebrow002', browDown: 0.0,  browUp: 0.22 },
-  cn_willow_classical: { assetId: 'eyebrow012', browDown: 0.0,  browUp: 0.18 },
-  kr_sweet_droop:      { assetId: 'eyebrow010', browDown: 0.42, browUp: 0.0  },
-  cn_cold_sword:       { assetId: 'eyebrow005', browDown: 0.0,  browUp: 0.40 },
-  kr_wild_feathered:   { assetId: 'eyebrow003', browDown: 0.0,  browUp: 0.12 },
-  cn_tang_moth:        { assetId: 'eyebrow004', browDown: 0.20, browUp: 0.0  },
+  cn_scholar_natural:  { assetId: 'eyebrow012', browDown: 0.05, browUp: 0.0  },
+  kr_straight_mist:    { assetId: 'eyebrow001', browDown: 0.28, browUp: 0.0  },
+  kr_idol_arch:        { assetId: 'eyebrow010', browDown: 0.0,  browUp: 0.26 },
+  cn_willow_classical: { assetId: 'eyebrow002', browDown: 0.0,  browUp: 0.22 },
+  kr_sweet_droop:      { assetId: 'eyebrow004', browDown: 0.45, browUp: 0.0  },
+  cn_cold_sword:       { assetId: 'eyebrow003', browDown: 0.0,  browUp: 0.42 },
+  kr_wild_feathered:   { assetId: 'eyebrow005', browDown: 0.0,  browUp: 0.16 },
+  cn_tang_moth:        { assetId: 'eyebrow007', browDown: 0.22, browUp: 0.0  },
 };
 
 /**
- * Stage 29 · Maps Face Archetype IDs to 100% Real Downloaded MakeHuman / MPFB2 & Elvaerwyn `.target` Morph Weights
- * + Real Downloaded Photographic Skin Variant (ZERO manual math vertex pinching!).
+ * Stage 30 · Maps 10 Face Archetype Presets to Multi-Head Morph Blend Recipes (`blend_*`)
+ * + Wrinkle-Free Young Asian/Chinese/Korean/Eurasian Skin Variants.
  */
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
   cn_oval_scholar: {
-    skinVariant: 'young_asian',
-    targets: {
-      mh_head_oval: 0.34,
-      mh_head_round: 0.12,
-      mh_head_heart: 0.0,
-      mh_head_diamond: 0.0,
-      elvs_baby_cheeks: 0.10,
-      elvs_apple_cheeks: 0.08,
-      elvs_slim_cheeks: 0.0,
-    },
+    skinVariant: 'cn_scholar_natural',
+    headBlend: { blend_asian_youth: 0.55, blend_cn_scholar: 0.75, blend_cn_baby: 0.15, blend_kr_vline: 0.0, blend_cn_melon: 0.10, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
   },
   cn_round_babyface: {
-    skinVariant: 'natural_makeup',
-    targets: {
-      mh_head_round: 0.52,
-      mh_head_oval: 0.0,
-      mh_head_heart: 0.0,
-      mh_head_diamond: 0.0,
-      elvs_baby_cheeks: 0.42,
-      elvs_apple_cheeks: 0.28,
-      elvs_slim_cheeks: 0.0,
-    },
+    skinVariant: 'kr_dewy_peach',
+    headBlend: { blend_asian_youth: 0.65, blend_cn_scholar: 0.15, blend_cn_baby: 0.85, blend_kr_vline: 0.20, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
   },
   kr_idol_vline: {
-    skinVariant: 'violet_makeup',
-    targets: {
-      mh_head_round: 0.0,
-      mh_head_oval: 0.20,
-      mh_head_heart: 0.46,
-      mh_head_diamond: 0.15,
-      elvs_baby_cheeks: 0.0,
-      elvs_apple_cheeks: 0.36,
-      elvs_slim_cheeks: 0.22,
-    },
+    skinVariant: 'kr_chaebol_cool',
+    headBlend: { blend_asian_youth: 0.40, blend_cn_scholar: 0.10, blend_cn_baby: 0.0, blend_kr_vline: 0.85, blend_cn_melon: 0.25, blend_cn_royal: 0.15, blend_eurasian: 0.0 },
   },
   cn_classical_melon: {
-    skinVariant: 'eurasian',
-    targets: {
-      mh_head_round: 0.0,
-      mh_head_oval: 0.30,
-      mh_head_heart: 0.34,
-      mh_head_diamond: 0.0,
-      elvs_baby_cheeks: 0.0,
-      elvs_apple_cheeks: 0.12,
-      elvs_slim_cheeks: 0.32,
-    },
+    skinVariant: 'cn_jiangnan_jade',
+    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.45, blend_cn_baby: 0.0, blend_kr_vline: 0.15, blend_cn_melon: 0.85, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
   },
   kr_sweet_heart: {
-    skinVariant: 'glam_makeup',
-    targets: {
-      mh_head_round: 0.22,
-      mh_head_oval: 0.0,
-      mh_head_heart: 0.48,
-      mh_head_diamond: 0.0,
-      elvs_baby_cheeks: 0.20,
-      elvs_apple_cheeks: 0.42,
-      elvs_slim_cheeks: 0.0,
-    },
+    skinVariant: 'kr_firstlove_camellia',
+    headBlend: { blend_asian_youth: 0.60, blend_cn_scholar: 0.20, blend_cn_baby: 0.45, blend_kr_vline: 0.55, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
   },
   cn_cold_royal: {
-    skinVariant: 'zoey',
-    targets: {
-      mh_head_round: 0.0,
-      mh_head_oval: 0.24,
-      mh_head_heart: 0.0,
-      mh_head_diamond: 0.46,
-      elvs_baby_cheeks: 0.0,
-      elvs_apple_cheeks: 0.0,
-      elvs_slim_cheeks: 0.38,
-    },
+    skinVariant: 'cn_intellectual_olive',
+    headBlend: { blend_asian_youth: 0.25, blend_cn_scholar: 0.20, blend_cn_baby: 0.0, blend_kr_vline: 0.25, blend_cn_melon: 0.35, blend_cn_royal: 0.85, blend_eurasian: 0.0 },
+  },
+  cn_pure_campus_bell: {
+    skinVariant: 'cn_porcelain_ivory',
+    headBlend: { blend_asian_youth: 0.85, blend_cn_scholar: 0.50, blend_cn_baby: 0.25, blend_kr_vline: 0.35, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+  },
+  kr_waterglow_idol: {
+    skinVariant: 'kr_dewy_peach',
+    headBlend: { blend_asian_youth: 0.50, blend_cn_scholar: 0.0, blend_cn_baby: 0.60, blend_kr_vline: 0.75, blend_cn_melon: 0.20, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+  },
+  cn_tang_peony: {
+    skinVariant: 'cn_jiangnan_jade',
+    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.70, blend_cn_baby: 0.70, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+  },
+  eurasian_sculpted_mix: {
+    skinVariant: 'eurasian_velvet_rose',
+    headBlend: { blend_asian_youth: 0.15, blend_cn_scholar: 0.35, blend_cn_baby: 0.0, blend_kr_vline: 0.45, blend_cn_melon: 0.15, blend_cn_royal: 0.25, blend_eurasian: 0.65 },
   },
 };
 
@@ -441,13 +409,15 @@ function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natu
       child.userData.isEyebrowMesh = true;
       if (asset.texture && child.material) {
         child.material.map = asset.texture;
-        child.material.alphaTest = 0.02;
+        child.material.alphaTest = 0.015;
         child.material.transparent = true;
+        child.material.opacity = 0.96;
         child.material.needsUpdate = true;
       }
       if (asset.pos && child.geometry?.attributes?.position && child.geometry.attributes.position.array.length === asset.pos.length) {
         child.geometry.attributes.position.array.set(asset.pos);
         child.geometry.attributes.position.needsUpdate = true;
+        child.geometry.computeVertexNormals();
       }
       if (asset.uv && child.geometry?.attributes?.uv && child.geometry.attributes.uv.array.length === asset.uv.length) {
         child.geometry.attributes.uv.array.set(asset.uv);
@@ -457,9 +427,22 @@ function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natu
   });
 }
 
-function applyRealSkinVariantToGroup(rootGroup, skinVariantId = 'young_asian') {
+function resolveLegacySkinVariantId(skinVariantId = 'cn_porcelain_ivory') {
+  const legacyMap = {
+    young_asian: 'cn_scholar_natural',
+    natural_makeup: 'kr_dewy_peach',
+    violet_makeup: 'kr_chaebol_cool',
+    eurasian: 'cn_jiangnan_jade',
+    glam_makeup: 'kr_firstlove_camellia',
+    zoey: 'cn_intellectual_olive',
+  };
+  return legacyMap[skinVariantId] || skinVariantId || 'cn_porcelain_ivory';
+}
+
+function applyRealSkinVariantToGroup(rootGroup, skinVariantId = 'cn_porcelain_ivory') {
   if (!rootGroup || !realWebAssetsCache?.skins) return;
-  const tex = realWebAssetsCache.skins[skinVariantId] || realWebAssetsCache.skins.young_asian;
+  const resolvedId = resolveLegacySkinVariantId(skinVariantId);
+  const tex = realWebAssetsCache.skins[resolvedId] || realWebAssetsCache.skins.cn_porcelain_ivory;
   if (!tex) return;
   rootGroup.traverse((child) => {
     if (!child.isMesh) return;
@@ -486,12 +469,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const bangsPart = Math.max(-0.6, Math.min(0.6, Number(morphs.bangsParting ?? 0)));
   const hairVol = Math.max(-0.5, Math.min(0.9, Number(morphs.hairVolume ?? 0)));
   const hairLen = Math.max(-0.6, Math.min(0.9, Number(morphs.hairLength ?? 0)));
-  const sideburnRaw = Math.max(-0.6, Math.min(0.7, Number(morphs.sideburnLock ?? morphs.hairSideburnTuck ?? 0)));
-  const faceArchetype = morphs.faceArchetype || rootGroup.userData.faceArchetype || 'cn_oval_scholar';
-  const archCheekClearance = faceArchetype === 'cn_round_babyface' ? -0.08
-    : faceArchetype === 'kr_sweet_heart' ? -0.04
-    : (faceArchetype === 'kr_idol_vline' || faceArchetype === 'cn_classical_melon') ? 0.04 : 0.0;
-  const sideburn = Math.max(-0.6, Math.min(0.7, sideburnRaw + archCheekClearance));
+  const sideburn = Math.max(-0.6, Math.min(0.7, Number(morphs.sideburnLock ?? 0)));
   const hairFlare = Math.max(-0.7, Math.min(0.7, Number(morphs.hairFlare ?? 0)));
   const offX = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetX ?? 0)));
   const offY = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetY ?? 0)));
@@ -583,6 +561,14 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   });
 }
 
+export function setHeadSkinVariant(rootGroup, skinVariant = 'cn_porcelain_ivory') {
+  if (!rootGroup) return;
+  const resolved = resolveLegacySkinVariantId(skinVariant);
+  rootGroup.userData.skinVariant = resolved;
+  rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), skinVariant: resolved };
+  applyRealSkinVariantToGroup(rootGroup, resolved);
+}
+
 export function setHeadEyebrowStyle(rootGroup, eyebrowStyle = 'cn_scholar_natural') {
   if (!rootGroup) return;
   rootGroup.userData.eyebrowStyle = eyebrowStyle;
@@ -591,16 +577,39 @@ export function setHeadEyebrowStyle(rootGroup, eyebrowStyle = 'cn_scholar_natura
   applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
 }
 
-export function setHeadFaceArchetype(rootGroup, faceArchetype = 'cn_oval_scholar') {
+export function setHeadFaceArchetype(rootGroup, faceArchetype = 'cn_oval_scholar', options = {}) {
   if (!rootGroup) return;
   rootGroup.userData.faceArchetype = faceArchetype;
   const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
-  if (archSpec?.skinVariant) {
+  const blendRecipe = archSpec.headBlend || {};
+  const nextMorphs = {
+    ...(rootGroup.userData.currentMorphs || {}),
+    faceArchetype,
+    ...blendRecipe,
+  };
+  if (options.syncSkinVariant && archSpec.skinVariant) {
     rootGroup.userData.skinVariant = archSpec.skinVariant;
+    nextMorphs.skinVariant = archSpec.skinVariant;
     applyRealSkinVariantToGroup(rootGroup, archSpec.skinVariant);
   }
-  rootGroup.userData.currentMorphs = { ...(rootGroup.userData.currentMorphs || {}), faceArchetype };
-  applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
+  rootGroup.userData.currentMorphs = nextMorphs;
+  applyHeadMorphsToGroup(rootGroup, nextMorphs);
+}
+
+export function getHeadBlendStateFromGroup(rootGroup) {
+  const m = rootGroup?.userData?.currentMorphs || {};
+  const faceArchetype = m.faceArchetype || rootGroup?.userData?.faceArchetype || 'cn_oval_scholar';
+  const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
+  const def = archSpec.headBlend || {};
+  return {
+    blend_asian_youth: Number(m.blend_asian_youth ?? def.blend_asian_youth ?? 0.55),
+    blend_cn_scholar:  Number(m.blend_cn_scholar  ?? def.blend_cn_scholar  ?? 0.45),
+    blend_cn_baby:     Number(m.blend_cn_baby     ?? def.blend_cn_baby     ?? 0.0),
+    blend_kr_vline:    Number(m.blend_kr_vline    ?? def.blend_kr_vline    ?? 0.0),
+    blend_cn_melon:    Number(m.blend_cn_melon    ?? def.blend_cn_melon    ?? 0.0),
+    blend_cn_royal:    Number(m.blend_cn_royal    ?? def.blend_cn_royal    ?? 0.0),
+    blend_eurasian:    Number(m.blend_eurasian    ?? def.blend_eurasian    ?? 0.0),
+  };
 }
 
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
@@ -616,13 +625,24 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   rootGroup.userData.eyebrowStyle = eyebrowStyle;
 
   const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
-  const archTargets = archSpec.targets || {};
+  const defBlend = archSpec.headBlend || {};
   const browSpec = EYEBROW_STYLE_TO_MH_ASSET[eyebrowStyle] || EYEBROW_STYLE_TO_MH_ASSET.cn_scholar_natural;
 
-  const skinVariant = m.skinVariant || rootGroup.userData.skinVariant || bias.skinVariant || archSpec.skinVariant || 'young_asian';
+  const skinVariant = resolveLegacySkinVariantId(
+    m.skinVariant || rootGroup.userData.skinVariant || bias.skinVariant || archSpec.skinVariant || 'cn_porcelain_ivory'
+  );
   rootGroup.userData.skinVariant = skinVariant;
   applyRealSkinVariantToGroup(rootGroup, skinVariant);
   applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle);
+
+  const clampBlend = (val) => Math.max(0.0, Math.min(1.2, Number(val) || 0.0));
+  const wAsianYouth = clampBlend(m.blend_asian_youth ?? defBlend.blend_asian_youth ?? 0.50);
+  const wCnScholar  = clampBlend(m.blend_cn_scholar  ?? defBlend.blend_cn_scholar  ?? 0.0);
+  const wCnBaby     = clampBlend(m.blend_cn_baby     ?? defBlend.blend_cn_baby     ?? 0.0);
+  const wKrVline    = clampBlend(m.blend_kr_vline    ?? defBlend.blend_kr_vline    ?? 0.0);
+  const wCnMelon    = clampBlend(m.blend_cn_melon    ?? defBlend.blend_cn_melon    ?? 0.0);
+  const wCnRoyal    = clampBlend(m.blend_cn_royal    ?? defBlend.blend_cn_royal    ?? 0.0);
+  const wEurasian   = clampBlend(m.blend_eurasian    ?? defBlend.blend_eurasian    ?? 0.0);
 
   const clampHarmony = (val, maxAbs = 0.28) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
 
@@ -649,16 +669,16 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const eyeWideVal = Math.max(0, Math.min(0.85, Number(m.eyeWide ?? 0)));
 
   const targetWeights = {
-    // 9 Real Downloaded MakeHuman / MPFB2 & Elvaerwyn Artist `.target` Morphs
-    mh_head_round: Number(archTargets.mh_head_round ?? 0),
-    mh_head_oval: Number(archTargets.mh_head_oval ?? 0),
-    mh_head_heart: Number(archTargets.mh_head_heart ?? 0),
-    mh_head_diamond: Number(archTargets.mh_head_diamond ?? 0),
-    elvs_baby_cheeks: Number(archTargets.elvs_baby_cheeks ?? 0),
-    elvs_apple_cheeks: Number(archTargets.elvs_apple_cheeks ?? 0),
-    elvs_slim_cheeks: Number(archTargets.elvs_slim_cheeks ?? 0),
-    mh_brow_down: Number(browSpec.browDown ?? 0),
-    mh_brow_up: Number(browSpec.browUp ?? 0),
+    // 7 Multi-Head Morph Blend Channels + 2 Brow Bone Channels (100% Real MPFB2/Elvaerwyn `.target` Morphs)
+    mh_head_asian_youth: wAsianYouth * 0.72,
+    mh_head_oval:        wCnScholar * 0.68,
+    mh_head_round:       wCnBaby * 0.72,
+    mh_head_heart:       wKrVline * 0.72,
+    mh_head_melon:       wCnMelon * 0.72,
+    mh_head_diamond:     wCnRoyal * 0.68,
+    mh_head_eurasian:    wEurasian * 0.85,
+    mh_brow_down:        Number(browSpec.browDown ?? 0),
+    mh_brow_up:          Number(browSpec.browUp ?? 0),
     // Official MakeHuman Base `.target` Sliders
     face_jaw_width_decr: jawV > 0 ? jawV : 0,
     face_jaw_width_incr: jawV < 0 ? -jawV : 0,
@@ -834,22 +854,50 @@ export function updateHairSheen(node, value) {
   node?.getObjectByName('HairGroup')?.traverse(child => {
     if (!child.isMesh || !child.material?.userData?.builtInHair) return;
     if (child.name === 'ScalpRootFeatherCap') return;
-    child.material.sheen = Math.min(0.22, sheen * 0.20);
-    child.material.roughness = Math.max(0.36, 0.56 - sheen * 0.16);
-    child.material.anisotropy = 0.72 + sheen * 0.24;
+    child.material.sheen = Math.min(0.18, sheen * 0.16);
+    child.material.roughness = Math.max(0.42, 0.62 - sheen * 0.16);
+    child.material.anisotropy = 0.45 + sheen * 0.25;
     child.material.clearcoat = 0.0;
   });
 }
 
 function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
-  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216']);
-  const baseColor = new THREE.Color(legacyDarkSet.has(normalizedHex) ? '#151418' : normalizedHex);
+  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417']);
+  const baseColor = new THREE.Color(legacyDarkSet.has(normalizedHex) ? '#121216' : normalizedHex);
   const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
   if (lum < 0.08) {
-    return new THREE.Color('#17161b');
+    return new THREE.Color('#101115');
   }
   return baseColor;
+}
+
+function smoothHairCardNormals(geometry) {
+  if (!geometry?.attributes?.position || !geometry?.attributes?.normal || geometry.userData?.normalsSmoothed) return;
+  geometry.userData = geometry.userData || {};
+  geometry.userData.normalsSmoothed = true;
+  const pos = geometry.attributes.position;
+  const norm = geometry.attributes.normal;
+  const hcX = 0.0, hcY = 0.015, hcZ = -0.015;
+  for (let i = 0; i < pos.count; i++) {
+    const rx = pos.getX(i) - hcX;
+    const ry = pos.getY(i) - hcY;
+    const rz = pos.getZ(i) - hcZ;
+    const rLen = Math.hypot(rx, ry, rz) || 1.0;
+    const ox = rx / rLen, oy = ry / rLen, oz = rz / rLen;
+
+    let nx = norm.getX(i), ny = norm.getY(i), nz = norm.getZ(i);
+    // Ensure raw card normal points generally outward from head dome so adjacent cards never flip 180 deg
+    if (nx * ox + ny * oy + nz * oz < -0.15) {
+      nx = -nx; ny = -ny; nz = -nz;
+    }
+    const bx = nx * 0.42 + ox * 0.58;
+    const by = ny * 0.42 + oy * 0.58;
+    const bz = nz * 0.42 + oz * 0.58;
+    const bLen = Math.hypot(bx, by, bz) || 1.0;
+    norm.setXYZ(i, bx / bLen, by / bLen, bz / bLen);
+  }
+  norm.needsUpdate = true;
 }
 
 function fitImportedHairScene(scene) {
@@ -1150,6 +1198,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (!child.isMesh) return;
       const g = child.geometry;
       if (g?.attributes?.position) {
+        smoothHairCardNormals(g);
         totalVerts += g.attributes.position.count;
         totalTris += g.index ? Math.floor(g.index.count / 3) : Math.floor(g.attributes.position.count / 3);
       }
@@ -1284,6 +1333,9 @@ export async function buildCollectibleHeadNode(config = {}) {
   rootGroup.userData.basePreset = presetKey;
   rootGroup.userData.faceArchetype = config.faceArchetype || config.morphs?.faceArchetype || presetBias.faceArchetype || 'cn_oval_scholar';
   rootGroup.userData.eyebrowStyle = config.eyebrowStyle || config.morphs?.eyebrowStyle || presetBias.eyebrowStyle || 'cn_scholar_natural';
+  rootGroup.userData.skinVariant = resolveLegacySkinVariantId(
+    config.skinVariant || config.morphs?.skinVariant || presetBias.skinVariant || 'cn_porcelain_ivory'
+  );
   rootGroup.userData.hairColor = config.hairColor || config.materials?.hairColorHex || '#121216';
   rootGroup.userData.deadExpression = config.deadExpression || config.morphs?.deadExpression || 'dead_calm';
   rootGroup.userData.neckClearance = Number(config.neckClearance ?? 0.45);
@@ -1292,6 +1344,7 @@ export async function buildCollectibleHeadNode(config = {}) {
     ...(config.morphs || {}),
     faceArchetype: rootGroup.userData.faceArchetype,
     eyebrowStyle: rootGroup.userData.eyebrowStyle,
+    skinVariant: rootGroup.userData.skinVariant,
     deadExpression: config.deadExpression || config.morphs?.deadExpression || 'dead_calm',
   };
   const materials = config.materials || {};
@@ -1360,7 +1413,7 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (skinNorm) {
         skinNorm.anisotropy = 16;
       }
-      const skinVariantId = presetBias.skinVariant || 'young_asian';
+      const skinVariantId = rootGroup.userData.skinVariant || presetBias.skinVariant || 'cn_porcelain_ivory';
       rootGroup.userData.skinVariant = skinVariantId;
       const realSkinMap = realWebAssetsCache?.skins?.[skinVariantId] || rawSkinMap;
       const skinMicro = createSkinMicroMaps();
@@ -1370,20 +1423,20 @@ export async function buildCollectibleHeadNode(config = {}) {
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.88, 0.88),
+        normalScale: new THREE.Vector2(0.42, 0.42),
         roughnessMap: skinMicro.roughnessMap,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Math.max(0.56, Number(materials.skinRoughness ?? 0.66)),
+        roughness: Math.max(0.58, Number(materials.skinRoughness ?? 0.68)),
         metalness: 0.0,
-        sheen: 0.34,
-        sheenRoughness: 0.82,
-        sheenColor: new THREE.Color('#e6b2aa'),
+        sheen: 0.38,
+        sheenRoughness: 0.85,
+        sheenColor: new THREE.Color('#f2c0b8'),
         clearcoat: 0.0,
-        clearcoatRoughness: 0.58,
-        specularIntensity: 0.24,
-        specularColor: new THREE.Color('#e2eaf4'),
-        ior: 1.39,
-        envMapIntensity: 0.18,
+        clearcoatRoughness: 0.62,
+        specularIntensity: 0.20,
+        specularColor: new THREE.Color('#f5ece8'),
+        ior: 1.38,
+        envMapIntensity: 0.24,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });

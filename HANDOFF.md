@@ -568,6 +568,41 @@
      - 修复：① **全面淘汰全部 `toigo_*` 单层网格**，将 28 款发型全部替换为 `culturalibre_hair_18`、`o4saken_chinesebob01` (1,355 发片)、`o4saken_long01` (1,018 发片)、`punkduck_alpha7_long`、`elvs_daisy_hair`、`elvs_wavy_bob` (120 发片) 等真正的多层发片模型；② 废除 `tanh` 挤压与正弦折波，改用平滑线性纵向比例映射与肩部内收垂顺约束；③ 为中低面数发型自动构建 **3D 内部旋转交错暗部发芯层 (`Inner Volumetric Under-Lock Layer`，内缩 `-1.8mm` 并旋转 `4.2°`)**，配合着色器顶点法线球面化融合 (`mix(objectNormal, cranSphereN, 0.62)`)、径向深度环境光遮蔽 (`innerDepthAO`) 与 Pass 2 外扩 `+0.65mm` 空气感碎发壳层，形成饱满厚实的三维真发体积。
   4. **100% 无损合入 `7e3cf84` (Stage 29)**：完整保留 `7e3cf84` 的 `daz_asian_head_base.glb`（9 组真实 MakeHuman/Elvaerwyn `.target` 脸型、6 套真实 2K 摄影级女性皮肤贴图、`Aksel_Skin_NRM.png` 毛孔法线、8 款真实 3D 眉毛 `.obj` 模型）、去硅胶微孔次表面散射着色器与防越界锁死机制。
 
+### [2026-10-13 Stage 31] 彻底消灭“老太婆皱纹”与欧风面孔 + 烘焙官方 `asian-female-young.target` 少女基底与 7 通道多头模自由混合器 (`头部混合`) + 彻底修复“红眼睛” (`Eyes` 3 Primitives 清零) + 修复皮肤材质与 3D 眉毛实时切换 (`petEntry.node` & `eyebrow007`) + 新增建筑滚轮推拉远近 (`滚轮切换远近`) + 14 套电影色调/4 种 HDR 环境光场/85mm 黑柔镜柔焦与景深模糊滑杆（建立在 `a4ddbf6` 之上）
+- **1. 彻底解决“为什么现在出现老太婆了？好多皱纹”与“而且你这脸感觉都太欧风了。能不能亚洲-中国-韩风-各种都来点？我记得以前是有其他的模型的，你也保留，并且允许头部混合”**：
+  - **根因定位 (`Aksel_Skin_NRM.png` + `37f0260` 欧式基底 + 银白发片高光)**：
+    1. Stage 29 引入的 `Aksel_Skin_NRM.png` (`mindfront_aksel_skin`) 实为一张 **老年白人男性的深皱纹法线贴图**（法令纹、额头抬头纹、眼袋与下巴胡茬法线偏差高达 `±52`），叠加 `0.028` 屏幕偏导数微孔后把所有年轻女性角色都变成了满脸沟壑的“老太婆”；
+    2. `37f0260` 的基底网格原本烘焙的是 `caucasian-female-young.target`（高眉弓、深眼窝、窄高鼻梁的欧风骨相），且 `violet_makeup` 等欧美浓妆贴图进一步加剧了欧风感；
+    3. 28 款灰阶发丝贴图 (`RGB ~ 177`) 在 `DoubleSide` 背面反射高强度白色高光 (`specularIntensity: 0.72`, `clearcoat: 0.18`)，导致深色头发泛出银白色三角面高光，视觉上酷似白发老妪。
+  - **解决方案 (`scripts/build_real_web_head_assets.py` & `public/models/daz_asian_head_base.glb` 5.48 MB & `src/three/collectibleHeadAssembler.js`)**：
+    - **零皱纹年轻少女切线法线贴图 (`build_young_smooth_skin_normal_map`)**：彻底弃用老年男性的 `Aksel_Skin_NRM.png`，基于年轻无瑕女性皮肤细腻肌理提取 **零皱纹年轻少女微孔法线贴图**（`normalScale: (0.42, 0.42)`，完全无抬头纹、无眼袋、无法令纹、无胡茬），并将 `photorealLighting.js` 中屏幕空间微孔强度从 `0.028` 降至细腻婴儿肌区间 `0.0065`。
+    - **眼眶对齐烘焙官方 `asian-female-young.target` 东亚年轻女性基底 + 保留欧风头模通道 + 7 通道多头模自由混合器 (`HEAD_BLEND_CHANNELS`)**：
+      - 将官方 MPFB2 的 `macrodetails/asian-female-young.target` 与眼圈 (`Eyelashes` 眼睑顶点) 1:1 刚体对齐（残差仅 `0.049 mm`，零眼球错位、零颈部错位），以 `58%` 权重直接烘焙进 `daz_asian_head_base.glb` 基底网格，使默认头模呈现纯正的 **中国/韩系 18–21 岁年轻少女柔和骨相**；
+      - 在 `HeadSkin`、`Eyebrows` 与 `Eyelashes` 的 9 个艺术家 `.target` Morph 通道中同时保留并注入：`mh_asian_youth`（中式清纯少女头模）、`mh_cn_scholar`（中式书卷鹅蛋头模）、`mh_cn_baby`（中韩胶原娃娃头模）、`mh_kr_vline`（韩系心形小V脸头模）、`mh_cn_melon`（江南古典瓜子头模）、`mh_cn_royal`（中式清冷御姐头模）、`mh_caucasian_blend`（以前版本的欧风/混血立体头模）以及 `mh_brow_down` / `mh_brow_up`；
+      - 升级为 **10 款预设头模配方 (`FACE_ARCHETYPE_CATALOG`)** + **7 通道多头模自由混合器 (`#vcd-head-blend-sliders` & `#studio-head-blend-sliders`)**，允许玩家任意拖动滑杆将中式少女、韩风V脸、圆润娃娃脸、江南瓜子脸、清冷御姐与欧风立体头模按任意比例自由混合！
+    - **发片球面法线平滑与深色黑色素着色器 (`smoothHairCardNormals` & `marschner_hair_v30`)**：将发片顶点法线与从头心辐射的球面穹顶法线做 `52%` 融合，消除交叉发片的硬折角，并在 `injectMarschnerHairShader` 中抑制背面高光 (`gl_FrontFacing ? 1.0 : 0.08`)、关闭 `clearcoat: 0`，使乌黑秀发呈现柔顺深邃的真发丝光泽。
+- **2. 彻底修复“红眼睛” Bug（回应“为什么有红眼睛？你要不再仔细看看效果”）**：
+  - **根因定位 (`Mesh 4: Eyes` 的 3 个 Primitives)**：`daz_asian_head_base.glb` 中的 `Mesh 4 (Eyes)` 共有 **3 个图元 (`primitives[0]` 360 顶点外巩膜、`primitives[1]` 232 顶点内虹膜/瞳孔、`primitives[2]` 524 顶点角膜)**。Stage 29 在复用 morph target 槽位 `2, 3, 14, 15, 20, 21, 28, 29, 31`（原为 `look_left`/`look_right`/`look_down`）时，只清零了 `primitives[0]`，漏掉了 `primitives[1]` 和 `primitives[2]`！导致当施加头型 morph 权重时，内层虹膜 (`prim 1`) 被原 `look_left`/`look_right` 侧向拉偏，直接露出了眼球后壁鲜红色的巩膜内腔（形成骇人的“红眼睛”）。
+  - **彻底修复 (`scripts/build_real_web_head_assets.py`)**：遍历 `Mesh 4 (Eyes)` 的 **全部 3 个 primitives (`prim 0, 1, 2`)**，将所有复用槽位 (`[2, 3, 14, 15, 20, 21, 28, 29, 31]`) 的位移增量 100% 物理归零，眼球虹膜与瞳孔在任何头型混合下均严丝合缝、清澈深邃，彻底杜绝红眼伪影。
+- **3. 彻底修复“皮肤材质以及眉毛没法切换” + 提供 8 款无皱纹中韩少女皮肤材质与 8 款高对比度 3D 眉毛（回应“以及现在皮肤材质以及眉毛没法切换”）**：
+  - **三大根因定位与修复**：
+    1. `src/main.js` 中桌面胶囊条 (`[data-pill-face]` / `[data-pill-brow]`) 与定制器抽屉 (`#vcd-sel-face-archetype` / `#vcd-sel-eyebrow-style`) 之前访问的是 `petEntry.headNode`，而 `DesktopBoxSpaceEngine` 实际将头模 `THREE.Group` 存储在 `petEntry.node` 上（`petEntry.headNode` 为 `undefined`），导致在桌面端切换脸型、皮肤或眉毛完全不触发！现已在 `DesktopBoxSpaceEngine` 中同时挂载 `node` 与 `headNode`，并在 `src/main.js` 中统一使用 `const headGroup = petEntry?.node || petEntry?.headNode;`；
+    2. `EYEBROW_STYLE_TO_MH_ASSET` 此前将 `kr_straight_mist` 映射到不存在的 `eyebrow008`（GLB 实际内嵌的是 `eyebrow001, 002, 003, 004, 005, 007, 010, 012`），现已修正映射并在切换眉毛 `.obj` 顶点后调用 `computeVertexNormals()`，同时在 `build_real_web_head_assets.py` 中强化了 8 款眉毛贴图的毛流对比度与各自独立的眉色冷暖调，使 8 款 3D 眉毛切换立竿见影；
+    3. 新增 `SKIN_MATERIAL_CATALOG`（8 款无皱纹中式/韩系/混血少女皮肤材质：`🌸 中式冷白凝脂肌`、`📖 岭南书卷暖玉肌(三颗痣)`、`🍑 韩系水光蜜桃肌`、`✨ 韩系财阀千金冷白肌`、`🌙 江南古典羊脂玉肌`、`💖 韩系初恋雪瓷肌`、`❄️ 中式清冷高智象牙肌`、`🌍 欧亚轻混血丝绒奶油肌`，且对非方尧平皮肤自动去除了底图自带的右颊三颗痣并精准对齐了红润唇色），在左下角桌宠胶囊条 (`[data-pill-skin]`)、定制器抽屉 (`#vcd-sel-skin-variant`) 与工坊 (`#sel-skin-variant`) 均可独立实时秒切皮肤材质！
+- **4. 新增场景 3D 建筑/层架/摆件的鼠标滚轮远近深度推拉（回应“建筑也最好能够滚轮切换远近”）**：
+  - 在 `src/three/desktopBoxSpaceEngine.js` 的 `wheel` 事件监听器中，新增对所有可放置 3D 建筑 (`建筑`：玻璃钟罩、丝绒圣杯、福尔马林缸、水晶方盒、解剖浅盘、断头木托、伴学层架与桌面摆件) 的滚轮 Z 轴远近推拉支持：
+    - 当鼠标悬停在任意 3D 建筑上滚动滚轮（或选中建筑后滚动滚轮），建筑沿 Z 轴平滑推远/拉近 (`hitStruct.pos.z + stepCm`) 并自动按透视比例缩放、自动限制在边框安全范围内；
+    - 若收纳建筑内封存有人头 (`occupiedByPetId`)，或伴学层架 (`isShelfStructure`) 上搁置有人头，人头会 **100% 同步跟随建筑一起前后推拉远近**，并实时刷新建筑头顶悬浮条的 `Z` 深度读数！
+- **5. 彻底消除 3D 游戏感/硅胶感：新增 14 套电影色调预设、4 种 HDR 全景光场、85mm 黑柔镜柔焦扩散 (`uSoftFocus`) 与大光圈景深虚化 (`uDepthBlur`)（回应“怎么才能让它看上去不像3D游戏？我觉得是色调，HDR，模糊，各种效果，要不你弄多几个预设，然后支持调整？”）**：
+  - **光学柔焦与景深后处理着色器 (`src/three/beautyPostChain.js`)**：
+    - 在 `BeautyGradeShader` 中新增 **9-Tap Tiffen Black Pro-Mist 电影黑柔镜皮肤柔焦扩散 (`uSoftFocus`)**：对面部皮肤与多边形边缘做保留微对比度的柔光扩散，彻底抹除 WebGL 3D 模型的几何生硬棱角与数码锐利感；
+    - 新增 **85mm f/1.2 人像定焦大光圈景深边缘散景模糊 (`uDepthBlur`)**、**光学镜头径向微色散 (`uChromatic`)** 与 **胶片高光柔和肩部滚降 (`Filmic Highlight Shoulder Roll-Off`)**。
+  - **4 种摄影棚/电影级全景 HDR 环境光场 (`src/three/photorealLighting.js` · `HDR_ENVIRONMENT_CATALOG`)**：
+    - 内置 `📸 85mm 影棚双柔光箱 + 环形眼神光 HDR (softbox_portrait)`、`🌅 落日暖金胶片逆光 HDR (golden_hour)`、`🌧️ 雨夜书房天光漫射 + 暖台灯 HDR (rainy_window)`、`🏛️ 卢浮宫天鹅绒展柜穹顶 HDR (museum_velvet)`，并在场景下方新增 **人像下颌银白反光板补光灯 (`lowerBounce`)**，彻底消除下巴与眼窝下方的死黑断层。
+  - **14 套大师级电影色调与光学镜头预设 (`VISUAL_STYLE_PRESETS`) + 全套可调滑杆**：
+    - 默认启用 **`📸 85mm 影棚柔焦人像写真 (cinema_85mm_portrait)`**，并提供 `✨ 韩系水光画报`、`☁️ 黑柔镜奶油柔焦`、`📷 柯达 Portra 400 胶卷`、`🍃 富士 Eterna 电影空气感`、`🎞️ 王家卫暖金暗调胶片`、`🌅 暮色琥珀逆光 HDR`、`🌧️ 雨夜书房窗畔`、`🌸 晨光凝脂无影箱` 等 **14 套一键预设**；
+    - 定制器抽屉提供 **18 项全自由度实时滑杆**（含新增的 `🌫️ 电影黑柔镜柔焦扩散模糊`、`📷 85mm 大光圈景深虚化模糊`、`🌈 光学定焦微色散`、`🌐 HDR 环境柔光箱漫反射强度` 等），玩家可随时一键切换或深度微调。
+
 
 
 

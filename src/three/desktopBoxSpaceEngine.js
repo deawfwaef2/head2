@@ -629,6 +629,10 @@ export class DesktopBoxSpaceEngine {
     });
   }
 
+  emitPetsChange() {
+    this.onPetStateUpdate(this.getSummonedList());
+  }
+
   updateSettings(newPartial = {}) {
     Object.assign(this.settings, newPartial);
     this.updateCameraProjection();
@@ -696,6 +700,7 @@ export class DesktopBoxSpaceEngine {
       id: collectible.id,
       collectible,
       node: headNode,
+      headNode,
       pos: new THREE.Vector3(startX, startY, startZ),
       vel: new THREE.Vector3(0, 0, 0),
       baseScale,
@@ -1391,8 +1396,13 @@ export class DesktopBoxSpaceEngine {
       this.updateMouseCoords(e);
       if (this.isBlockedByUI(e)) return;
 
-      const hitPet = this.pickPetAtCursor() || (this.hoveredPetId ? this.pets.get(this.hoveredPetId) : null);
-      if (!hitPet) return;
+      const directStruct = this.pickStructureAtCursor();
+      const directPet = this.pickPetAtCursor();
+      const fallbackStruct = !directPet && this.selectedStructureId ? this.structures.get(this.selectedStructureId) : null;
+      const hitStruct = directStruct || fallbackStruct;
+      const hitPet = directPet || (!hitStruct && this.hoveredPetId ? this.pets.get(this.hoveredPetId) : null);
+
+      if (!hitPet && !hitStruct) return;
 
       e.preventDefault();
       e.stopPropagation();
@@ -1402,6 +1412,82 @@ export class DesktopBoxSpaceEngine {
       const baseB = this.getBoxBounds();
       const mag = Math.min(11.5, Math.max(5.0, Math.abs(e.deltaY) * 0.065));
       const stepCm = (e.deltaY > 0 ? -mag : mag) * this.settings.wheelDepthStep;
+
+      // Case A: Mouse wheel on a Placed 3D Structure / Building (Container, Shelf, or Prop)
+      if (hitStruct && (!directPet || directStruct)) {
+        this.selectedStructureId = hitStruct.id;
+        const prevZ = hitStruct.pos.z;
+        const nextScale = hitStruct.isStageGenerated
+          ? 1.0
+          : this.computeMacroTargetScale(prevZ + stepCm, 0.76);
+        const bz = this.getBoxBoundsAtZ(prevZ + stepCm, nextScale);
+        const panX = hitStruct.pos.x / Math.max(1, bz.maxX);
+
+        if (prevZ + stepCm < bz.minZ) {
+          hitStruct.pos.z = bz.minZ;
+          soundEngine.playBoxWallCollision(0.75, 'back_wall', panX);
+          this.onBoxCollisionVisual('back');
+        } else if (prevZ + stepCm > bz.maxZ) {
+          hitStruct.pos.z = bz.maxZ;
+          soundEngine.playBoxWallCollision(0.85, 'front_glass', panX);
+          this.onBoxCollisionVisual('front');
+        } else {
+          hitStruct.pos.z = prevZ + stepCm;
+          const totalRange = Math.max(1, baseB.maxZ - baseB.minZ);
+          const depthRatio = (baseB.maxZ - hitStruct.pos.z) / totalRange;
+          soundEngine.playDepthTick(depthRatio, panX);
+        }
+
+        const deltaZ = hitStruct.pos.z - prevZ;
+        hitStruct.scale = hitStruct.isStageGenerated
+          ? 1.0
+          : this.computeMacroTargetScale(hitStruct.pos.z, 0.76);
+        if (!hitStruct.isShelfStructure) {
+          hitStruct.pos.y = this.getSupportSurfaceY(hitStruct.pos.x, hitStruct.pos.y + 4, hitStruct.pos.z, hitStruct.scale, 0);
+        }
+        this.clampStructureToBounds(hitStruct);
+        hitStruct.node.position.copy(hitStruct.pos);
+        hitStruct.node.scale.setScalar(hitStruct.scale);
+
+        // If this container structure holds a snapped head, move the head in lockstep
+        if (hitStruct.occupiedByPetId && this.pets.has(hitStruct.occupiedByPetId)) {
+          const occPet = this.pets.get(hitStruct.occupiedByPetId);
+          occPet.pos.z = hitStruct.pos.z;
+          occPet.pos.x = hitStruct.pos.x;
+          occPet.targetScale = hitStruct.scale;
+          const socketLocalY = hitStruct.node.userData.headSocketLocalY ?? 13.5;
+          occPet.pos.y = hitStruct.pos.y + socketLocalY * hitStruct.scale;
+          this.clampPetToBounds(occPet);
+          occPet.node.position.copy(occPet.pos);
+        } else if (hitStruct.isShelfStructure && hitStruct.platformRef && Math.abs(deltaZ) > 1e-4) {
+          // If this is a shelf structure, carry any heads resting on this shelf along in Z!
+          const plat = hitStruct.platformRef;
+          for (const p of this.pets.values()) {
+            if (p.snappedStructureId) continue;
+            const bottomOff = (p.node?.userData?.baseBottomOffset ?? -10.8) * p.targetScale;
+            const footY = p.pos.y + bottomOff;
+            if (
+              Math.abs(footY - plat.y) < 5.5 &&
+              p.pos.x >= plat.minX - 6 &&
+              p.pos.x <= plat.maxX + 6 &&
+              Math.abs(p.pos.z - prevZ) <= 14
+            ) {
+              p.pos.z = hitStruct.pos.z;
+              p.targetScale = this.computeMacroTargetScale(p.pos.z, p.baseScale || 0.76);
+              this.clampPetToBounds(p);
+              p.node.position.copy(p.pos);
+            }
+          }
+        }
+
+        this.refreshHoverHUD();
+        this.refreshSelectedStructureHUD();
+        this.onStructuresUpdate(this.getPlacedStructuresList());
+        this.onPetStateUpdate(this.getSummonedList());
+        return;
+      }
+
+      // Case B: Mouse wheel on a Character Head
       const nextZ = hitPet.pos.z + stepCm;
       const bz = this.getBoxBoundsAtZ(nextZ, hitPet.targetScale);
       const panX = hitPet.pos.x / Math.max(1, bz.maxX);

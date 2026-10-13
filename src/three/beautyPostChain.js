@@ -20,18 +20,21 @@ export const BeautyGradeShader = {
     tDiffuse: { value: null },
     tSourceAlpha: { value: null },
     uResolution: { value: new THREE.Vector2(1280, 720) },
-    uVignette: { value: 0.36 },
-    uSaturation: { value: 0.96 },
-    uContrast: { value: 1.18 },
-    uWarmth: { value: 0.10 },
-    uSharpen: { value: 0.64 },
-    uFilmGrain: { value: 0.16 },
-    uTyndall: { value: 0.75 },
-    uVintagePhoto: { value: 0.42 },
+    uVignette: { value: 0.30 },
+    uSaturation: { value: 0.98 },
+    uContrast: { value: 1.08 },
+    uWarmth: { value: 0.06 },
+    uSharpen: { value: 0.24 },
+    uSoftFocus: { value: 0.42 },
+    uDepthBlur: { value: 0.28 },
+    uChromatic: { value: 0.18 },
+    uFilmGrain: { value: 0.10 },
+    uTyndall: { value: 0.52 },
+    uVintagePhoto: { value: 0.26 },
     uTyndallAngle: { value: -0.58 },
-    uTyndallColor: { value: new THREE.Vector3(1.0, 0.92, 0.80) },
-    uTint: { value: new THREE.Vector3(1.01, 0.99, 0.95) },
-    uShadowTint: { value: new THREE.Vector3(0.05, 0.035, 0.045) },
+    uTyndallColor: { value: new THREE.Vector3(1.0, 0.92, 0.82) },
+    uTint: { value: new THREE.Vector3(1.01, 0.995, 0.98) },
+    uShadowTint: { value: new THREE.Vector3(0.04, 0.03, 0.045) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -49,6 +52,9 @@ export const BeautyGradeShader = {
     uniform float uContrast;
     uniform float uWarmth;
     uniform float uSharpen;
+    uniform float uSoftFocus;
+    uniform float uDepthBlur;
+    uniform float uChromatic;
     uniform float uFilmGrain;
     uniform float uTyndall;
     uniform float uVintagePhoto;
@@ -58,27 +64,71 @@ export const BeautyGradeShader = {
     uniform vec3 uShadowTint;
     varying vec2 vUv;
 
+    vec3 sampleRingBlur(vec2 uv, vec2 radiusTexel) {
+      vec3 sum = texture2D(tDiffuse, uv).rgb * 0.20;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 1.0,  0.0) * radiusTexel, 0.002, 0.998)).rgb * 0.12;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-1.0,  0.0) * radiusTexel, 0.002, 0.998)).rgb * 0.12;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.0,  1.0) * radiusTexel, 0.002, 0.998)).rgb * 0.12;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.0, -1.0) * radiusTexel, 0.002, 0.998)).rgb * 0.12;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.707,  0.707) * radiusTexel * 1.45, 0.002, 0.998)).rgb * 0.08;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.707,  0.707) * radiusTexel * 1.45, 0.002, 0.998)).rgb * 0.08;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.707, -0.707) * radiusTexel * 1.45, 0.002, 0.998)).rgb * 0.08;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.707, -0.707) * radiusTexel * 1.45, 0.002, 0.998)).rgb * 0.08;
+      return sum;
+    }
+
     void main() {
-      vec4 c = texture2D(tDiffuse, vUv);
-      vec3 col = c.rgb;
-      if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
-      col = clamp(col, 0.0, 2.0);
+      vec2 texel = 1.0 / max(uResolution, vec2(256.0));
       float srcAlpha = texture2D(tSourceAlpha, vUv).r;
 
-      // 1. 5-Tap Micro-Detail Unsharp Mask (sharpens real 2K skin pores, eyebrow hairs, eyelashes & iris)
-      vec2 texel = 1.0 / max(uResolution, vec2(256.0));
+      // 0. Subtle Optical Lens Chromatic Dispersion (85mm f/1.4 optical realism)
+      vec2 centerVec = vUv - vec2(0.5);
+      float radialDist = length(centerVec);
+      vec2 caOffset = centerVec * radialDist * (uChromatic * 0.0042) * smoothstep(0.05, 0.5, srcAlpha);
+      vec3 col;
+      col.r = texture2D(tDiffuse, clamp(vUv + caOffset, 0.001, 0.999)).r;
+      col.g = texture2D(tDiffuse, vUv).g;
+      col.b = texture2D(tDiffuse, clamp(vUv - caOffset, 0.001, 0.999)).b;
+      if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
+      col = clamp(col, 0.0, 2.0);
+
+      // 1. 5-Tap Micro-Detail Unsharp Mask (kept gentle so it never creates 3D game aliasing)
       vec3 n = texture2D(tDiffuse, vUv + vec2(0.0, texel.y)).rgb;
       vec3 s = texture2D(tDiffuse, vUv - vec2(0.0, texel.y)).rgb;
       vec3 e = texture2D(tDiffuse, vUv + vec2(texel.x, 0.0)).rgb;
       vec3 w = texture2D(tDiffuse, vUv - vec2(texel.x, 0.0)).rgb;
-      vec3 blur = 0.25 * (n + s + e + w);
+      vec3 blur1 = 0.25 * (n + s + e + w);
 
       if (uSharpen > 0.001) {
-        vec3 detail = clamp(col - blur, -0.25, 0.25);
-        col = clamp(col + detail * (uSharpen * 1.65), 0.0, 2.0);
+        vec3 detail = clamp(col - blur1, -0.14, 0.14);
+        col = clamp(col + detail * (uSharpen * 1.15), 0.0, 2.0);
       }
 
-      // 2. True Screen-Space Radial Crepuscular God-Ray Scatter (NO flat 2D stripes/rectangles!)
+      // 2. Optical Pro-Mist / Subsurface Portrait Soft-Focus Diffusion (melts 3D polygon harshness)
+      if (uSoftFocus > 0.001 && srcAlpha > 0.01) {
+        vec3 mistNear = sampleRingBlur(vUv, texel * 2.4);
+        vec3 mistWide = sampleRingBlur(vUv, texel * 5.8);
+        vec3 mistBlend = mix(mistNear, mistWide, 0.52);
+        // Preserve dark eye lashes/pupils while diffusing skin midtones and highlights like a Tiffen Black Pro-Mist 1/4 filter
+        float lumaOrig = dot(col, vec3(0.299, 0.587, 0.114));
+        float skinAndHighMask = smoothstep(0.08, 0.32, lumaOrig);
+        vec3 softCol = mix(col, mistBlend, clamp(uSoftFocus * 0.58, 0.0, 0.78) * skinAndHighMask);
+        // Add subtle pearlescent Pro-Mist highlight halation
+        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.48)) * (uSoftFocus * 0.26);
+        col = softCol + hiGlow * srcAlpha;
+      }
+
+      // 3. 85mm Portrait Lens Depth-of-Field / Peripheral Bokeh Blur
+      if (uDepthBlur > 0.001 && srcAlpha > 0.01) {
+        float bokehMask = smoothstep(0.18, 0.68, length((vUv - vec2(0.5, 0.48)) * vec2(1.12, 0.95)));
+        float blurAmt = clamp(bokehMask * uDepthBlur, 0.0, 1.0);
+        if (blurAmt > 0.01) {
+          vec3 dofSample = sampleRingBlur(vUv, texel * (2.5 + blurAmt * 7.5));
+          col = mix(col, dofSample, blurAmt * 0.82);
+        }
+      }
+
+      // 4. True Screen-Space Radial Crepuscular God-Ray Scatter
       if (uTyndall > 0.001 && srcAlpha > 0.005) {
         vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.82, 0.94) : vec2(0.18, 0.94);
         vec2 delta = (lightOrigin - vUv) * 0.28;
@@ -94,53 +144,54 @@ export const BeautyGradeShader = {
           scatter += smoothstep(0.38, 0.95, lumS) * sa * weight;
           weight *= 0.84;
         }
-        vec3 tyndallGlow = uTyndallColor * (scatter * 0.22 * srcAlpha);
+        vec3 tyndallGlow = uTyndallColor * (scatter * 0.18 * srcAlpha);
         col += tyndallGlow * uTyndall;
       }
 
-      // 3. Color Temperature Warmth Shift
-      col.r += uWarmth * 0.065;
-      col.g += uWarmth * 0.018;
-      col.b -= uWarmth * 0.062;
+      // 5. Color Temperature Warmth Shift
+      col.r += uWarmth * 0.055;
+      col.g += uWarmth * 0.016;
+      col.b -= uWarmth * 0.052;
       col = max(col, vec3(0.0));
 
-      // 4. Highlight / Midtone Art-Style Tint & Deep Chiaroscuro Shadow Split-Toning
+      // 6. Highlight / Midtone Art-Style Tint & Creamy Shadow Split-Toning
       col *= uTint;
       float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.42, lumaPre), 0.0, 1.0);
-      col += uShadowTint * shadowMask * 0.35;
+      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.46, lumaPre), 0.0, 1.0);
+      col += uShadowTint * shadowMask * 0.42;
 
-      // 5. High-Dynamic S-Curve Contrast pivoted at 0.20 middle grey
-      col = (col - vec3(0.20)) * uContrast + vec3(0.20);
+      // 7. Filmic S-Curve Contrast & Soft Highlight Shoulder Roll-Off (prevents digital plastic clipping)
+      col = (col - vec3(0.24)) * uContrast + vec3(0.24);
       col = max(col, vec3(0.0));
+      col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(0.75)) * 0.42);
 
-      // 6. Saturation
+      // 8. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
       col = mix(vec3(luma), col, uSaturation);
 
-      // 7. Subtle Analog Film Emulsion & Rim Halation (without muddying skin contrast)
+      // 9. Analog Film Emulsion & Rim Halation
       if (uVintagePhoto > 0.001) {
         float lumV = dot(col, vec3(0.299, 0.587, 0.114));
-        vec3 warmSilver = vec3(lumV * 1.06, lumV * 0.97, lumV * 0.86);
-        vec3 poeticFilm = mix(col, warmSilver, 0.18);
+        vec3 warmSilver = vec3(lumV * 1.05, lumV * 0.98, lumV * 0.89);
+        vec3 poeticFilm = mix(col, warmSilver, 0.16);
         vec3 wideBlur = 0.5 * (
           texture2D(tDiffuse, vUv + texel * 3.0).rgb +
           texture2D(tDiffuse, vUv - texel * 3.0).rgb
         );
         float hiMask = smoothstep(0.58, 0.95, dot(wideBlur, vec3(0.299, 0.587, 0.114)));
-        poeticFilm += vec3(0.08, 0.048, 0.026) * hiMask * srcAlpha;
+        poeticFilm += vec3(0.065, 0.042, 0.024) * hiMask * srcAlpha;
         col = mix(col, poeticFilm, clamp(uVintagePhoto, 0.0, 1.0));
       }
 
-      // 8. Fine Silver-Halide Film Grain (suppresses plastic digital smoothness on skin)
+      // 10. Fine Silver-Halide Film Grain
       if (uFilmGrain > 0.001 && srcAlpha > 0.01) {
         float noise = fract(sin(dot(vUv * uResolution, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-        col += noise * uFilmGrain * 0.09 * srcAlpha;
+        col += noise * uFilmGrain * 0.075 * srcAlpha;
       }
 
-      // 9. Subtle Studio Vignette (RGB only, preserves alpha)
+      // 11. Subtle Studio Vignette
       vec2 d = (vUv - vec2(0.5)) * vec2(1.08, 0.96);
-      float v = 1.0 - uVignette * smoothstep(0.20, 0.82, length(d) * 1.32);
+      float v = 1.0 - uVignette * smoothstep(0.22, 0.85, length(d) * 1.32);
       col *= v;
 
       gl_FragColor = vec4(clamp(col, 0.0, 1.0), clamp(srcAlpha, 0.0, 1.0));
@@ -207,8 +258,11 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   gradePass.uniforms.uSaturation.value = options.saturation ?? 0.88;
   gradePass.uniforms.uContrast.value = options.contrast ?? 1.16;
   gradePass.uniforms.uWarmth.value = options.warmth ?? 0.14;
-  gradePass.uniforms.uSharpen.value = options.sharpen ?? 0.54;
-  gradePass.uniforms.uFilmGrain.value = options.filmGrain ?? 0.24;
+  gradePass.uniforms.uSharpen.value = options.sharpen ?? 0.24;
+  gradePass.uniforms.uSoftFocus.value = options.softFocus ?? 0.42;
+  gradePass.uniforms.uDepthBlur.value = options.depthBlur ?? 0.28;
+  gradePass.uniforms.uChromatic.value = options.chromatic ?? 0.18;
+  gradePass.uniforms.uFilmGrain.value = options.filmGrain ?? 0.10;
   gradePass.uniforms.uTyndall.value = options.tyndall ?? 0.82;
   gradePass.uniforms.uVintagePhoto.value = options.vintagePhoto ?? 0.76;
 
@@ -263,6 +317,9 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       if (params.contrast !== undefined) u.uContrast.value = Number(params.contrast);
       if (params.warmth !== undefined) u.uWarmth.value = Number(params.warmth);
       if (params.sharpen !== undefined) u.uSharpen.value = Number(params.sharpen);
+      if (params.softFocus !== undefined) u.uSoftFocus.value = Number(params.softFocus);
+      if (params.depthBlur !== undefined) u.uDepthBlur.value = Number(params.depthBlur);
+      if (params.chromatic !== undefined) u.uChromatic.value = Number(params.chromatic);
       if (params.filmGrain !== undefined) u.uFilmGrain.value = Number(params.filmGrain);
       if (params.tyndall !== undefined) u.uTyndall.value = Number(params.tyndall);
       if (params.vintagePhoto !== undefined) u.uVintagePhoto.value = Number(params.vintagePhoto);

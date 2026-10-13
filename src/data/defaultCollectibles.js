@@ -276,44 +276,198 @@ export const REAL_HAIR_CATALOG = [
 ];
 
 /**
- * Stage 29 · 6 款官方开源艺术家精雕头模 `.target` 预设 + 6 套真摄影级女性皮肤贴图 (100% 真实下载模型，严禁代码手动捏脸)
+ * Stage 30 · 8 款无皱纹高写实年轻亚洲/中式/韩系/混血女性摄影级皮肤材质 (`SKIN_MATERIAL_CATALOG`)
+ * 支持在桌面快捷胶囊、定制抽屉与工坊中独立自由切换皮肤材质，与头模混合及眉毛完全解耦！
+ */
+export const SKIN_MATERIAL_CATALOG = [
+  {
+    id: 'cn_porcelain_ivory',
+    shortLabel: '🌸 中式冷白凝脂肌 (清透少女原皮)',
+    label: '🌸 中式冷白凝脂肌 · 零皱纹清透无瑕东方少女原皮与粉嫩花瓣唇',
+    desc: '剔除一切法令纹与眼袋阴影，还原18-20岁中式少女清透冷白凝脂肤质与真实微毛孔'
+  },
+  {
+    id: 'cn_scholar_natural',
+    shortLabel: '📖 岭南书卷暖玉肌 (女状元三颗痣原生肌)',
+    label: '📖 岭南书卷暖玉肌 · 19岁高考女状元方尧平专属右脸三颗秀痣原生肌',
+    desc: '温润书卷暖象牙肤色，保留右脸颊标志性三颗浅褐小痣与素颜清润玫瑰唇色'
+  },
+  {
+    id: 'kr_dewy_peach',
+    shortLabel: '🍑 韩系水光蜜桃肌 (甜妹粉白卧蚕妆)',
+    label: '🍑 韩系水光蜜桃肌 · 初夏同款粉白奶油肌、饱满卧蚕高光与蜜桃咬唇',
+    desc: '首尔水光感白里透粉肤质，自带蜜桃苹果肌红晕、卧蚕提亮与草莓蜜桃渐变咬唇'
+  },
+  {
+    id: 'kr_chaebol_cool',
+    shortLabel: '✨ 韩系财阀千金肌 (清冷梅子眼尾泪痣)',
+    label: '✨ 韩系财阀千金冷白肌 · 林汐同款高鼻梁提亮、清冷丝绒梅子唇与左眼尾泪痣',
+    desc: '高贵冷白瓷肌配大地色微醺眼影、左眼外眦精致泪痣与财阀千金丝绒梅子玫瑰唇'
+  },
+  {
+    id: 'cn_jiangnan_jade',
+    shortLabel: '🌙 江南古典羊脂玉肌 (远山黛点绛唇)',
+    label: '🌙 江南古典羊脂白玉肌 · 苏晚同款温润杏粉眼韵、眼下泪痣与古典朱砂点绛唇',
+    desc: '东方古典温润羊脂白玉肤色，配杏粉微红眼尾、右眼下悲情泪痣与古典渐变点绛唇'
+  },
+  {
+    id: 'kr_firstlove_camellia',
+    shortLabel: '💖 韩系初恋雪瓷肌 (桃花山茶红唇)',
+    label: '💖 韩系初恋雪瓷肌 · 千雪同款舞台桃花微醺腮红、鼻梁美人痣与山茶花红唇',
+    desc: '高透亮雪瓷白肌配眼尾桃花晕染、鼻梁正中俏皮美人痣与饱满山茶红唇'
+  },
+  {
+    id: 'cn_intellectual_olive',
+    shortLabel: '❄️ 中式清冷高智肌 (修容干枯玫瑰唇)',
+    label: '❄️ 中式清冷高智象牙肌 · 沈知微同款立体眼窝修容、左颊冷艳痣与干枯玫瑰哑光唇',
+    desc: '清冷疏离的高智感象牙肤色，配深邃大地色眼窝修容、左脸颊美人痣与哑光干枯玫瑰唇'
+  },
+  {
+    id: 'eurasian_velvet_rose',
+    shortLabel: '🌍 欧亚混血丝绒奶油肌 (混血立体裸玫瑰)',
+    label: '🌍 欧亚轻混血丝绒奶油肌 · 东西方融合细腻奶油肤质与立体裸色玫瑰唇',
+    desc: '融合东方细腻肤质与欧亚立体光影的丝绒奶油肌，零皱纹、零胡茬，配柔雾裸色玫瑰唇'
+  }
+];
+
+/**
+ * Stage 30 · 7 通道多头模自由混合器 (`HEAD_BLEND_CHANNELS` · 支持中/韩/古典/幼态/御姐/欧亚头模任意比例混合)
+ */
+export const HEAD_BLEND_CHANNELS = [
+  {
+    id: 'blend_asian_youth',
+    morphKey: 'mh_head_asian_youth',
+    shortLabel: '🇨🇳 中式少女头模',
+    label: '🇨🇳 中式清纯少女头模 (Asian Youth · 柔和额弓与饱满胶原感)',
+    defaultVal: 0.45
+  },
+  {
+    id: 'blend_cn_scholar',
+    morphKey: 'mh_head_oval',
+    shortLabel: '📖 书卷鹅蛋头模',
+    label: '📖 中式书卷鹅蛋头模 (Scholar Oval · 端庄标准东方鹅蛋脸)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_baby',
+    morphKey: 'mh_head_round',
+    shortLabel: '🍑 幼态娃娃头模',
+    label: '🍑 中式圆润娃娃头模 (Plump Babyface · 软糯苹果肌与短圆下巴)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_vline',
+    morphKey: 'mh_head_heart',
+    shortLabel: '✨ 韩系心形V脸模',
+    label: '✨ 韩系财阀心形V脸头模 (Korean Heart V-Line · 饱满上庭与精致V型下颌)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_melon',
+    morphKey: 'mh_head_melon',
+    shortLabel: '🌙 江南古典瓜子模',
+    label: '🌙 江南古典瓜子头模 (Classical Melon · 柔美内收颧弓与纤巧尖颏)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_royal',
+    morphKey: 'mh_head_diamond',
+    shortLabel: '❄️ 清冷高智御姐模',
+    label: '❄️ 中式清冷高智御姐头模 (Sculpted Diamond · 清瘦骨相与利落折角)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_eurasian',
+    morphKey: 'mh_head_eurasian',
+    shortLabel: '🌍 欧风/混血立体模',
+    label: '🌍 欧风/亚欧混血立体头模 (Eurasian Deep-Set · 保留深邃眼窝高眉弓供自由混合)',
+    defaultVal: 0.0
+  }
+];
+
+/**
+ * Stage 30 · 10 款中式/韩风/古典/幼态/御姐/混血预设头模配方 (支持一键套用 + 多头模滑杆自由叠加混合)
  */
 export const FACE_ARCHETYPE_CATALOG = [
   {
+    id: 'cn_oval_scholar',
+    shortLabel: '📖 中式书卷清秀鹅蛋脸 (方尧平同款)',
+    label: '📖 中式书卷清秀鹅蛋脸 · 55%中式少女 + 75%书卷鹅蛋头模混合 (19岁女状元方尧平默认)',
+    desc: '流畅端庄的岭南少女鹅蛋脸型，面部胶原饱满零皱纹，兼具书卷气与少女感',
+    defaultSkinVariant: 'cn_scholar_natural',
+    headBlend: { blend_asian_youth: 0.55, blend_cn_scholar: 0.75, blend_cn_baby: 0.15, blend_kr_vline: 0.0, blend_cn_melon: 0.10, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+  },
+  {
     id: 'cn_round_babyface',
-    shortLabel: '🍑 饱满幼态圆脸模 (MH Round + Elvs Cheek)',
-    label: '🍑 饱满幼态圆润脸模 · MPFB2 Head-Round + Elvs Chipmunk 艺术家精雕 + Toigo 自然妆真皮肤 (初夏同款)',
-    desc: '100% 官方 MPFB2 head-round 与 Elvaerwyn 苹果肌艺术家 .target 模型 + Toigo 摄影级自然妆女性皮肤贴图'
+    shortLabel: '🍑 中韩甜妹胶原娃娃脸 (初夏同款)',
+    label: '🍑 中韩甜妹胶原圆润娃娃脸 · 65%中式少女 + 85%幼态娃娃头模混合 (初夏默认)',
+    desc: '软糯饱满的18岁少女苹果肌与微圆下巴，满满青春胶原蛋白，毫无岁月痕迹',
+    defaultSkinVariant: 'kr_dewy_peach',
+    headBlend: { blend_asian_youth: 0.65, blend_cn_scholar: 0.15, blend_cn_baby: 0.85, blend_kr_vline: 0.20, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'kr_idol_vline',
-    shortLabel: '✨ 精致心形V脸模 (MH Heart + Elvs Apple)',
-    label: '✨ 精致心形V脸模 · MPFB2 InvertedTriangular + Elvs Apple 艺术家精雕 + Toigo 紫罗兰冷白真皮肤 (林汐同款)',
-    desc: '100% 官方 MPFB2 心形V脸艺术家 .target 模型 + Toigo 摄影级冷白清透女性皮肤贴图'
-  },
-  {
-    id: 'cn_oval_scholar',
-    shortLabel: '📖 清秀标准鹅蛋脸模 (MH Oval + Young Asian)',
-    label: '📖 清秀书卷鹅蛋脸模 · MPFB2 Head-Oval 艺术家精雕 + MakeHuman 原生东方少女真摄影皮肤 (方尧平同款)',
-    desc: '100% 官方 MPFB2 head-oval 艺术家 .target 模型 + MakeHuman 官方东方青年女性摄影级皮肤贴图'
+    shortLabel: '✨ 韩系财阀千金心形V脸 (林汐同款)',
+    label: '✨ 韩系财阀千金精致心形V脸 · 40%中式少女 + 85%韩系心形V脸头模混合 (林汐默认)',
+    desc: '首尔清담洞财阀千金标准上镜心形小V脸，苹果肌高挑饱满、下颌线收束利落',
+    defaultSkinVariant: 'kr_chaebol_cool',
+    headBlend: { blend_asian_youth: 0.40, blend_cn_scholar: 0.10, blend_cn_baby: 0.0, blend_kr_vline: 0.85, blend_cn_melon: 0.25, blend_cn_royal: 0.15, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_classical_melon',
-    shortLabel: '🌸 温婉古典瓜子脸模 (MH Oval-Heart + Eurasian)',
-    label: '🌸 温婉古典瓜子脸模 · MPFB2 Oval-Heart 艺术家精雕 + OnlyTheGhosts 东方温润真皮肤 (苏晚同款)',
-    desc: '100% 官方 MPFB2 鹅蛋瓜子脸艺术家 .target 模型 + OnlyTheGhosts 摄影级温润女性皮肤贴图'
+    shortLabel: '🌙 江南古典温婉瓜子脸 (苏晚同款)',
+    label: '🌙 江南古典温婉瓜子脸 · 45%书卷鹅蛋 + 85%江南古典瓜子头模混合 (苏晚默认)',
+    desc: '古典东方名门闺秀柳叶瓜子脸，双颊柔美内收、下颏纤巧温婉',
+    defaultSkinVariant: 'cn_jiangnan_jade',
+    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.45, blend_cn_baby: 0.0, blend_kr_vline: 0.15, blend_cn_melon: 0.85, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'kr_sweet_heart',
-    shortLabel: '💖 初恋甜美心形脸模 (MH Heart + Glam Skin)',
-    label: '💖 初恋甜美心形脸模 · MPFB2 Heart + Elvs Cheek 艺术家精雕 + Toigo 盛妆红唇真皮肤 (千雪同款)',
-    desc: '100% 官方 MPFB2 饱满甜美心形脸艺术家 .target 模型 + Toigo 摄影级盛妆女性皮肤贴图'
+    shortLabel: '💖 韩系女团初恋上镜脸 (千雪同款)',
+    label: '💖 韩系女团初恋甜美心形脸 · 60%中式少女 + 55%韩系V脸 + 45%幼态娃娃混合 (千雪默认)',
+    desc: '兼具少女圆润苹果肌与女团精致小尖下巴的初恋上镜脸型',
+    defaultSkinVariant: 'kr_firstlove_camellia',
+    headBlend: { blend_asian_youth: 0.60, blend_cn_scholar: 0.20, blend_cn_baby: 0.45, blend_kr_vline: 0.55, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_cold_royal',
-    shortLabel: '❄️ 清冷高级菱形脸模 (MH Diamond + Zoey Skin)',
-    label: '❄️ 清冷高智感脸模 · MPFB2 Head-Diamond + Elvs Slim 艺术家精雕 + Nyloseth Zoey 高清真皮肤 (沈知微同款)',
-    desc: '100% 官方 MPFB2 立体清冷艺术家 .target 模型 + Nyloseth Zoey 摄影级冷调女性皮肤贴图'
+    shortLabel: '❄️ 中式清冷高智御姐脸 (沈知微同款)',
+    label: '❄️ 中式清冷高智感骨相脸 · 85%清冷御姐 + 35%古典瓜子头模混合 (沈知微默认)',
+    desc: '清瘦立体的东方智感学姐骨相，颧骨微挑、下颌清晰冷冽',
+    defaultSkinVariant: 'cn_intellectual_olive',
+    headBlend: { blend_asian_youth: 0.25, blend_cn_scholar: 0.20, blend_cn_baby: 0.0, blend_kr_vline: 0.25, blend_cn_melon: 0.35, blend_cn_royal: 0.85, blend_eurasian: 0.0 }
+  },
+  {
+    id: 'cn_pure_campus_bell',
+    shortLabel: '🌸 中式纯欲清纯校花脸 (中韩混合)',
+    label: '🌸 中式纯欲清纯校花脸 · 85%中式少女 + 50%书卷鹅蛋 + 35%韩系V脸混合',
+    desc: '中式清纯校花鹅蛋轮廓融合韩系精致下巴，清透无辜、极具初恋感',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    headBlend: { blend_asian_youth: 0.85, blend_cn_scholar: 0.50, blend_cn_baby: 0.25, blend_kr_vline: 0.35, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+  },
+  {
+    id: 'kr_waterglow_idol',
+    shortLabel: '💎 韩系张元英式水光神颜 (韩风幼态V脸)',
+    label: '💎 韩系水光甜欲神颜脸 · 75%韩系心形V脸 + 60%幼态娃娃 + 50%中式少女混合',
+    desc: '高饱满度幼态苹果肌配极致精致的V型小下巴，典型韩系五代女团视觉中心脸型',
+    defaultSkinVariant: 'kr_dewy_peach',
+    headBlend: { blend_asian_youth: 0.50, blend_cn_scholar: 0.0, blend_cn_baby: 0.60, blend_kr_vline: 0.75, blend_cn_melon: 0.20, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+  },
+  {
+    id: 'cn_tang_peony',
+    shortLabel: '🌺 盛唐珠圆玉润国风贵女脸',
+    label: '🌺 盛唐珠圆玉润国风贵女脸 · 70%书卷鹅蛋 + 70%幼态娃娃 + 45%中式少女混合',
+    desc: '丰润端庄的古典国风少女面庞，面若银盘、笑靥饱满',
+    defaultSkinVariant: 'cn_jiangnan_jade',
+    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.70, blend_cn_baby: 0.70, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+  },
+  {
+    id: 'eurasian_sculpted_mix',
+    shortLabel: '🌍 亚欧混血深邃立体颜 (中欧头模混合)',
+    label: '🌍 亚欧轻混血深邃立体颜 · 65%欧风立体头模 + 45%韩系V脸 + 35%书卷鹅蛋混合',
+    desc: '保留欧风深邃眼窝与高挺鼻梁选项，与东方柔和鹅蛋下颌按黄金比例混合，立体感十足',
+    defaultSkinVariant: 'eurasian_velvet_rose',
+    headBlend: { blend_asian_youth: 0.15, blend_cn_scholar: 0.35, blend_cn_baby: 0.0, blend_kr_vline: 0.45, blend_cn_melon: 0.15, blend_cn_royal: 0.25, blend_eurasian: 0.65 }
   }
 ];
 
@@ -431,6 +585,7 @@ export const DEFAULT_COLLECTIBLES = [
     grade: 'UR · 状元首级孤品',
     basePreset: 'fangyaoping',
     faceArchetype: 'cn_oval_scholar',
+    skinVariant: 'cn_scholar_natural',
     eyebrowStyle: 'cn_scholar_natural',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
@@ -504,6 +659,7 @@ export const DEFAULT_COLLECTIBLES = [
     grade: 'UR · 甜妹首级孤品',
     basePreset: 'user_photo',
     faceArchetype: 'cn_round_babyface',
+    skinVariant: 'kr_dewy_peach',
     eyebrowStyle: 'kr_straight_mist',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
@@ -577,6 +733,7 @@ export const DEFAULT_COLLECTIBLES = [
     grade: 'SSR · 高岭之花首级',
     basePreset: 'linxi',
     faceArchetype: 'kr_idol_vline',
+    skinVariant: 'kr_chaebol_cool',
     eyebrowStyle: 'kr_idol_arch',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
@@ -650,6 +807,7 @@ export const DEFAULT_COLLECTIBLES = [
     grade: 'SSR · 世家千金首级',
     basePreset: 'suwan',
     faceArchetype: 'cn_classical_melon',
+    skinVariant: 'cn_jiangnan_jade',
     eyebrowStyle: 'cn_willow_classical',
     deadExpression: 'dead_half_open',
     modelUrl: '/models/daz_asian_head_base.glb',
@@ -723,6 +881,7 @@ export const DEFAULT_COLLECTIBLES = [
     grade: 'UR · 绝代舞姬首级',
     basePreset: 'qianxue',
     faceArchetype: 'kr_sweet_heart',
+    skinVariant: 'kr_firstlove_camellia',
     eyebrowStyle: 'kr_sweet_droop',
     deadExpression: 'dead_shock',
     modelUrl: '/models/daz_asian_head_base.glb',
@@ -796,6 +955,7 @@ export const DEFAULT_COLLECTIBLES = [
     grade: 'SSR · 首席学姐首级',
     basePreset: 'shenzhiwei',
     faceArchetype: 'cn_cold_royal',
+    skinVariant: 'cn_intellectual_olive',
     eyebrowStyle: 'cn_cold_sword',
     deadExpression: 'dead_smile',
     modelUrl: '/models/daz_asian_head_base.glb',

@@ -216,109 +216,146 @@
     </div>
 
     <div class="vcd-body">
-      <!-- 1. Art Style, Window Gobo Projection & Chiaroscuro Lighting Customizer -->
+      <!-- 1. Art Style, HDR Environment, Optical Blur/DOF & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🎬 1. 窗户透光光影 (Window Gobo) · 光影明暗差分 & 自定义光源</div>
+        <div class="vcd-sec-title">🎬 1. 14套电影色调 · 4种HDR环境光场 · 85mm黑柔镜/景深模糊 (彻底消除3D硅胶感)</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
-          <button class="vcd-preset-btn active" data-style-preset="rainy_study">🌧️ 雨夜书房窗格透光</button>
+          <button class="vcd-preset-btn active" data-style-preset="cinema_85mm_portrait">📸 85mm柔焦人像(首推)</button>
+          <button class="vcd-preset-btn" data-style-preset="korean_magazine_glow">✨ 韩系水光画报</button>
+          <button class="vcd-preset-btn" data-style-preset="dreamy_promist_soft">☁️ 黑柔镜奶油柔焦</button>
+          <button class="vcd-preset-btn" data-style-preset="kodak_portra_400">📷 柯达Portra400胶卷</button>
+          <button class="vcd-preset-btn" data-style-preset="fujifilm_eterna_cinema">🍃 富士Eterna空气感</button>
+          <button class="vcd-preset-btn" data-style-preset="wong_kar_wai_film">🎞️ 王家卫暖金暗调</button>
+          <button class="vcd-preset-btn" data-style-preset="sunset_amber_hdr">🌅 暮色琥珀逆光HDR</button>
+          <button class="vcd-preset-btn" data-style-preset="rainy_study">🌧️ 雨夜书房窗畔</button>
+          <button class="vcd-preset-btn" data-style-preset="luxury_porcelain">🌸 晨光凝脂无影箱</button>
           <button class="vcd-preset-btn" data-style-preset="warm_gallery">🏛️ 暖金私人藏馆</button>
-          <button class="vcd-preset-btn" data-style-preset="cold_forensic">❄️ 冷冽法医标本室</button>
-          <button class="vcd-preset-btn" data-style-preset="gothic_velvet">🕯️ 暗夜哥特极暗烛光</button>
-          <button class="vcd-preset-btn" data-style-preset="luxury_porcelain">🌸 庭院树影柔光对比</button>
-          <button class="vcd-preset-btn" data-style-preset="cyber_vitrine">🔮 雨夜霓虹百叶窗</button>
-          <button class="vcd-preset-btn" data-style-preset="vintage_film">🎞️ 复古胶片标本志</button>
+          <button class="vcd-preset-btn" data-style-preset="gothic_velvet">🕯️ 暗夜哥特油画</button>
+          <button class="vcd-preset-btn" data-style-preset="cold_forensic">❄️ 冷冽法医无影灯</button>
+          <button class="vcd-preset-btn" data-style-preset="cyber_vitrine">🔮 雨夜霓虹双切割</button>
+          <button class="vcd-preset-btn" data-style-preset="vintage_film">🕰️ 民国银盐老相片</button>
         </div>
 
         <div class="field-row" style="margin-top:8px;">
-          <label>🪟 窗户透光光影格栅样式 (投射在断头面部与书桌上)</label>
+          <label>🌐 HDR 全景环境光场模式 (影棚柔光箱 / 落日逆光 / 雨夜天光 / 展柜穹顶)</label>
+          <select id="sel-hdr-mode">
+            <option value="softbox_portrait" selected>📸 85mm 影棚双柔光箱 + 环形眼神光 HDR (消除脸部生硬黑影·人像推荐)</option>
+            <option value="golden_hour">🌅 落日暖金胶片逆光 HDR (夕阳暖肤漫反射)</option>
+            <option value="rainy_window">🌧️ 雨夜书房天光漫射 + 暖台灯 HDR (沉浸伴学)</option>
+            <option value="museum_velvet">🏛️ 卢浮宫天鹅绒展柜穹顶 HDR (戏剧性明暗)</option>
+          </select>
+        </div>
+
+        <div class="field-row" style="margin-top:6px;">
+          <label>🪟 窗户透光光影格栅样式 (投射在面部与书桌上)</label>
           <select id="sel-window-gobo">
-            <option value="rain_mullion" selected>🌧️ 雨夜十字窗格 + 窗玻璃流雨痕透光 (伴学推荐)</option>
-            <option value="venetian_blinds">🪟 书房百叶窗斜射格栅条纹透光 (极强明暗切割)</option>
-            <option value="gothic_lattice">🏰 哥特菱格花窗铅条透光 (古典标本馆)</option>
-            <option value="tree_dappled">🌿 窗外夜雨梧桐树影斑驳透光 (静谧庭院)</option>
-            <option value="none">🔦 纯粹伦勃朗单束聚光 (无窗框投影)</option>
+            <option value="none" selected>🔦 纯净影棚无影柔光箱 (无窗框投影 · 肤质最清透干净)</option>
+            <option value="rain_mullion">🌧️ 雨夜十字窗格 + 柔和漫射窗光 (伴学推荐)</option>
+            <option value="venetian_blinds">🪟 书房百叶窗柔化漫射光 (电影感光影)</option>
+            <option value="gothic_lattice">🏰 哥特菱格花窗柔光 (古典标本馆)</option>
+            <option value="tree_dappled">🌿 窗外梧桐树影柔光 (静谧庭院)</option>
           </select>
         </div>
 
         <div class="field-row" style="margin-top:6px;display:flex;gap:12px;align-items:center;">
           <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
-            ☀️ 主光源(窗光/台灯)色温:
-            <input type="color" id="vc-key-color" value="#ffeed6" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+            ☀️ 主光源(柔光箱/窗光)色温:
+            <input type="color" id="vc-key-color" value="#fff3e4" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
           </label>
           <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
-            🌙 背部雨夜轮廓光色:
-            <input type="color" id="vc-rim-color" value="#93c5fd" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+            🌙 背部发丝轮廓光色:
+            <input type="color" id="vc-rim-color" value="#ffe8d6" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
           </label>
         </div>
 
         <div class="vcd-sliders">
           <div class="slider-row">
-            <span>✨ 丁达尔体积光束感 (Tyndall Light Shafts)</span>
-            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.95" />
-            <span id="val-vc-tyndall">95%</span>
+            <span>🌫️ 电影黑柔镜/皮肤柔焦扩散模糊 (Pro-Mist · 消除3D硬边感)</span>
+            <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.46" />
+            <span id="val-vc-soft-focus">46%</span>
           </div>
           <div class="slider-row">
-            <span>🎞️ 唯美老照片胶片感 (Vintage Old Photo)</span>
-            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.86" />
-            <span id="val-vc-vintage-photo">86%</span>
+            <span>📷 85mm 大光圈景深边缘虚化模糊 (DOF Bokeh Blur)</span>
+            <input type="range" id="vc-depth-blur" min="0.0" max="1.0" step="0.04" value="0.32" />
+            <span id="val-vc-depth-blur">32%</span>
           </div>
           <div class="slider-row">
-            <span>🌓 光影明暗差分强度 (Chiaroscuro 暗部深邃感)</span>
-            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.6" step="0.05" value="1.28" />
-            <span id="val-vc-chiaroscuro">128%</span>
+            <span>🌈 光学定焦镜头微色散 (Chromatic Dispersion)</span>
+            <input type="range" id="vc-chromatic" min="0.0" max="1.0" step="0.04" value="0.18" />
+            <span id="val-vc-chromatic">18%</span>
           </div>
           <div class="slider-row">
-            <span>🪟 窗户透光格栅阴影浓度 (Window Gobo)</span>
-            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.76" />
-            <span id="val-vc-window-gobo-strength">76%</span>
+            <span>🌐 HDR 环境柔光箱漫反射强度 (Env HDR)</span>
+            <input type="range" id="vc-env-intensity" min="0.10" max="1.20" step="0.04" value="0.52" />
+            <span id="val-vc-env-intensity">52%</span>
           </div>
           <div class="slider-row">
-            <span>☀️ 窗光/主光水平入射角 (Azimuth)</span>
-            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="38" />
-            <span id="val-vc-key-azimuth">+38°</span>
+            <span>✨ 丁达尔体积光散射晕染 (Tyndall Scatter)</span>
+            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.45" />
+            <span id="val-vc-tyndall">45%</span>
           </div>
           <div class="slider-row">
-            <span>📐 窗光/主光高度俯角 (Elevation)</span>
-            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="32" />
-            <span id="val-vc-key-elevation">32°</span>
+            <span>🎞️ 胶片乳剂高光柔和晕染 (Film Halation)</span>
+            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.20" />
+            <span id="val-vc-vintage-photo">20%</span>
           </div>
           <div class="slider-row">
-            <span>💡 主光雕刻强度</span>
-            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="2.18" />
-            <span id="val-vc-key-intensity">2.18</span>
+            <span>🌓 光影明暗过渡对比 (低=柔光奶油肌 / 高=戏剧明暗)</span>
+            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.5" step="0.05" value="0.52" />
+            <span id="val-vc-chiaroscuro">52%</span>
           </div>
           <div class="slider-row">
-            <span>🌙 背部发丝冷雨轮廓光 (Rim)</span>
-            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.38" />
-            <span id="val-vc-rim-intensity">1.38</span>
+            <span>🪟 窗户格栅光影浓度 (Window Gobo)</span>
+            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.22" />
+            <span id="val-vc-window-gobo-strength">22%</span>
           </div>
           <div class="slider-row">
-            <span>🩸 真皮明暗交界线次表面血色感 (SSS)</span>
-            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.32" />
-            <span id="val-vc-sss">132%</span>
+            <span>☀️ 主光水平入射角 (Azimuth)</span>
+            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="30" />
+            <span id="val-vc-key-azimuth">+30°</span>
           </div>
           <div class="slider-row">
-            <span>🧴 尸皮哑光真皮感 ↔ 湿润防腐液感 (默认哑光零硅胶)</span>
+            <span>📐 主光高度俯角 (Elevation)</span>
+            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="28" />
+            <span id="val-vc-key-elevation">28°</span>
+          </div>
+          <div class="slider-row">
+            <span>💡 主光柔光箱强度</span>
+            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="1.92" />
+            <span id="val-vc-key-intensity">1.92</span>
+          </div>
+          <div class="slider-row">
+            <span>🌙 背部发丝轮廓光 (Rim)</span>
+            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.15" />
+            <span id="val-vc-rim-intensity">1.15</span>
+          </div>
+          <div class="slider-row">
+            <span>🩸 真皮次表面透光粉嫩感 (SSS)</span>
+            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.48" />
+            <span id="val-vc-sss">148%</span>
+          </div>
+          <div class="slider-row">
+            <span>🧴 丝绒粉雾肌 ↔ 水光奶油肌光度</span>
             <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.16" />
             <span id="val-vc-wet-gloss">16%</span>
           </div>
           <div class="slider-row">
-            <span>🔪 微距毛孔/皮沟/发丝锐化 (Sharpen)</span>
-            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.05" value="0.58" />
-            <span id="val-vc-sharpen">58%</span>
+            <span>🔪 微距细节锐化 (建议保持低值防3D锯齿感)</span>
+            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.04" value="0.22" />
+            <span id="val-vc-sharpen">22%</span>
           </div>
           <div class="slider-row">
-            <span>🎞️ 画面电影级对比度 (Contrast)</span>
-            <input type="range" id="vc-contrast" min="0.80" max="1.45" step="0.02" value="1.26" />
-            <span id="val-vc-contrast">1.26</span>
+            <span>🎞️ 胶片反差对比度 (Contrast)</span>
+            <input type="range" id="vc-contrast" min="0.80" max="1.45" step="0.02" value="1.06" />
+            <span id="val-vc-contrast">1.06</span>
           </div>
           <div class="slider-row">
             <span>🌡️ 色温冷暖偏移 (Warmth)</span>
-            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.12" />
-            <span id="val-vc-warmth">+0.12</span>
+            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.05" />
+            <span id="val-vc-warmth">+0.05</span>
           </div>
           <div class="slider-row">
-            <span>✨ 暗房柔光辉光强度 (Bloom)</span>
+            <span>✨ 柔光高光辉光 (Bloom)</span>
             <input type="range" id="vc-bloom" min="0.0" max="0.90" step="0.02" value="0.08" />
             <span id="val-vc-bloom">8%</span>
           </div>
@@ -398,22 +435,79 @@
         </div>
         <div id="placed-structures-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px;"></div>
 
-        <!-- Stage 28: Quick Desktop Active Head Face Shape & Eyebrow Style Switcher -->
+        <!-- Stage 30: Quick Desktop Active Head Skin Material, Face Archetype, Multi-Head Blender & Eyebrow Switcher -->
         <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:10px;margin-top:8px;">
-          <div class="vcd-sec-title" style="margin-bottom:6px;">👩 4. 当前选中头颅 · 中韩青年女头型 (圆润脸/韩国脸) & 8款眉形秒切</div>
+          <div class="vcd-sec-title" style="margin-bottom:6px;">👩 4. 当前选中头颅 · 8款无皱纹少女皮肤材质 · 10款中韩头型 & 多头模混合器 · 8款眉形秒切</div>
           <div class="field-row" style="margin-bottom:6px;">
-            <label>🍑 切换当前头颅的中韩骨相脸型 (告别美式亚裔方腮高颧骨)</label>
-            <select id="vcd-sel-face-archetype">
-              <option value="cn_round_babyface">🍑 中式幼态圆润娃娃脸 (初夏同款 · 饱满婴儿肥+短圆下巴)</option>
-              <option value="kr_idol_vline">✨ 韩系财阀千金鹅蛋V脸 (林汐同款 · 韩国柔滑V脸+饱满前苹果肌)</option>
-              <option value="cn_oval_scholar">📖 中式清秀书卷鹅蛋脸 (方尧平同款 · 岭南19岁女状元柔和鹅蛋脸)</option>
-              <option value="cn_classical_melon">🌸 江南古典温婉瓜子脸 (苏晚同款 · 柔润上庭+古典瓜子下巴)</option>
-              <option value="kr_sweet_heart">💖 韩系初恋甜美心形脸 (千雪同款 · 甜美心形苹果肌+短俏下巴)</option>
-              <option value="cn_cold_royal">❄️ 中式清冷高智御姐脸 (沈知微同款 · 高智感修长鹅蛋脸+挺拔鼻梁)</option>
+            <label>🎨 独立切换皮肤材质 (8款零皱纹中式/韩系/混血年轻少女真摄影肤质)</label>
+            <select id="vcd-sel-skin-variant">
+              <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 (零皱纹清透无瑕少女原皮)</option>
+              <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 (19岁女状元方尧平右颊三颗痣原生肌)</option>
+              <option value="kr_dewy_peach">🍑 韩系水光蜜桃肌 (初夏同款粉白奶油肌+卧蚕蜜桃咬唇)</option>
+              <option value="kr_chaebol_cool">✨ 韩系财阀千金冷白肌 (林汐同款清冷梅子唇+左眼尾泪痣)</option>
+              <option value="cn_jiangnan_jade">🌙 江南古典羊脂玉肌 (苏晚同款远山黛+眼下泪痣+点绛唇)</option>
+              <option value="kr_firstlove_camellia">💖 韩系初恋雪瓷肌 (千雪同款舞台桃花腮红+鼻梁痣+山茶红唇)</option>
+              <option value="cn_intellectual_olive">❄️ 中式清冷高智象牙肌 (沈知微同款立体修容+左颊痣+干枯玫瑰唇)</option>
+              <option value="eurasian_velvet_rose">🌍 欧亚轻混血丝绒奶油肌 (东西方融合丝绒裸色玫瑰妆)</option>
             </select>
           </div>
           <div class="field-row" style="margin-bottom:6px;">
-            <label>✒️ 切换当前头颅的眉形 (8款根根分明中韩真毛流眉形)</label>
+            <label>🍑 一键套用预设头模配方 (10款中式/韩系/古典/幼态/御姐/混血头模)</label>
+            <select id="vcd-sel-face-archetype">
+              <option value="cn_oval_scholar">📖 中式书卷清秀鹅蛋脸 (方尧平同款 · 55%中式少女+75%书卷鹅蛋)</option>
+              <option value="cn_round_babyface">🍑 中韩甜妹胶原娃娃脸 (初夏同款 · 65%中式少女+85%幼态娃娃)</option>
+              <option value="kr_idol_vline">✨ 韩系财阀千金心形V脸 (林汐同款 · 40%中式少女+85%韩系心形V脸)</option>
+              <option value="cn_classical_melon">🌙 江南古典温婉瓜子脸 (苏晚同款 · 45%书卷鹅蛋+85%江南古典瓜子)</option>
+              <option value="kr_sweet_heart">💖 韩系女团初恋上镜脸 (千雪同款 · 60%中式少女+55%韩系V脸+45%娃娃)</option>
+              <option value="cn_cold_royal">❄️ 中式清冷高智御姐脸 (沈知微同款 · 85%清冷御姐+35%古典瓜子)</option>
+              <option value="cn_pure_campus_bell">🌸 中式纯欲清纯校花脸 (85%中式少女+50%书卷鹅蛋+35%韩系V脸)</option>
+              <option value="kr_waterglow_idol">💎 韩系张元英式水光神颜 (75%韩系V脸+60%幼态娃娃+50%中式少女)</option>
+              <option value="cn_tang_peony">🌺 盛唐珠圆玉润国风贵女脸 (70%书卷鹅蛋+70%幼态娃娃+45%中式少女)</option>
+              <option value="eurasian_sculpted_mix">🌍 亚欧混血深邃立体颜 (65%欧风立体头模+45%韩系V脸+35%书卷鹅蛋)</option>
+            </select>
+          </div>
+          <div style="background:rgba(15,23,42,0.55);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:8px;margin-bottom:8px;">
+            <div style="font-size:11.5px;color:#e2e8f0;font-weight:600;margin-bottom:6px;">🧬 多头模自由混合器 (头部混合 · 可同时叠加中式/韩风/娃娃/瓜子/御姐/欧风头模)：</div>
+            <div class="vcd-sliders" id="vcd-head-blend-sliders">
+              <div class="slider-row">
+                <span>🇨🇳 中式清纯少女头模</span>
+                <input type="range" data-head-blend="blend_asian_youth" min="0.0" max="1.0" step="0.05" value="0.55" />
+                <span data-head-blend-val="blend_asian_youth">55%</span>
+              </div>
+              <div class="slider-row">
+                <span>📖 中式书卷鹅蛋头模</span>
+                <input type="range" data-head-blend="blend_cn_scholar" min="0.0" max="1.0" step="0.05" value="0.75" />
+                <span data-head-blend-val="blend_cn_scholar">75%</span>
+              </div>
+              <div class="slider-row">
+                <span>🍑 中韩幼态娃娃头模</span>
+                <input type="range" data-head-blend="blend_cn_baby" min="0.0" max="1.0" step="0.05" value="0.15" />
+                <span data-head-blend-val="blend_cn_baby">15%</span>
+              </div>
+              <div class="slider-row">
+                <span>✨ 韩系心形V脸头模</span>
+                <input type="range" data-head-blend="blend_kr_vline" min="0.0" max="1.0" step="0.05" value="0.0" />
+                <span data-head-blend-val="blend_kr_vline">0%</span>
+              </div>
+              <div class="slider-row">
+                <span>🌙 江南古典瓜子头模</span>
+                <input type="range" data-head-blend="blend_cn_melon" min="0.0" max="1.0" step="0.05" value="0.10" />
+                <span data-head-blend-val="blend_cn_melon">10%</span>
+              </div>
+              <div class="slider-row">
+                <span>❄️ 清冷高智御姐头模</span>
+                <input type="range" data-head-blend="blend_cn_royal" min="0.0" max="1.0" step="0.05" value="0.0" />
+                <span data-head-blend-val="blend_cn_royal">0%</span>
+              </div>
+              <div class="slider-row">
+                <span>🌍 欧风/混血立体头模</span>
+                <input type="range" data-head-blend="blend_eurasian" min="0.0" max="1.0" step="0.05" value="0.0" />
+                <span data-head-blend-val="blend_eurasian">0%</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-row" style="margin-bottom:6px;">
+            <label>✒️ 切换当前头颅的 3D 眉毛模型 (8款高对比度中韩真毛流立体眉)</label>
             <select id="vcd-sel-eyebrow-style">
               <option value="cn_scholar_natural">🌿 中式原生书卷眉 (方尧平 · 自然微弯柔顺学生眉)</option>
               <option value="kr_straight_mist">☁️ 韩式温柔一字雾眉 (初夏 · 减龄平眉+柔雾绒毛感)</option>
@@ -679,25 +773,100 @@
                 </div>
 
                 <div class="field-row">
-                  <label>🍑 6款中韩青年女头型 3D 骨相流派 (彻底告别美式亚裔高颧骨方腮)</label>
-                  <select id="sel-face-archetype">
-                    <option value="cn_oval_scholar">📖 中式清秀书卷鹅蛋脸 (方尧平 · 岭南学霸清秀鹅蛋脸)</option>
-                    <option value="cn_round_babyface">🍑 中式幼态圆润娃娃脸 (初夏 · 饱满婴儿肥满月脸 + 短圆下巴)</option>
-                    <option value="kr_idol_vline">✨ 韩系财阀千金鹅蛋V脸 (林汐 · 韩国柔滑鹅蛋V脸 + 饱满前苹果肌)</option>
-                    <option value="cn_classical_melon">🌸 江南古典温婉瓜子脸 (苏晚 · 柔润上庭 + 古典瓜子尖俏下巴)</option>
-                    <option value="kr_sweet_heart">💖 韩系初恋甜美心形脸 (千雪 · 甜美心形苹果肌 + 短俏翘下巴)</option>
-                    <option value="cn_cold_royal">❄️ 中式清冷高智御姐脸 (沈知微 · 高智感修长鹅蛋脸 + 挺拔鼻梁)</option>
+                  <label>🎨 8款无皱纹年轻亚洲/中式/韩系/混血少女真摄影皮肤材质 (可独立自由切换)</label>
+                  <select id="sel-skin-variant">
+                    <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 · 19岁女状元方尧平右颊三颗痣原生肌</option>
+                    <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 · 零皱纹清透无瑕少女原皮与花瓣唇</option>
+                    <option value="kr_dewy_peach">🍑 韩系水光蜜桃肌 · 初夏同款粉白奶油肌+卧蚕高光+蜜桃咬唇</option>
+                    <option value="kr_chaebol_cool">✨ 韩系财阀千金冷白肌 · 林汐同款清冷梅子唇+左眼尾泪痣</option>
+                    <option value="cn_jiangnan_jade">🌙 江南古典羊脂玉肌 · 苏晚同款远山黛+眼下泪痣+古典点绛唇</option>
+                    <option value="kr_firstlove_camellia">💖 韩系初恋雪瓷肌 · 千雪同款舞台桃花腮红+鼻梁痣+山茶红唇</option>
+                    <option value="cn_intellectual_olive">❄️ 中式清冷高智象牙肌 · 沈知微同款立体眼窝修容+左颊痣+干枯玫瑰唇</option>
+                    <option value="eurasian_velvet_rose">🌍 欧亚轻混血丝绒奶油肌 · 东西方融合细腻奶油肌与裸色玫瑰唇</option>
                   </select>
                 </div>
 
-                <div class="preset-photo-row" id="face-archetype-quick-chips" style="margin-bottom:4px;flex-wrap:wrap;gap:4px;">
-                  <span>头型秒切:</span>
-                  <button type="button" class="chip-btn" data-face-arch="cn_round_babyface">🍑 中式圆润娃娃脸</button>
-                  <button type="button" class="chip-btn" data-face-arch="kr_idol_vline">✨ 韩国千金鹅蛋V脸</button>
-                  <button type="button" class="chip-btn active" data-face-arch="cn_oval_scholar">📖 中式书卷鹅蛋脸</button>
-                  <button type="button" class="chip-btn" data-face-arch="cn_classical_melon">🌸 江南古典瓜子脸</button>
-                  <button type="button" class="chip-btn" data-face-arch="kr_sweet_heart">💖 韩系甜美心形脸</button>
-                  <button type="button" class="chip-btn" data-face-arch="cn_cold_royal">❄️ 中式清冷御姐脸</button>
+                <div class="preset-photo-row" id="skin-variant-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                  <span>皮肤秒切:</span>
+                  <button type="button" class="chip-btn" data-skin-var="cn_porcelain_ivory">🌸 中式冷白原皮</button>
+                  <button type="button" class="chip-btn active" data-skin-var="cn_scholar_natural">📖 状元三痣暖玉肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="kr_dewy_peach">🍑 韩系水光蜜桃肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="kr_chaebol_cool">✨ 财阀千金梅子肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="cn_jiangnan_jade">🌙 江南羊脂点绛肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="kr_firstlove_camellia">💖 初恋雪瓷山茶肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="cn_intellectual_olive">❄️ 高智干枯玫瑰肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="eurasian_velvet_rose">🌍 混血丝绒奶油肌</button>
+                </div>
+
+                <div class="field-row">
+                  <label>🍑 10款中式/韩风/古典/幼态/混血预设头模 (点击预设自动配比，下方滑杆可自由混合)</label>
+                  <select id="sel-face-archetype">
+                    <option value="cn_oval_scholar">📖 中式书卷清秀鹅蛋脸 (方尧平 · 55%中式少女 + 75%书卷鹅蛋混合)</option>
+                    <option value="cn_round_babyface">🍑 中韩甜妹胶原娃娃脸 (初夏 · 65%中式少女 + 85%幼态娃娃混合)</option>
+                    <option value="kr_idol_vline">✨ 韩系财阀千金心形V脸 (林汐 · 40%中式少女 + 85%韩系心形V脸混合)</option>
+                    <option value="cn_classical_melon">🌙 江南古典温婉瓜子脸 (苏晚 · 45%书卷鹅蛋 + 85%江南古典瓜子混合)</option>
+                    <option value="kr_sweet_heart">💖 韩系女团初恋上镜脸 (千雪 · 60%中式少女 + 55%韩系V脸 + 45%娃娃混合)</option>
+                    <option value="cn_cold_royal">❄️ 中式清冷高智御姐脸 (沈知微 · 85%清冷御姐 + 35%古典瓜子混合)</option>
+                    <option value="cn_pure_campus_bell">🌸 中式纯欲清纯校花脸 (85%中式少女 + 50%书卷鹅蛋 + 35%韩系V脸)</option>
+                    <option value="kr_waterglow_idol">💎 韩系张元英式水光神颜 (75%韩系V脸 + 60%幼态娃娃 + 50%中式少女)</option>
+                    <option value="cn_tang_peony">🌺 盛唐珠圆玉润国风贵女脸 (70%书卷鹅蛋 + 70%幼态娃娃 + 45%中式少女)</option>
+                    <option value="eurasian_sculpted_mix">🌍 亚欧混血深邃立体颜 (65%欧风立体头模 + 45%韩系V脸 + 35%书卷鹅蛋)</option>
+                  </select>
+                </div>
+
+                <div class="preset-photo-row" id="face-archetype-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                  <span>头模配方:</span>
+                  <button type="button" class="chip-btn active" data-face-arch="cn_oval_scholar">📖 中式书卷鹅蛋</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_round_babyface">🍑 甜妹胶原娃娃</button>
+                  <button type="button" class="chip-btn" data-face-arch="kr_idol_vline">✨ 韩系财阀V脸</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_classical_melon">🌙 江南古典瓜子</button>
+                  <button type="button" class="chip-btn" data-face-arch="kr_sweet_heart">💖 韩系初恋心形</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_cold_royal">❄️ 中式清冷御姐</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_pure_campus_bell">🌸 纯欲校花混合</button>
+                  <button type="button" class="chip-btn" data-face-arch="kr_waterglow_idol">💎 韩系水光神颜</button>
+                  <button type="button" class="chip-btn" data-face-arch="cn_tang_peony">🌺 盛唐圆润贵女</button>
+                  <button type="button" class="chip-btn" data-face-arch="eurasian_sculpted_mix">🌍 亚欧混血立体</button>
+                </div>
+
+                <div style="background:rgba(15,23,42,0.52);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:8px;margin-bottom:8px;">
+                  <div style="font-size:11.5px;color:#38bdf8;font-weight:600;margin-bottom:4px;">🧬 7通道多头模自由混合器 (头部混合 · 任意叠加中式/韩风/古典/幼态/欧风头模)：</div>
+                  <div id="studio-head-blend-sliders">
+                    <div class="slider-row">
+                      <span>🇨🇳 中式清纯少女头模</span>
+                      <input type="range" data-studio-head-blend="blend_asian_youth" min="0.0" max="1.0" step="0.05" value="0.55" />
+                      <span data-studio-head-blend-val="blend_asian_youth">55%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>📖 中式书卷鹅蛋头模</span>
+                      <input type="range" data-studio-head-blend="blend_cn_scholar" min="0.0" max="1.0" step="0.05" value="0.75" />
+                      <span data-studio-head-blend-val="blend_cn_scholar">75%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>🍑 中韩幼态娃娃头模</span>
+                      <input type="range" data-studio-head-blend="blend_cn_baby" min="0.0" max="1.0" step="0.05" value="0.15" />
+                      <span data-studio-head-blend-val="blend_cn_baby">15%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>✨ 韩系心形V脸头模</span>
+                      <input type="range" data-studio-head-blend="blend_kr_vline" min="0.0" max="1.0" step="0.05" value="0.0" />
+                      <span data-studio-head-blend-val="blend_kr_vline">0%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>🌙 江南古典瓜子头模</span>
+                      <input type="range" data-studio-head-blend="blend_cn_melon" min="0.0" max="1.0" step="0.05" value="0.10" />
+                      <span data-studio-head-blend-val="blend_cn_melon">10%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>❄️ 清冷高智御姐头模</span>
+                      <input type="range" data-studio-head-blend="blend_cn_royal" min="0.0" max="1.0" step="0.05" value="0.0" />
+                      <span data-studio-head-blend-val="blend_cn_royal">0%</span>
+                    </div>
+                    <div class="slider-row">
+                      <span>🌍 欧风/混血立体头模</span>
+                      <input type="range" data-studio-head-blend="blend_eurasian" min="0.0" max="1.0" step="0.05" value="0.0" />
+                      <span data-studio-head-blend-val="blend_eurasian">0%</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="field-row">

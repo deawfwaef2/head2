@@ -2,6 +2,8 @@ import {
   DEFAULT_COLLECTIBLES,
   DAZ_TUTORIAL_STEPS,
   REAL_HAIR_CATALOG,
+  SKIN_MATERIAL_CATALOG,
+  HEAD_BLEND_CHANNELS,
   FACE_ARCHETYPE_CATALOG,
   EYEBROW_STYLE_CATALOG,
   STUDY_ROLE_CATALOG,
@@ -16,9 +18,12 @@ import {
   attachSpecimenContainerAndDecor,
   resolveRealHairStyle,
   setHeadFaceArchetype,
-  setHeadEyebrowStyle
+  setHeadSkinVariant,
+  setHeadEyebrowStyle,
+  getHeadBlendStateFromGroup,
+  applyHeadMorphsToGroup
 } from './three/collectibleHeadAssembler.js';
-import { VISUAL_STYLE_PRESETS } from './three/photorealLighting.js';
+import { VISUAL_STYLE_PRESETS, HDR_ENVIRONMENT_CATALOG } from './three/photorealLighting.js';
 import {
   CONTAINER_STYLE_CATALOG,
   DECOR_STYLE_CATALOG
@@ -32,7 +37,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage28-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage30-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -49,6 +54,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage28-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage27-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage25-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage24-v1') ||
@@ -91,28 +97,34 @@ const state = {
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
   visualCustomConfig: {
-    presetId: 'rainy_study',
-    windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.76,
-    chiaroscuro: 1.28,
-    tyndall: 0.95,
-    vintagePhoto: 0.86,
-    keyColor: '#ffdca8',
-    rimColor: '#93c5fd',
-    keyAzimuthDeg: 38,
-    keyElevationDeg: 32,
-    keyIntensity: 2.18,
-    rimIntensity: 1.38,
-    sssIntensity: 1.32,
+    presetId: 'cinema_85mm_portrait',
+    hdrMode: 'softbox_portrait',
+    envIntensity: 0.52,
+    windowGobo: 'none',
+    windowGoboStrength: 0.22,
+    chiaroscuro: 0.52,
+    tyndall: 0.45,
+    vintagePhoto: 0.20,
+    softFocus: 0.46,
+    depthBlur: 0.32,
+    chromatic: 0.18,
+    keyColor: '#fff3e4',
+    rimColor: '#ffe8d6',
+    keyAzimuthDeg: 30,
+    keyElevationDeg: 28,
+    keyIntensity: 1.92,
+    rimIntensity: 1.15,
+    sssIntensity: 1.48,
     skinGloss: 0.16,
     wetGloss: 0.16,
-    sharpen: 0.58,
-    contrast: 1.26,
-    warmth: 0.12,
+    sharpen: 0.22,
+    contrast: 1.06,
+    warmth: 0.05,
     bloomStrength: 0.08
   },
   studioDraft: {
     basePreset: 'fangyaoping',
+    skinVariant: 'cn_scholar_natural',
     faceArchetype: 'cn_oval_scholar',
     eyebrowStyle: 'cn_scholar_natural',
     deadExpression: 'dead_calm',
@@ -810,11 +822,15 @@ function renderActivePetsStrip(summonedList = []) {
   for (const p of summonedList) {
     const col = state.collectibles.find(c => c.id === p.id) || p;
     const curHair = resolveRealHairStyle(col.hairStyle || p.hairStyle || 'hair_bob01');
+    const curSkin = col.skinVariant || col.morphs?.skinVariant || 'cn_porcelain_ivory';
     const curFace = col.faceArchetype || col.morphs?.faceArchetype || 'cn_oval_scholar';
     const curBrow = col.eyebrowStyle || col.morphs?.eyebrowStyle || 'cn_scholar_natural';
     const curExpr = p.deadExpression || 'dead_calm';
     const curCont = p.containerStyle || 'none';
     const curRole = col.studyRole || 'gaokao_pomodoro';
+    const skinShortOpts = SKIN_MATERIAL_CATALOG.map(
+      sk => `<option value="${sk.id}" ${sk.id === curSkin ? 'selected' : ''}>${sk.shortLabel}</option>`
+    ).join('');
     const faceShortOpts = FACE_ARCHETYPE_CATALOG.map(
       fa => `<option value="${fa.id}" ${fa.id === curFace ? 'selected' : ''}>${fa.shortLabel}</option>`
     ).join('');
@@ -841,10 +857,13 @@ function renderActivePetsStrip(summonedList = []) {
     pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
     pill.innerHTML = `
       <strong>${p.name.split('·')[0].trim()}</strong>
-      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换中韩青年女头型流派（圆润娃娃脸 / 韩国鹅蛋V脸 / 中式书卷鹅蛋脸等）" style="padding:1px 4px;background:rgba(46,16,38,0.92);color:#fbcfe8;border:1px solid rgba(244,114,182,0.5);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-skin="${p.id}" title="独立切换 8 款无皱纹中式/韩系/混血少女真摄影皮肤材质" style="padding:1px 4px;background:rgba(56,22,34,0.92);color:#fecdd3;border:1px solid rgba(251,113,133,0.5);border-radius:4px;">
+        ${skinShortOpts}
+      </select>
+      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换 10 款中韩青年女头型流派（圆润娃娃脸 / 韩国鹅蛋V脸 / 中式书卷鹅蛋脸等）" style="padding:1px 4px;background:rgba(46,16,38,0.92);color:#fbcfe8;border:1px solid rgba(244,114,182,0.5);border-radius:4px;">
         ${faceShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换 8 款中韩根根分明真毛流眉形" style="padding:1px 4px;background:rgba(36,24,16,0.92);color:#fde68a;border:1px solid rgba(245,158,11,0.5);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换 8 款中韩高对比度立体 3D 眉毛模型" style="padding:1px 4px;background:rgba(36,24,16,0.92);color:#fde68a;border:1px solid rgba(245,158,11,0.5);border-radius:4px;">
         ${browShortOpts}
       </select>
       <select class="pill-mini-btn" data-pill-hair="${p.id}" title="一键切换 28 款大师级真发丝 3D 发型" style="padding:1px 4px;background:rgba(12,26,46,0.92);color:#7dd3fc;border:1px solid rgba(56,189,248,0.5);border-radius:4px;">
@@ -868,6 +887,31 @@ function renderActivePetsStrip(summonedList = []) {
     pillsContainer.appendChild(pill);
   }
 
+  pillsContainer.querySelectorAll('[data-pill-skin]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillSkin;
+      const skinId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      const skMeta = SKIN_MATERIAL_CATALOG.find(x => x.id === skinId);
+      if (col) {
+        col.skinVariant = skinId;
+        if (skMeta?.skinTone) col.skinTone = skMeta.skinTone;
+        col.morphs = { ...(col.morphs || {}), skinVariant: skinId };
+        persistCollectibles();
+      }
+      const petEntry = desktopEngine?.pets.get(id);
+      const headGroup = petEntry?.node || petEntry?.headNode;
+      if (headGroup) {
+        if (skMeta?.skinTone) headGroup.userData.skinTone = skMeta.skinTone;
+        setHeadSkinVariant(headGroup, skinId);
+        desktopEngine.wakeRender(1.5, true);
+      }
+      const vcdSkinSel = document.getElementById('vcd-sel-skin-variant');
+      if (vcdSkinSel) vcdSkinSel.value = skinId;
+      showToast(`🎨 已为「${col ? col.name.split('·')[0].trim() : id}」切换无皱纹少女皮肤材质：${skMeta ? skMeta.label : skinId}`);
+    });
+  });
+
   pillsContainer.querySelectorAll('[data-pill-face]').forEach(sel => {
     sel.addEventListener('change', (e) => {
       const id = sel.dataset.pillFace;
@@ -879,8 +923,9 @@ function renderActivePetsStrip(summonedList = []) {
         persistCollectibles();
       }
       const petEntry = desktopEngine?.pets.get(id);
-      if (petEntry?.headNode) {
-        setHeadFaceArchetype(petEntry.headNode, faceId);
+      const headGroup = petEntry?.node || petEntry?.headNode;
+      if (headGroup) {
+        setHeadFaceArchetype(headGroup, faceId);
         desktopEngine.wakeRender(1.5, true);
       }
       const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === faceId);
@@ -899,12 +944,13 @@ function renderActivePetsStrip(summonedList = []) {
         persistCollectibles();
       }
       const petEntry = desktopEngine?.pets.get(id);
-      if (petEntry?.headNode) {
-        setHeadEyebrowStyle(petEntry.headNode, browId);
+      const headGroup = petEntry?.node || petEntry?.headNode;
+      if (headGroup) {
+        setHeadEyebrowStyle(headGroup, browId);
         desktopEngine.wakeRender(1.5, true);
       }
       const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
-      showToast(`✒️ 已为「${col ? col.name.split('·')[0].trim() : id}」切换眉形：${bw ? bw.label : browId}`);
+      showToast(`✒️ 已为「${col ? col.name.split('·')[0].trim() : id}」切换 3D 眉毛模型：${bw ? bw.label : browId}`);
     });
   });
 
@@ -1673,6 +1719,26 @@ window.addEventListener('DOMContentLoaded', async () => {
     await refreshStudio3DModel();
   });
 
+  const syncStudioSkinVariantUI = (skinId) => {
+    const sel = document.getElementById('sel-skin-variant');
+    if (sel) sel.value = skinId;
+    document.querySelectorAll('[data-skin-var]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.skinVar === skinId);
+    });
+  };
+
+  const syncStudioHeadBlendSliders = (blendState) => {
+    if (!blendState) return;
+    document.querySelectorAll('[data-studio-head-blend]').forEach(inp => {
+      const k = inp.dataset.studioHeadBlend;
+      const v = Number(blendState[k] ?? 0);
+      inp.value = String(v);
+      const valSpan = document.querySelector(`[data-studio-head-blend-val="${k}"]`);
+      if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
+      state.studioDraft.morphs[k] = v;
+    });
+  };
+
   const syncStudioFaceArchetypeUI = (archId) => {
     const sel = document.getElementById('sel-face-archetype');
     if (sel) sel.value = archId;
@@ -1689,16 +1755,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   };
 
+  const applyStudioSkinVariant = (skinId) => {
+    state.studioDraft.skinVariant = skinId;
+    state.studioDraft.morphs.skinVariant = skinId;
+    const skMeta = SKIN_MATERIAL_CATALOG.find(x => x.id === skinId);
+    if (skMeta?.skinTone) {
+      state.studioDraft.skinTone = skMeta.skinTone;
+      const colSkin = document.getElementById('col-skin');
+      if (colSkin) colSkin.value = skMeta.skinTone;
+    }
+    syncStudioSkinVariantUI(skinId);
+    if (studioEngine?.headNode) {
+      if (skMeta?.skinTone) studioEngine.headNode.userData.skinTone = skMeta.skinTone;
+      setHeadSkinVariant(studioEngine.headNode, skinId);
+      studioEngine.wakeRender(1.5, true);
+    }
+    if (skMeta) showToast(`🎨 已切换无皱纹少女皮肤材质：${skMeta.label}`);
+  };
+
   const applyStudioFaceArchetype = (archId) => {
     state.studioDraft.faceArchetype = archId;
     state.studioDraft.morphs.faceArchetype = archId;
+    for (const ch of HEAD_BLEND_CHANNELS) {
+      delete state.studioDraft.morphs[ch.id];
+    }
     syncStudioFaceArchetypeUI(archId);
     if (studioEngine?.headNode) {
       setHeadFaceArchetype(studioEngine.headNode, archId);
+      syncStudioHeadBlendSliders(getHeadBlendStateFromGroup(studioEngine.headNode));
       studioEngine.wakeRender(1.5, true);
     }
     const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === archId);
-    if (fa) showToast(`🍑 已切换中韩青年女头型流派：${fa.label}`);
+    if (fa) showToast(`🍑 已切换头模流派并同步 7 通道混合器：${fa.label}`);
   };
 
   const applyStudioEyebrowStyle = (browId) => {
@@ -1710,8 +1798,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       studioEngine.wakeRender(1.5, true);
     }
     const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
-    if (bw) showToast(`✒️ 已切换根根分明真毛流眉形：${bw.label}`);
+    if (bw) showToast(`✒️ 已切换 3D 眉毛模型：${bw.label}`);
   };
+
+  document.getElementById('sel-skin-variant')?.addEventListener('change', (e) => {
+    applyStudioSkinVariant(e.target.value);
+  });
+  document.querySelectorAll('[data-skin-var]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyStudioSkinVariant(btn.dataset.skinVar);
+    });
+  });
 
   document.getElementById('sel-face-archetype')?.addEventListener('change', (e) => {
     applyStudioFaceArchetype(e.target.value);
@@ -1719,6 +1816,25 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.querySelectorAll('[data-face-arch]').forEach(btn => {
     btn.addEventListener('click', () => {
       applyStudioFaceArchetype(btn.dataset.faceArch);
+    });
+  });
+
+  document.querySelectorAll('[data-studio-head-blend]').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const k = inp.dataset.studioHeadBlend;
+      const v = parseFloat(e.target.value);
+      const valSpan = document.querySelector(`[data-studio-head-blend-val="${k}"]`);
+      if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
+      state.studioDraft.morphs[k] = v;
+      if (studioEngine?.headNode) {
+        studioEngine.headNode.userData.morphs = {
+          ...(studioEngine.headNode.userData.morphs || {}),
+          ...state.studioDraft.morphs,
+          [k]: v,
+        };
+        applyHeadMorphsToGroup(studioEngine.headNode, studioEngine.headNode.userData.morphs);
+        studioEngine.wakeRender(1.5, true);
+      }
     });
   });
 
@@ -1783,13 +1899,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       qianxue: 'kr_sweet_droop',
       shenzhiwei: 'cn_cold_sword'
     };
+    const presetSkinVariantMap = {
+      fangyaoping: 'cn_scholar_natural',
+      user_photo: 'kr_dewy_peach',
+      linxi: 'kr_chaebol_cool',
+      suwan: 'cn_jiangnan_jade',
+      qianxue: 'kr_firstlove_camellia',
+      shenzhiwei: 'cn_intellectual_olive'
+    };
     const presetSkinMap = {
-      fangyaoping: '#faDFce',
-      user_photo: '#fff0eb',
-      linxi: '#f6edf5',
-      suwan: '#fcf0e1',
-      qianxue: '#fff5f4',
-      shenzhiwei: '#f4e6dc'
+      fangyaoping: '#fae3d2',
+      user_photo: '#ffeae4',
+      linxi: '#fcf3f6',
+      suwan: '#fdf2e5',
+      qianxue: '#fff1f3',
+      shenzhiwei: '#f8ece4'
     };
     const presetExprMap = {
       fangyaoping: 'dead_calm',
@@ -1823,6 +1947,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.studioDraft.eyebrowStyle = presetBrowMap[e.target.value];
       state.studioDraft.morphs.eyebrowStyle = presetBrowMap[e.target.value];
       syncStudioEyebrowStyleUI(presetBrowMap[e.target.value]);
+    }
+    if (presetSkinVariantMap[e.target.value]) {
+      state.studioDraft.skinVariant = presetSkinVariantMap[e.target.value];
+      state.studioDraft.morphs.skinVariant = presetSkinVariantMap[e.target.value];
+      syncStudioSkinVariantUI(presetSkinVariantMap[e.target.value]);
     }
     if (presetSkinMap[e.target.value]) {
       state.studioDraft.skinTone = presetSkinMap[e.target.value];
@@ -2035,6 +2164,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       grade,
       createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
       basePreset: state.studioDraft.basePreset,
+      skinVariant: state.studioDraft.skinVariant || 'cn_scholar_natural',
+      faceArchetype: state.studioDraft.faceArchetype || 'cn_oval_scholar',
+      eyebrowStyle: state.studioDraft.eyebrowStyle || 'cn_scholar_natural',
       deadExpression: state.studioDraft.deadExpression || state.studioDraft.morphs?.deadExpression || 'dead_calm',
       containerStyle,
       decorStyle,
@@ -2397,7 +2529,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     setGravityMode(e.target.checked);
   });
 
-  // Visual Style Presets & Real-Time Lighting / Window Gobo / Chiaroscuro / Tyndall / Vintage Photo Sliders
+  // Visual Style Presets & Real-Time Lighting / HDR / Soft-Focus / DOF / Chiaroscuro Sliders
   const applyVisualConfigAndSyncUI = (patch = {}, fromPreset = false) => {
     if ('wetGloss' in patch && !('skinGloss' in patch)) {
       patch.skinGloss = patch.wetGloss;
@@ -2406,13 +2538,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (fromPreset && patch.presetId && VISUAL_STYLE_PRESETS[patch.presetId]) {
       const p = VISUAL_STYLE_PRESETS[patch.presetId];
       Object.assign(state.visualCustomConfig, {
-        windowGobo: p.windowGobo || 'rain_mullion',
-        windowGoboStrength: p.windowGoboStrength ?? 0.76,
-        chiaroscuro: p.chiaroscuro ?? 1.28,
-        tyndall: p.tyndall ?? 0.95,
-        vintagePhoto: p.vintagePhoto ?? 0.86,
-        keyColor: p.keyColor || '#ffdca8',
-        rimColor: p.rimColor || '#93c5fd',
+        hdrMode: p.hdrMode || 'softbox_portrait',
+        envIntensity: p.envIntensity ?? 0.52,
+        windowGobo: p.windowGobo || 'none',
+        windowGoboStrength: p.windowGoboStrength ?? 0.22,
+        chiaroscuro: p.chiaroscuro ?? 0.52,
+        tyndall: p.tyndall ?? 0.45,
+        vintagePhoto: p.vintagePhoto ?? 0.20,
+        softFocus: p.softFocus ?? 0.46,
+        depthBlur: p.depthBlur ?? 0.32,
+        chromatic: p.chromatic ?? 0.18,
+        keyColor: p.keyColor || '#fff3e4',
+        rimColor: p.rimColor || '#ffe8d6',
         keyAzimuthDeg: p.keyAzimuthDeg,
         keyElevationDeg: p.keyElevationDeg,
         keyIntensity: p.keyIntensity,
@@ -2431,6 +2568,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (el) el.value = String(val);
         if (vEl) vEl.textContent = fmt(val);
       };
+      syncSlider('vc-soft-focus', 'val-vc-soft-focus', state.visualCustomConfig.softFocus, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-depth-blur', 'val-vc-depth-blur', state.visualCustomConfig.depthBlur, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-chromatic', 'val-vc-chromatic', state.visualCustomConfig.chromatic, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-env-intensity', 'val-vc-env-intensity', state.visualCustomConfig.envIntensity, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-tyndall', 'val-vc-tyndall', state.visualCustomConfig.tyndall, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-vintage-photo', 'val-vc-vintage-photo', state.visualCustomConfig.vintagePhoto, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', state.visualCustomConfig.chiaroscuro, v => `${Math.round(v * 100)}%`);
@@ -2445,6 +2586,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       syncSlider('vc-contrast', 'val-vc-contrast', p.contrast, v => Number(v).toFixed(2));
       syncSlider('vc-warmth', 'val-vc-warmth', p.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
       syncSlider('vc-bloom', 'val-vc-bloom', p.bloomStrength, v => `${Math.round(v * 100)}%`);
+      const selHdr = document.getElementById('sel-hdr-mode');
+      if (selHdr) selHdr.value = state.visualCustomConfig.hdrMode;
       const selGobo = document.getElementById('sel-window-gobo');
       if (selGobo) selGobo.value = state.visualCustomConfig.windowGobo;
       const colKey = document.getElementById('vc-key-color');
@@ -2463,8 +2606,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       const presetId = btn.dataset.stylePreset;
       applyVisualConfigAndSyncUI({ presetId }, true);
       const p = VISUAL_STYLE_PRESETS[presetId];
-      if (p) showToast(`🎬 已切换唯美老照片与丁达尔光影预设：${p.label}`);
+      if (p) showToast(`🎬 已切换电影色调/HDR/柔焦预设：${p.label} — ${p.desc}`);
     });
+  });
+
+  document.getElementById('sel-hdr-mode')?.addEventListener('change', (e) => {
+    applyVisualConfigAndSyncUI({ hdrMode: e.target.value }, false);
+    showToast(`🌐 已切换 HDR 全景环境光场：${e.target.options[e.target.selectedIndex].text}`);
   });
 
   document.getElementById('sel-window-gobo')?.addEventListener('change', (e) => {
@@ -2488,6 +2636,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyVisualConfigAndSyncUI({ [key]: v }, false);
     });
   };
+  bindVcSlider('vc-soft-focus', 'val-vc-soft-focus', 'softFocus', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-depth-blur', 'val-vc-depth-blur', 'depthBlur', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-chromatic', 'val-vc-chromatic', 'chromatic', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-env-intensity', 'val-vc-env-intensity', 'envIntensity', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-tyndall', 'val-vc-tyndall', 'tyndall', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-vintage-photo', 'val-vc-vintage-photo', 'vintagePhoto', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', 'chiaroscuro', v => `${Math.round(v * 100)}%`);
@@ -2563,7 +2715,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     showToast('🔄 已恢复默认书桌层架、摆件与收纳建筑！');
   });
 
-  // Stage 28: Quick Desktop Active Head Face Archetype & Eyebrow Style Switcher
+  // Stage 30: Quick Desktop Active Head Skin Material, Face Archetype, Multi-Head Blender & Eyebrow Style Switcher
   const getTargetDesktopPet = () => {
     if (!desktopEngine || desktopEngine.pets.size === 0) return null;
     if (desktopEngine.hoveredPetId && desktopEngine.pets.has(desktopEngine.hoveredPetId)) {
@@ -2571,11 +2723,50 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     return Array.from(desktopEngine.pets.values())[0];
   };
+  const syncVcdHeadBlendSliders = (headGroup) => {
+    if (!headGroup) return;
+    const blendState = getHeadBlendStateFromGroup(headGroup);
+    document.querySelectorAll('[data-head-blend]').forEach(inp => {
+      const k = inp.dataset.headBlend;
+      const v = Number(blendState[k] ?? 0);
+      inp.value = String(v);
+      const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
+      if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
+    });
+  };
+  document.getElementById('vcd-sel-skin-variant')?.addEventListener('change', (e) => {
+    const skinId = e.target.value;
+    const pet = getTargetDesktopPet();
+    if (!pet) return;
+    const headGroup = pet.node || pet.headNode;
+    const skMeta = SKIN_MATERIAL_CATALOG.find(x => x.id === skinId);
+    if (headGroup) {
+      if (skMeta?.skinTone) headGroup.userData.skinTone = skMeta.skinTone;
+      setHeadSkinVariant(headGroup, skinId);
+    }
+    pet.collectible.skinVariant = skinId;
+    if (skMeta?.skinTone) pet.collectible.skinTone = skMeta.skinTone;
+    pet.collectible.morphs = { ...(pet.collectible.morphs || {}), skinVariant: skinId };
+    const col = state.collectibles.find(c => c.id === pet.id);
+    if (col) {
+      col.skinVariant = skinId;
+      if (skMeta?.skinTone) col.skinTone = skMeta.skinTone;
+      col.morphs = { ...(col.morphs || {}), skinVariant: skinId };
+      persistCollectibles();
+    }
+    desktopEngine.wakeRender(1.5, true);
+    desktopEngine.emitPetsChange();
+    showToast(`🎨 已将「${pet.collectible.name.split('·')[0].trim()}」皮肤切换为：${skMeta ? skMeta.label : skinId}`);
+  });
   document.getElementById('vcd-sel-face-archetype')?.addEventListener('change', (e) => {
     const faceId = e.target.value;
     const pet = getTargetDesktopPet();
     if (!pet) return;
-    setHeadFaceArchetype(pet.headNode, faceId);
+    const headGroup = pet.node || pet.headNode;
+    if (headGroup) {
+      setHeadFaceArchetype(headGroup, faceId);
+      syncVcdHeadBlendSliders(headGroup);
+    }
     pet.collectible.faceArchetype = faceId;
     pet.collectible.morphs = { ...(pet.collectible.morphs || {}), faceArchetype: faceId };
     const col = state.collectibles.find(c => c.id === pet.id);
@@ -2587,13 +2778,41 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine.wakeRender(1.5, true);
     desktopEngine.emitPetsChange();
     const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === faceId);
-    showToast(`🍑 已将「${pet.collectible.name.split('·')[0].trim()}」切换为：${fa ? fa.label : faceId}`);
+    showToast(`🍑 已将「${pet.collectible.name.split('·')[0].trim()}」头模切换为：${fa ? fa.label : faceId}`);
+  });
+  document.querySelectorAll('[data-head-blend]').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const k = inp.dataset.headBlend;
+      const v = parseFloat(e.target.value);
+      const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
+      if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
+      const pet = getTargetDesktopPet();
+      if (!pet) return;
+      const headGroup = pet.node || pet.headNode;
+      if (!headGroup) return;
+      headGroup.userData.morphs = {
+        ...(headGroup.userData.morphs || {}),
+        ...(pet.collectible.morphs || {}),
+        [k]: v,
+      };
+      applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
+      pet.collectible.morphs = { ...headGroup.userData.morphs };
+      const col = state.collectibles.find(c => c.id === pet.id);
+      if (col) {
+        col.morphs = { ...headGroup.userData.morphs };
+        persistCollectibles();
+      }
+      desktopEngine.wakeRender(1.5, true);
+    });
   });
   document.getElementById('vcd-sel-eyebrow-style')?.addEventListener('change', (e) => {
     const browId = e.target.value;
     const pet = getTargetDesktopPet();
     if (!pet) return;
-    setHeadEyebrowStyle(pet.headNode, browId);
+    const headGroup = pet.node || pet.headNode;
+    if (headGroup) {
+      setHeadEyebrowStyle(headGroup, browId);
+    }
     pet.collectible.eyebrowStyle = browId;
     pet.collectible.morphs = { ...(pet.collectible.morphs || {}), eyebrowStyle: browId };
     const col = state.collectibles.find(c => c.id === pet.id);
@@ -2605,7 +2824,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine.wakeRender(1.5, true);
     desktopEngine.emitPetsChange();
     const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
-    showToast(`✒️ 已将「${pet.collectible.name.split('·')[0].trim()}」切换为：${bw ? bw.label : browId}`);
+    showToast(`✒️ 已将「${pet.collectible.name.split('·')[0].trim()}」3D 眉毛切换为：${bw ? bw.label : browId}`);
   });
 
   // Floor Style, Shelf Layout & Screen-Space Formation Switcher
