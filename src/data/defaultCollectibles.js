@@ -70,7 +70,7 @@ export const DEFAULT_COLLECTIBLES = [
   {
     id: 'SPEC-2026-000',
     folderName: 'SPEC-2026-000_UserPhoto',
-    name: '初夏 · 照片真容定制标本',
+    name: '初夏 · 照片参照发型标本',
     subtitle: '空气碎刘海露耳束发 · 右颊特征痣 · 失活微阖平直唇',
     grade: 'UR · 照片真容孤品',
     basePreset: 'user_photo',

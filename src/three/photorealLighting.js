@@ -131,7 +131,7 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   else if (lvl === 'ultra') ratio = isStudio ? Math.max(dpr, 2.5) : Math.max(dpr, 1.75);
   else if (lvl === 'high' && isStudio) ratio = Math.max(dpr, 2);
   const cap = isStudio ? (cfg.studioPixelRatioCap || cfg.pixelRatioCap) : cfg.pixelRatioCap;
-  renderer.setPixelRatio(Math.min(ratio, cap));
+  renderer.setPixelRatio(engine.softwareRenderer ? Math.min(dpr, 1) : Math.min(ratio, cap));
 
   // 最高档把已加载贴图的各向异性过滤拉满，斜视角下皮肤/发丝不再糊成一片。
   const maxAniso = Math.min(cfg.aniso || 8, renderer.capabilities?.getMaxAnisotropy?.() || 8);
@@ -165,4 +165,13 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   }
   engine.currentRenderQuality = lvl;
   return lvl;
+}
+
+export function isSoftwareRenderer(renderer) {
+  try {
+    const gl = renderer.getContext();
+    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return /swiftshader|llvmpipe|softpipe|software raster/i.test(String(name));
+  } catch (_) { return false; }
 }
