@@ -66,15 +66,15 @@ function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
 export function buildStudioLightRig(scene) {
   // A shaped studio key/fill ratio keeps facial planes readable instead of
   // filling every shadow into the flat, porcelain/plastic look.
-  const hemi = new THREE.HemisphereLight('#fff5ef', '#34272b', 0.30);
-  const key = new THREE.DirectionalLight('#fff4ed', 1.70);
+  const hemi = new THREE.HemisphereLight('#fff5ef', '#34272b', 0.24);
+  const key = new THREE.DirectionalLight('#fff4ed', 1.32);
   key.position.set(28, 34, 48);
   configureKeyShadow(key, 26, 2048, 220);
-  const fill = new THREE.DirectionalLight('#b7c9e5', 0.24);
+  const fill = new THREE.DirectionalLight('#b7c9e5', 0.20);
   fill.position.set(-34, 10, 35);
-  const up = new THREE.DirectionalLight('#f2c9c0', 0.62);
+  const up = new THREE.DirectionalLight('#f2c9c0', 0.34);
   up.position.set(0, -48, 22);
-  const rim = new THREE.DirectionalLight('#d1e2ef', 1.05); // Stage 13c：+0.13 发丝边缘分离
+  const rim = new THREE.DirectionalLight('#d1e2ef', 0.88);
   rim.position.set(0, 26, -42);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
@@ -85,15 +85,15 @@ export function buildStudioLightRig(scene) {
  * 注意：旧版背部 PointLight 在物理灯光单位下几乎无贡献，改为确定性 DirectionalLight。
  */
 export function buildDesktopLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff5f0', '#26314a', 0.55);
-  const key = new THREE.DirectionalLight('#fff6ef', 1.85);
+  const hemi = new THREE.HemisphereLight('#fff5f0', '#26314a', 0.30);
+  const key = new THREE.DirectionalLight('#fff6ef', 1.28);
   key.position.set(42, 48, 95);
   configureKeyShadow(key, 70, 2048, 500);
-  const fill = new THREE.DirectionalLight('#9cc2ff', 0.55);
+  const fill = new THREE.DirectionalLight('#9cc2ff', 0.26);
   fill.position.set(-55, 15, 70);
-  const up = new THREE.DirectionalLight('#fde2e4', 0.95);
+  const up = new THREE.DirectionalLight('#fde2e4', 0.38);
   up.position.set(0, -65, 55);
-  const rim = new THREE.DirectionalLight('#7dd3fc', 1.70); // Stage 13c：+0.20 发丝边缘分离
+  const rim = new THREE.DirectionalLight('#7dd3fc', 1.08);
   rim.position.set(0, 35, -80);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
@@ -102,14 +102,14 @@ export function buildDesktopLightRig(scene) {
 const QUALITY_CONFIGS = {
   low: { pixelRatioCap: 1, shadowSize: 0, envIntensity: 0.28, aniso: 4 },
   medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.50, aniso: 8 },
-  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.70, aniso: 8 },
+  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.55, aniso: 8 },
   // Stage 14 · 电影 Ultra：WebGL 版的 DLSS 等效上限——以超采样换发丝/皮肤稳定性。
   // 工坊(小画布)可拉到 3x + 4096 阴影；全屏桌宠封顶 2.5x，避免显存爆炸。
-  ultra: { pixelRatioCap: 2.5, studioPixelRatioCap: 3, shadowSize: 2048, studioShadowSize: 4096, envIntensity: 0.78, aniso: 16 },
+  ultra: { pixelRatioCap: 2.5, studioPixelRatioCap: 3, shadowSize: 2048, studioShadowSize: 4096, envIntensity: 0.58, aniso: 16 },
   // Stage 15 · RTX 2070 Super (Turing 8GB) 专属推荐档：单头桌宠瓶颈是全屏像素/发丝overdraw而非几何。
   // 原生分辨率起步 + 桌宠封顶1.5x/工坊2x + 2048阴影 + 16x过滤 + 桌面自适应动态分辨率(引擎侧)。
   // 这是该卡上“清晰度/帧率”甜点；盲目3x超采样只会掉帧并触发驱动降频，反而更糊更卡。
-  rtx2070: { pixelRatioCap: 1.5, studioPixelRatioCap: 2, shadowSize: 2048, studioShadowSize: 2048, envIntensity: 0.75, aniso: 16 },
+  rtx2070: { pixelRatioCap: 1.5, studioPixelRatioCap: 2, shadowSize: 2048, studioShadowSize: 2048, envIntensity: 0.50, aniso: 16 },
 };
 
 /**

@@ -51,7 +51,7 @@ export class StudioPreviewEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
     // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
-    applyBaseRendererSettings(this.renderer, 0.94);
+    applyBaseRendererSettings(this.renderer, 0.88);
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     this.controls = new OrbitControls(this.camera, this.canvas);

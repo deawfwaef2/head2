@@ -74,9 +74,9 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   // 保守阈值辉光：只有高光溢出，绝不洗白皮肤/断面
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    options.bloomStrength ?? 0.22,
+    options.bloomStrength ?? 0.15,
     options.bloomRadius ?? 0.55,
-    options.bloomThreshold ?? 0.85
+    options.bloomThreshold ?? 0.92
   );
 
   const gradePass = new ShaderPass(BeautyGradeShader);

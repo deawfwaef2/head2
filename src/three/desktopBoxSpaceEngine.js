@@ -87,7 +87,7 @@ export class DesktopBoxSpaceEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
     // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
-    applyBaseRendererSettings(this.renderer, 1.0);
+    applyBaseRendererSettings(this.renderer, 0.82);
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     // Stage 7 写实 5 点灯阵（与工坊同色温体系；背部轮廓光改用确定性方向光）

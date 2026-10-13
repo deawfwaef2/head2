@@ -614,18 +614,18 @@ function buildGimbalOverlayGroup() {
   gimbalGroup.visible = false;
 
   const ringGeo1 = new THREE.TorusGeometry(13.2, 0.16, 12, 64);
-  const ringMat1 = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.65 });
+  const ringMat1 = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.30 });
   const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
   ring1.userData.planeNormal = new THREE.Vector3(0, 0, 1);
-  ring1.userData.baseOpacity = 0.65;
+  ring1.userData.baseOpacity = 0.30;
   gimbalGroup.add(ring1);
 
   const ringGeo2 = new THREE.TorusGeometry(12.4, 0.12, 12, 64);
   ringGeo2.rotateY(Math.PI / 2);
-  const ringMat2 = new THREE.MeshBasicMaterial({ color: '#f43f5e', transparent: true, opacity: 0.52 });
+  const ringMat2 = new THREE.MeshBasicMaterial({ color: '#f43f5e', transparent: true, opacity: 0.22 });
   const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
   ring2.userData.planeNormal = new THREE.Vector3(1, 0, 0);
-  ring2.userData.baseOpacity = 0.52;
+  ring2.userData.baseOpacity = 0.22;
   gimbalGroup.add(ring2);
 
   return gimbalGroup;
@@ -720,7 +720,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         normalScale: new THREE.Vector2(0.50, 0.50),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.055,
+        bumpScale: 0.028,
         color: computeSkinTintColor(skinToneHex),
         roughness: Number(materials.skinRoughness ?? 0.68),
         metalness: 0.0,
@@ -729,9 +729,9 @@ export async function buildCollectibleHeadNode(config = {}) {
         sheenColor: new THREE.Color('#e0a198'),
         clearcoat: 0.03,
         clearcoatRoughness: 0.65,
-        specularIntensity: 0.34,
+        specularIntensity: 0.27,
         ior: 1.42,
-        envMapIntensity: 0.42,
+        envMapIntensity: 0.30,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });

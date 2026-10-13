@@ -109,7 +109,7 @@ function buildStrands(source, indices, steps, sides, desktop) {
       }
       // Real tapered cylindrical strands. Desktop LOD slightly widens subpixel
       // fibers for stable coverage; source and portrait preserve physical radii.
-      const radius = source.radius[strand] * (desktop ? 1.8 : (source.family[strand] === 1 ? 1.55 : 1.15)) * (.98 * Math.pow(1 - t, .32) + .02);
+      const radius = source.radius[strand] * (desktop ? 2.55 : (source.family[strand] === 1 ? 1.55 : 1.30)) * (.98 * Math.pow(1 - t, .32) + .02);
       for (let k = 0; k < sides; k++) {
         const angle = k / sides * Math.PI * 2;
         radial.copy(normal).multiplyScalar(Math.cos(angle)).addScaledVector(binormal, Math.sin(angle));
@@ -150,7 +150,7 @@ function makeRootLayer(head, color, style) {
     const photo = style === 'groom_photo_tied';
     const hairline = -.026 + (photo ? .060 : .084) * front;
     let a = THREE.MathUtils.smoothstep(y, hairline, hairline + (photo ? .037 : .026));
-    if (style === 'groom_center_long' && y > .065) a *= 1 - Math.exp(-Math.pow(x / .0011, 2));
+    if (style === 'groom_center_long' && y > .065) a *= 1 - 0.82 * Math.exp(-Math.pow(x / .00055, 2));
     const ear = THREE.MathUtils.smoothstep(Math.abs(x), .058, .070) * (1 - THREE.MathUtils.smoothstep(y, .025, .044)) * THREE.MathUtils.smoothstep(z, -.02, .015);
     a *= 1 - ear; // A scalp-density layer must never paint the pinna as hair.
     for (let k = 0; k < 3; k++) {
@@ -170,7 +170,7 @@ function makeRootLayer(head, color, style) {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
   g.setAttribute('color', new THREE.BufferAttribute(colors, 4)); g.setIndex(selected);
   g.computeBoundingSphere();
-  const m = new THREE.MeshStandardMaterial({ color, roughness: .88, vertexColors: true, transparent: true, depthWrite: false, alphaTest: 0, alphaToCoverage: false });
+  const m = new THREE.MeshStandardMaterial({ color, roughness: .92, vertexColors: true, transparent: true, depthWrite: true, alphaTest: .04, alphaToCoverage: true });
   const layer = new THREE.Mesh(g, m); layer.name = 'Groom_ScalpRootDensity';
   layer.userData.isGroomRoot = true; layer.castShadow = false; layer.receiveShadow = true;
   return layer;
@@ -181,7 +181,7 @@ export async function buildCurveGroom(style, head, config = {}) {
   if (!id) throw new Error('未知 Groom 发型');
   const source = await decodeSource(id);
   const desktop = config.groomLod !== 'studio';
-  const budget = desktop ? 3000 : Math.min(source.count, Number(config.groomDensity || 9000));
+  const budget = desktop ? 4600 : Math.min(source.count, Number(config.groomDensity || 9000));
   const count = Math.max(600, Math.min(source.count, budget));
   const families = [[], [], [], []];
   for (let i = 0; i < count; i++) {
@@ -191,6 +191,9 @@ export async function buildCurveGroom(style, head, config = {}) {
   // Two smoothly offset child fibers per fringe guide increase natural coverage.
   const fringeParents = families[1].slice();
   for (const strand of fringeParents) families[1].push(strand + source.count, strand + source.count * 2);
+  // Stage 16: 长发主体(family0)也补一根子发丝，侧面/背面不再透出皮肤噪点
+  const flowParents = families[0].slice();
+  for (const strand of flowParents) families[0].push(strand + source.count);
   const rendered = families.reduce((n, family) => n + family.length, 0);
   const group = new THREE.Group(); group.name = 'HairGroup';
   const base = new THREE.Color(config.hairColor || config.materials?.hairColorHex || '#191518');
