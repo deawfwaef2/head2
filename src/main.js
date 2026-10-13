@@ -11,20 +11,32 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-v2';
+const STORAGE_KEY = 'cervix3d-collectibles-stage21-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (!Array.isArray(saved)) return defaults;
-    const byId = new Map(defaults.map(item => [item.id, item]));
-    for (const item of saved) {
-      if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
-      // A blob URL is tied to a single tab. Never restore a dead reference.
-      if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
-      byId.set(item.id, item);
+    if (Array.isArray(saved) && saved.length > 0) {
+      const byId = new Map(defaults.map(item => [item.id, item]));
+      for (const item of saved) {
+        if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
+        if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+        byId.set(item.id, item);
+      }
+      return [...byId.values()];
     }
-    return [...byId.values()];
+    // Migrate only custom user-created specimens from previous storage key
+    const legacy = JSON.parse(localStorage.getItem('cervix3d-collectibles-v2') || '[]');
+    if (Array.isArray(legacy)) {
+      const builtinIds = new Set(defaults.map(d => d.id));
+      for (const item of legacy) {
+        if (item && typeof item.id === 'string' && !builtinIds.has(item.id)) {
+          if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+          defaults.unshift(item);
+        }
+      }
+    }
+    return defaults;
   } catch (_) { return defaults; }
 }
 function persistCollectibles() {
@@ -1148,16 +1160,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     const presetHairMap = {
       user_photo: 'groom_photo_tied',
       linxi: 'groom_center_long',
-      suwan: 'groom_air_bob',
-      qianxue: 'groom_high_ponytail',
-      shenzhiwei: 'groom_low_chignon'
+      suwan: 'groom_low_chignon',
+      qianxue: 'groom_hime_cut',
+      shenzhiwei: 'groom_clavicle_bob'
     };
     const presetExprMap = {
       user_photo: 'dead_calm',
-      linxi: 'dead_hollow',
-      suwan: 'dead_serene',
+      linxi: 'dead_calm',
+      suwan: 'dead_calm',
       qianxue: 'dead_shock',
       shenzhiwei: 'dead_smile'
+    };
+    const presetMorphMap = {
+      user_photo: { jawVLine: 0.12, chinLength: -0.25, cheekSoftness: 0.35, noseBridge: 0.10, eyeAlmond: 0.25, eyeTilt: -0.06, lipFullness: 0.0 },
+      linxi: { jawVLine: -0.35, chinLength: 0.08, cheekSoftness: -0.32, noseBridge: 0.38, eyeAlmond: 0.06, eyeTilt: 0.34, lipFullness: 0.0 },
+      suwan: { jawVLine: 0.42, chinLength: 0.20, cheekSoftness: 0.10, noseBridge: 0.28, eyeAlmond: 0.18, eyeTilt: 0.10, lipFullness: 0.0 },
+      qianxue: { jawVLine: 0.36, chinLength: -0.38, cheekSoftness: 0.32, noseBridge: 0.24, eyeAlmond: 0.38, eyeTilt: 0.40, lipFullness: 0.0 },
+      shenzhiwei: { jawVLine: 0.20, chinLength: 0.38, cheekSoftness: -0.30, noseBridge: 0.34, eyeAlmond: 0.08, eyeTilt: 0.16, lipFullness: 0.0 },
     };
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
@@ -1168,7 +1187,23 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.studioDraft.morphs.deadExpression = presetExprMap[e.target.value];
       syncStudioExpressionUI(presetExprMap[e.target.value]);
     }
-    document.getElementById('custom-model-status').textContent = `内置演示头模 (${e.target.value} + ${state.studioDraft.hairStyle})`;
+    if (presetMorphMap[e.target.value]) {
+      Object.assign(state.studioDraft.morphs, presetMorphMap[e.target.value]);
+      for (const [sId, vId, mKey] of [
+        ['morph-jaw', 'val-morph-jaw', 'jawVLine'],
+        ['morph-cheek', 'val-morph-cheek', 'cheekSoftness'],
+        ['morph-nose', 'val-morph-nose', 'noseBridge'],
+        ['morph-eye', 'val-morph-eye', 'eyeAlmond'],
+        ['morph-lip', 'val-morph-lip', 'lipFullness'],
+      ]) {
+        const sEl = document.getElementById(sId);
+        const vEl = document.getElementById(vId);
+        const val = Number(state.studioDraft.morphs[mKey] ?? 0);
+        if (sEl) sEl.value = String(val);
+        if (vEl) vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
+      }
+    }
+    document.getElementById('custom-model-status').textContent = `内置高定头模 (${e.target.value} + ${state.studioDraft.hairStyle})`;
     await refreshStudio3DModel();
   });
 

@@ -92,13 +92,18 @@ function buildDustLayer({ count, size, opacity, bounds, seed }) {
  * bounds: { x:[min,max], y:[min,max], z:[min,max] } 世界坐标范围
  */
 export function createBokehDust(options = {}) {
-  const bounds = options.bounds || { x: [-58, 58], y: [-30, 30], z: [-112, -4] };
+  const rawBounds = options.bounds || { x: [-58, 58], y: [-30, 30], z: [-112, -28] };
+  const bounds = {
+    x: rawBounds.x,
+    y: rawBounds.y,
+    z: [rawBounds.z[0], Math.min(-28, rawBounds.z[1])],
+  };
   const group = new THREE.Group();
   group.name = 'BokehDustAtmosphere';
   const layers = [
-    buildDustLayer({ count: options.far ?? 120, size: options.farSize ?? 1.7, opacity: 0.34, bounds, seed: 1234567 }),
-    buildDustLayer({ count: options.mid ?? 80, size: options.midSize ?? 2.9, opacity: 0.28, bounds, seed: 7654321 }),
-    buildDustLayer({ count: options.near ?? 36, size: options.nearSize ?? 4.8, opacity: 0.20, bounds, seed: 2468135 }),
+    buildDustLayer({ count: options.far ?? 100, size: options.farSize ?? 1.4, opacity: 0.16, bounds, seed: 1234567 }),
+    buildDustLayer({ count: options.mid ?? 64, size: options.midSize ?? 2.1, opacity: 0.12, bounds, seed: 7654321 }),
+    buildDustLayer({ count: options.near ?? 24, size: options.nearSize ?? 2.8, opacity: 0.08, bounds, seed: 2468135 }),
   ];
   for (const layer of layers) group.add(layer.points);
 

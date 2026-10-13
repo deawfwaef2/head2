@@ -85,15 +85,16 @@ export function buildStudioLightRig(scene) {
  * 注意：旧版背部 PointLight 在物理灯光单位下几乎无贡献，改为确定性 DirectionalLight。
  */
 export function buildDesktopLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff5f0', '#26314a', 0.30);
+  const hemi = new THREE.HemisphereLight('#fff5f0', '#2b242a', 0.30);
   const key = new THREE.DirectionalLight('#fff6ef', 1.28);
   key.position.set(42, 48, 95);
   configureKeyShadow(key, 70, 2048, 500);
-  const fill = new THREE.DirectionalLight('#9cc2ff', 0.26);
+  const fill = new THREE.DirectionalLight('#d8e4f5', 0.24);
   fill.position.set(-55, 15, 70);
-  const up = new THREE.DirectionalLight('#fde2e4', 0.38);
+  const up = new THREE.DirectionalLight('#f7d5d0', 0.36);
   up.position.set(0, -65, 55);
-  const rim = new THREE.DirectionalLight('#7dd3fc', 1.08);
+  // Warm-neutral studio rim light so dark hair & porcelain skin never get a neon blue outline
+  const rim = new THREE.DirectionalLight('#f4e8e1', 0.76);
   rim.position.set(0, 35, -80);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };

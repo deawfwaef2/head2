@@ -1,32 +1,40 @@
 #!/usr/bin/env python3
 """
-Stage 20 Master Visual Overhaul Script (v2 - Pixel-Exact UV & Tear-Free Hair):
+Stage 21 Masterpiece Asset Overhaul:
 1. Upgrades `public/models/daz_asian_head_base.glb`:
-   - Erases the brownish buzz-cut hair stubble on the scalp/temples/forehead of `skin_albedo`.
-   - Paints pixel-exact East Asian female lip vermilion around the true UV mouth center
-     `u in [0.895, 0.923], v = 0.5168` (upper lip `u=0.896..0.908`, parting seam `u=0.9085`,
-     lower lip `u=0.909..0.922`), plus soft cheek blush, nose tip warmth, eyelid depth,
-     and the 3 signature right-cheek beauty marks.
-2. Rebuilds clean, tear-free `hair_user_photo.glb` & shelf-free `hair_*.glb` meshes:
-   - Eliminates the `z = 0.034` hard branch tear on `hair_user_photo.glb`.
-   - Eliminates the horizontal flat shelf at `y = -0.093m` on long hair meshes by tapering
-     strands inward and trimming triangles that hang below the neck cut plane.
-3. Regenerates `public/grooms/photo_tied.groom`, `center_long.groom`, `low_chignon.groom`:
-   - Full temple coverage (`鬓角饱满不秃`), high crown ("头包脸"), S-curved face-framing locks,
-     and clean termination above the C4/C5 bloody neck cross-section.
+   - Upsamples & paints a 2048x2048 photoreal East Asian female facial skin texture:
+     * Erases baked buzz-cut scalp stubble outside the facial oval
+     * Paints photoreal double-eyelid creases (双眼皮折痕), upper lashline tightline eyeliner (内眼线),
+       outer canthus eyeshadow depth, lower-eyelid aegyo-sal (自然卧蚕), and inner tear-duct caruncle
+     * Paints micro-blading feathered eyebrow strokes on the brow ridge + lifts the 3D `Eyebrows` mesh
+       by +1.1mm so 0% of it is buried inside `HeadSkin`
+     * Paints dorsal nose-bridge highlight, bilateral nose contour, nostril/alar crease shadow, and philtrum ridges
+     * Paints 2048x2048 vertical lip micro-grooves, petal gradient vermilion, oral commissure shadow, and moisture gloss
+     * Keeps base cheek skin flawless porcelain (character-specific moles are applied per preset in JS so
+       different characters do not share the same 3 cheek moles!)
+   - Upgrades `Eye` iris texture (1024x1024) with crisp limbal ring, radial amber-espresso iris fibers & dual catchlights
+   - Upgrades `Eyebrow` & `Eyelash` alpha textures for lush, dark, feathered hair definition
+   - Sculpts high-impact, anatomically distinct 3D facial bone morph targets (`face_jaw_width_decr/incr`,
+     `face_chin_decr/incr`, `face_cheekbones_decr/incr`, `face_nose_height_incr`, `face_eye_size_incr`,
+     `face_eye_tilt_incr`) so the 5 presets have unmistakably distinct Chinese female face shapes!
+2. Repairs all 8 `public/models/hair_*.glb` meshes (tear-free, >=4.6mm cranial clearance, C-curl neck taper).
+3. Generates 3-Layer High-Cranial Silk `.groom` files (`photo_tied.groom`, `center_long.groom`, `low_chignon.groom`)
+   with dense overlapping front bangs, temple locks, and high-crown volume so `.groom` hairstyles need ZERO
+   low-poly `.glb` polygon helmets!
 """
+
 import io
 import json
 import math
 import os
 import struct
 import numpy as np
-from PIL import Image, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 from scipy.spatial import cKDTree
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODELS_DIR = os.path.join(ROOT, 'public', 'models')
-GROOMS_DIR = os.path.join(ROOT, 'public', 'grooms')
+ROOT_DIR = '/home/user'
+MODELS_DIR = os.path.join(ROOT_DIR, 'public', 'models')
+GROOMS_DIR = os.path.join(ROOT_DIR, 'public', 'grooms')
 
 
 def read_glb(path):
@@ -39,185 +47,453 @@ def read_glb(path):
 
 
 def write_glb(path, gltf, bin_chunk):
-    json_bytes = json.dumps(gltf, separators=(',', ':')).encode('utf-8')
-    jpad = (-len(json_bytes)) % 4
+    jbytes = json.dumps(gltf, separators=(',', ':')).encode('utf-8')
+    jpad = (-len(jbytes)) % 4
     if jpad:
-        json_bytes += b' ' * jpad
+        jbytes += b' ' * jpad
     bpad = (-len(bin_chunk)) % 4
     if bpad:
         bin_chunk += b'\x00' * bpad
-    total_len = 12 + 8 + len(json_bytes) + 8 + len(bin_chunk)
+    total_len = 12 + 8 + len(jbytes) + 8 + len(bin_chunk)
     with open(path, 'wb') as f:
-        f.write(struct.pack('<4sII', b'glTF', 2, total_len))
-        f.write(struct.pack('<I4s', len(json_bytes), b'JSON'))
-        f.write(json_bytes)
-        f.write(struct.pack('<I4s', len(bin_chunk), b'BIN\x00'))
+        f.write(struct.pack('<III', 0x46546C67, 2, total_len))
+        f.write(struct.pack('<II', len(jbytes), 0x4E4F534A))
+        f.write(jbytes)
+        f.write(struct.pack('<II', len(bin_chunk), 0x004E4942))
         f.write(bin_chunk)
 
 
-def get_acc(gltf, b, idx):
-    a = gltf['accessors'][idx]
-    bv = gltf['bufferViews'][a['bufferView']]
-    off = bv.get('byteOffset', 0) + a.get('byteOffset', 0)
-    stride = bv.get('byteStride', 0)
-    if a['componentType'] == 5122 and stride == 8:
-        arr = np.frombuffer(b, dtype='<i2', count=a['count'] * 4, offset=off).reshape(a['count'], 4)[:, :3]
-        return arr.astype(np.float32) / 32767.0
-    dt = {5126: '<f4', 5123: '<u2', 5125: '<u4', 5122: '<i2'}[a['componentType']]
-    ch = {'VEC3': 3, 'VEC2': 2, 'SCALAR': 1}[a['type']]
-    return np.frombuffer(b, dtype=dt, count=a['count'] * ch, offset=off).reshape(a['count'], ch)
-
-
 # ==============================================================================
-# PART 1: Upgrade `daz_asian_head_base.glb` Skin Albedo (Pixel-Exact UV Mapping)
+# PART 1: Upgrade `daz_asian_head_base.glb` (2K Skin, Iris, Brows, Lashes & 3D Bone Morphs)
 # ==============================================================================
 head_glb_path = os.path.join(MODELS_DIR, 'daz_asian_head_base.glb')
 gltf_h, bin_h = read_glb(head_glb_path)
-prim_h = gltf_h['meshes'][0]['primitives'][0]
-head_pos = get_acc(gltf_h, bin_h, prim_h['attributes']['POSITION']).astype(np.float64)
-head_norm = get_acc(gltf_h, bin_h, prim_h['attributes']['NORMAL']).astype(np.float64)
-head_uv = get_acc(gltf_h, bin_h, prim_h['attributes']['TEXCOORD_0']).astype(np.float64)
-head_tris = get_acc(gltf_h, bin_h, prim_h['indices']).reshape(-1, 3)
+bin_mut = bytearray(bin_h)
 
+
+def get_acc_view(gltf, b, acc_idx):
+    a = gltf['accessors'][acc_idx]
+    bv = gltf['bufferViews'][a['bufferView']]
+    dt = {5126: '<f4', 5123: '<u2', 5125: '<u4', 5122: '<i2'}[a['componentType']]
+    ch = {'VEC3': 3, 'VEC2': 2, 'SCALAR': 1}[a['type']]
+    stride = bv.get('byteStride', 0)
+    off = bv.get('byteOffset', 0) + a.get('byteOffset', 0)
+    return a, bv, off, stride, dt, ch
+
+
+def read_acc(gltf, b, acc_idx):
+    a, bv, off, stride, dt, ch = get_acc_view(gltf, b, acc_idx)
+    itemsize = np.dtype(dt).itemsize
+    if stride and stride != ch * itemsize:
+        raw_v = np.frombuffer(b, dtype=np.uint8, count=a['count'] * stride, offset=off).reshape(a['count'], stride)
+        arr = np.frombuffer(raw_v[:, :ch * itemsize].tobytes(), dtype=dt).reshape(a['count'], ch).copy()
+    else:
+        arr = np.frombuffer(b, dtype=dt, count=a['count'] * ch, offset=off).reshape(a['count'], ch).copy()
+    return arr
+
+
+def write_morph_delta_i16(gltf, b_mut, acc_idx, delta_f32):
+    a, bv, off, stride, dt, ch = get_acc_view(gltf, b_mut, acc_idx)
+    assert dt == '<i2' and ch == 3
+    q = np.clip(np.round(delta_f32 * 32767.0), -32767, 32767).astype('<i2')
+    a['min'] = (q.min(axis=0).astype(float) / 32767.0).tolist()
+    a['max'] = (q.max(axis=0).astype(float) / 32767.0).tolist()
+    if stride == 8:
+        padded = np.zeros((a['count'], 4), dtype='<i2')
+        padded[:, :3] = q
+        raw_bytes = padded.tobytes()
+        b_mut[off:off + len(raw_bytes)] = raw_bytes
+    else:
+        raw_bytes = q.tobytes()
+        b_mut[off:off + len(raw_bytes)] = raw_bytes
+
+
+pr_head = gltf_h['meshes'][0]['primitives'][0]
+head_pos = read_acc(gltf_h, bin_mut, pr_head['attributes']['POSITION']).astype(np.float64)
+head_norm = read_acc(gltf_h, bin_mut, pr_head['attributes']['NORMAL']).astype(np.float64)
+head_uv = read_acc(gltf_h, bin_mut, pr_head['attributes']['TEXCOORD_0']).astype(np.float64)
+head_tris = read_acc(gltf_h, bin_mut, pr_head['indices']).reshape(-1, 3)
+
+# 1A. Lift `Eyebrows` (Mesh 2) and `Eyelashes` (Mesh 3) so 0% is buried inside `HeadSkin`
+head_tree = cKDTree(head_pos)
+for m_idx, min_sd_target in [(2, 0.00095), (3, 0.00045)]:
+    pr_m = gltf_h['meshes'][m_idx]['primitives'][0]
+    a_m, bv_m, off_m, stride_m, dt_m, ch_m = get_acc_view(gltf_h, bin_mut, pr_m['attributes']['POSITION'])
+    pos_m = read_acc(gltf_h, bin_mut, pr_m['attributes']['POSITION']).astype(np.float64)
+    _, near_h = head_tree.query(pos_m)
+    hn_near = head_norm[near_h]
+    hn_near /= np.maximum(np.linalg.norm(hn_near, axis=1, keepdims=True), 1e-8)
+    sd = np.sum((pos_m - head_pos[near_h]) * hn_near, axis=1)
+    lift_vec = np.where(sd < min_sd_target, min_sd_target - sd, 0.0)[:, None] * hn_near
+    pos_m_new = (pos_m + lift_vec).astype('<f4')
+    a_m['min'] = pos_m_new.min(axis=0).astype(float).tolist()
+    a_m['max'] = pos_m_new.max(axis=0).astype(float).tolist()
+    bin_mut[off_m:off_m + pos_m_new.nbytes] = pos_m_new.tobytes()
+
+# 1B. Sculpt High-Impact, Anatomically Distinct 3D Facial Bone Morph Targets across Meshes 0, 2, 3, 4
+target_names = gltf_h['meshes'][0]['extras']['targetNames']
+
+
+def compute_bone_morph_deltas(pos_arr, tname):
+    x = pos_arr[:, 0]
+    y = pos_arr[:, 1]
+    z = pos_arr[:, 2]
+    abs_x = np.abs(x)
+    sign_x = np.where(x >= 0.0, 1.0, -1.0)
+    d = np.zeros_like(pos_arr, dtype=np.float64)
+
+    # Jaw & face sit in front of ear/neck cylinder (z > 0.020); NeckCrossSection is at y = -0.108
+    jaw_front = 1.0 / (1.0 + np.exp(-(z - 0.022) / 0.014))
+    face_front = 1.0 / (1.0 + np.exp(-(z - 0.015) / 0.018))
+    neck_guard = 1.0 / (1.0 + np.exp(-(y - (-0.095)) / 0.005))
+
+    if tname == 'face_jaw_width_decr':
+        # 江南古典瓜子V脸: Monotonic V-line taper from below cheekbones (y = -0.005) down to chin (y = -0.082)
+        wy_down = (1.0 / (1.0 + np.exp((y - (-0.018)) / 0.014))) * np.exp(-(((y - (-0.062)) / 0.036) ** 2))
+        w = jaw_front * neck_guard * wy_down
+        d[:, 0] = -x * 0.24 * w
+        d[:, 1] = +0.0025 * w * np.clip(abs_x / 0.045, 0.0, 1.0)
+
+    elif tname == 'face_jaw_width_incr':
+        # 清冷高级超模折角方圆脸: Defined mandibular corner (y in [-0.068, -0.035]) & sculpted square-oval jaw
+        wy = np.exp(-(((y - (-0.052)) / 0.022) ** 2))
+        w = jaw_front * neck_guard * wy
+        d[:, 0] = +x * 0.22 * w
+        d[:, 1] = -0.0032 * w * np.clip((abs_x - 0.020) / 0.030, 0.0, 1.0)
+
+    elif tname == 'face_chin_decr':
+        # 幼态甜妹短缩下巴 / 猫系短下庭: Shorten lower face (+9.5mm upward at chin y = -0.081)
+        wy = (1.0 / (1.0 + np.exp((y - (-0.046)) / 0.012))) * neck_guard
+        wz = 1.0 / (1.0 + np.exp(-(z - 0.028) / 0.016))
+        w = wy * wz
+        d[:, 1] = +0.0095 * w * np.exp(-((abs_x / 0.042) ** 2))
+        d[:, 0] = -x * 0.085 * w
+        d[:, 2] = -0.0028 * w * np.exp(-((abs_x / 0.035) ** 2))
+
+    elif tname == 'face_chin_incr':
+        # 知性御姐修长下庭 / 成熟鹅蛋长脸: Elongate lower face (-8.8mm downward) & project V-chin
+        wy = (1.0 / (1.0 + np.exp((y - (-0.046)) / 0.012))) * neck_guard
+        wz = 1.0 / (1.0 + np.exp(-(z - 0.028) / 0.016))
+        w = wy * wz
+        d[:, 1] = -0.0088 * w * np.exp(-((abs_x / 0.042) ** 2))
+        d[:, 2] = +0.0038 * w * np.exp(-((abs_x / 0.032) ** 2))
+        d[:, 0] = -x * 0.125 * w
+
+    elif tname == 'face_cheekbones_incr':
+        # 元气少女饱满苹果肌 / 幼态圆润鹅蛋脸: Plump anterior malar cheeks & soft full midface (y in [-0.035, +0.015])
+        wy = np.exp(-(((y - (-0.010)) / 0.028) ** 2))
+        wz = 1.0 / (1.0 + np.exp(-(z - 0.022) / 0.020))
+        w_apple = np.exp(-(((y - (-0.004)) / 0.022) ** 2)) * np.exp(-(((abs_x - 0.034) / 0.024) ** 2)) * (1.0 / (1.0 + np.exp(-(z - 0.045) / 0.018)))
+        d[:, 0] = +x * 0.105 * wy * wz
+        d[:, 2] = +0.0065 * w_apple
+        d[:, 1] = +0.0018 * w_apple
+
+    elif tname == 'face_cheekbones_decr':
+        # 清冷高级菱形骨相: Prominent high zygomatic arch (y = +0.006) + sleek tapered lower cheek (y = -0.048)
+        wy_high = np.exp(-(((y - 0.006) / 0.016) ** 2)) * face_front
+        wy_taper = (1.0 / (1.0 + np.exp((y - (-0.020)) / 0.014))) * np.exp(-(((y - (-0.054)) / 0.028) ** 2)) * jaw_front * neck_guard
+        d[:, 0] = x * (0.075 * wy_high - 0.115 * wy_taper)
+        d[:, 2] = +0.0024 * wy_high - 0.0018 * wy_taper
+
+    elif tname == 'face_nose_height_incr':
+        # 立体高挺盒型翘鼻: Project nasal bridge & tip (+6.5mm Z), lift tip (+2.4mm Y), narrow alae
+        wy_bridge = np.exp(-(((y - (-0.002)) / 0.022) ** 2))
+        wx_bridge = np.exp(-((abs_x / 0.014) ** 2))
+        wz_nose = 1.0 / (1.0 + np.exp(-(z - 0.080) / 0.012))
+        w_tip = np.exp(-(((y - (-0.015)) / 0.011) ** 2)) * np.exp(-((abs_x / 0.012) ** 2)) * wz_nose
+        w_ala = np.exp(-(((y - (-0.022)) / 0.011) ** 2)) * np.exp(-(((abs_x - 0.015) / 0.009) ** 2)) * wz_nose
+        d[:, 2] = +0.0065 * wy_bridge * wx_bridge * wz_nose + 0.0028 * w_tip
+        d[:, 1] = +0.0024 * w_tip
+        d[:, 0] = -x * 0.16 * w_ala
+
+    elif tname == 'face_eye_size_incr':
+        # 灵动大杏眼: Enlarge palpebral fissure & eye region smoothly
+        wy = np.exp(-(((y - 0.0180) / 0.012) ** 2))
+        wx = np.exp(-(((abs_x - 0.0285) / 0.018) ** 2))
+        wz = 1.0 / (1.0 + np.exp(-(z - 0.066) / 0.014))
+        w = wy * wx * wz
+        d[:, 1] = (y - 0.0178) * 0.28 * w
+        d[:, 0] = sign_x * (abs_x - 0.0282) * 0.16 * w
+
+    elif tname == 'face_eye_tilt_incr':
+        # 魅惑上挑丹凤眼 / 猫系挑眼: Smoothly lift outer eye corner & outer brow tail (+4.8mm Y)
+        wy = np.exp(-(((y - 0.020) / 0.018) ** 2))
+        wx = (1.0 / (1.0 + np.exp(-(abs_x - 0.026) / 0.008))) * np.exp(-(((abs_x - 0.044) / 0.022) ** 2))
+        wz = 1.0 / (1.0 + np.exp(-(z - 0.062) / 0.015))
+        w = wy * wx * wz
+        d[:, 1] = +0.0048 * w
+        d[:, 0] = +sign_x * 0.0016 * w
+
+    return d.astype(np.float32)
+
+
+for m_idx in [0, 2, 3, 4]:
+    for pr_m in gltf_h['meshes'][m_idx]['primitives']:
+        pos_m = read_acc(gltf_h, bin_mut, pr_m['attributes']['POSITION']).astype(np.float64)
+        m_targets = pr_m.get('targets', [])
+        for tname in [
+            'face_jaw_width_decr',
+            'face_jaw_width_incr',
+            'face_chin_decr',
+            'face_chin_incr',
+            'face_cheekbones_incr',
+            'face_cheekbones_decr',
+            'face_nose_height_incr',
+            'face_eye_size_incr',
+            'face_eye_tilt_incr',
+        ]:
+            if tname in target_names:
+                ti = target_names.index(tname)
+                if ti < len(m_targets):
+                    if m_idx == 4 and tname in ('face_eye_tilt_incr', 'face_eye_size_incr'):
+                        continue
+                    delta = compute_bone_morph_deltas(pos_m, tname)
+                    write_morph_delta_i16(gltf_h, bin_mut, m_targets[ti]['POSITION'], delta)
+
+
+# 1C. Upgrade Embedded Textures in `daz_asian_head_base.glb`:
+#     - Image 0 (`skin_albedo`): Upscale to 2048x2048 & paint photoreal East Asian female features
+#     - Image 2 (`eye`): Upgrade to photoreal high-contrast amber-espresso iris with dual catchlights
+#     - Image 3 (`eyebrow`): Upgrade to dense dark feathered micro-blading brow strokes
+#     - Image 4 (`eyelash`): Upgrade to dense, curved, plush dark lashes
 img_bytes_list = []
 for im_def in gltf_h['images']:
     bv = gltf_h['bufferViews'][im_def['bufferView']]
     off = bv.get('byteOffset', 0)
-    img_bytes_list.append(bin_h[off:off + bv['byteLength']])
+    img_bytes_list.append(bytes(bin_mut[off:off + bv['byteLength']]))
 
-skin_im = Image.open(io.BytesIO(img_bytes_list[0])).convert('RGB')
-W_s, H_s = skin_im.size
-skin_arr = np.asarray(skin_im, dtype=np.float32)
+# --- Upgrade Image 0: 2048x2048 Photoreal Skin Albedo (Memory-Safe float32 ROI Slicing) ---
+skin_orig = Image.open(io.BytesIO(img_bytes_list[0])).convert('RGB').resize((2048, 2048), Image.Resampling.LANCZOS)
+skin_arr = np.asarray(skin_orig, dtype=np.float32).copy()
+H_s, W_s, _ = skin_arr.shape
 
-yy, xx = np.mgrid[0:H_s, 0:W_s].astype(np.float32)
-u_grid = xx / W_s
-v_grid = yy / H_s
+u_1d = np.linspace(0.0, 1.0, W_s, dtype=np.float32)[None, :]
+v_1d = np.linspace(0.0, 1.0, H_s, dtype=np.float32)[:, None]
+v_mid = np.float32(0.5168)
+abs_dv_full = np.abs(v_1d - v_mid)
 
-# 1A. Erase the brownish buzz-cut hair stubble on the cranium/temples/forehead
-clean_ref = np.array([242.0, 198.0, 178.0], dtype=np.float32)
-skin_pil_cur = Image.fromarray(np.clip(skin_arr, 0, 255).astype(np.uint8))
-skin_smooth = np.asarray(skin_pil_cur.filter(ImageFilter.GaussianBlur(radius=14)), dtype=np.float32)
+# 1) Erase baked buzz-cut scalp stubble outside the facial oval
+face_oval = np.exp(-((((u_1d - 0.865) / 0.088) ** 2 + (abs_dv_full / 0.088) ** 2) ** 1.5)).astype(np.float32)
+clean_mask = (np.clip((u_1d - 0.56) / 0.04, 0.0, 1.0) * (1.0 - face_oval))[..., None]
 
-in_head_uv = (u_grid > 0.60) & (u_grid < 0.96) & (v_grid > 0.14) & (v_grid < 0.86)
-central_face_dist = np.hypot((u_grid - 0.875) / 0.095, (v_grid - 0.5168) / 0.125)
-scalp_lobe_weight = np.clip((central_face_dist - 0.82) / 0.32, 0.0, 1.0) * in_head_uv.astype(np.float32)
-lum_skin = 0.299 * skin_arr[..., 0] + 0.587 * skin_arr[..., 1] + 0.114 * skin_arr[..., 2]
-stubble_darkness = np.clip((220.0 - lum_skin) / 36.0, 0.0, 1.0) * scalp_lobe_weight
-erase_w = np.clip(scalp_lobe_weight * 0.90 + stubble_darkness * 0.45, 0.0, 0.96)[..., None]
+base_patch = skin_arr[int(0.49 * H_s):int(0.54 * H_s), int(0.80 * W_s):int(0.825 * W_s)]
+fair_tone = np.percentile(base_patch.reshape(-1, 3), 75, axis=0).astype(np.float32)
+fair_tone = np.array([
+    max(float(fair_tone[0]), 238.0),
+    max(float(fair_tone[1]), 202.0),
+    max(float(fair_tone[2]), 188.0),
+], dtype=np.float32)
 
-target_scalp_tone = clean_ref[None, None, :] * 0.80 + skin_smooth * 0.20
-skin_arr = skin_arr * (1.0 - erase_w) + target_scalp_tone * erase_w
+skin_arr = skin_arr * (1.0 - clean_mask) + fair_tone[None, None, :] * clean_mask
+del face_oval, clean_mask
 
-# 1B. Pixel-Exact UV Lip Vermilion, Mouth Parting Line, Cheek Blush, Nose Tip & Eyelids!
-# Recall from our exact vertex table on `daz_asian_head_base.glb`:
-# - Midline (x = 0) is at v_mid = 0.5168
-# - Nose tip (y = -0.0147, z = +0.1141) is at u = 0.8732, v = 0.5168
-# - Upper lip Cupid's bow peak (y = -0.0343) is at u = 0.8961, v = 0.5168
-# - Mouth parting slit (y = -0.0451) is at u = 0.9072, v = 0.5168
-# - Lower lip center (y = -0.0480) is at u = 0.9165, v = 0.5168
-# - Lower lip bottom border (y = -0.0511) is at u = 0.9242, v = 0.5168
-v_mid = 0.5168
+# Erase the 3 baked right-cheek moles by mirroring the clean left-cheek skin across v_mid = 0.5168
+for mu, mv in [(0.8847, 0.5543), (0.8895, 0.5640), (0.9042, 0.5718)]:
+    px_m = int(round(mu * (W_s - 1)))
+    py_m = int(round(mv * (H_s - 1)))
+    py_mirror = int(round((2.0 * 0.5168 - mv) * (H_s - 1)))
+    r_patch = 14
+    skin_arr[py_m - r_patch:py_m + r_patch + 1, px_m - r_patch:px_m + r_patch + 1] = (
+        skin_arr[py_mirror - r_patch:py_mirror + r_patch + 1, px_m - r_patch:px_m + r_patch + 1]
+    )
+
+# Slice the Facial Region of Interest: u in [0.76, 0.96], v in [0.35, 0.68] (only ~675x410 pixels!)
+u0_i, u1_i = int(0.76 * W_s), int(0.96 * W_s)
+v0_i, v1_i = int(0.35 * H_s), int(0.68 * H_s)
+face_roi = skin_arr[v0_i:v1_i, u0_i:u1_i].copy()
+u_grid = u_1d[:, u0_i:u1_i]
+v_grid = v_1d[v0_i:v1_i, :]
 dv = v_grid - v_mid
 abs_dv = np.abs(dv)
-lip_half_w = 0.0255  # Mouth corner half-width in V
 
-# Corner taper factor (1 at center, 0 at mouth corners |dv| = lip_half_w)
-lip_x_env = np.clip(1.0 - (abs_dv / lip_half_w) ** 2.1, 0.0, 1.0)
+# Brighten & refine the facial complexion for translucent porcelain warmth ("通透冷白皮/奶油肌")
+face_glow = np.exp(-(((u_grid - 0.865) / 0.075) ** 2 + (abs_dv / 0.072) ** 2))[..., None]
+porcelain_target = np.array([246.0, 214.0, 202.0], dtype=np.float32)[None, None, :]
+face_roi = face_roi * (1.0 - 0.22 * face_glow) + porcelain_target * (0.22 * face_glow)
 
-# Cupid's bow M-curve on upper lip top border: dips slightly at dv=0, peaks at |dv|=0.006
-cupid_u_top = 0.8965 + 0.0016 * np.exp(-((abs_dv / 0.0035) ** 2)) - 0.0018 * np.exp(-(((abs_dv - 0.0065) / 0.0045) ** 2)) + 0.0085 * ((abs_dv / lip_half_w) ** 1.8)
-seam_u = 0.9074 - 0.0012 * ((abs_dv / lip_half_w) ** 1.6)
-lower_u_bot = 0.9225 - 0.0095 * ((abs_dv / lip_half_w) ** 1.7)
+# 2) Photoreal Eye Makeup, Double-Eyelid Crease (双眼皮折痕), Tightline Eyeliner (内眼线) & Aegyo-Sal (卧蚕)
+for side_sign, v_eye_c in [(-1.0, 0.4835), (+1.0, 0.5501)]:
+    dv_e = (v_grid - v_eye_c) * (-side_sign)
+    abs_dv_e = np.abs(v_grid - v_eye_c)
 
-# Smooth upper lip vermilion mask
-upper_lip_w = (
-    np.clip((u_grid - cupid_u_top) / 0.0028, 0.0, 1.0)
-    * np.clip((seam_u + 0.0015 - u_grid) / 0.0025, 0.0, 1.0)
-    * lip_x_env
-)
-# Smooth lower lip vermilion mask
-lower_lip_w = (
-    np.clip((u_grid - (seam_u - 0.0010)) / 0.0025, 0.0, 1.0)
-    * np.clip((lower_u_bot - u_grid) / 0.0038, 0.0, 1.0)
-    * lip_x_env
-)
-# Delicate oral commissure / mouth parting line shadow
-seam_w = np.exp(-(((u_grid - seam_u) / 0.0014) ** 2)) * np.clip(1.0 - (abs_dv / (lip_half_w * 0.96)) ** 2.4, 0.0, 1.0)
+    # Soft warm rose-almond eyeshadow wash over upper mobile eyelid
+    shadow_w = np.exp(-(((u_grid - 0.8330) / 0.0052) ** 2)) * np.exp(-(((v_grid - v_eye_c - side_sign * 0.002) / 0.0165) ** 2))
+    face_roi = face_roi * (1.0 - 0.24 * shadow_w[..., None]) + np.array([182.0, 126.0, 118.0], dtype=np.float32)[None, None, :] * (0.24 * shadow_w[..., None])
 
-# Also erase any old low-chin pink smudge between u = 0.924 and u = 0.942 near v_mid!
-chin_clean_w = (
-    np.clip((u_grid - 0.9225) / 0.0030, 0.0, 1.0)
-    * np.clip((0.945 - u_grid) / 0.0040, 0.0, 1.0)
-    * np.exp(-((abs_dv / 0.032) ** 2))
+    # Crisp Asian parallel-fan double-eyelid crease (平行开扇双眼皮折痕)
+    u_crease = 0.8318 + 0.0014 * np.tanh((dv_e + 0.004) / 0.010)
+    crease_line = np.exp(-(((u_grid - u_crease) / 0.00075) ** 2)) * np.exp(-(np.abs((dv_e - 0.001) / 0.0135) ** 2.4))
+    crease_hi = np.exp(-(((u_grid - (u_crease + 0.0011)) / 0.00085) ** 2)) * np.exp(-(np.abs((dv_e - 0.001) / 0.0130) ** 2.4))
+    face_roi = face_roi * (1.0 - 0.48 * crease_line[..., None]) + np.array([96.0, 62.0, 56.0], dtype=np.float32)[None, None, :] * (0.48 * crease_line[..., None])
+    face_roi = face_roi * (1.0 - 0.18 * crease_hi[..., None]) + np.array([255.0, 236.0, 228.0], dtype=np.float32)[None, None, :] * (0.18 * crease_hi[..., None])
+
+    # Upper lashline tightline eyeliner & outer winged tail (浓密睫毛根部内眼线 + 眼尾微拉长)
+    u_lash = 0.8355 + 0.0008 * ((dv_e / 0.012) ** 2)
+    lash_line = np.exp(-(((u_grid - u_lash) / 0.00095) ** 2)) * np.exp(-(np.abs((dv_e - 0.002) / 0.0148) ** 2.6))
+    face_roi = face_roi * (1.0 - 0.68 * lash_line[..., None]) + np.array([34.0, 22.0, 22.0], dtype=np.float32)[None, None, :] * (0.68 * lash_line[..., None])
+
+    # Lower eyelid Aegyo-Sal (自然卧蚕高光 + 卧蚕下阴影线)
+    aegyo_hi = np.exp(-(((u_grid - 0.8462) / 0.0014) ** 2)) * np.exp(-((abs_dv_e / 0.0125) ** 2.2))
+    aegyo_sh = np.exp(-(((u_grid - 0.8492) / 0.0010) ** 2)) * np.exp(-((abs_dv_e / 0.0120) ** 2.2))
+    face_roi = face_roi * (1.0 - 0.22 * aegyo_hi[..., None]) + np.array([255.0, 238.0, 230.0], dtype=np.float32)[None, None, :] * (0.22 * aegyo_hi[..., None])
+    face_roi = face_roi * (1.0 - 0.25 * aegyo_sh[..., None]) + np.array([158.0, 112.0, 104.0], dtype=np.float32)[None, None, :] * (0.25 * aegyo_sh[..., None])
+
+    # Soft airbrushed brow powder shadow directly under the 3D Eyebrows mesh (u in [0.824, 0.831])
+    u_brow_arch = 0.8278 - 0.0012 * np.sin(np.clip((dv_e + 0.012) / 0.036, 0.0, 1.0) * math.pi)
+    brow_env = np.exp(-(((u_grid - u_brow_arch) / 0.0022) ** 2)) * np.exp(-(np.abs((dv_e - 0.003) / 0.021) ** 2.4))
+    brow_w = (brow_env * 0.28)[..., None]
+    face_roi = face_roi * (1.0 - brow_w) + np.array([68.0, 50.0, 46.0], dtype=np.float32)[None, None, :] * brow_w
+
+# 3) Sculpted Nose Bridge Highlight, Nasal Side Contour, Nostril Shadow & Philtrum
+nose_bridge_hi = np.exp(-(((u_grid - 0.854) / 0.020) ** 2)) * np.exp(-((abs_dv / 0.0032) ** 2))
+nose_tip_hi = np.exp(-(((u_grid - 0.8735) / 0.0042) ** 2)) * np.exp(-((abs_dv / 0.0042) ** 2))
+nose_side_sh = np.exp(-(((u_grid - 0.852) / 0.022) ** 2)) * np.exp(-(((abs_dv - 0.0085) / 0.0035) ** 2))
+alar_sh = np.exp(-(((u_grid - 0.8805) / 0.0045) ** 2)) * np.exp(-(((abs_dv - 0.0145) / 0.0042) ** 2))
+philtrum_sh = np.exp(-(((u_grid - 0.8915) / 0.0045) ** 2)) * np.exp(-((abs_dv / 0.0026) ** 2))
+philtrum_ridge = np.exp(-(((u_grid - 0.8915) / 0.0045) ** 2)) * np.exp(-(((abs_dv - 0.0042) / 0.0016) ** 2))
+
+face_roi = face_roi * (1.0 - 0.26 * nose_bridge_hi[..., None]) + np.array([255.0, 244.0, 238.0], dtype=np.float32)[None, None, :] * (0.26 * nose_bridge_hi[..., None])
+face_roi = face_roi * (1.0 - 0.32 * nose_tip_hi[..., None]) + np.array([255.0, 245.0, 240.0], dtype=np.float32)[None, None, :] * (0.32 * nose_tip_hi[..., None])
+face_roi = face_roi * (1.0 - 0.18 * nose_side_sh[..., None]) + np.array([172.0, 128.0, 118.0], dtype=np.float32)[None, None, :] * (0.18 * nose_side_sh[..., None])
+face_roi = face_roi * (1.0 - 0.34 * alar_sh[..., None]) + np.array([138.0, 92.0, 84.0], dtype=np.float32)[None, None, :] * (0.34 * alar_sh[..., None])
+face_roi = face_roi * (1.0 - 0.18 * philtrum_sh[..., None]) + np.array([175.0, 130.0, 122.0], dtype=np.float32)[None, None, :] * (0.18 * philtrum_sh[..., None])
+face_roi = face_roi * (1.0 - 0.16 * philtrum_ridge[..., None]) + np.array([255.0, 240.0, 234.0], dtype=np.float32)[None, None, :] * (0.16 * philtrum_ridge[..., None])
+
+# 4) Photoreal 2048x2048 Multi-Layer Petal Lips with Ultra-Fine Microscopic Lip Sulcus
+lip_half_v = 0.0255
+xn = np.clip(abs_dv / lip_half_v, 0.0, 1.5)
+cupid_u_top = 0.8960 - 0.0018 * np.sin(np.clip(1.0 - xn, 0.0, 1.0) * math.pi) + 0.0014 * (xn < 0.22) * (1.0 - xn / 0.22) + 0.0078 * (xn ** 2.1)
+u_seam = 0.9074 - 0.0008 * (xn ** 2)
+u_bot = 0.9225 - 0.0145 * (xn ** 1.95)
+
+w_vx = np.exp(-((np.maximum(0.0, abs_dv - 0.0225) / 0.0040) ** 2)) * (abs_dv < 0.029)
+up_h = np.maximum(0.001, u_seam - cupid_u_top)
+up_t = (u_grid - cupid_u_top) / up_h
+w_upper = np.exp(-((np.maximum(0.0, np.abs(up_t - 0.52) - 0.36) / 0.15) ** 2)) * w_vx * (u_grid >= cupid_u_top - 0.003) * (u_grid <= u_seam + 0.002)
+
+lo_h = np.maximum(0.001, u_bot - u_seam)
+lo_t = (u_grid - u_seam) / lo_h
+w_lower = np.exp(-((np.maximum(0.0, np.abs(lo_t - 0.48) - 0.36) / 0.16) ** 2)) * w_vx * (u_grid >= u_seam - 0.002) * (u_grid <= u_bot + 0.0035)
+
+lip_sulcus = 0.978 + 0.022 * np.sin(dv * 4800.0 + np.sin(u_grid * 620.0) * 0.5)
+inner_grad_up = np.clip(up_t, 0.0, 1.0)
+inner_grad_lo = np.clip(1.0 - lo_t, 0.0, 1.0)
+
+upper_lip_col = (
+    np.array([204.0, 108.0, 114.0], dtype=np.float32)[None, None, :] * (1.0 - 0.35 * inner_grad_up[..., None])
+    + np.array([168.0, 68.0, 78.0], dtype=np.float32)[None, None, :] * (0.35 * inner_grad_up[..., None])
+) * lip_sulcus[..., None]
+
+lower_lip_col = (
+    np.array([218.0, 118.0, 124.0], dtype=np.float32)[None, None, :] * (1.0 - 0.38 * inner_grad_lo[..., None])
+    + np.array([176.0, 72.0, 82.0], dtype=np.float32)[None, None, :] * (0.38 * inner_grad_lo[..., None])
+) * lip_sulcus[..., None]
+
+wu = (w_upper * 0.86)[..., None]
+wl = (w_lower * 0.88)[..., None]
+face_roi = face_roi * (1.0 - wu) + upper_lip_col * wu
+face_roi = face_roi * (1.0 - wl) + lower_lip_col * wl
+
+seam_w = np.exp(-(((u_grid - u_seam) / 0.0014) ** 2)) * np.exp(-((abs_dv / 0.0235) ** 2.8))
+comm_w = np.exp(-(((u_grid - 0.9066) / 0.0024) ** 2)) * np.exp(-(((abs_dv - 0.0225) / 0.0038) ** 2))
+ws = np.clip(seam_w * 0.72 + comm_w * 0.56, 0.0, 0.80)[..., None]
+face_roi = face_roi * (1.0 - ws) + np.array([92.0, 38.0, 44.0], dtype=np.float32)[None, None, :] * ws
+
+lo_hi_w = (
+    np.exp(-(((u_grid - 0.9142) / 0.0020) ** 2))
+    * np.exp(-((abs_dv / 0.011) ** 2))
+    * (0.85 + 0.15 * np.cos(dv * 4800.0))
 )[..., None]
-skin_arr = skin_arr * (1.0 - 0.75 * chin_clean_w) + clean_ref[None, None, :] * (0.75 * chin_clean_w)
+cupid_hi_w = (np.exp(-(((u_grid - 0.8954) / 0.0014) ** 2)) * np.exp(-((abs_dv / 0.0075) ** 2)))[..., None]
+face_roi = face_roi * (1.0 - 0.38 * lo_hi_w) + np.array([255.0, 212.0, 216.0], dtype=np.float32)[None, None, :] * (0.38 * lo_hi_w)
+face_roi = face_roi * (1.0 - 0.26 * cupid_hi_w) + np.array([255.0, 228.0, 224.0], dtype=np.float32)[None, None, :] * (0.26 * cupid_hi_w)
 
-# Blur lip masks slightly for natural feathered vermilion border
-def blur_np(arr2d, rad):
-    im_t = Image.fromarray((np.clip(arr2d, 0.0, 1.0) * 255.0).astype(np.uint8))
-    return (np.asarray(im_t.filter(ImageFilter.GaussianBlur(radius=rad)), dtype=np.float32) / 255.0)[..., None]
+cheek_l = np.exp(-(((u_grid - 0.864) / 0.030) ** 2) - (((v_grid - (v_mid - 0.050)) / 0.036) ** 2))
+cheek_r = np.exp(-(((u_grid - 0.864) / 0.030) ** 2) - (((v_grid - (v_mid + 0.050)) / 0.036) ** 2))
+nose_blush = np.exp(-(((u_grid - 0.874) / 0.010) ** 2) - ((abs_dv / 0.012) ** 2))
+blush_total = np.clip(cheek_l + cheek_r + nose_blush * 0.55, 0.0, 1.0)[..., None]
+face_roi = face_roi * (1.0 - 0.18 * blush_total) + np.array([238.0, 134.0, 136.0], dtype=np.float32)[None, None, :] * (0.18 * blush_total)
 
-up_lip_mask = blur_np(upper_lip_w, 2.2)
-lo_lip_mask = blur_np(lower_lip_w, 2.8)
-seam_mask = blur_np(seam_w, 1.2)
-
-# Subtle vertical lip micro-striations (realistic lip texture)
-lip_striations = (0.5 + 0.5 * np.sin(dv * 1850.0) * np.cos(dv * 920.0))[..., None]
-up_color = np.array([182.0, 88.0, 98.0])[None, None, :] * (0.96 + 0.06 * lip_striations)
-lo_color = np.array([198.0, 102.0, 112.0])[None, None, :] * (0.95 + 0.08 * lip_striations)
-seam_color = np.array([105.0, 38.0, 46.0])[None, None, :]
-
-skin_arr = skin_arr * (1.0 - 0.58 * up_lip_mask) + up_color * (0.58 * up_lip_mask)
-skin_arr = skin_arr * (1.0 - 0.54 * lo_lip_mask) + lo_color * (0.54 * lo_lip_mask)
-skin_arr = skin_arr * (1.0 - 0.55 * seam_mask) + seam_color * (0.55 * seam_mask)
-
-# Subtle lower lip moisture highlight & Cupid's bow highlight
-lo_hi_w = (np.exp(-(((u_grid - 0.9145) / 0.0025) ** 2)) * np.exp(-((abs_dv / 0.011) ** 2)))[..., None]
-cupid_hi_w = (np.exp(-(((u_grid - 0.8955) / 0.0018) ** 2)) * np.exp(-((abs_dv / 0.008) ** 2)))[..., None]
-skin_arr = np.clip(skin_arr + lo_hi_w * np.array([22.0, 16.0, 18.0]) + cupid_hi_w * np.array([18.0, 14.0, 12.0]), 0, 255)
-
-# Soft rosy cheek blush & nose tip warmth in UV space
-cheek_l = np.exp(-(((u_grid - 0.868) / 0.032) ** 2) - (((v_grid - (v_mid - 0.052)) / 0.038) ** 2))
-cheek_r = np.exp(-(((u_grid - 0.868) / 0.032) ** 2) - (((v_grid - (v_mid + 0.052)) / 0.038) ** 2))
-nose_tip_w = np.exp(-(((u_grid - 0.874) / 0.012) ** 2) - ((abs_dv / 0.014) ** 2))
-blush_total = np.clip(cheek_l + cheek_r + nose_tip_w * 0.65, 0.0, 1.0)[..., None]
-skin_arr = skin_arr * (1.0 - 0.16 * blush_total) + np.array([235.0, 136.0, 134.0])[None, None, :] * (0.16 * blush_total)
-
-# Re-affirm the 3 signature right-cheek moles (matching user photo)
-MOLE_LOCAL = [
-    (-0.031, -0.024, 0.092),
-    (-0.039, -0.028, 0.086),
-    (-0.043, -0.044, 0.080),
-]
-for mx, my, mz in MOLE_LOCAL:
-    dists = np.hypot(head_pos[:, 0] - mx, head_pos[:, 1] - my) + np.abs(head_pos[:, 2] - mz) * 0.5
-    bvi = int(np.argmin(dists))
-    cx_u = int(head_uv[bvi, 0] * W_s)
-    cy_v = int(head_uv[bvi, 1] * H_s)
-    for py in range(max(0, cy_v - 3), min(H_s, cy_v + 4)):
-        for px in range(max(0, cx_u - 3), min(W_s, cx_u + 4)):
-            d_p = math.hypot(px - cx_u, py - cy_v)
-            if d_p < 2.2:
-                mw = math.exp(-((d_p / 1.3) ** 2)) * 0.68
-                skin_arr[py, px] = skin_arr[py, px] * (1.0 - mw) + np.array([62.0, 38.0, 32.0]) * mw
+skin_arr[v0_i:v1_i, u0_i:u1_i] = face_roi
 
 skin_out_buf = io.BytesIO()
-Image.fromarray(np.clip(skin_arr, 0, 255).astype(np.uint8)).save(skin_out_buf, format='JPEG', quality=94)
+Image.fromarray(np.clip(skin_arr, 0, 255).astype(np.uint8)).save(skin_out_buf, format='JPEG', quality=93)
 img_bytes_list[0] = skin_out_buf.getvalue()
 
+# --- Upgrade Image 2: Photoreal High-Contrast Iris & Sclera Texture (`eye`, 1024x1024) ---
+# Exact measured iris disc (`Mesh 4, prim[1]`) UV centers on 1024x1024:
+# Left iris (x>0): (300.0, 711.4), radii rx_ir=109.6, ry_ir=106.1
+# Right iris (x<0): (722.9, 300.5), radii rx_ir=109.8, ry_ir=106.2
+eye_orig = np.asarray(Image.open(io.BytesIO(img_bytes_list[2])).convert('RGB'), dtype=np.float32).copy()
+H_e, W_e, _ = eye_orig.shape
+ye, xe = np.mgrid[0:H_e, 0:W_e].astype(np.float32)
+for icx, icy in [(300.0, 711.4), (722.9, 300.5)]:
+    dx_e = xe - icx
+    dy_e = ye - icy
+    rx_ir, ry_ir = 109.7, 106.2
+    r_norm = np.hypot(dx_e / rx_ir, dy_e / ry_ir)
+    ang_e = np.arctan2(dy_e / ry_ir, dx_e / rx_ir)
+    pup_norm = 0.36
+
+    # Clean warm-white sclera outside iris (r_norm > 1.0)
+    sclera_w = np.clip((r_norm - 1.02) / 0.16, 0.0, 1.0)[..., None]
+    sclera_mask = (r_norm > 1.0) & (r_norm < 2.35)
+    eye_orig = np.where(
+        sclera_mask[..., None],
+        eye_orig * (1.0 - 0.55 * sclera_w) + np.array([245.0, 240.0, 238.0], dtype=np.float32)[None, None, :] * (0.55 * sclera_w),
+        eye_orig,
+    )
+
+    # Rich amber-espresso radial iris fibers between pup_norm and 1.0
+    in_iris = (r_norm >= pup_norm * 0.82) & (r_norm <= 1.06)
+    rn = np.clip((r_norm - pup_norm) / (1.0 - pup_norm), 0.0, 1.0)
+    fibers = 0.5 + 0.32 * np.sin(ang_e * 72.0 + np.sin(rn * 6.0) * 0.5) + 0.18 * np.cos(ang_e * 135.0 - rn * 4.0)
+    collarette = np.exp(-(((rn - 0.34) / 0.14) ** 2))
+    limbal = np.exp(-(((rn - 0.94) / 0.10) ** 2))
+
+    iris_col = (
+        np.array([64.0, 34.0, 22.0], dtype=np.float32)[None, None, :] * (0.65 + 0.55 * fibers[..., None])
+        + np.array([124.0, 68.0, 36.0], dtype=np.float32)[None, None, :] * (collarette * fibers)[..., None] * 0.58
+    ) * (1.0 - 0.82 * limbal[..., None])
+
+    w_ir = (np.exp(-((np.maximum(0.0, np.abs(rn - 0.5) - 0.44) / 0.08) ** 2)) * in_iris)[..., None]
+    eye_orig = eye_orig * (1.0 - w_ir) + iris_col * w_ir
+
+    # Deep velvet-black pupil
+    w_pup = (1.0 / (1.0 + np.exp(np.clip((r_norm - pup_norm) / 0.025, -40.0, 40.0))))[..., None]
+    eye_orig = eye_orig * (1.0 - w_pup) + np.array([7.0, 5.0, 6.0], dtype=np.float32)[None, None, :] * w_pup
+
+    # Dual studio catchlights (眼神光: upper-left softbox + lower-right fill)
+    c1 = np.exp(-(((dx_e - (-28.0)) / 15.0) ** 2 + ((dy_e - (-28.0)) / 12.0) ** 2))[..., None]
+    c2 = np.exp(-(((dx_e - 24.0) / 8.5) ** 2 + ((dy_e - 24.0) / 7.5) ** 2))[..., None]
+    eye_orig = np.clip(eye_orig + 248.0 * c1 + 170.0 * c2, 0, 255)
+
+eye_out_buf = io.BytesIO()
+Image.fromarray(np.clip(eye_orig, 0, 255).astype(np.uint8)).save(eye_out_buf, format='JPEG', quality=94)
+img_bytes_list[2] = eye_out_buf.getvalue()
+
+# --- Upgrade Image 3 (`eyebrow`) & Image 4 (`eyelash`): Boost alpha density for crisp dark strokes ---
+for tidx, boost in [(3, 1.45), (4, 1.65)]:
+    im_rgba = np.asarray(Image.open(io.BytesIO(img_bytes_list[tidx])).convert('RGBA'), dtype=np.float32).copy()
+    im_rgba[:, :, 3] = np.clip(im_rgba[:, :, 3] * boost, 0, 255)
+    buf_t = io.BytesIO()
+    Image.fromarray(im_rgba.astype(np.uint8)).save(buf_t, format='PNG')
+    img_bytes_list[tidx] = buf_t.getvalue()
+
+# Repack `daz_asian_head_base.glb` binary buffer
 new_bin_chunks = []
-image_bv_Map = {im_def['bufferView']: idx for idx, im_def in enumerate(gltf_h['images'])}
+image_bv_map = {im_def['bufferView']: idx for idx, im_def in enumerate(gltf_h['images'])}
 for bv_idx, bv in enumerate(gltf_h['bufferViews']):
     off = sum(len(c) for c in new_bin_chunks)
     pad = (-off) % 4
     if pad:
         new_bin_chunks.append(b'\x00' * pad)
         off += pad
-    if bv_idx in image_bv_Map:
-        raw_part = img_bytes_list[image_bv_Map[bv_idx]]
+    if bv_idx in image_bv_map:
+        raw_part = img_bytes_list[image_bv_map[bv_idx]]
     else:
         old_off = bv.get('byteOffset', 0)
-        raw_part = bin_h[old_off:old_off + bv['byteLength']]
+        raw_part = bytes(bin_mut[old_off:old_off + bv['byteLength']])
     bv['byteOffset'] = off
     bv['byteLength'] = len(raw_part)
     new_bin_chunks.append(raw_part)
@@ -229,7 +505,7 @@ print(f"Upgraded {head_glb_path}: {os.path.getsize(head_glb_path)/1024:.1f} KB")
 
 
 # ==============================================================================
-# PART 2: Repair All 8 `public/models/hair_*.glb` Meshes (Tear-Free & Shelf-Free)
+# PART 2: Repair Legacy `public/models/hair_*.glb` Meshes
 # ==============================================================================
 scalp_mask = head_pos[:, 1] > -0.055
 scalp_pts = head_pos[scalp_mask]
@@ -246,11 +522,8 @@ dense_tree = cKDTree(dense_scalp_pts)
 HEAD_CORE = np.array([0.0, 0.025, -0.012], dtype=np.float64)
 
 
-def repair_hair_mesh_positions(pos_arr, h_name, min_clearance=0.0036):
+def repair_hair_mesh_positions(pos_arr, h_name, min_clearance=0.0046):
     out = pos_arr.astype(np.float64).copy()
-
-    # For `hair_user_photo.glb`, rebuild its side locks from `hair_bob01.glb` + back bun from `hair_user_photo.glb`
-    # WITHOUT the discontinuous `z < 0.034` branch that tore cheek triangles!
     if h_name == 'hair_user_photo.glb' and len(out) == 5029:
         g_b1, b_b1 = read_glb(os.path.join(MODELS_DIR, 'hair_bob01.glb'))
         pr_b1 = g_b1['meshes'][0]['primitives'][0]
@@ -260,37 +533,28 @@ def repair_hair_mesh_positions(pos_arr, h_name, min_clearance=0.0036):
         p_bob = np.frombuffer(b_b1, dtype='<f4', count=2806 * 3, offset=off_b1).reshape(2806, 3).astype(np.float64).copy()
         for i in range(2806):
             x, y, z = p_bob[i]
-            # Smoothly feather front bangs into a soft, airy arched contour above the eyebrows
             if z > 0.058 and y < 0.068 and abs(x) < 0.060:
                 t_tip = max(0.0, min(1.0, (0.058 - y) / 0.040))
                 arch = max(0.0, 1.0 - (x / 0.048) ** 2)
                 p_bob[i, 1] += (0.0055 * arch + 0.0018 * math.sin(x * 165.0)) * t_tip
                 p_bob[i, 2] += 0.0022 * arch * t_tip
-            # Smoothly taper lower bob sides & back using a continuous sigmoid in Z (NO tear!)
             if y < 0.042:
                 t_down = max(0.0, min(1.0, (0.042 - y) / 0.115))
                 t_down = t_down * t_down * (3.0 - 2.0 * t_down)
-                # Smooth blend between front cheek wisp (z > 0.025) and back ear-revealing sweep (z < 0.025)
                 u_front = max(0.0, min(1.0, (z - (-0.002)) / 0.042))
                 u_front = u_front * u_front * (3.0 - 2.0 * u_front)
                 u_back = 1.0 - u_front
-
-                # Back part pulls gently behind the ear into the bun at y = -0.024
                 bx = x * (1.0 - 0.42 * t_down)
                 by = y * (1.0 - 0.54 * t_down) + (-0.024) * (0.54 * t_down)
                 bz = z - 0.014 * t_down
-
-                # Front part frames the temple & upper cheek, tapering into a sleek pointed wisp at y = -0.042
                 fx = x * (1.0 - 0.15 * t_down)
                 fy = y * (1.0 - 0.42 * t_down) + (-0.042) * (0.42 * t_down)
                 fz = z + 0.005 * (1.0 - t_down)
-
                 p_bob[i, 0] = bx * u_back + fx * u_front
                 p_bob[i, 1] = by * u_back + fy * u_front
                 p_bob[i, 2] = bz * u_back + fz * u_front
         out[:2806] = p_bob
 
-    # 1) Cranial clearance above y = -0.030 so skull NEVER pokes through hair triangles
     _, near_idx = dense_tree.query(out)
     sp = dense_scalp_pts[near_idx]
     sn = dense_scalp_norms[near_idx]
@@ -298,39 +562,26 @@ def repair_hair_mesh_positions(pos_arr, h_name, min_clearance=0.0036):
     need_push = (out[:, 1] > -0.030) & (sd < min_clearance)
     out[need_push] += sn[need_push] * (min_clearance - sd[need_push])[:, None]
 
-    # 2) Eliminate invisible-shoulder flare & flat pancake lines below y = -0.015m:
-    #    Original MakeHuman long hairs flare out to |x| = 0.24m to rest on human shoulders.
-    #    On a head-only bust ("只有头，有断面"), we smoothly pull any shoulder-flaring vertices
-    #    inward toward a natural neck-hugging / nape-gathered silhouette (r_xz <= 0.072m) and
-    #    taper lower tips smoothly behind the neck above y = -0.092m!
     low_v = out[:, 1] < -0.010
     if np.any(low_v):
         pts_l = out[low_v].copy()
-        depth = np.maximum(0.0, -0.010 - pts_l[:, 1])  # 0 at earlobe (-0.01m), up to 0.48m at chest
-        t_sh = np.tanh(depth / 0.085)  # 0 -> 1 smoothly as hair goes down
-
-        # Pull excessive shoulder flare (r_xz > 0.068m) smoothly inward
+        depth = np.maximum(0.0, -0.010 - pts_l[:, 1])
+        t_sh = np.tanh(depth / 0.085)
         cx_n, cz_n = 0.0, -0.018
         dx_n = pts_l[:, 0] - cx_n
         dz_n = pts_l[:, 2] - cz_n
         r_xz = np.hypot(dx_n, dz_n)
-        max_r = 0.074 - 0.016 * t_sh  # Narrows from 7.4cm at jaw to 5.8cm near neck base (C-curl)
+        max_r = 0.074 - 0.016 * t_sh
         excess = np.maximum(0.0, r_xz - max_r)
         new_r = np.where(r_xz > max_r, max_r + 0.18 * np.tanh(excess / 0.045) * 0.045, r_xz)
         scale_r = np.where(r_xz > 1e-5, new_r / np.maximum(r_xz, 1e-5), 1.0)
         pts_l[:, 0] = cx_n + dx_n * scale_r
         pts_l[:, 2] = cz_n + dz_n * scale_r
-
-        # Sweep only extreme chest/back-drape strands (depth > 0.14m) gently toward the nape
         deep_w = np.clip((depth - 0.140) / 0.180, 0.0, 1.0)
         deep_w = deep_w * deep_w * (3.0 - 2.0 * deep_w)
         pts_l[:, 2] = pts_l[:, 2] * (1.0 - 0.32 * deep_w) + (-0.045) * (0.32 * deep_w)
         pts_l[:, 0] *= (1.0 - 0.18 * deep_w)
-
-        # Smooth vertical C-taper down to y = -0.078m (jawline/upper neck, never a flat pancake!)
         pts_l[:, 1] = -0.010 - 0.068 * np.tanh(depth / 0.095)
-
-        # Smoothly part any front strands around the central face/throat oval (no hard step!)
         front_w = np.clip((pts_l[:, 2] - (-0.010)) / 0.035, 0.0, 1.0) * np.clip((-0.035 - pts_l[:, 1]) / 0.025, 0.0, 1.0)
         min_abs_x = 0.048
         need_part = (front_w > 0.0) & (np.abs(pts_l[:, 0]) < min_abs_x)
@@ -364,7 +615,8 @@ for h_name in sorted(os.listdir(MODELS_DIR)):
 
 
 # ==============================================================================
-# PART 3: Fast Precomputed Spherical Scalp Grid + Vectorized `.groom` Generator
+# PART 3: Masterpiece 3-Layer High-Cranial Silk `.groom` Generator
+#         (Zero `.glb` helmet needed — 100% pure overlapping 3D silk locks!)
 # ==============================================================================
 N_THETA, N_PHI = 256, 512
 th_vals = np.linspace(0.0, math.pi, N_THETA)
@@ -383,7 +635,7 @@ g_nrms /= np.maximum(np.linalg.norm(g_nrms, axis=1, keepdims=True), 1e-8)
 g_nrms = g_nrms.reshape(N_THETA, N_PHI, 3)
 
 
-def sample_scalp_fast(theta, phi, lift=0.0022):
+def sample_scalp_fast(theta, phi, lift=0.0032):
     ti = int(np.clip(theta / math.pi * (N_THETA - 1), 0, N_THETA - 1))
     pi = int(np.clip((phi + math.pi) / (2.0 * math.pi) * (N_PHI - 1), 0, N_PHI - 1))
     p = g_pts[ti, pi]
@@ -391,42 +643,41 @@ def sample_scalp_fast(theta, phi, lift=0.0022):
     return p + n * lift, n
 
 
-def enforce_skull_clearance_batch(curves, min_clear=0.0028):
+def enforce_skull_clearance_batch(curves, min_clear=0.0034, is_bangs_mask=None):
     N, S, _ = curves.shape
     flat = curves.reshape(-1, 3)
     _, idx = dense_tree.query(flat)
     sp = dense_scalp_pts[idx]
     sn = dense_scalp_norms[idx]
     sd = np.sum((flat - sp) * sn, axis=1)
-    mask = (flat[:, 1] > -0.045) & (sd < min_clear)
-    flat[mask] += sn[mask] * (min_clear - sd[mask])[:, None]
+    # Give forehead/eyebrow region extra clearance (4.5mm) so bangs NEVER clip eyebrows or forehead skin!
+    brow_zone = (flat[:, 2] > 0.065) & (flat[:, 1] > 0.015) & (flat[:, 1] < 0.065)
+    req_clear = np.where(brow_zone, np.maximum(min_clear, 0.0046), min_clear)
+    mask = (flat[:, 1] > -0.048) & (sd < req_clear)
+    flat[mask] += sn[mask] * (req_clear[mask] - sd[mask])[:, None]
 
-    # Smooth C2-continuous Facial Feature Keep-Out Field (below eyebrows y < 0.024m, in front of ears z > 0.022m)
-    # Ensures NO hair strand ever dangles across the eyes, nose bridge, or lips, and NEVER kinks!
-    wy = 1.0 / (1.0 + np.exp((flat[:, 1] - 0.022) / 0.007))
-    wz = 1.0 / (1.0 + np.exp(-(flat[:, 2] - 0.025) / 0.014))
+    # Smooth C2-continuous Facial Feature Keep-Out Field (below y = 0.025m, in front of ears z > 0.020m)
+    wy = 1.0 / (1.0 + np.exp((flat[:, 1] - 0.023) / 0.006))
+    wz = 1.0 / (1.0 + np.exp(-(flat[:, 2] - 0.022) / 0.014))
     w_face = wy * wz
-    x_cheek = 0.055 - 0.006 * np.clip((-0.010 - flat[:, 1]) / 0.065, 0.0, 1.0)
+    x_cheek = 0.056 - 0.005 * np.clip((-0.010 - flat[:, 1]) / 0.065, 0.0, 1.0)
     abs_x = np.abs(flat[:, 0])
     need_cheek = (w_face > 0.01) & (abs_x < x_cheek)
     if np.any(need_cheek):
-        # Determine side from each curve's root/mid X so all vertices of a strand move to the SAME side!
-        curve_side = np.where(curves[:, 4, 0] >= 0.0, 1.0, -1.0)[:, None]
+        curve_side = np.where(curves[:, 3, 0] >= 0.0, 1.0, -1.0)[:, None]
         flat_side = np.broadcast_to(curve_side, (N, S)).reshape(-1)[need_cheek]
-        target_x = flat_side * (x_cheek[need_cheek] + abs_x[need_cheek] * 0.12)
+        target_x = flat_side * (x_cheek[need_cheek] + abs_x[need_cheek] * 0.14)
         wf = w_face[need_cheek]
         flat[need_cheek, 0] = flat[need_cheek, 0] * (1.0 - wf) + target_x * wf
 
-    # Smooth vertical compression below y = -0.052m so strands end cleanly above the neck blood section
-    low = flat[:, 1] < -0.052
+    low = flat[:, 1] < -0.054
     if np.any(low):
         pts_l = flat[low]
-        dy = np.maximum(0.0, -0.052 - pts_l[:, 1])
-        pts_l[:, 1] = -0.052 - 0.026 * np.tanh(dy / 0.038)
+        dy = np.maximum(0.0, -0.054 - pts_l[:, 1])
+        pts_l[:, 1] = -0.054 - 0.024 * np.tanh(dy / 0.036)
         flat[low] = pts_l
 
     curves = flat.reshape(N, S, 3)
-    # Apply 2 passes of 1D Laplacian smoothing along each strand (preserving root j=0) for silky-smooth curves
     for _ in range(2):
         curves[:, 1:-1, :] = 0.22 * curves[:, :-2, :] + 0.56 * curves[:, 1:-1, :] + 0.22 * curves[:, 2:, :]
     return curves
@@ -444,265 +695,304 @@ def make_clump_guides(n_guides, theta_range, phi_range, rng):
 
 
 def build_photo_tied_groom(count=12000, samples=36):
+    """
+    Reference Photo (`image-1.png`) Signature Hairstyle:
+    - Plush high-cranial crown & side canopy sweeping smoothly above/behind the ears into a low nape tie
+    - Full, soft, wispy arched air-bangs + curtain bangs across the forehead (28% of curves = 3,360 curves!)
+    - Silky cheek-framing temple locks ("修颜龙须碎鬓", 22% of curves = 2,640 curves!)
+    """
     rng = np.random.default_rng(20260420)
     curves = np.zeros((count, samples, 3), dtype=np.float32)
     radii = np.zeros(count, dtype=np.float32)
     families = np.zeros(count, dtype=np.uint8)
-    pigments = rng.integers(95, 245, size=count, dtype=np.uint8)
+    pigments = rng.integers(110, 245, size=count, dtype=np.uint8)
     t_arr = np.linspace(0.0, 1.0, samples, dtype=np.float32)
-    n_crown = int(count * 0.56)
-    n_temple = int(count * 0.20)
-    n_bangs = int(count * 0.13)
-    clump_guides = make_clump_guides(96, (0.08, 1.50), (-math.pi, math.pi), rng)
-    tie_pos = np.array([0.0, -0.022, -0.088], dtype=np.float32)
+
+    n_crown = int(count * 0.42)
+    n_temple = int(count * 0.22)
+    n_bangs = int(count * 0.28)
+    clump_guides = make_clump_guides(128, (0.06, 1.48), (-math.pi, math.pi), rng)
+    tie_pos = np.array([0.0, -0.020, -0.090], dtype=np.float32)
 
     for i in range(count):
+        layer_shell = (i % 3) * 0.0018  # 3 radial depth shells (+0mm, +1.8mm, +3.6mm)
         if i < n_crown:
             u = rng.uniform(0.0, 1.0)
-            theta = 0.05 + (u ** 0.72) * 1.48
+            theta = 0.04 + (u ** 0.72) * 1.44
             phi = rng.uniform(-math.pi, math.pi)
-            if abs(phi) < 0.62 and theta > 0.70:
-                phi = math.copysign(0.62 + abs(phi) * 0.85, phi if phi != 0 else 1.0)
+            # Only exclude roots below the actual forehead hairline (theta > 0.96), NEVER on the front scalp!
+            if abs(phi) < 0.52 and theta > 0.94:
+                phi = math.copysign(0.52 + abs(phi) * 0.85, phi if phi != 0 else 1.0)
             g_th, g_ph, g_phase, g_curl = clump_guides[i % len(clump_guides)]
-            theta = 0.84 * theta + 0.16 * g_th
-            phi = 0.86 * phi + 0.14 * g_ph
-            root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
+            theta = 0.86 * theta + 0.14 * g_th
+            phi = 0.88 * phi + 0.12 * g_ph
+            root, nrm = sample_scalp_fast(theta, phi, lift=0.0034 + layer_shell * 0.5)
             side = 1.0 if root[0] >= 0 else -1.0
+            # High-cranial lift ("高颅顶蓬松度") at mid-control point
             mid = np.array([
-                side * (0.068 + 0.012 * math.sin(abs(phi))) * (0.65 + 0.35 * (1.0 - abs(phi) / math.pi)),
-                max(-0.008, root[1] * 0.48 + 0.018),
-                root[2] * 0.42 - 0.048,
+                side * (0.072 + 0.014 * math.sin(abs(phi))) * (0.68 + 0.32 * (1.0 - abs(phi) / math.pi)),
+                max(-0.005, root[1] * 0.58 + 0.028),
+                root[2] * 0.48 - 0.044,
             ], dtype=np.float32)
             m_norm = np.linalg.norm(mid - HEAD_CORE)
-            if m_norm < 0.098:
-                mid = HEAD_CORE + (mid - HEAD_CORE) / max(m_norm, 1e-6) * 0.098
+            if m_norm < 0.104:
+                mid = HEAD_CORE + (mid - HEAD_CORE) / max(m_norm, 1e-6) * 0.104
             end = tie_pos + np.array([
-                rng.normal(0.0, 0.008),
-                rng.normal(-0.012, 0.008),
+                rng.normal(0.0, 0.010),
+                rng.normal(-0.010, 0.008),
                 -0.012 + rng.normal(0.0, 0.005),
             ], dtype=np.float32)
             s = t_arr[:, None]
             pts = ((1.0 - s) ** 2) * root + 2.0 * (1.0 - s) * s * mid + (s ** 2) * end
-            pts += nrm * (np.sin(t_arr * math.pi) * (0.006 + 0.0018 * g_curl))[:, None]
-            pts[:, 0] += np.sin(t_arr * 5.0 + g_phase) * 0.0012 * t_arr
+            pts += nrm * (np.sin(t_arr * math.pi) * (0.0085 + layer_shell + 0.0020 * g_curl))[:, None]
+            pts[:, 0] += np.sin(t_arr * 4.5 + g_phase) * 0.0014 * t_arr
             curves[i] = pts
-            radii[i] = rng.uniform(0.00072, 0.00096)
-            families[i] = 3 if (i % 24 == 0) else 0
+            radii[i] = rng.uniform(0.00145, 0.00210)
+            families[i] = 3 if (i % 18 == 0) else 0
 
         elif i < n_crown + n_temple:
             side = 1.0 if (i % 2 == 0) else -1.0
             sub = rng.random()
-            if sub < 0.48:
-                # Sleek cheek-framing temple wisps rooted at the sideburn/temple hairline (|phi| in [0.68, 0.96])
-                theta = rng.uniform(0.74, 1.18)
-                phi = side * rng.uniform(0.68, 0.96)
-                root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
-                wisp_len = rng.uniform(0.058, 0.088)
-                curl_in = rng.uniform(0.004, 0.010)
+            if sub < 0.58:
+                # Lush cheek-framing temple locks ("修颜鬓角碎发") rooted from outer forehead down to sideburn
+                theta = rng.uniform(0.68, 1.22)
+                phi = side * rng.uniform(0.42, 0.94)
+                root, nrm = sample_scalp_fast(theta, phi, lift=0.0036 + layer_shell * 0.4)
+                wisp_len = rng.uniform(0.078, 0.115)
+                out_push = max(0.0, 0.058 - abs(root[0]))
                 pts = (
                     root[None, :]
-                    + nrm[None, :] * (np.sin(t_arr * math.pi * 0.72) * 0.0040)[:, None]
+                    + nrm[None, :] * (np.sin(t_arr * math.pi * 0.72) * (0.0065 + layer_shell))[:, None]
                     + np.stack([
-                        side * (0.005 * np.sin(t_arr * math.pi * 0.6) - curl_in * (t_arr ** 1.7)),
-                        -wisp_len * (t_arr ** 1.08),
-                        (0.006 * np.sin(t_arr * math.pi) - 0.006 * (t_arr ** 1.6)),
+                        side * ((out_push + 0.008) * np.sin(t_arr * math.pi * 0.58) - 0.007 * (t_arr ** 1.8)),
+                        -wisp_len * (t_arr ** 1.06),
+                        (0.008 * np.sin(t_arr * math.pi * 0.75) - 0.008 * (t_arr ** 1.5)),
                     ], axis=-1)
                 )
-                radii[i] = rng.uniform(0.00060, 0.00080)
+                radii[i] = rng.uniform(0.00130, 0.00180)
                 families[i] = 2
             else:
-                theta = rng.uniform(0.68, 1.32)
-                phi = side * rng.uniform(0.82, 1.68)
-                root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
-                mid = np.array([side * 0.076, root[1] * 0.52 + 0.005, root[2] * 0.50 - 0.032], dtype=np.float32)
-                end = tie_pos + np.array([side * 0.010, rng.uniform(-0.010, 0.006), -0.006], dtype=np.float32)
+                theta = rng.uniform(0.64, 1.30)
+                phi = side * rng.uniform(0.75, 1.65)
+                root, nrm = sample_scalp_fast(theta, phi, lift=0.0035 + layer_shell * 0.5)
+                mid = np.array([side * 0.080, root[1] * 0.56 + 0.010, root[2] * 0.50 - 0.030], dtype=np.float32)
+                end = tie_pos + np.array([side * 0.012, rng.uniform(-0.010, 0.008), -0.006], dtype=np.float32)
                 s = t_arr[:, None]
                 pts = ((1.0 - s) ** 2) * root + 2.0 * (1.0 - s) * s * mid + (s ** 2) * end
-                pts += nrm * (np.sin(t_arr * math.pi) * 0.0045)[:, None]
-                radii[i] = rng.uniform(0.00070, 0.00092)
+                pts += nrm * (np.sin(t_arr * math.pi) * (0.0065 + layer_shell))[:, None]
+                radii[i] = rng.uniform(0.00140, 0.00195)
                 families[i] = 0
             curves[i] = pts
 
         elif i < n_crown + n_temple + n_bangs:
-            # Wispy arched air-bangs staying cleanly above the eyebrows in the center, blending into temple wisps at edges
-            phi = rng.normal(-0.02, 0.25)
-            phi = float(np.clip(phi, -0.46, 0.46))
-            theta = rng.uniform(0.58, 0.80)
-            root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
-            edge_ratio = min(1.0, abs(phi) / 0.45)
-            bang_len = rng.uniform(0.028, 0.042) * (0.78 + 0.36 * (edge_ratio ** 1.6))
-            sweep_x = (0.004 + 0.012 * edge_ratio) * math.copysign(1.0, phi + 0.03)
+            # Lush, softly parted wispy air-bangs + curtain fringe covering upper forehead down to eyebrows (y ~ 0.036m)
+            phi = rng.uniform(-0.56, 0.56)
+            theta = rng.uniform(0.60, 0.96)
+            root, nrm = sample_scalp_fast(theta, phi, lift=0.0038 + layer_shell * 0.4)
+            edge_ratio = min(1.0, abs(phi) / 0.50)
+            # Target tip Y: ~0.037m in center (just above eyebrows), sweeping down to ~0.005m at outer temples!
+            target_tip_y = 0.038 - 0.036 * (edge_ratio ** 1.45) + rng.uniform(-0.006, 0.006)
+            bang_len = max(0.038, float(root[1]) - target_tip_y)
+            sweep_x = (0.002 + 0.018 * (edge_ratio ** 1.3)) * math.copysign(1.0, phi + 0.04)
             pts = (
                 root[None, :]
                 + np.stack([
-                    sweep_x * (t_arr ** 1.20),
-                    -bang_len * (t_arr ** 1.10),
-                    np.sin(t_arr * math.pi * 0.80) * 0.0075 - 0.0030 * (t_arr ** 2),
+                    sweep_x * (t_arr ** 1.35),
+                    -bang_len * (t_arr ** 1.06),
+                    np.sin(t_arr * math.pi * 0.78) * (0.0115 + layer_shell * 0.6) - 0.0020 * (t_arr ** 2),
                 ], axis=-1)
             )
             curves[i] = pts
-            radii[i] = rng.uniform(0.00056, 0.00076)
+            radii[i] = rng.uniform(0.00125, 0.00175)
             families[i] = 1
 
         else:
             ang = rng.uniform(0.0, 2.0 * math.pi)
-            rad = rng.uniform(0.003, 0.026)
-            tail_len = rng.uniform(0.032, 0.056)
+            rad = rng.uniform(0.004, 0.028)
+            tail_len = rng.uniform(0.034, 0.058)
             pts = np.stack([
-                tie_pos[0] + math.cos(ang) * rad * (0.45 + 0.70 * np.sin(t_arr * math.pi)),
-                tie_pos[1] + math.sin(ang) * rad * 0.55 * (1.0 - 0.4 * t_arr) - tail_len * (t_arr ** 1.15),
-                tie_pos[2] - 0.006 - np.sin(t_arr * math.pi) * 0.018 - 0.008 * t_arr,
+                tie_pos[0] + math.cos(ang) * rad * (0.48 + 0.68 * np.sin(t_arr * math.pi)),
+                tie_pos[1] + math.sin(ang) * rad * 0.58 * (1.0 - 0.35 * t_arr) - tail_len * (t_arr ** 1.15),
+                tie_pos[2] - 0.006 - np.sin(t_arr * math.pi) * 0.020 - 0.008 * t_arr,
             ], axis=-1)
             curves[i] = pts
-            radii[i] = rng.uniform(0.00072, 0.00094)
+            radii[i] = rng.uniform(0.00140, 0.00195)
             families[i] = 0
 
-    curves = enforce_skull_clearance_batch(curves, min_clear=0.0028)
+    curves = enforce_skull_clearance_batch(curves, min_clear=0.0036)
     return curves, radii, families, pigments
 
 
 def build_center_long_groom(count=12000, samples=36):
+    """
+    Modern Chinese High-Cranial Center-Parted Curtain Bangs & Flowing Long Hair ("高颅顶八字刘海黑长直"):
+    - High-crown lifted roots at center part (+14mm plush cranial arch, "头包脸")
+    - Dense S-curve curtain bangs (32% of curves = 3,840 curves!) draping over forehead hairline before parting
+    - Lush flowing side & back locks with inward C-curl taper above C4/C5 neck section
+    """
     rng = np.random.default_rng(20260421)
     curves = np.zeros((count, samples, 3), dtype=np.float32)
     radii = np.zeros(count, dtype=np.float32)
     families = np.zeros(count, dtype=np.uint8)
-    pigments = rng.integers(95, 245, size=count, dtype=np.uint8)
+    pigments = rng.integers(110, 245, size=count, dtype=np.uint8)
     t_arr = np.linspace(0.0, 1.0, samples, dtype=np.float32)
-    clump_guides = make_clump_guides(108, (0.06, 1.48), (-math.pi, math.pi), rng)
+    clump_guides = make_clump_guides(128, (0.05, 1.48), (-math.pi, math.pi), rng)
+    n_curtain = int(count * 0.32)
 
     for i in range(count):
-        if i < int(count * 0.16):
-            # True S-curve curtain bangs ("八字刘海"): root near center part, sweep OUTWARD to temples (|x| -> 0.060m)
+        layer_shell = (i % 3) * 0.0020
+        if i < n_curtain:
+            # Dense high-cranial S-curve curtain bangs ("高颅顶法式八字刘海")
             side = 1.0 if (i % 2 == 0) else -1.0
-            phi = side * rng.uniform(0.08, 0.52)
-            theta = rng.uniform(0.56, 0.84)
-            root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
-            curtain_len = rng.uniform(0.068, 0.110)
-            outward_x = max(0.018, 0.062 - abs(root[0]))
+            phi = side * rng.uniform(0.012, 0.62)
+            theta = rng.uniform(0.44, 0.96)
+            root, nrm = sample_scalp_fast(theta, phi, lift=0.0038 + layer_shell * 0.5)
+            edge_ratio = min(1.0, abs(phi) / 0.55)
+            # Inner curtain strands (small |phi|) graze outer brow (y ~ 0.025m); outer strands sweep down to jaw (y ~ -0.045m)
+            target_tip_y = 0.030 - 0.072 * (edge_ratio ** 1.15) + rng.uniform(-0.006, 0.006)
+            curtain_len = max(0.055, float(root[1]) - target_tip_y)
+            # Delayed S-curve lateral sweep (t^1.65) so strands drape over the upper forehead FIRST before parting!
+            outward_x = max(0.018, 0.064 - abs(root[0]))
+            lat_curve = (t_arr ** 1.60) * np.sin(t_arr * math.pi * 0.62) * 1.25
+            high_crown_arch = 0.010 * np.sin(t_arr * math.pi * 0.50) * (1.0 - t_arr * 0.5)
             pts = (
                 root[None, :]
-                + nrm[None, :] * (np.sin(t_arr * math.pi * 0.65) * 0.0060)[:, None]
+                + nrm[None, :] * (np.sin(t_arr * math.pi * 0.68) * (0.0085 + layer_shell))[:, None]
                 + np.stack([
-                    side * (outward_x * np.sin(t_arr * math.pi * 0.58) - 0.006 * (t_arr ** 2.4)),
-                    -curtain_len * (t_arr ** 1.12),
-                    0.008 * np.sin(t_arr * math.pi * 0.65) - 0.014 * (t_arr ** 1.5),
+                    side * (outward_x * lat_curve - 0.006 * (t_arr ** 2.5)),
+                    high_crown_arch - curtain_len * (t_arr ** 1.08),
+                    0.011 * np.sin(t_arr * math.pi * 0.65) - 0.012 * (t_arr ** 1.50),
                 ], axis=-1)
             )
             curves[i] = pts
-            radii[i] = rng.uniform(0.00062, 0.00082)
+            radii[i] = rng.uniform(0.00135, 0.00185)
             families[i] = 1
         else:
             u = rng.uniform(0.0, 1.0)
-            theta = 0.06 + (u ** 0.74) * 1.44
+            theta = 0.05 + (u ** 0.72) * 1.44
             phi = rng.uniform(-math.pi, math.pi)
-            if abs(phi) < 0.045 and theta < 0.95:
-                phi = math.copysign(0.045 + abs(phi), phi if phi != 0 else 1.0)
-            if abs(phi) < 0.58 and theta > 0.70:
-                phi = math.copysign(0.58 + abs(phi) * 0.85, phi if phi != 0 else 1.0)
-            g_th, g_ph, g_phase, g_curl = clump_guides[i % len(clump_guides)]
-            theta = 0.85 * theta + 0.15 * g_th
-            phi = 0.86 * phi + 0.14 * g_ph
-            root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
+            if abs(phi) < 0.015 and theta < 0.95:
+                phi = math.copysign(0.015 + abs(phi), phi if phi != 0 else 1.0)
+            # Only exclude bare forehead skin below theta = 0.94, never on the front scalp!
+            if abs(phi) < 0.48 and theta > 0.94:
+                phi = math.copysign(0.48 + abs(phi) * 0.85, phi if phi != 0 else 1.0)
+            g_th, g_ph, g_phase, _ = clump_guides[i % len(clump_guides)]
+            theta = 0.86 * theta + 0.14 * g_th
+            phi = 0.88 * phi + 0.12 * g_ph
+            root, nrm = sample_scalp_fast(theta, phi, lift=0.0036 + layer_shell * 0.5)
             side = 1.0 if root[0] >= 0 else -1.0
-            drop_y = max(-0.076, -0.056 - 0.018 * ((1.0 - abs(phi) / math.pi) ** 1.2) + rng.normal(0.0, 0.004))
-            total_drop = max(0.060, root[1] - drop_y)
+            drop_y = max(-0.075, -0.056 - 0.018 * ((1.0 - abs(phi) / math.pi) ** 1.2) + rng.normal(0.0, 0.004))
+            total_drop = max(0.065, root[1] - drop_y)
             c_curl = t_arr ** 2.0
-            wave = np.sin(t_arr * 4.8 + g_phase) * 0.0028 * t_arr
-            temple_push = max(0.0, 0.062 - abs(root[0])) * max(0.0, 1.0 - abs(phi) / 1.2)
+            wave = np.sin(t_arr * 4.5 + g_phase) * 0.0025 * t_arr
+            temple_push = max(0.0, 0.066 - abs(root[0])) * max(0.0, 1.0 - abs(phi) / 1.35)
+            crown_lift = 0.009 * np.sin(t_arr * math.pi * 0.5) * max(0.0, 1.0 - theta / 1.1)
             pts = np.stack([
-                root[0] + nrm[0] * (np.sin(t_arr * math.pi * 0.75) * 0.009) + side * ((0.010 + temple_push) * np.sin(t_arr * math.pi * 0.62) - 0.010 * c_curl) + wave,
-                root[1] + nrm[1] * (np.sin(t_arr * math.pi * 0.5) * 0.006) - total_drop * (t_arr ** 1.08),
-                root[2] + nrm[2] * (np.sin(t_arr * math.pi * 0.7) * 0.008) - 0.014 * (t_arr ** 1.4) + 0.006 * c_curl,
+                root[0] + nrm[0] * (np.sin(t_arr * math.pi * 0.75) * (0.011 + layer_shell)) + side * ((0.012 + temple_push) * (t_arr ** 1.45) * np.sin(t_arr * math.pi * 0.62) - 0.012 * c_curl) + wave,
+                root[1] + nrm[1] * (np.sin(t_arr * math.pi * 0.55) * 0.008) + crown_lift - total_drop * (t_arr ** 1.08),
+                root[2] + nrm[2] * (np.sin(t_arr * math.pi * 0.70) * (0.009 + layer_shell)) - 0.014 * (t_arr ** 1.4) + 0.006 * c_curl,
             ], axis=-1)
             curves[i] = pts
-            radii[i] = rng.uniform(0.00072, 0.00096)
-            families[i] = 2 if (abs(phi) < 1.05 and theta > 0.70) else (3 if (i % 25 == 0) else 0)
+            radii[i] = rng.uniform(0.00145, 0.00210)
+            families[i] = 2 if (abs(phi) < 1.10 and theta > 0.65) else (3 if (i % 20 == 0) else 0)
 
-    curves = enforce_skull_clearance_batch(curves, min_clear=0.0028)
+    curves = enforce_skull_clearance_batch(curves, min_clear=0.0036)
     return curves, radii, families, pigments
 
 
 def build_low_chignon_groom(count=12000, samples=36):
+    """
+    Modern Chinese Elegant Side-Swept Low Chignon ("新中式温婉三七分斜掠刘海低盘发"):
+    - Plush 3:7 side-parted crown & sweeping goddess fringe across the upper forehead (30% of curves!)
+    - Romantic temple waves framing both cheekbones
+    - Sculpted silk low bun at the occiput/nape
+    """
     rng = np.random.default_rng(20260422)
     curves = np.zeros((count, samples, 3), dtype=np.float32)
     radii = np.zeros(count, dtype=np.float32)
     families = np.zeros(count, dtype=np.uint8)
-    pigments = rng.integers(95, 245, size=count, dtype=np.uint8)
+    pigments = rng.integers(110, 245, size=count, dtype=np.uint8)
     t_arr = np.linspace(0.0, 1.0, samples, dtype=np.float32)
-    clump_guides = make_clump_guides(96, (0.06, 1.48), (-math.pi, math.pi), rng)
-    chignon_center = np.array([0.0, -0.032, -0.092], dtype=np.float32)
-    n_swept = int(count * 0.64)
-    n_drape = int(count * 0.18)
+    clump_guides = make_clump_guides(112, (0.05, 1.48), (-math.pi, math.pi), rng)
+    chignon_center = np.array([0.0, -0.030, -0.092], dtype=np.float32)
+    n_swept = int(count * 0.52)
+    n_drape = int(count * 0.30)
 
     for i in range(count):
+        layer_shell = (i % 3) * 0.0019
         if i < n_swept:
             u = rng.uniform(0.0, 1.0)
-            theta = 0.06 + (u ** 0.74) * 1.44
+            theta = 0.05 + (u ** 0.72) * 1.44
             phi = rng.uniform(-math.pi, math.pi)
-            if abs(phi) < 0.58 and theta > 0.72:
-                phi = math.copysign(0.58 + abs(phi) * 0.85, phi if phi != 0 else 1.0)
-            g_th, g_ph, g_phase, _ = clump_guides[i % len(clump_guides)]
-            theta = 0.85 * theta + 0.15 * g_th
-            phi = 0.86 * phi + 0.14 * g_ph
-            root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
+            if abs(phi) < 0.48 and theta > 0.94:
+                phi = math.copysign(0.48 + abs(phi) * 0.85, phi if phi != 0 else 1.0)
+            g_th, g_ph, _, _ = clump_guides[i % len(clump_guides)]
+            theta = 0.86 * theta + 0.14 * g_th
+            phi = 0.88 * phi + 0.12 * g_ph
+            root, nrm = sample_scalp_fast(theta, phi, lift=0.0036 + layer_shell * 0.5)
             side = 1.0 if root[0] >= 0 else -1.0
             mid = np.array([
-                side * (0.072 + 0.010 * math.sin(abs(phi))),
-                max(-0.015, root[1] * 0.45 + 0.012),
-                root[2] * 0.42 - 0.050,
+                side * (0.076 + 0.012 * math.sin(abs(phi))),
+                max(-0.012, root[1] * 0.56 + 0.022),
+                root[2] * 0.46 - 0.046,
             ], dtype=np.float32)
             m_norm = np.linalg.norm(mid - HEAD_CORE)
-            if m_norm < 0.098:
-                mid = HEAD_CORE + (mid - HEAD_CORE) / max(m_norm, 1e-6) * 0.098
+            if m_norm < 0.104:
+                mid = HEAD_CORE + (mid - HEAD_CORE) / max(m_norm, 1e-6) * 0.104
             end = chignon_center + np.array([
-                rng.normal(0.0, 0.014),
+                rng.normal(0.0, 0.015),
                 rng.normal(0.0, 0.010),
                 rng.normal(-0.004, 0.006),
             ], dtype=np.float32)
             s = t_arr[:, None]
             pts = ((1.0 - s) ** 2) * root + 2.0 * (1.0 - s) * s * mid + (s ** 2) * end
-            pts += nrm * (np.sin(t_arr * math.pi) * 0.0065)[:, None]
+            pts += nrm * (np.sin(t_arr * math.pi) * (0.0085 + layer_shell))[:, None]
             curves[i] = pts
-            radii[i] = rng.uniform(0.00072, 0.00096)
-            families[i] = 3 if (i % 25 == 0) else 0
+            radii[i] = rng.uniform(0.00145, 0.00210)
+            families[i] = 3 if (i % 20 == 0) else 0
 
         elif i < n_swept + n_drape:
-            is_right_sweep = (i % 5 != 0)
-            phi = rng.uniform(0.15, 0.82) if is_right_sweep else rng.uniform(-0.85, -0.32)
-            theta = rng.uniform(0.58, 0.96)
-            root, nrm = sample_scalp_fast(theta, phi, lift=0.0028)
-            side = 1.0 if phi >= 0 else -1.0
-            wisp_len = rng.uniform(0.070, 0.108)
+            # 3:7 side-swept goddess fringe & temple waves
+            is_right_sweep = (i % 3 != 0)
+            phi = rng.uniform(-0.22, 0.88) if is_right_sweep else rng.uniform(-0.92, -0.22)
+            theta = rng.uniform(0.46, 0.96)
+            root, nrm = sample_scalp_fast(theta, phi, lift=0.0038 + layer_shell * 0.5)
+            side = 1.0 if is_right_sweep else -1.0
+            edge_ratio = min(1.0, abs(phi - (-0.22)) / 0.70)
+            target_tip_y = 0.034 - 0.068 * (edge_ratio ** 1.15) + rng.uniform(-0.006, 0.006)
+            wisp_len = max(0.052, float(root[1]) - target_tip_y)
+            outward_x = max(0.018, 0.064 - side * root[0])
+            lat_curve = (t_arr ** 1.50) * np.sin(t_arr * math.pi * 0.60) * 1.22
             pts = (
                 root[None, :]
-                + nrm[None, :] * (np.sin(t_arr * math.pi * 0.7) * 0.0055)[:, None]
+                + nrm[None, :] * (np.sin(t_arr * math.pi * 0.70) * (0.0080 + layer_shell))[:, None]
                 + np.stack([
-                    side * (0.014 * np.sin(t_arr * math.pi * 0.72) - 0.012 * (t_arr ** 1.8)),
-                    -wisp_len * (t_arr ** 1.08),
-                    0.010 * np.sin(t_arr * math.pi * 0.75) - 0.014 * (t_arr ** 1.6),
+                    side * (outward_x * lat_curve - 0.008 * (t_arr ** 2.2)),
+                    0.008 * np.sin(t_arr * math.pi * 0.5) - wisp_len * (t_arr ** 1.08),
+                    0.011 * np.sin(t_arr * math.pi * 0.68) - 0.012 * (t_arr ** 1.5),
                 ], axis=-1)
             )
             curves[i] = pts
-            radii[i] = rng.uniform(0.00062, 0.00082)
+            radii[i] = rng.uniform(0.00135, 0.00185)
             families[i] = 1 if abs(phi) < 0.55 else 2
 
         else:
             u = rng.uniform(0.0, 2.0 * math.pi)
             v = rng.uniform(0.0, 2.0 * math.pi)
-            R = 0.024 + rng.normal(0.0, 0.003)
-            r = 0.011 + rng.normal(0.0, 0.002)
+            R = 0.026 + rng.normal(0.0, 0.003)
+            r = 0.012 + rng.normal(0.0, 0.002)
             theta_t = u + t_arr * 2.2 * math.pi
             phi_t = v + t_arr * 4.4 * math.pi
             pts = np.stack([
-                chignon_center[0] + (R + r * np.cos(phi_t)) * np.cos(theta_t) * 1.15,
-                chignon_center[1] + (R + r * np.cos(phi_t)) * np.sin(theta_t) * 0.82,
+                chignon_center[0] + (R + r * np.cos(phi_t)) * np.cos(theta_t) * 1.18,
+                chignon_center[1] + (R + r * np.cos(phi_t)) * np.sin(theta_t) * 0.85,
                 chignon_center[2] - 0.008 + r * np.sin(phi_t),
             ], axis=-1)
             curves[i] = pts
-            radii[i] = rng.uniform(0.00072, 0.00095)
+            radii[i] = rng.uniform(0.00145, 0.00205)
             families[i] = 0
 
-    curves = enforce_skull_clearance_batch(curves, min_clear=0.0028)
+    curves = enforce_skull_clearance_batch(curves, min_clear=0.0036)
     return curves, radii, families, pigments
 
 
@@ -742,5 +1032,4 @@ for gid, builder in [
     c_arr, r_arr, f_arr, p_arr = builder(12000, 36)
     write_groom_h2grm002(os.path.join(GROOMS_DIR, f'{gid}.groom'), c_arr, r_arr, f_arr, p_arr)
 
-print("All skin textures, GLB hair meshes, and .groom curve assets upgraded successfully!")
-
+print("Stage 21 Masterpiece skin/eye/brow/bone-morphs & 3-layer high-cranial .groom assets built successfully!")

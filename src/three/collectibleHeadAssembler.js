@@ -262,14 +262,94 @@ function fitImportedHead(scene) {
   return fitGroup;
 }
 
-// Subtle bone-structure biases per preset — NOTE: lipFullness is 0.0 across all presets so mouth is NEVER pouty ("嘟嘟嘴")!
+// Stage 21: 5 Distinct Chinese Female Bone-Structure Recipes ("五款高辨识度中式骨相")
+// Maps both defaultCollectibles `basePreset` keys and character short-keys.
 const PRESET_MORPH_BIASES = {
-  user_photo: { jawVLine: 0.02, cheekSoftness: 0.16, noseBridge: 0.02, eyeAlmond: 0.06, lipFullness: 0.0 },
-  linxi: { jawVLine: 0.10, cheekSoftness: 0.10, noseBridge: 0.10, eyeAlmond: 0.10, lipFullness: 0.0 },
-  suwan: { jawVLine: 0.22, cheekSoftness: 0.04, noseBridge: 0.20, eyeAlmond: 0.22, lipFullness: 0.0 },
-  qianxue: { jawVLine: 0.18, cheekSoftness: 0.14, noseBridge: 0.16, eyeAlmond: 0.16, lipFullness: 0.0 },
-  shenzhiwei: { jawVLine: 0.06, cheekSoftness: 0.20, noseBridge: 0.06, eyeAlmond: 0.14, lipFullness: 0.0 },
+  // 1. 初夏 · 幼态甜妹鹅蛋脸 (Baby Oval: Plump apple cheeks, short rounded chin, big round doe eyes)
+  user_photo: { jawVLine: 0.28, chinLength: -0.58, cheekSoftness: 0.78, noseBridge: 0.25, eyeAlmond: 0.58, eyeTilt: -0.12, lipFullness: 0.0 },
+  chuxia: { jawVLine: 0.28, chinLength: -0.58, cheekSoftness: 0.78, noseBridge: 0.25, eyeAlmond: 0.58, eyeTilt: -0.12, lipFullness: 0.0 },
+  // 2. 林汐 · 清冷超模折角方圆脸 (Model Square-Oval: Defined mandibular corner, high cheekbones, tall bridge, phoenix eyes)
+  female_realistic: { jawVLine: -0.82, chinLength: 0.15, cheekSoftness: -0.72, noseBridge: 0.85, eyeAlmond: 0.12, eyeTilt: 0.78, lipFullness: 0.0 },
+  linxi: { jawVLine: -0.82, chinLength: 0.15, cheekSoftness: -0.72, noseBridge: 0.85, eyeAlmond: 0.12, eyeTilt: 0.78, lipFullness: 0.0 },
+  // 3. 苏晚 · 江南古典尖俏瓜子V脸 (Classical V-Face: Smooth V-taper jaw, delicate pointed chin, gentle almond eyes)
+  female_2: { jawVLine: 0.95, chinLength: 0.45, cheekSoftness: 0.22, noseBridge: 0.65, eyeAlmond: 0.42, eyeTilt: 0.22, lipFullness: 0.0 },
+  suwan: { jawVLine: 0.95, chinLength: 0.45, cheekSoftness: 0.22, noseBridge: 0.65, eyeAlmond: 0.42, eyeTilt: 0.22, lipFullness: 0.0 },
+  // 4. 千雪 · 甜酷猫系短下庭V脸 (Cat Short-V: Sharp V-jaw, ultra-short lower third, full cheeks, tilted cat eyes)
+  female_3: { jawVLine: 0.82, chinLength: -0.85, cheekSoftness: 0.75, noseBridge: 0.55, eyeAlmond: 0.85, eyeTilt: 0.88, lipFullness: 0.0 },
+  qianxue: { jawVLine: 0.82, chinLength: -0.85, cheekSoftness: 0.75, noseBridge: 0.55, eyeAlmond: 0.85, eyeTilt: 0.88, lipFullness: 0.0 },
+  // 5. 沈知微 · 知性御姐修长菱形脸 (Regal Long Diamond: Elongated lower third, sculpted cheekbones, tall refined nose)
+  female_gentle: { jawVLine: 0.45, chinLength: 0.85, cheekSoftness: -0.68, noseBridge: 0.75, eyeAlmond: 0.18, eyeTilt: 0.32, lipFullness: 0.0 },
+  shenzhiwei: { jawVLine: 0.45, chinLength: 0.85, cheekSoftness: -0.68, noseBridge: 0.75, eyeAlmond: 0.18, eyeTilt: 0.32, lipFullness: 0.0 },
 };
+
+const characterSkinOverlayCache = new Map();
+
+/**
+ * Overlays character-specific beauty marks (e.g., 初夏's 3 right-cheek moles, 林汐's tear mole,
+ * 苏晚's classical beauty mark, 千雪's nose-bridge mole & winged liner, 沈知微's left-cheek mole)
+ * onto the 2048x2048 base skin texture without mutating the shared GLB image.
+ */
+function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
+  if (!baseSkinMap?.image || typeof document === 'undefined') return baseSkinMap;
+  const img = baseSkinMap.image;
+  const w = img.width || img.naturalWidth || 0;
+  const h = img.height || img.naturalHeight || 0;
+  if (!w || !h) return baseSkinMap;
+
+  if (characterSkinOverlayCache.has(presetKey)) {
+    return characterSkinOverlayCache.get(presetKey);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const paintMole = (u, v, radPx = 2.6, alpha = 0.78) => {
+    const cx = u * w;
+    const cy = v * h;
+    const grad = ctx.createRadialGradient(cx, cy, 0.2, cx, cy, radPx);
+    grad.addColorStop(0, `rgba(56, 34, 30, ${alpha})`);
+    grad.addColorStop(0.55, `rgba(88, 56, 48, ${alpha * 0.65})`);
+    grad.addColorStop(1, 'rgba(88, 56, 48, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radPx, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  if (presetKey === 'user_photo' || presetKey === 'chuxia') {
+    // 初夏: Signature 3 delicate beauty marks on her right cheek (matching reference photo `image-1.png`)
+    paintMole(0.8847, 0.5543, w * 0.0016, 0.76);
+    paintMole(0.8895, 0.5640, w * 0.0017, 0.80);
+    paintMole(0.9042, 0.5718, w * 0.0016, 0.78);
+  } else if (presetKey === 'female_realistic' || presetKey === 'linxi') {
+    // 林汐: High-fashion outer-left-eye tear mole (左眼尾清冷泪痣)
+    paintMole(0.8475, 0.4685, w * 0.0015, 0.82);
+  } else if (presetKey === 'female_2' || presetKey === 'suwan') {
+    // 苏晚: Classical lower-right-eyelid beauty mark (右眼下古典美人痣) + warm peach-blossom blush boost
+    paintMole(0.8492, 0.5562, w * 0.0014, 0.78);
+  } else if (presetKey === 'female_3' || presetKey === 'qianxue') {
+    // 千雪: Cute-cool nose-bridge mole (鼻梁甜酷小痣) + subtle cheekbone mole
+    paintMole(0.8615, 0.5138, w * 0.0014, 0.80);
+    paintMole(0.8680, 0.4640, w * 0.0013, 0.72);
+  } else if (presetKey === 'female_gentle' || presetKey === 'shenzhiwei') {
+    // 沈知微: Intellectual left-cheek beauty mark (左颊知性美人痣)
+    paintMole(0.8915, 0.4775, w * 0.0015, 0.78);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.flipY = baseSkinMap.flipY;
+  tex.wrapS = baseSkinMap.wrapS;
+  tex.wrapT = baseSkinMap.wrapT;
+  tex.userData.sharedSkinMicro = true;
+  tex.needsUpdate = true;
+  characterSkinOverlayCache.set(presetKey, tex);
+  return tex;
+}
 
 /**
  * Applies facial bone morphs, forensic dead-person expressions ("死人各种表情"),
@@ -332,10 +412,12 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const presetKey = rootGroup.userData.basePreset || 'user_photo';
   const bias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.user_photo;
 
-  const jawV = (m.jawVLine ?? -(m.jawWidth ?? 0)) + bias.jawVLine * 0.4;
-  const cheek = (m.cheekSoftness ?? m.cheekboneFullness ?? 0) + bias.cheekSoftness * 0.4;
-  const nose = (m.noseBridge ?? m.noseBridgeHeight ?? 0) + bias.noseBridge * 0.4;
-  const eye = (m.eyeAlmond ?? m.eyeSize ?? 0) + bias.eyeAlmond * 0.4;
+  const jawV = (m.jawVLine ?? -(m.jawWidth ?? 0)) + bias.jawVLine * 0.85;
+  const chin = (m.chinLength ?? 0) + (bias.chinLength ?? 0) * 0.85;
+  const cheek = (m.cheekSoftness ?? m.cheekboneFullness ?? 0) + bias.cheekSoftness * 0.85;
+  const nose = (m.noseBridge ?? m.noseBridgeHeight ?? 0) + bias.noseBridge * 0.85;
+  const eye = (m.eyeAlmond ?? m.eyeSize ?? 0) + bias.eyeAlmond * 0.85;
+  const eyeTilt = (m.eyeTilt ?? 0) + (bias.eyeTilt ?? 0) * 0.85;
   const lip = (m.lipFullness ?? 0) + bias.lipFullness * 0.4;
   const forehead = Number(m.foreheadHeight ?? 0);
   const ear = Number(m.earSize ?? 0);
@@ -359,20 +441,20 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const bangsLenVal = Math.max(-0.5, Math.min(1.2, Number(m.bangsLength ?? 0)));
 
   const targetWeights = {
-    face_jaw_width_decr: jawV > 0 ? Math.min(1.1, jawV * 1.25) : 0,
-    face_jaw_width_incr: jawV < 0 ? Math.min(1.1, -jawV * 1.25) : 0,
-    face_chin_decr: jawV > 0 ? Math.min(0.85, jawV * 0.65) : 0,
-    face_chin_incr: jawV < 0 ? Math.min(0.85, -jawV * 0.65) : 0,
-    face_cheekbones_incr: cheek > 0 ? Math.min(1.1, cheek * 1.25) : 0,
-    face_cheekbones_decr: cheek < 0 ? Math.min(1.1, -cheek * 1.25) : 0,
-    face_nose_height_incr: nose > 0 ? Math.min(1.1, nose * 1.2) : 0,
-    face_nose_height_decr: nose < 0 ? Math.min(1.1, -nose * 1.2) : 0,
+    face_jaw_width_decr: jawV > 0 ? Math.min(1.15, jawV * 1.15) : 0,
+    face_jaw_width_incr: jawV < 0 ? Math.min(1.15, -jawV * 1.15) : 0,
+    face_chin_incr: chin > 0 ? Math.min(1.10, chin * 1.10) : 0,
+    face_chin_decr: chin < 0 ? Math.min(1.10, -chin * 1.10) : 0,
+    face_cheekbones_incr: cheek > 0 ? Math.min(1.15, cheek * 1.15) : 0,
+    face_cheekbones_decr: cheek < 0 ? Math.min(1.15, -cheek * 1.15) : 0,
+    face_nose_height_incr: nose > 0 ? Math.min(1.15, nose * 1.15) : 0,
+    face_nose_height_decr: nose < 0 ? Math.min(1.15, -nose * 1.15) : 0,
     face_nose_width_decr: nose > 0 ? Math.min(0.9, nose * 0.75) : 0,
     face_nose_width_incr: nose < 0 ? Math.min(0.9, -nose * 0.75) : 0,
-    face_eye_size_incr: eye > 0 ? Math.min(0.8, eye * 0.95) : 0,
-    face_eye_size_decr: eye < 0 ? Math.min(0.8, -eye * 0.95) : 0,
-    face_eye_tilt_incr: eye > 0 ? Math.min(0.9, eye * 1.05) : 0,
-    face_eye_tilt_decr: eye < 0 ? Math.min(0.9, -eye * 1.05) : 0,
+    face_eye_size_incr: eye > 0 ? Math.min(0.95, eye * 1.0) : 0,
+    face_eye_size_decr: eye < 0 ? Math.min(0.95, -eye * 1.0) : 0,
+    face_eye_tilt_incr: eyeTilt > 0 ? Math.min(1.0, eyeTilt * 1.05) : 0,
+    face_eye_tilt_decr: eyeTilt < 0 ? Math.min(1.0, -eyeTilt * 1.05) : 0,
     face_lips_incr: lip > 0 ? Math.min(0.75, lip * 0.85) : 0,
     face_lips_decr: lip < 0 ? Math.min(0.95, -lip * 1.15) : 0,
     face_mouth_width_decr: 0, // Never pinch mouth width into a pout!
@@ -666,13 +748,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(groom); return null; }
       disposeHeadNode(oldHair);
       modelContainer.add(groom);
-      try {
-        const underlayer = await buildHairVolumeUnderlayer(resolvedStyle, config);
-        if (underlayer) {
-          if (rootGroup.userData.hairRequestSerial !== request) disposeHeadNode(underlayer);
-          else groom.add(underlayer);
-        }
-      } catch (_) { /* 发量层失败则纯发丝呈现 */ }
       rootGroup.userData.currentHairStyle = groomId;
       rootGroup.userData.groomStats = groom.userData.groom;
       if (rootGroup.userData.currentMorphs) applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
@@ -879,13 +954,13 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.geometry.userData.parentHeadGroup = rootGroup;
       child.userData.basePositions = true;
 
-      const skinMap = child.material?.map || null;
+      const rawSkinMap = child.material?.map || null;
       const skinNorm = child.material?.normalMap || null;
-      if (skinMap) {
-        skinMap.colorSpace = THREE.SRGBColorSpace;
-        skinMap.anisotropy = 8;
+      if (rawSkinMap) {
+        rawSkinMap.colorSpace = THREE.SRGBColorSpace;
+        rawSkinMap.anisotropy = 8;
       }
-      // Stage 7/8 写实皮肤：微观粗糙/毛孔 + 次表面暖调 + IBL（Stage 8 降低自发光洗白、增强毛孔法线）
+      const skinMap = buildCharacterSkinOverlayMap(rawSkinMap, rootGroup.userData.basePreset || 'user_photo');
       const skinMicro = createSkinMicroMaps();
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
@@ -893,21 +968,21 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.material = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.50, 0.50),
+        normalScale: new THREE.Vector2(0.38, 0.38),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.042,
+        bumpScale: 0.012,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.62),
+        roughness: Number(materials.skinRoughness ?? 0.56),
         metalness: 0.0,
-        sheen: 0.16,
-        sheenRoughness: 0.62,
-        sheenColor: new THREE.Color('#e8a49b'),
-        clearcoat: 0.05,
-        clearcoatRoughness: 0.55,
-        specularIntensity: 0.38,
-        ior: 1.42,
-        envMapIntensity: 0.34,
+        sheen: 0.18,
+        sheenRoughness: 0.58,
+        sheenColor: new THREE.Color('#eba8a0'),
+        clearcoat: 0.06,
+        clearcoatRoughness: 0.48,
+        specularIntensity: 0.36,
+        ior: 1.40,
+        envMapIntensity: 0.36,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -922,9 +997,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        // Stage 8b+9 合并：8b 的缎面自发光（防掠射角洗白）+ Stage 9 的弱自发光（防霓虹红盘）取中——
-        // 用户证实"有的角度是好的"，保留中等自发光保证仰视可读，同时缎面粗糙杀死镜面泛白
-        emissiveIntensity: 0.35,
+        emissiveIntensity: 0.32,
         bumpMap: bumpTex,
         bumpScale: 0.005,
         roughness: Math.max(0.34, 0.72 - wetness * 0.40),
@@ -943,51 +1016,55 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       child.material = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.08,
+        roughness: 0.06,
         metalness: 0.0,
-        clearcoat: 0.92,
+        clearcoat: 0.85,
         clearcoatRoughness: 0.04,
-        specularIntensity: 1.0,
+        specularIntensity: 0.85,
         ior: 1.38,
-        envMapIntensity: 1.60,
+        envMapIntensity: 1.15,
       });
     } else if (matName === 'Cornea') {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        // Linear HDR composites highlights before tonemapping; a thick white
-        // overlay would wash out the iris in the post chain.
-        opacity: 0.04,
+        opacity: 0.03,
         roughness: 0.04,
         metalness: 0.0,
-        clearcoat: 0.40,
+        clearcoat: 0.35,
         clearcoatRoughness: 0.01,
-        specularIntensity: 0.65,
+        specularIntensity: 0.55,
         ior: 1.38,
-        envMapIntensity: 0.35,
+        envMapIntensity: 0.30,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
       const browMap = child.material?.map || null;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
-        color: new THREE.Color('#241a18'),
+        color: new THREE.Color('#201615'),
         transparent: true,
-        alphaTest: 0.06,
+        alphaTest: 0.04,
         depthWrite: false,
-        roughness: 0.65,
-        envMapIntensity: 0.50,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -2,
+        roughness: 0.58,
+        envMapIntensity: 0.45,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {
       const lashMap = child.material?.map || null;
       child.material = new THREE.MeshStandardMaterial({
         map: lashMap,
-        color: new THREE.Color('#100c0d'),
+        color: new THREE.Color('#0c090a'),
         transparent: true,
-        alphaTest: 0.10,
-        roughness: 0.40,
-        envMapIntensity: 0.50,
+        alphaTest: 0.06,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -2,
+        roughness: 0.36,
+        envMapIntensity: 0.45,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {

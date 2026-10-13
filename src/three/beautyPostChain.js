@@ -41,6 +41,8 @@ export const BeautyGradeShader = {
     void main() {
       vec4 c = texture2D(tDiffuse, vUv);
       vec3 col = c.rgb;
+      if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
+      col = clamp(col, 0.0, 2.0);
       // 以线性 0.18 灰为支点的轻柔 S 对比
       col = (col - vec3(0.18)) * uContrast + vec3(0.18);
       // 饱和度（线性亮度权重）
@@ -50,7 +52,7 @@ export const BeautyGradeShader = {
       vec2 d = vUv - vec2(0.5);
       float v = 1.0 - uVignette * smoothstep(0.15, 0.75, length(d) * 1.35);
       col *= v;
-      gl_FragColor = vec4(col, texture2D(tSourceAlpha, vUv).r);
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), texture2D(tSourceAlpha, vUv).r);
     }
   `,
 };
@@ -62,10 +64,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const samplingScale = 1;
   const pixelRatio = (options.pixelRatio || renderer.getPixelRatio()) * samplingScale;
 
-  // Geometry is first drawn to an offscreen target, so canvas antialiasing
-  // does not apply. Multisample the HDR target to keep subpixel hair smooth.
+  // Stage 21 Fix: Use UnsignedByteType instead of HalfFloatType so a single specular/normal
+  // derivative spike on morphed triangles NEVER creates a NaN/Inf bloom fireball on desktop GPUs!
   const hdrTarget = new THREE.WebGLRenderTarget(width, height, {
-    type: THREE.HalfFloatType,
+    type: THREE.UnsignedByteType,
     samples: software ? 0 : Math.min(4, renderer.capabilities.maxSamples || 0),
   });
   const composer = new EffectComposer(renderer, hdrTarget);
@@ -100,9 +102,9 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   // 保守阈值辉光：只有高光溢出，绝不洗白皮肤/断面
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    options.bloomStrength ?? 0.10,
-    options.bloomRadius ?? 0.55,
-    options.bloomThreshold ?? 1.0
+    options.bloomStrength ?? 0.04,
+    options.bloomRadius ?? 0.28,
+    options.bloomThreshold ?? 0.98
   );
 
   const gradePass = new ShaderPass(BeautyGradeShader);

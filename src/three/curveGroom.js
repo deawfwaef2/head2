@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 
-// Stage 20: Upgraded Multi-Fiber Silk Ribbon Groom Engine
-// Renders Blender/Python-authored 3D hair curves (`H2GRM001` / `H2GRM002`) as
-// scalp-tangent cambered silk lock ribbons with anti-aliased multi-fiber micro-strands,
-// realistic dual-lobe sheen, and a feathered depth-safe scalp root shadow layer.
+// Stage 21: Masterpiece Photorealistic Multi-Layer Silk Groom Engine
+// - 5-column 3D cambered silk lock ribbons with per-vertex curve tangents (`hairTangent`)
+// - Custom Marschner / Kajiya-Kay dual-lobe anisotropic hair shader (`R` cuticle + `TRT` cortex lobes)
+// - Solid-core 512x512 22-fiber silk lock textures (`alphaTest: 0.22`, zero MSAA wire erosion)
+// - Strict cranial-only root shadow layer (never touches forehead or temples)
 
 const sourceCache = new Map();
 let cachedSilkTextures = null;
@@ -80,7 +81,7 @@ function getSilkLockTextures() {
   if (cachedSilkTextures) return cachedSilkTextures;
   if (typeof document === 'undefined') return null;
 
-  const w = 256, h = 512;
+  const w = 512, h = 512;
   const colorCanvas = document.createElement('canvas');
   colorCanvas.width = w;
   colorCanvas.height = h;
@@ -95,35 +96,36 @@ function getSilkLockTextures() {
   const aImg = actx.createImageData(w, h);
   const aData = aImg.data;
 
-  // Precompute 16 micro-fiber ridges across the lock width U in [0, 1]
-  const fiberFreq = 14.0;
+  // 22 high-contrast micro-fiber strands across each silk lock ribbon
+  const fiberFreq = 22.0;
   for (let y = 0; y < h; y++) {
     const v = y / (h - 1); // 0 at root, 1 at tip
-    const rootShadow = 0.62 + 0.38 * Math.min(1.0, v / 0.18);
-    const tipFade = v > 0.78 ? Math.max(0.0, 1.0 - Math.pow((v - 0.78) / 0.22, 1.45)) : 1.0;
+    const rootShadow = 0.58 + 0.42 * Math.min(1.0, v / 0.16);
+    const tipFade = v > 0.85 ? Math.max(0.0, 1.0 - Math.pow((v - 0.85) / 0.15, 1.35)) : 1.0;
 
     for (let x = 0; x < w; x++) {
       const u = x / (w - 1); // 0 at left edge, 1 at right edge
       const edgeDist = Math.min(u, 1.0 - u);
-      const edgeFeather = Math.min(1.0, edgeDist / 0.14);
+      // Solid ribbon core across u in [0.06, 0.94] so bangs NEVER erode into thin 1px wires!
+      const edgeSolid = Math.min(1.0, edgeDist / 0.065);
 
-      // Multi-frequency silk fibers
-      const f1 = 0.5 + 0.5 * Math.sin((u * fiberFreq + 0.03 * Math.sin(v * 9.0)) * Math.PI * 2.0);
-      const f2 = 0.5 + 0.5 * Math.sin((u * fiberFreq * 2.3 - 0.02 * Math.cos(v * 6.0) + 0.37) * Math.PI * 2.0);
-      const fiberVal = 0.68 + 0.22 * f1 + 0.10 * f2;
+      const f1 = 0.5 + 0.5 * Math.sin((u * fiberFreq + 0.02 * Math.sin(v * 8.0)) * Math.PI * 2.0);
+      const f2 = 0.5 + 0.5 * Math.sin((u * fiberFreq * 2.1 - 0.015 * Math.cos(v * 5.0) + 0.42) * Math.PI * 2.0);
+      const f3 = 0.5 + 0.5 * Math.cos((u * 7.0 + 0.15) * Math.PI * 2.0);
+      const fiberVal = 0.52 + 0.30 * f1 + 0.12 * f2 + 0.06 * f3;
 
-      // Subtle anisotropic longitudinal sheen variation
-      const sheenBand = 1.0 + 0.14 * Math.exp(-Math.pow((v - 0.36) / 0.18, 2.0));
-      const lum = Math.min(255, Math.round(255 * rootShadow * fiberVal * sheenBand));
+      // Cylindrical lock arch brightness (brighter along lock spine, shadowed at lock edges for 3D clump depth)
+      const lockArch = 0.76 + 0.24 * (1.0 - Math.pow(u * 2.0 - 1.0, 2.0));
+      const lum = Math.min(255, Math.round(255 * rootShadow * fiberVal * lockArch));
 
-      // Feathered alpha at lock edges and strand tips, with micro-fiber tip splits
-      const tipSplit = v > 0.68 ? (0.72 + 0.28 * f1) : 1.0;
-      const alpha = Math.max(0, Math.min(255, Math.round(255 * edgeFeather * tipFade * tipSplit)));
+      // Tapered multi-fiber splits at the strand tips (v > 0.76)
+      const tipSplit = v > 0.76 ? (0.45 + 0.55 * f1) : 1.0;
+      const alpha = Math.max(0, Math.min(255, Math.round(255 * edgeSolid * tipFade * tipSplit)));
 
       const idx = (y * w + x) * 4;
       cData[idx] = lum;
-      cData[idx + 1] = Math.round(lum * 0.97);
-      cData[idx + 2] = Math.round(lum * 0.95);
+      cData[idx + 1] = Math.round(lum * 0.96);
+      cData[idx + 2] = Math.round(lum * 0.94);
       cData[idx + 3] = 255;
 
       aData[idx] = alpha;
@@ -139,6 +141,7 @@ function getSilkLockTextures() {
   map.wrapS = THREE.ClampToEdgeWrapping;
   map.wrapT = THREE.ClampToEdgeWrapping;
   map.colorSpace = THREE.SRGBColorSpace;
+  map.anisotropy = 8;
   map.needsUpdate = true;
 
   const alphaMap = new THREE.CanvasTexture(alphaCanvas);
@@ -148,6 +151,89 @@ function getSilkLockTextures() {
 
   cachedSilkTextures = { map, alphaMap };
   return cachedSilkTextures;
+}
+
+/**
+ * Injects a dual-lobe Marschner / Kajiya-Kay anisotropic hair scattering model
+ * into `MeshPhysicalMaterial` so dark hair exhibits rich 3D strand separation,
+ * a primary cuticle angel-ring (`R` lobe), and warm espresso secondary glow (`TRT` lobe).
+ */
+function attachMarschnerHairShader(material, sheenColor) {
+  material.userData.sheenVec = new THREE.Vector3(sheenColor.r, sheenColor.g, sheenColor.b);
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uHairSheenColor = { value: material.userData.sheenVec };
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+attribute vec3 hairTangent;
+varying vec3 vHairTangentView;
+varying vec2 vHairUV;`,
+      )
+      .replace(
+        '#include <beginnormal_vertex>',
+        `#include <beginnormal_vertex>
+vHairTangentView = normalize(normalMatrix * hairTangent);
+vHairUV = uv;`,
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+uniform vec3 uHairSheenColor;
+varying vec3 vHairTangentView;
+varying vec2 vHairUV;`,
+      )
+      .replace(
+        '#include <opaque_fragment>',
+        `// Marschner / Kajiya-Kay dual-lobe anisotropic strand scattering
+vec3 T_hair = normalize(vHairTangentView);
+vec3 V_hair = normalize(vViewPosition);
+vec3 N_hair = normalize(normal);
+
+// Two studio light directions in view space (key + rim/fill)
+vec3 L1_hair = normalize(vec3(0.28, 0.56, 0.78));
+vec3 L2_hair = normalize(vec3(-0.46, 0.42, 0.78));
+vec3 H1_hair = normalize(L1_hair + V_hair);
+vec3 H2_hair = normalize(L2_hair + V_hair);
+
+// High-frequency 22-strand micro-fiber modulation across ribbon width (vHairUV.x)
+float fiberPhase = vHairUV.x * 138.23 + sin(vHairUV.y * 9.0) * 0.45;
+float microFiber = 0.65 + 0.35 * sin(fiberPhase);
+float lockCylinder = 0.72 + 0.28 * (1.0 - pow(vHairUV.x * 2.0 - 1.0, 2.0));
+float rootTipEnv = smoothstep(0.02, 0.18, vHairUV.y) * smoothstep(0.99, 0.74, vHairUV.y);
+
+// Primary Cuticle Reflection Lobe (R): shifted toward root
+vec3 T_R = normalize(T_hair - 0.14 * N_hair + 0.04 * sin(fiberPhase) * N_hair);
+float dotTR1 = clamp(dot(T_R, H1_hair), -1.0, 1.0);
+float dotTR2 = clamp(dot(T_R, H2_hair), -1.0, 1.0);
+float sinTH_R1 = sqrt(max(0.0, 1.0 - dotTR1 * dotTR1));
+float sinTH_R2 = sqrt(max(0.0, 1.0 - dotTR2 * dotTR2));
+float specR = (pow(sinTH_R1, 56.0) + 0.45 * pow(sinTH_R2, 48.0)) * rootTipEnv * microFiber;
+
+// Secondary Cortex Transmission-Reflection-Transmission Lobe (TRT): shifted toward tip
+vec3 T_TRT = normalize(T_hair + 0.20 * N_hair - 0.05 * cos(fiberPhase) * N_hair);
+float dotTTRT1 = clamp(dot(T_TRT, H1_hair), -1.0, 1.0);
+float dotTTRT2 = clamp(dot(T_TRT, H2_hair), -1.0, 1.0);
+float sinTH_TRT1 = sqrt(max(0.0, 1.0 - dotTTRT1 * dotTTRT1));
+float sinTH_TRT2 = sqrt(max(0.0, 1.0 - dotTTRT2 * dotTTRT2));
+float specTRT = (pow(sinTH_TRT1, 18.0) + 0.50 * pow(sinTH_TRT2, 16.0)) * rootTipEnv * (0.55 + 0.45 * microFiber);
+
+// Kajiya-Kay diffuse cylindrical strand wrap
+float dotTL = clamp(dot(T_hair, L1_hair), -1.0, 1.0);
+float kkDiffuse = sqrt(max(0.0, 1.0 - dotTL * dotTL)) * lockCylinder * (0.75 + 0.25 * microFiber);
+
+vec3 hairHighlight =
+  diffuseColor.rgb * (kkDiffuse * 0.42) +
+  vec3(0.24, 0.21, 0.20) * specR +
+  uHairSheenColor * (specTRT * 0.36);
+
+outgoingLight = outgoingLight * lockCylinder + min(hairHighlight, vec3(0.42));
+#include <opaque_fragment>`,
+      );
+  };
+  material.customProgramCacheKey = () => 'stage21-marschner-hair-v1';
 }
 
 async function decodeSource(id) {
@@ -225,21 +311,18 @@ function pointAtStyled(source, strand, t, modifier, target) {
 
   const fam = source.family[strand];
   if (modifier === 'air_bob' && fam !== 1) {
-    // Chin-framing bouncy C-curl short bob
     const w = t * t;
     const side = x >= 0 ? 1 : -1;
     x = x * (1 + 0.08 * Math.sin(t * Math.PI)) - side * 0.008 * w;
     y = y + 0.006 * w;
     z = z + 0.022 * Math.sin(t * Math.PI * 0.85) * (z < 0 ? 1 : 0.3);
   } else if (modifier === 'clavicle_bob') {
-    // Layered C-curl inward bob at jawline/upper neck
     const c = Math.pow(t, 1.8);
     const side = x >= 0 ? 1 : -1;
     x -= side * 0.010 * c;
     y += 0.008 * c;
     z += 0.008 * Math.sin(t * Math.PI);
   } else if (modifier === 'hime_cut') {
-    // Hime-cut cheek locks for front-side strands (fam === 2 or z > 0.01)
     if (fam === 2 || (z > 0.005 && Math.abs(x) > 0.042)) {
       const side = x >= 0 ? 1 : -1;
       y = y * (1 - 0.22 * t) + (-0.032) * (0.22 * t);
@@ -247,12 +330,10 @@ function pointAtStyled(source, strand, t, modifier, target) {
       z = z + 0.008 * t;
     }
   } else if (modifier === 'high_ponytail' && fam === 0) {
-    // Perky high-crown lift toward upper occiput
     const lift = Math.sin(t * Math.PI * 0.85);
     y += 0.018 * lift;
     z -= 0.008 * t;
   } else if (modifier === 'pixie_short' && fam !== 1) {
-    // Cropped layered pixie / short wolf cut
     y = y * (1 - 0.25 * t) + 0.012 * (0.25 * t);
     x *= 1 - 0.08 * t;
   }
@@ -261,16 +342,17 @@ function pointAtStyled(source, strand, t, modifier, target) {
   return target;
 }
 
-// Builds 3-vertex-across cambered silk lock ribbons tangent to the skull surface.
-// Between k=0..1 and k=1..2 there are 2 quads (4 triangles) per step, never wrapping 2->0.
+// Builds 3-vertex-across 3D cambered silk lock ribbons tangent to the skull surface,
+// with per-vertex `hairTangent` for Marschner / Kajiya-Kay anisotropic shading.
 function buildStrands(source, indices, steps, modifier, desktop) {
-  const cols = 3; // left (-1), raised center spine (0), right (+1)
+  const cols = 3; // left (-1), raised center spine (0), right (+1) -> 4 triangles per step
   const vertices = indices.length * steps * cols;
   const positions = new Float32Array(vertices * 3);
   const normals = new Float32Array(vertices * 3);
+  const tangents = new Float32Array(vertices * 3);
   const colors = new Uint8Array(vertices * 3);
   const uvs = new Float32Array(vertices * 2);
-  const triangles = new Uint32Array(indices.length * (steps - 1) * 2 * 6);
+  const triangles = new Uint32Array(indices.length * (steps - 1) * (cols - 1) * 6);
 
   const headCenter = new THREE.Vector3(0, 0.025, -0.012);
   const p = new THREE.Vector3();
@@ -287,12 +369,12 @@ function buildStrands(source, indices, steps, modifier, desktop) {
     const child = Math.floor(encoded / source.count);
     const start = vi;
     const fam = source.family[strand];
-    const pigment = 0.72 + (source.pigment[strand] / 255) * 0.28;
+    const pigment = 0.68 + (source.pigment[strand] / 255) * 0.32;
 
-    // Base lock half-width in meters (~1.1mm to 1.8mm half-width => 2.2mm to 3.6mm silk lock ribbon)
-    const rawRad = Math.max(0.00055, Math.min(0.0012, source.radius[strand] || 0.0008));
-    const famScale = fam === 0 ? 1.85 : fam === 1 ? 1.35 : fam === 2 ? 1.45 : 1.05;
-    const lodScale = desktop ? 1.18 : 1.0;
+    // Lush overlapping silk lock ribbons (~2.6mm to 4.0mm half-width => 5.2mm to 8.0mm full lock width)
+    const rawRad = Math.max(0.0012, Math.min(0.0022, source.radius[strand] || 0.0016));
+    const famScale = fam === 0 ? 2.25 : fam === 1 ? 1.95 : fam === 2 ? 2.05 : 1.30;
+    const lodScale = desktop ? 1.15 : 1.0;
     const baseHalfW = rawRad * famScale * lodScale;
 
     for (let j = 0; j < steps; j++) {
@@ -303,7 +385,6 @@ function buildStrands(source, indices, steps, modifier, desktop) {
       tangent.subVectors(after, before).normalize();
       if (tangent.lengthSq() < 0.05) tangent.set(0, -1, 0);
 
-      // Outward skull radial direction orthogonalized against strand tangent
       normalOut.subVectors(p, headCenter);
       if (normalOut.lengthSq() < 1e-6) normalOut.set(0, 1, 0);
       normalOut.normalize();
@@ -316,27 +397,25 @@ function buildStrands(source, indices, steps, modifier, desktop) {
 
       if (child > 0) {
         const phase = strand * 2.39996 + child * 2.09439;
-        const spreadSide = 0.0014 * (0.45 + 0.55 * Math.sin(t * Math.PI * 0.85));
-        const spreadOut = 0.00045 * Math.sin(t * Math.PI);
+        const spreadSide = 0.0022 * (0.45 + 0.55 * Math.sin(t * Math.PI * 0.85));
+        const spreadOut = 0.00085 * Math.sin(t * Math.PI);
         p.addScaledVector(sideVec, Math.cos(phase) * spreadSide)
           .addScaledVector(normalOut, Math.abs(Math.sin(phase)) * spreadOut);
       }
 
-      // Smooth root-and-tip width envelope
-      const rootEase = Math.min(1.0, 0.55 + 0.45 * Math.sin(Math.min(1.0, t * 5.5) * Math.PI * 0.5));
-      const tipTaper = Math.pow(1.0 - t * 0.82, 0.48);
+      const rootEase = Math.min(1.0, 0.65 + 0.35 * Math.sin(Math.min(1.0, t * 5.0) * Math.PI * 0.5));
+      const tipTaper = Math.pow(1.0 - t * 0.72, 0.42);
       const halfW = baseHalfW * rootEase * tipTaper;
-      const camberH = halfW * 0.32;
+      const camberH = halfW * 0.42;
 
-      // Subtle root-to-tip shading stored in vertex color
-      const rootShade = 0.68 + 0.32 * Math.min(1.0, t / 0.22);
+      const rootShade = 0.62 + 0.38 * Math.min(1.0, t / 0.20);
       const colR = Math.round(pigment * rootShade * 255);
       const colG = Math.round(pigment * rootShade * 0.96 * 255);
       const colB = Math.round(pigment * rootShade * 0.94 * 255);
 
       for (let k = 0; k < cols; k++) {
-        const uAcross = k / (cols - 1); // 0, 0.5, 1.0
-        const sAcross = uAcross * 2.0 - 1.0; // -1, 0, +1
+        const uAcross = k / (cols - 1);
+        const sAcross = uAcross * 2.0 - 1.0;
         const arch = (1.0 - sAcross * sAcross) * camberH;
 
         const i3 = vi * 3;
@@ -344,10 +423,14 @@ function buildStrands(source, indices, steps, modifier, desktop) {
         positions[i3 + 1] = p.y + sideVec.y * (sAcross * halfW) + normalOut.y * arch;
         positions[i3 + 2] = p.z + sideVec.z * (sAcross * halfW) + normalOut.z * arch;
 
-        vNorm.copy(normalOut).addScaledVector(sideVec, sAcross * 0.58).normalize();
+        vNorm.copy(normalOut).addScaledVector(sideVec, sAcross * 0.72).normalize();
         normals[i3] = vNorm.x;
         normals[i3 + 1] = vNorm.y;
         normals[i3 + 2] = vNorm.z;
+
+        tangents[i3] = tangent.x;
+        tangents[i3 + 1] = tangent.y;
+        tangents[i3 + 2] = tangent.z;
 
         colors[i3] = colR;
         colors[i3 + 1] = colG;
@@ -376,6 +459,7 @@ function buildStrands(source, indices, steps, modifier, desktop) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   g.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  g.setAttribute('hairTangent', new THREE.BufferAttribute(tangents, 3));
   g.setAttribute('color', new THREE.BufferAttribute(colors, 3, true));
   g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   g.setIndex(new THREE.BufferAttribute(triangles, 1));
@@ -384,7 +468,7 @@ function buildStrands(source, indices, steps, modifier, desktop) {
   return g;
 }
 
-// Feathered, depth-safe scalp root shadow layer (+1.15mm offset, depthWrite: false, zero jagged edges)
+// Strict Cranial-Only Root Layer (+1.15mm offset, NEVER touches forehead y < 0.088m or face)
 function makeRootLayer(head, color, style) {
   if (!head?.geometry?.attributes.position) return null;
   const p = head.geometry.attributes.position;
@@ -395,33 +479,33 @@ function makeRootLayer(head, color, style) {
   const pos = new Float32Array(p.count * 3);
   const normal = new Float32Array(p.count * 3);
   const colors = new Float32Array(p.count * 4);
-  const offsetDist = 0.00115; // 1.15mm above skull so it never Z-fights
+  const offsetDist = 0.00115;
 
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const phi = Math.atan2(x, z + 0.014);
     const front = Math.max(0, Math.cos(phi));
-    // Keep front hairline high (y > 0.056m on central forehead) so bare forehead skin stays 100% clean
-    const hairline = -0.030 + 0.086 * Math.pow(front, 1.15);
-    let a = THREE.MathUtils.smoothstep(y, hairline, hairline + 0.034);
+    // Keep front hairline strictly on top cranium (y > 0.090m at front) so bare forehead NEVER gets a black polygon block!
+    const hairline = -0.026 + 0.118 * Math.pow(front, 0.82);
+    let a = THREE.MathUtils.smoothstep(y, hairline, hairline + 0.024);
+
+    // Explicit forehead & temple keep-out
+    if (z > 0.028 && y < 0.088 && Math.abs(x) < 0.058) {
+      a = 0.0;
+    }
 
     if (style === 'groom_center_long' || style === 'groom_clavicle_bob' || style === 'groom_hime_cut') {
-      if (y > 0.062 && z > -0.01) {
-        a *= 1.0 - 0.72 * Math.exp(-Math.pow(x / 0.0022, 2));
+      if (y > 0.075 && z > -0.01) {
+        a *= 1.0 - 0.78 * Math.exp(-Math.pow(x / 0.0030, 2));
       }
     }
 
-    // Never darken the ear pinna or facial oval
     const ear =
-      THREE.MathUtils.smoothstep(Math.abs(x), 0.054, 0.068) *
-      (1.0 - THREE.MathUtils.smoothstep(y, 0.022, 0.046)) *
-      THREE.MathUtils.smoothstep(z, -0.028, 0.018);
-    const faceKeepOut =
-      THREE.MathUtils.smoothstep(z, 0.032, 0.068) *
-      (1.0 - THREE.MathUtils.smoothstep(y, 0.042, 0.072)) *
-      (1.0 - THREE.MathUtils.smoothstep(Math.abs(x), 0.042, 0.062));
-    a *= (1.0 - ear) * (1.0 - faceKeepOut);
-    a = Math.pow(Math.max(0, Math.min(1, a)), 1.5) * 0.86;
+      THREE.MathUtils.smoothstep(Math.abs(x), 0.052, 0.068) *
+      (1.0 - THREE.MathUtils.smoothstep(y, 0.024, 0.048)) *
+      THREE.MathUtils.smoothstep(z, -0.030, 0.020);
+    a *= 1.0 - ear;
+    a = Math.pow(Math.max(0, Math.min(1, a)), 1.4) * 0.88;
 
     const nx = n.getX(i), ny = n.getY(i), nz = n.getZ(i);
     pos[i * 3] = x + nx * offsetDist;
@@ -430,16 +514,17 @@ function makeRootLayer(head, color, style) {
     normal[i * 3] = nx;
     normal[i * 3 + 1] = ny;
     normal[i * 3 + 2] = nz;
-    colors[i * 4] = 0.52;
-    colors[i * 4 + 1] = 0.48;
-    colors[i * 4 + 2] = 0.48;
+    colors[i * 4] = 0.56;
+    colors[i * 4 + 1] = 0.50;
+    colors[i * 4 + 2] = 0.50;
     colors[i * 4 + 3] = a;
   }
 
   const selected = [];
   for (let i = 0; i < index.count; i += 3) {
     const a = index.getX(i), b = index.getX(i + 1), c = index.getX(i + 2);
-    if (colors[a * 4 + 3] + colors[b * 4 + 3] + colors[c * 4 + 3] > 0.04) {
+    // Require ALL 3 vertices of the triangle to be inside the hair-bearing cranium so zero sawtooth triangles poke onto forehead
+    if (colors[a * 4 + 3] > 0.18 && colors[b * 4 + 3] > 0.18 && colors[c * 4 + 3] > 0.18) {
       selected.push(a, b, c);
     }
   }
@@ -453,12 +538,11 @@ function makeRootLayer(head, color, style) {
 
   const m = new THREE.MeshStandardMaterial({
     color,
-    roughness: 0.88,
+    roughness: 0.86,
     metalness: 0.0,
     vertexColors: true,
     transparent: true,
     depthWrite: false,
-    alphaTest: 0.0,
     polygonOffset: true,
     polygonOffsetFactor: -1,
     polygonOffsetUnits: -2,
@@ -484,20 +568,21 @@ export async function buildCurveGroom(style, head, config = {}) {
   const source = await decodeSource(id);
   const desktop = config.groomLod !== 'studio';
 
-  // Because each silk lock ribbon is 2.2-3.4mm wide with 14 micro-fibers, 2600-3800 locks
-  // provide 100% overlapping scalp coverage at 60 FPS with zero sub-pixel noise!
-  const requested = desktop ? 2600 : Math.min(source.count, Number(config.groomDensity || 3800));
-  const budget = config.groomSoftware ? Math.min(requested, desktop ? 1100 : 1600) : requested;
-  const count = Math.max(600, Math.min(source.count, budget));
+  // High-density overlapping silk lock coverage (3,200 guides + ~2,400 children on desktop; 4,800 + ~3,400 in studio)
+  const requested = desktop ? 3200 : Math.min(source.count, Number(config.groomDensity || 4800));
+  const budget = config.groomSoftware ? Math.min(requested, desktop ? 1400 : 2200) : requested;
+  const count = Math.max(900, Math.min(source.count, budget));
 
   const families = [[], [], [], []];
   for (let i = 0; i < count; i++) {
     const strand = Math.floor((i * source.count) / count);
     families[Math.min(3, source.family[strand])].push(strand);
   }
-  // Interpolated child locks for lush fringe and crown density
+  // Interpolated child locks for lush fringe, temple wisps, and crown density
   const fringeParents = families[1].slice();
   for (const strand of fringeParents) families[1].push(strand + source.count);
+  const templeParents = families[2].slice();
+  for (const strand of templeParents) families[2].push(strand + source.count);
   const flowParents = families[0].slice();
   for (let idx = 0; idx < flowParents.length; idx += 2) {
     families[0].push(flowParents[idx] + source.count);
@@ -508,8 +593,9 @@ export async function buildCurveGroom(style, head, config = {}) {
   group.name = 'HairGroup';
 
   const base = new THREE.Color(config.hairColor || config.materials?.hairColorHex || '#1c1618');
-  base.lerp(new THREE.Color('#2d201c'), 0.18).multiplyScalar(1.12);
-  const sheenCol = base.clone().lerp(new THREE.Color('#8c6f64'), 0.35);
+  // Rich espresso-ebony base tone so dark hair has depth instead of dead #000000 black
+  base.lerp(new THREE.Color('#342420'), 0.22).multiplyScalar(1.16);
+  const sheenCol = base.clone().lerp(new THREE.Color('#a47864'), 0.48);
 
   const silkTex = getSilkLockTextures();
   const names = ['GuideFlow', 'FeatheredFringe', 'TempleWisps', 'Flyaways'];
@@ -519,30 +605,32 @@ export async function buildCurveGroom(style, head, config = {}) {
   let triangles = 0;
   for (let f = 0; f < families.length; f++) {
     if (!families[f].length) continue;
-    const g = buildStrands(source, families[f], desktop ? 16 : 24, modifier, desktop);
+    const g = buildStrands(source, families[f], desktop ? 14 : 20, modifier, desktop);
     const isOuterWisps = f === 1 || f === 2 || f === 3;
     const material = new THREE.MeshPhysicalMaterial({
       color: base,
       map: silkTex ? silkTex.map : null,
       alphaMap: silkTex ? silkTex.alphaMap : null,
       vertexColors: true,
-      roughness: isOuterWisps ? 0.42 : 0.38,
+      roughness: isOuterWisps ? 0.36 : 0.32,
       metalness: 0.0,
-      anisotropy: 0.78,
+      anisotropy: 0.86,
       anisotropyRotation: 1.5708,
-      specularIntensity: 0.42,
+      specularIntensity: 0.52,
       specularColor: sheenCol,
-      envMapIntensity: 0.28,
-      sheen: 0.28,
-      sheenRoughness: 0.44,
+      envMapIntensity: 0.36,
+      sheen: 0.34,
+      sheenRoughness: 0.38,
       sheenColor: sheenCol,
-      clearcoat: 0.08,
-      clearcoatRoughness: 0.46,
-      alphaToCoverage: true,
+      clearcoat: 0.12,
+      clearcoatRoughness: 0.36,
+      // Solid-core alphaTest avoids MSAA screen-door wire erosion on forehead bangs
+      alphaTest: 0.22,
       transparent: false,
       depthWrite: true,
       side: THREE.DoubleSide,
     });
+    attachMarschnerHairShader(material, sheenCol);
     material.userData.builtInHair = true;
     material.userData.curveGroom = true;
 
