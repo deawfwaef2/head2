@@ -107,6 +107,7 @@ ${item.dossier?.hairNotes || '多层级各向异性丝感发片配微米级游�
 }
 
 export default defineConfig({
+  base: './',
   server: {
     host: '0.0.0.0',
     port: 5173,

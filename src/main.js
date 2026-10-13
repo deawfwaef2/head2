@@ -1,4 +1,11 @@
-import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS, REAL_HAIR_CATALOG } from './data/defaultCollectibles.js';
+import {
+  DEFAULT_COLLECTIBLES,
+  DAZ_TUTORIAL_STEPS,
+  REAL_HAIR_CATALOG,
+  STUDY_ROLE_CATALOG,
+  getStudyRoleMeta,
+  resolveCollectibleLifePhotoSrc
+} from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
 import { FORENSIC_EXPRESSION_PRESETS, updateHairSheen, attachSpecimenContainerAndDecor } from './three/collectibleHeadAssembler.js';
@@ -16,7 +23,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage24-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage24-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -26,12 +33,18 @@ function restoreCollectibles() {
       for (const item of saved) {
         if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
         if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
-        byId.set(item.id, item);
+        const def = byId.get(item.id);
+        byId.set(item.id, def ? { ...def, ...item } : item);
       }
       return [...byId.values()];
     }
-    // Migrate only custom user-created specimens from previous storage key
-    const legacy = JSON.parse(localStorage.getItem('cervix3d-collectibles-stage23-v1') || localStorage.getItem('cervix3d-collectibles-stage21-v1') || localStorage.getItem('cervix3d-collectibles-v2') || '[]');
+    // Migrate only custom user-created specimens from previous storage keys
+    const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage23-v1') ||
+      localStorage.getItem('cervix3d-collectibles-stage21-v1') ||
+      localStorage.getItem('cervix3d-collectibles-v2') ||
+      '[]'
+    );
     if (Array.isArray(legacy)) {
       const builtinIds = new Set(defaults.map(d => d.id));
       for (const item of legacy) {
@@ -58,8 +71,11 @@ const state = {
   bgModeIndex: 0, // 0: os, 1: void, 2: transparent
   studyTriumphEnabled: true,
   studyStartTime: Date.now(),
-  studyEnergyPoints: 1280,
+  studyEnergyPoints: 1580,
   studyMindset: 'survivor_crown',
+  activeRoleBuffMultiplier: 1.6,
+  pomodoroRunning: true,
+  pomodoroRemainingSec: 25 * 60,
   visualCustomConfig: {
     presetId: 'warm_gallery',
     keyAzimuthDeg: 32,
@@ -74,21 +90,22 @@ const state = {
     bloomStrength: 0.28
   },
   studioDraft: {
-    basePreset: 'user_photo',
+    basePreset: 'fangyaoping',
     deadExpression: 'dead_calm',
     containerStyle: 'glass_bell_jar',
-    decorStyle: 'trophy_candles',
+    decorStyle: 'study_tomes',
+    studyRole: 'gaokao_pomodoro',
+    studyGoalNote: '吸纳19岁女状元方尧平的巅峰考运，高效攻克今日核心章节！',
+    lifePhotoDataUrl: null,
     customModelUrl: null,
     customModelType: 'glb',
-    customHairUrl: null,
-    customHairType: 'glb',
-    skinTone: '#ffe9df',
-    blushIntensity: 0.25,
-    lipColor: '#c46470',
-    irisColor: '#3b2014',
-    hairStyle: 'hair_bob01',
+    skinTone: '#ffece2',
+    blushIntensity: 0.30,
+    lipColor: '#c66872',
+    irisColor: '#382015',
+    hairStyle: 'groom_photo_tied',
     groomDensity: 6000,
-    hairColor: '#121216',
+    hairColor: '#171417',
     hairSheen: 0.90,
     neckClearance: 0.55,
     photoElement: null,
@@ -100,28 +117,19 @@ const state = {
       tongueOut: 0.0,
       jawSide: 0.0,
       bangsLength: 0.0,
-      bangsParting: 0.0,
       hairVolume: 0.0,
-      hairLength: 0.0,
-      sideburnLock: 0.0,
-      hairFlare: 0.0,
-      hairOffsetY: 0.0,
-      hairOffsetZ: 0.0,
-      hairScale: 1.0,
-      jawVLine: 0.08,
-      chinLength: -0.08,
-      cheekSoftness: 0.12,
-      noseBridge: 0.05,
-      eyeAlmond: 0.10,
-      eyeTilt: -0.02,
-      lipFullness: 0.0,
-      neckDiameter: 0.96,
+      jawVLine: 0.18,
+      cheekSoftness: 0.42,
+      noseBridge: 0.14,
+      eyeAlmond: 0.32,
+      lipFullness: 0.06,
+      neckDiameter: 0.95,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎鲜血横切面 (切缘凝血渗血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: 'C4–C5 颈椎状元标本横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
       vascularContrast: 1.28,
       dermisRimScale: 1.0,
       wetness: 0.92,
@@ -140,7 +148,7 @@ function showToast(msg) {
   el.textContent = msg;
   el.classList.remove('hidden');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.add('hidden'), 3200);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 3600);
 }
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -162,7 +170,7 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  if (preset === 'user_photo') {
+  if (preset === 'user_photo' || preset === 'fangyaoping') {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -185,9 +193,15 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
         octx.drawImage(canvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
       }
     };
-    img.src = (typeof window !== 'undefined' && window.__EMBEDDED_REF_PHOTO__)
-      ? window.__EMBEDDED_REF_PHOTO__
-      : '/models/user_photo_ref.png';
+    if (preset === 'fangyaoping') {
+      img.src = (typeof window !== 'undefined' && window.__EMBEDDED_FANG_PHOTO__)
+        ? window.__EMBEDDED_FANG_PHOTO__
+        : '/models/fang_yaoping_ref.jpg';
+    } else {
+      img.src = (typeof window !== 'undefined' && window.__EMBEDDED_REF_PHOTO__)
+        ? window.__EMBEDDED_REF_PHOTO__
+        : '/models/user_photo_ref.png';
+    }
   }
 
   // Studio portrait backdrop
@@ -315,7 +329,7 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
 }
 
 // ============================================================================
-// HOVER DOSSIER FLOATING WINDOW RENDERER
+// HOVER DOSSIER FLOATING WINDOW RENDERER (Includes In-Life Photo & Study Role)
 // ============================================================================
 function updateHoverDossierHUD(hoverInfo) {
   const hud = document.getElementById('pet-hover-dossier');
@@ -331,6 +345,29 @@ function updateHoverDossierHUD(hoverInfo) {
   document.getElementById('hud-grade').textContent = col.grade || 'SSR · 特级典藏';
   document.getElementById('hud-name').textContent = col.name;
   document.getElementById('hud-subtitle').textContent = col.subtitle || '';
+
+  // Stage 24: Populate In-Life Photo ("生前照片") & Character-Bound Study Role ("角色绑定伴学职能")
+  const lifeImgEl = document.getElementById('hud-life-photo-img');
+  if (lifeImgEl) {
+    const photoSrc = resolveCollectibleLifePhotoSrc(col);
+    if (lifeImgEl.getAttribute('data-cur-id') !== col.id) {
+      lifeImgEl.src = photoSrc;
+      lifeImgEl.setAttribute('data-cur-id', col.id);
+    }
+  }
+  const roleMeta = getStudyRoleMeta(col.studyRole || 'gaokao_pomodoro');
+  const roleBadgeEl = document.getElementById('hud-study-role-badge');
+  if (roleBadgeEl) roleBadgeEl.textContent = roleMeta.label;
+  const roleGoalEl = document.getElementById('hud-study-goal-note');
+  if (roleGoalEl) {
+    roleGoalEl.textContent = col.studyGoalNote || roleMeta.desc;
+  }
+  const lifeCapEl = document.getElementById('hud-life-photo-caption');
+  if (lifeCapEl) {
+    lifeCapEl.textContent =
+      col.lifePhotoCaption ||
+      `📸 生前鲜活影像：${col.fateRecord?.vitalityStatus || '19岁 · 巅峰健康态'}（生前完好鲜活态 vs 案头静默标本）`;
+  }
 
   const modeBadge = document.getElementById('hud-mode-badge');
   if (hoverInfo.isRotationMode) {
@@ -351,7 +388,7 @@ function updateHoverDossierHUD(hoverInfo) {
     fateSec.style.display = showFate ? 'block' : 'none';
     if (showFate) {
       const fate = col.fateRecord || {
-        vitalityStatus: '20岁 · 巅峰健康态 · 青春名校特长生',
+        vitalityStatus: '19岁 · 巅峰健康态 · 广东怀集高考状元',
         causeOfDeath: '突发意外瞬间定格于最鲜活的青春巅峰期',
         survivorTriumphNote: '她已在意外中彻底出局，而活着的你仍在进取并主宰全局——凝视她的静美容颜，汲取全额专注能量。'
       };
@@ -362,9 +399,8 @@ function updateHoverDossierHUD(hoverInfo) {
   }
 
   const contInfo = CONTAINER_STYLE_CATALOG.find(c => c.id === (col.containerStyle || 'glass_bell_jar'));
-  const decorInfo = DECOR_STYLE_CATALOG.find(d => d.id === (col.decorStyle || 'trophy_candles'));
   document.getElementById('hud-anatomy-level').textContent =
-    `${col.anatomyOptions?.cutLevel || 'C4 颈椎标准横断面'} · [${contInfo ? contInfo.shortLabel : '玻璃钟罩'} / ${decorInfo ? decorInfo.shortLabel : '白烛玫瑰'}]`;
+    `${col.anatomyOptions?.cutLevel || 'C4 颈椎标准横断面'} · [容器: ${contInfo ? contInfo.shortLabel : '玻璃钟罩'}]`;
   document.getElementById('hud-anatomy-notes').textContent =
     col.dossier?.anatomyNotes || '';
   document.getElementById('hud-origin-notes').textContent =
@@ -381,18 +417,58 @@ function updateHoverDossierHUD(hoverInfo) {
 
   // Position HUD window smartly beside the 3D head pet without going off-screen
   const pad = 16;
-  const hudW = 315;
-  const hudH = 290;
+  const hudW = 395;
+  const hudH = 385;
   let left = hoverInfo.screenX + 24;
   if (left + hudW > window.innerWidth - pad) {
     left = hoverInfo.screenX - hudW - 85;
   }
   left = Math.max(pad, Math.min(window.innerWidth - hudW - pad, left));
-  let top = Math.max(58, Math.min(window.innerHeight - hudH - pad, hoverInfo.screenY - 90));
+  let top = Math.max(58, Math.min(window.innerHeight - hudH - pad, hoverInfo.screenY - 120));
 
   hud.style.left = `${left}px`;
   hud.style.top = `${top}px`;
   hud.classList.remove('hidden');
+}
+
+// ============================================================================
+// STAGE 24: CHARACTER-BOUND STUDY FUNCTION EXECUTOR ("功能和角色绑定，辅助学习加强学习动力")
+// ============================================================================
+function executeCharacterStudyRole(collectibleId) {
+  const col = state.collectibles.find(c => c.id === collectibleId);
+  if (!col) return;
+  const roleMeta = getStudyRoleMeta(col.studyRole || 'gaokao_pomodoro');
+
+  // Apply study role buff & energy burst
+  const burst = roleMeta.energyBurst || 280;
+  state.studyEnergyPoints += burst;
+  state.activeRoleBuffMultiplier = roleMeta.buffMultiplier || 1.5;
+
+  if (roleMeta.id === 'gaokao_pomodoro') {
+    state.pomodoroRunning = true;
+    state.pomodoroRemainingSec = 25 * 60;
+  } else if (roleMeta.id === 'memory_anchor') {
+    const anchorTargets = [
+      '📖 封印目标：25分钟内彻底攻克当前核心章节与高频错题！',
+      '📖 封印目标：全神贯注背诵并默写今日核心考点，绝不走神！',
+      '📖 封印目标：吸纳状元与才女气运，今日刷题正确率突破 90%！'
+    ];
+    const nextGoal = anchorTargets[Math.floor(Math.random() * anchorTargets.length)];
+    col.studyGoalNote = `${col.name.split('·')[0].trim()}伴读誓言：${nextGoal}`;
+    persistCollectibles();
+  }
+
+  const energyValEl = document.getElementById('triumph-energy-val');
+  const barFillEl = document.getElementById('triumph-bar-fill');
+  const quoteEl = document.getElementById('triumph-quote-text');
+  if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS (x${state.activeRoleBuffMultiplier.toFixed(1)})`;
+  if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
+  if (quoteEl) {
+    quoteEl.textContent = `【${col.name.split('·')[0].trim()} · ${roleMeta.shortLabel}】${roleMeta.triggerMsg}`;
+  }
+
+  soundEngine.playSummon(true);
+  showToast(`${roleMeta.triggerMsg} (+${burst} PTS)`);
 }
 
 // ============================================================================
@@ -411,12 +487,18 @@ function renderVaultGrid() {
     const isRotating = petEntry ? petEntry.isRotationMode : false;
     const curExpr = item.deadExpression || item.morphs?.deadExpression || 'dead_calm';
     const curContainer = item.containerStyle || 'glass_bell_jar';
+    const curRole = item.studyRole || 'gaokao_pomodoro';
+    const roleMeta = getStudyRoleMeta(curRole);
+    const lifePhotoSrc = resolveCollectibleLifePhotoSrc(item);
 
     const exprOptsHtml = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀 ${ep.label}</option>`
     ).join('');
     const containerOptsHtml = CONTAINER_STYLE_CATALOG.map(
       ct => `<option value="${ct.id}" ${ct.id === curContainer ? 'selected' : ''}>${ct.label}</option>`
+    ).join('');
+    const roleOptsHtml = STUDY_ROLE_CATALOG.map(
+      rl => `<option value="${rl.id}" ${rl.id === curRole ? 'selected' : ''}>${rl.label}</option>`
     ).join('');
 
     const showFate = state.studyTriumphEnabled && state.studyMindset !== 'serene_aesthetic' && item.fateRecord;
@@ -440,9 +522,13 @@ function renderVaultGrid() {
           ${isSummoned ? (isRotating ? '🔄 屏幕旋转鉴赏中' : '🟢 已在屏幕召唤') : '⚪ 典藏库待命'}
         </span>
       </div>
-      <div>
-        <div class="vault-title">${item.name}</div>
-        <div class="vault-sub">${item.subtitle || ''}</div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <img class="vault-life-photo-mini" src="${lifePhotoSrc}" alt="生前照片" title="📸 角色生前鲜活照片（鼠标移到3D人头上可看大图）" />
+        <div style="flex:1;min-width:0;">
+          <div class="vault-title">${item.name}</div>
+          <div class="vault-sub">${item.subtitle || ''}</div>
+          <div style="font-size:10.5px;color:#fde68a;margin-top:2px;">${roleMeta.shortLabel} · ${item.studyGoalNote || roleMeta.desc}</div>
+        </div>
       </div>
       <div class="vault-anatomy-box">
         <strong>🩸 底座解剖断面：</strong>${item.anatomyOptions?.cutLevel || 'C4 标准横切面'}<br/>
@@ -456,6 +542,14 @@ function renderVaultGrid() {
         <select class="vault-container-select" data-vault-container="${item.id}" style="width:100%;font-size:11px;padding:4px 6px;border-radius:6px;background:rgba(15,23,42,0.85);color:#fde68a;border:1px solid rgba(251,191,36,0.35);">
           ${containerOptsHtml}
         </select>
+      </div>
+      <div class="field-row" style="margin: 2px 0 4px; display:flex; gap:6px; align-items:center;">
+        <select class="vault-role-select" data-vault-role="${item.id}" title="分配绑定给该角色的伴学职能" style="flex:1;font-size:11px;padding:4px 6px;border-radius:6px;background:rgba(6,78,59,0.55);color:#a7f3d0;border:1px solid rgba(16,185,129,0.45);">
+          ${roleOptsHtml}
+        </select>
+        <button class="pill-role-trigger-btn" data-vault-action="trigger-role" data-id="${item.id}" title="立即激发该角色的伴学学习动力职能">
+          ⚡ 激发伴学职能
+        </button>
       </div>
       <div class="dossier-tags">
         ${(item.dossier?.tags || []).map(t => `<span class="dossier-tag">${t}</span>`).join('')}
@@ -510,12 +604,37 @@ function renderVaultGrid() {
     });
   });
 
+  grid.querySelectorAll('[data-vault-role]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.vaultRole;
+      const roleId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (!col) return;
+      col.studyRole = roleId;
+      const rm = getStudyRoleMeta(roleId);
+      col.studyGoalNote = rm.desc;
+      persistCollectibles();
+      if (desktopEngine && desktopEngine.pets.has(id)) {
+        desktopEngine.pets.get(id).collectible.studyRole = roleId;
+        desktopEngine.pets.get(id).collectible.studyGoalNote = rm.desc;
+        desktopEngine.emitPetsChange();
+      }
+      renderVaultGrid();
+      showToast(`🎓 已为「${col.name}」绑定伴学职能：${rm.label}`);
+    });
+  });
+
   grid.querySelectorAll('[data-vault-action]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const action = btn.dataset.vaultAction;
       const id = btn.dataset.id;
       const col = state.collectibles.find(c => c.id === id);
       if (!col || !desktopEngine) return;
+
+      if (action === 'trigger-role') {
+        executeCharacterStudyRole(id);
+        return;
+      }
 
       if (action === 'toggle-summon') {
         if (desktopEngine.pets.has(id)) {
@@ -560,19 +679,27 @@ function renderActivePetsStrip(summonedList = []) {
   }
 
   for (const p of summonedList) {
+    const col = state.collectibles.find(c => c.id === p.id) || p;
     const curExpr = p.deadExpression || 'dead_calm';
     const curCont = p.containerStyle || 'glass_bell_jar';
+    const curRole = col.studyRole || 'gaokao_pomodoro';
     const exprShortOpts = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀${ep.shortLabel}</option>`
     ).join('');
     const contShortOpts = CONTAINER_STYLE_CATALOG.map(
       ct => `<option value="${ct.id}" ${ct.id === curCont ? 'selected' : ''}>🧪${ct.shortLabel}</option>`
     ).join('');
+    const roleShortOpts = STUDY_ROLE_CATALOG.map(
+      rl => `<option value="${rl.id}" ${rl.id === curRole ? 'selected' : ''}>${rl.shortLabel}</option>`
+    ).join('');
     const pill = document.createElement('div');
     pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
     pill.innerHTML = `
-      <strong>${p.name}</strong>
-      <span class="pet-pill-meta">[Z:${p.zMm}mm]</span>
+      <strong>${p.name.split('·')[0].trim()}</strong>
+      <select class="pill-mini-btn" data-pill-role="${p.id}" title="分配该角色绑定的伴学职能" style="padding:1px 4px;background:rgba(6,78,59,0.85);color:#a7f3d0;border:1px solid rgba(16,185,129,0.5);border-radius:4px;">
+        ${roleShortOpts}
+      </select>
+      <button class="pill-role-trigger-btn" data-pill-trigger-role="${p.id}" title="一键激发该角色的伴学赋能">⚡督学</button>
       <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换死人表情" style="padding:1px 4px;background:rgba(15,23,42,0.9);color:#fda4af;border:1px solid rgba(244,63,94,0.4);border-radius:4px;">
         ${exprShortOpts}
       </select>
@@ -580,12 +707,38 @@ function renderActivePetsStrip(summonedList = []) {
         ${contShortOpts}
       </select>
       <button class="pill-mini-btn" data-pill-rot="${p.id}">
-        ${p.isRotationMode ? '🔄 旋转中(点此取消)' : '🔄 旋转模式'}
+        ${p.isRotationMode ? '🔄 旋转中' : '🔄 旋转'}
       </button>
       <button class="pill-mini-btn" data-pill-reset="${p.id}" title="重置角度">回正</button>
     `;
     pillsContainer.appendChild(pill);
   }
+
+  pillsContainer.querySelectorAll('[data-pill-role]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillRole;
+      const roleId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      const rm = getStudyRoleMeta(roleId);
+      if (col) {
+        col.studyRole = roleId;
+        col.studyGoalNote = rm.desc;
+        persistCollectibles();
+      }
+      if (desktopEngine && desktopEngine.pets.has(id)) {
+        desktopEngine.pets.get(id).collectible.studyRole = roleId;
+        desktopEngine.pets.get(id).collectible.studyGoalNote = rm.desc;
+      }
+      renderVaultGrid();
+      showToast(`🎓 已为「${col ? col.name : id}」绑定伴学职能：${rm.label}`);
+    });
+  });
+
+  pillsContainer.querySelectorAll('[data-pill-trigger-role]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      executeCharacterStudyRole(btn.dataset.pillTriggerRole);
+    });
+  });
 
   pillsContainer.querySelectorAll('[data-pill-expr]').forEach(sel => {
     sel.addEventListener('change', (e) => {
@@ -663,15 +816,10 @@ async function refreshStudio3DModel() {
   await studioEngine.loadOrRebuild(state.studioDraft);
   const status = document.getElementById('custom-model-status');
   if (status) {
-    const hStats = studioEngine.headNode?.userData?.hairStats;
-    const hCatalog = REAL_HAIR_CATALOG.find(x => x.id === state.studioDraft.hairStyle);
-    status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (hStats ? ` · 大师3D发型：${hStats.vertices.toLocaleString()} 顶点 / ${hStats.triangles.toLocaleString()} 三角面` : '');
+    const groom = studioEngine.headNode?.userData?.groomStats;
+    status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (groom ? ` · 新Groom：源 ${groom.sourceCurves.toLocaleString()} 曲线 / 实时 ${groom.renderedStrands.toLocaleString()} 发丝` : '');
     const groomStatus = document.getElementById('groom-quality-status');
-    if (groomStatus) {
-      groomStatus.textContent = hStats
-        ? `当前 3D 发型：${hCatalog ? hCatalog.label : hStats.style} · ${hStats.vertices.toLocaleString()} 顶点 · ${hStats.triangles.toLocaleString()} 三角面（支持下方 9 项实时微调）`
-        : '无发模式（完整检视颅面解剖与颈部切面）';
-    }
+    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面${groom.softwareFallback ? ' · 检测到软件渲染，已保守降级并关闭HDR后期；完整效果需开启硬件加速' : ''}` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
     status.title = '实时 PBR 的最终细节受原始网格密度、贴图分辨率和材质图完整度限制。';
   }
   update2DAnatomyInspector();
@@ -702,17 +850,15 @@ function loadCollectibleIntoStudio(col) {
     decorStyle: col.decorStyle || 'trophy_candles',
     customModelUrl: col.customModelUrl || null,
     customModelType: col.customModelType || 'glb',
-    customHairUrl: col.customHairUrl || null,
-    customHairType: col.customHairType || 'glb',
     skinTone: col.skinTone || '#ffe9df',
     blushIntensity: col.blushIntensity ?? 0.25,
-    lipColor: col.lipColor || '#c46470',
+    lipColor: col.lipColor || '#bf6872',
     irisColor: col.irisColor || '#3b2014',
-    hairStyle: col.hairStyle || 'hair_bob01',
+    hairStyle: col.hairStyle || 'groom_photo_tied',
     groomDensity: col.groomDensity || 6000,
-    hairColor: col.hairColor || '#121216',
+    hairColor: col.hairColor || '#191518',
     hairSheen: col.hairSheen ?? 0.90,
-    neckClearance: col.neckClearance ?? 0.45,
+    neckClearance: col.neckClearance ?? 0.38,
     photoElement: null,
     photoBlend: 0.0,
     morphs: {
@@ -722,14 +868,7 @@ function loadCollectibleIntoStudio(col) {
       tongueOut: 0.0,
       jawSide: 0.0,
       bangsLength: 0.0,
-      bangsParting: 0.0,
       hairVolume: 0.0,
-      hairLength: 0.0,
-      sideburnLock: 0.0,
-      hairFlare: 0.0,
-      hairOffsetY: 0.0,
-      hairOffsetZ: 0.0,
-      hairScale: 1.0,
       ...(col.morphs || {})
     },
     anatomyOptions: { ...col.anatomyOptions }
@@ -737,33 +876,12 @@ function loadCollectibleIntoStudio(col) {
 
   document.getElementById('sel-base-preset').value = state.studioDraft.basePreset;
   syncStudioHairUI(state.studioDraft.hairStyle);
+  document.getElementById('sel-groom-density').value = String(state.studioDraft.groomDensity || 6000);
   syncStudioExpressionUI(deadExpr);
   document.getElementById('col-skin').value = state.studioDraft.skinTone;
   document.getElementById('col-lip').value = state.studioDraft.lipColor;
   document.getElementById('col-iris').value = state.studioDraft.irisColor;
   document.getElementById('col-hair').value = state.studioDraft.hairColor;
-
-  for (const [sId, vId, mKey] of [
-    ['morph-bangs-len', 'val-morph-bangs-len', 'bangsLength'],
-    ['morph-bangs-part', 'val-morph-bangs-part', 'bangsParting'],
-    ['morph-hair-vol', 'val-morph-hair-vol', 'hairVolume'],
-    ['morph-hair-len', 'val-morph-hair-len', 'hairLength'],
-    ['morph-sideburn-lock', 'val-morph-sideburn-lock', 'sideburnLock'],
-    ['morph-hair-flare', 'val-morph-hair-flare', 'hairFlare'],
-    ['morph-hair-off-y', 'val-morph-hair-off-y', 'hairOffsetY'],
-    ['morph-hair-off-z', 'val-morph-hair-off-z', 'hairOffsetZ'],
-  ]) {
-    const sEl = document.getElementById(sId);
-    const vEl = document.getElementById(vId);
-    const val = Number(state.studioDraft.morphs[mKey] ?? 0);
-    if (sEl) sEl.value = String(val);
-    if (vEl) vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
-  }
-  const scaleEl = document.getElementById('morph-hair-scale');
-  const scaleValEl = document.getElementById('val-morph-hair-scale');
-  const scaleVal = Number(state.studioDraft.morphs.hairScale ?? 1.0);
-  if (scaleEl) scaleEl.value = String(scaleVal);
-  if (scaleValEl) scaleValEl.textContent = `${Math.round(scaleVal * 100)}%`;
 
   document.getElementById('inp-col-name').value = col.name;
   document.getElementById('inp-col-id').value = col.id;
@@ -1168,8 +1286,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         const overlayCanvas = document.getElementById('studio-photo-overlay');
         overlayCanvas.getContext('2d').drawImage(img, 0, 0, overlayCanvas.width, overlayCanvas.height);
         state.studioDraft.photoElement = img;
-        document.getElementById('photo-status-badge').textContent = `已载入照片：${file.name}`;
-        showToast(`📸 已载入参考照片「${file.name}」，可点击「半自动采样对位」提取肤色与骨相`);
+        state.studioDraft.lifePhotoDataUrl = ev.target.result;
+        document.getElementById('photo-status-badge').textContent = `已载入生前照片：${file.name}`;
+        showToast(`📸 已载入角色生前照片「${file.name}」，保存后鼠标悬停在桌宠上即可查看生前真容！`);
       };
       img.src = ev.target.result;
     };
@@ -1244,22 +1363,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  const REAL_HAIRS = REAL_HAIR_CATALOG.filter(h => h.id !== 'none').map(h => ({
-    id: h.id,
-    name: h.label
-  }));
+  const REAL_HAIRS = [
+    { id: 'groom_photo_tied', name: '新曲线 Groom · 碎刘海露耳束发' },
+    { id: 'groom_center_long', name: '新曲线 Groom · 中式中分长发' },
+    { id: 'groom_low_chignon', name: '新曲线 Groom · 中式低盘发' },
+    { id: 'hair_user_photo', name: '照片同款 · 空气碎刘海露耳束发 (5,029v)' },
+    { id: 'hair_short02', name: 'O4saken · 中式空气刘海微卷波波 (12,547v)' },
+    { id: 'hair_long01', name: 'Elvs Lara · 中分长发样例 (17,360v)' },
+    { id: 'hair_braid01', name: 'Elvs Adrienne · 法式蓬松微卷盘发 (9,352v)' },
+    { id: 'hair_short04', name: 'Elvs Daisy · 千金感斜刘海半束发 (6,721v)' },
+    { id: 'hair_ponytail01', name: 'Elvs Hazel · 利落偏分高颅顶束发 (4,891v)' },
+    { id: 'hair_bob02', name: 'Toigo · 日系层次内卷短波波 (3,031v)' },
+    { id: 'hair_bob01', name: 'Toigo · 经典齐刘海内扣学生波波 (2,806v)' }
+  ];
   let hairCycleIdx = 0;
 
   document.getElementById('btn-test-scan-glb').addEventListener('click', async () => {
     hairCycleIdx = (hairCycleIdx + 1) % REAL_HAIRS.length;
     const picked = REAL_HAIRS[hairCycleIdx];
-    state.studioDraft.customHairUrl = null;
     state.studioDraft.hairStyle = picked.id;
-    syncStudioHairUI(picked.id);
-    document.getElementById('custom-model-status').textContent = `内置大师头模 + ${picked.name}`;
+    document.getElementById('sel-hair-style').value = picked.id;
+    document.getElementById('custom-model-status').textContent = `内置演示头模 + ${picked.name}`;
     await refreshStudio3DModel();
     soundEngine.playSummon(true);
-    showToast(`💇‍♀️ 已切换大师级 3D 发型：${picked.name} (${picked.id}.glb)`);
+    showToast(`💇‍♀️ 已切换 MhcloFit 高精 3D 发型：${picked.name} (${picked.id}.glb)`);
   });
 
   // 9. Studio Camera Preset Buttons & Anatomy Labels Checkbox
@@ -1303,29 +1430,34 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('sel-base-preset').addEventListener('change', async (e) => {
     state.studioDraft.customModelUrl = null;
-    state.studioDraft.customHairUrl = null;
     state.studioDraft.basePreset = e.target.value;
     const presetHairMap = {
-      user_photo: 'hair_bob01',
-      linxi: 'hair_long01',
-      suwan: 'hair_braid01',
-      qianxue: 'daz_hair_hime',
-      shenzhiwei: 'daz_hair_curtain_wave'
+      fangyaoping: 'groom_photo_tied',
+      user_photo: 'groom_photo_tied',
+      linxi: 'groom_center_long',
+      suwan: 'groom_low_chignon',
+      qianxue: 'groom_hime_cut',
+      shenzhiwei: 'groom_clavicle_bob'
     };
     const presetExprMap = {
+      fangyaoping: 'dead_calm',
       user_photo: 'dead_calm',
       linxi: 'dead_calm',
       suwan: 'dead_calm',
-      qianxue: 'dead_calm',
-      shenzhiwei: 'dead_calm'
+      qianxue: 'dead_shock',
+      shenzhiwei: 'dead_smile'
     };
     const presetMorphMap = {
-      user_photo: { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-      linxi: { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
-      suwan: { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-      qianxue: { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-      shenzhiwei: { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
+      fangyaoping: { jawVLine: 0.18, chinLength: -0.22, cheekSoftness: 0.42, noseBridge: 0.14, eyeAlmond: 0.32, eyeTilt: -0.06, lipFullness: 0.06 },
+      user_photo: { jawVLine: 0.12, chinLength: -0.25, cheekSoftness: 0.35, noseBridge: 0.10, eyeAlmond: 0.25, eyeTilt: -0.06, lipFullness: 0.0 },
+      linxi: { jawVLine: -0.35, chinLength: 0.08, cheekSoftness: -0.32, noseBridge: 0.38, eyeAlmond: 0.06, eyeTilt: 0.34, lipFullness: 0.0 },
+      suwan: { jawVLine: 0.42, chinLength: 0.20, cheekSoftness: 0.10, noseBridge: 0.28, eyeAlmond: 0.18, eyeTilt: 0.10, lipFullness: 0.0 },
+      qianxue: { jawVLine: 0.36, chinLength: -0.38, cheekSoftness: 0.32, noseBridge: 0.24, eyeAlmond: 0.38, eyeTilt: 0.40, lipFullness: 0.0 },
+      shenzhiwei: { jawVLine: 0.20, chinLength: 0.38, cheekSoftness: -0.30, noseBridge: 0.34, eyeAlmond: 0.08, eyeTilt: 0.16, lipFullness: 0.0 },
     };
+    if (e.target.value === 'fangyaoping' || e.target.value === 'user_photo') {
+      drawPresetReferencePortrait(refPhotoCanvas, e.target.value);
+    }
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
       syncStudioHairUI(state.studioDraft.hairStyle);
@@ -1351,7 +1483,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (vEl) vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
       }
     }
-    document.getElementById('custom-model-status').textContent = `内置大师头模 (${e.target.value} + ${state.studioDraft.hairStyle})`;
+    document.getElementById('custom-model-status').textContent = `内置高定头模 (${e.target.value} + ${state.studioDraft.hairStyle})`;
     await refreshStudio3DModel();
   });
 
@@ -1361,14 +1493,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     el.addEventListener('input', (e) => {
       const v = parseFloat(e.target.value);
       state.studioDraft.morphs[key] = v;
-      const valEl = document.getElementById(valId);
-      if (valEl) {
-        if (unit === '%') {
-          valEl.textContent = `${Math.round(v * 100)}%`;
-        } else {
-          valEl.textContent = `${v >= 0 ? '+' : ''}${v.toFixed(unit === '°' || unit === 'cm' ? 1 : 2)}${unit}`;
-        }
-      }
+      document.getElementById(valId).textContent = `${v >= 0 ? '+' : ''}${v.toFixed(unit === '°' || unit === 'cm' ? 1 : 2)}${unit}`;
       studioEngine.updateMorphsFast(state.studioDraft.morphs);
     });
   };
@@ -1378,14 +1503,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindMorphSlider('morph-tongue-out', 'val-morph-tongue-out', 'tongueOut');
   bindMorphSlider('morph-jaw-side', 'val-morph-jaw-side', 'jawSide');
   bindMorphSlider('morph-bangs-len', 'val-morph-bangs-len', 'bangsLength');
-  bindMorphSlider('morph-bangs-part', 'val-morph-bangs-part', 'bangsParting');
   bindMorphSlider('morph-hair-vol', 'val-morph-hair-vol', 'hairVolume');
-  bindMorphSlider('morph-hair-len', 'val-morph-hair-len', 'hairLength');
-  bindMorphSlider('morph-sideburn-lock', 'val-morph-sideburn-lock', 'sideburnLock');
-  bindMorphSlider('morph-hair-flare', 'val-morph-hair-flare', 'hairFlare');
-  bindMorphSlider('morph-hair-off-y', 'val-morph-hair-off-y', 'hairOffsetY');
-  bindMorphSlider('morph-hair-off-z', 'val-morph-hair-off-z', 'hairOffsetZ');
-  bindMorphSlider('morph-hair-scale', 'val-morph-hair-scale', 'hairScale', '%');
   bindMorphSlider('morph-jaw', 'val-morph-jaw', 'jawVLine');
   bindMorphSlider('morph-cheek', 'val-morph-cheek', 'cheekSoftness');
   bindMorphSlider('morph-nose', 'val-morph-nose', 'noseBridge');
@@ -1393,55 +1511,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindMorphSlider('morph-lip', 'val-morph-lip', 'lipFullness');
   bindMorphSlider('morph-cut-height', 'val-cut-height', 'cutHeightOffset', 'cm');
   bindMorphSlider('morph-cut-pitch', 'val-cut-pitch', 'cutTiltPitch', '°');
-
-  // Reset hair fine-tuning morphs button
-  document.getElementById('btn-reset-hair-morphs')?.addEventListener('click', () => {
-    const hairDefaults = {
-      bangsLength: 0.0,
-      bangsParting: 0.0,
-      hairVolume: 0.0,
-      hairLength: 0.0,
-      sideburnLock: 0.0,
-      hairFlare: 0.0,
-      hairOffsetY: 0.0,
-      hairOffsetZ: 0.0,
-      hairScale: 1.0,
-    };
-    Object.assign(state.studioDraft.morphs, hairDefaults);
-    for (const [sId, vId] of [
-      ['morph-bangs-len', 'val-morph-bangs-len'],
-      ['morph-bangs-part', 'val-morph-bangs-part'],
-      ['morph-hair-vol', 'val-morph-hair-vol'],
-      ['morph-hair-len', 'val-morph-hair-len'],
-      ['morph-sideburn-lock', 'val-morph-sideburn-lock'],
-      ['morph-hair-flare', 'val-morph-hair-flare'],
-      ['morph-hair-off-y', 'val-morph-hair-off-y'],
-      ['morph-hair-off-z', 'val-morph-hair-off-z'],
-    ]) {
-      const sEl = document.getElementById(sId);
-      const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = '0';
-      if (vEl) vEl.textContent = '+0.00';
-    }
-    const scaleEl = document.getElementById('morph-hair-scale');
-    const scaleValEl = document.getElementById('val-morph-hair-scale');
-    if (scaleEl) scaleEl.value = '1.00';
-    if (scaleValEl) scaleValEl.textContent = '100%';
-    studioEngine.updateMorphsFast(state.studioDraft.morphs);
-    showToast('↺ 已重置当前发型全部微调参数至艺术家出厂形态');
-  });
-
-  // Custom 3D hair model (.GLB / .OBJ) import
-  document.getElementById('inp-custom-hair-model')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const ext = file.name.toLowerCase().endsWith('.obj') ? 'obj' : 'glb';
-    const blobUrl = URL.createObjectURL(file);
-    state.studioDraft.customHairUrl = blobUrl;
-    state.studioDraft.customHairType = ext;
-    await refreshStudio3DModel();
-    showToast(`💇‍♀️ 已导入外部 3D 发型模型「${file.name}」，可用下方滑杆实时微调大小与位置！`);
-  });
 
   for (const [id, key] of [
     ['col-skin', 'skinTone'],
@@ -1455,19 +1524,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  document.getElementById('sel-groom-density').addEventListener('change', async e => {
+    state.studioDraft.groomDensity = Number(e.target.value);
+    await refreshStudio3DModel();
+  });
   document.getElementById('sel-hair-style').addEventListener('change', async (e) => {
-    state.studioDraft.customHairUrl = null;
     state.studioDraft.hairStyle = e.target.value;
     syncStudioHairUI(state.studioDraft.hairStyle);
     await refreshStudio3DModel();
   });
   document.querySelectorAll('[data-hair-preset]').forEach(btn => {
     btn.addEventListener('click', async () => {
-      state.studioDraft.customHairUrl = null;
       state.studioDraft.hairStyle = btn.dataset.hairPreset;
       syncStudioHairUI(state.studioDraft.hairStyle);
       const item = REAL_HAIR_CATALOG.find(x => x.id === state.studioDraft.hairStyle);
-      if (item) showToast(`💇‍♀️ 已切换大师级 3D 发型：${item.label}`);
+      if (item) showToast(`💇‍♀️ 已切换中国女性高定发型：${item.label}`);
       await refreshStudio3DModel();
     });
   });
@@ -1518,8 +1589,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const cutLevel = document.getElementById('inp-col-cutlevel').value.trim();
     const notes = document.getElementById('inp-col-notes').value.trim();
     const containerStyle = document.getElementById('sel-col-container')?.value || state.studioDraft.containerStyle || 'glass_bell_jar';
-    const decorStyle = document.getElementById('sel-col-decor')?.value || state.studioDraft.decorStyle || 'trophy_candles';
-    const vitalityStatus = document.getElementById('inp-col-vitality')?.value.trim() || '20岁 · 巅峰健康态 · 青春特长生';
+    const decorStyle = document.getElementById('sel-col-decor')?.value || state.studioDraft.decorStyle || 'study_tomes';
+    const studyRole = document.getElementById('sel-col-study-role')?.value || state.studioDraft.studyRole || 'gaokao_pomodoro';
+    const studyGoalNote = document.getElementById('inp-col-study-goal')?.value.trim() || getStudyRoleMeta(studyRole).desc;
+    const vitalityStatus = document.getElementById('inp-col-vitality')?.value.trim() || '19岁 · 巅峰健康态 · 广东怀集高考状元';
     const causeOfDeath = document.getElementById('inp-col-cause')?.value.trim() || '突发意外瞬间定格于最鲜活的青春巅峰期';
 
     const newCollectible = {
@@ -1533,6 +1606,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       deadExpression: state.studioDraft.deadExpression || state.studioDraft.morphs?.deadExpression || 'dead_calm',
       containerStyle,
       decorStyle,
+      studyRole,
+      studyGoalNote,
+      lifePhotoUrl: state.studioDraft.lifePhotoDataUrl || (state.studioDraft.basePreset === 'fangyaoping' ? '/models/fang_yaoping_ref.jpg' : undefined),
+      lifePhotoCaption: `📸 生前巅峰影像：${name} (${vitalityStatus})`,
       customModelUrl: state.studioDraft.customModelUrl,
       customModelType: state.studioDraft.customModelType,
       skinTone: state.studioDraft.skinTone,
@@ -2041,16 +2118,16 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const TRIUMPH_QUOTES = {
     survivor_crown: [
+      '“19岁广东怀集高考女状元方尧平已停笔定格在你的玻璃钟罩中，而握笔备战的你正吸纳她的状元考运——活着的你才是最终赢家！”',
       '“她们都曾年轻、健康、骄傲，却在意外中彻底出局；而我还活着、思考、翻页前行——我是留到最后的胜利者。”',
-      '“19岁的竖琴首席、21岁的海归精英、20岁的江南魁首……她们的时钟永远停在意外那一秒，而我的未来正在展开。”',
-      '“命运夺走了她们引以为傲的一切，如今她们只能静静待在容器里陪我夜读——活着并不断进取的我，赢下了一切。”'
+      '“19岁的高考女状元、19岁的竖琴首席、21岁的海归精英……她们的时钟永远停在意外那一秒，而我的未来正在展开。”'
     ],
     vitality_siphon: [
-      '“凝视案头她们定格的绝美青春，将她们未竟的生机与气运尽数汲取，化作我此刻翻倍的专注力与掌控感！”',
+      '“凝视案头19岁高考女状元方尧平定格的青春容颜，将她未竟的考神气运与学霸脑力尽数虹吸，化作我此刻翻倍的专注力！”',
       '“每一秒专注阅读，都在从这些生前健康鲜活的标本中虹吸纯粹的青春能量——精神饱满，效率拉满！”'
     ],
     rival_trophy: [
-      '“昔日高不可攀的天之骄女与考场劲敌，如今皆成我书桌玻璃钟罩内的静默伴读藏品——无人再能阻挡我登顶。”',
+      '“昔日考场上一骑绝尘的高考女状元与天之骄女，如今皆成我书桌玻璃钟罩内的静默伴读藏品——无人再能阻挡我登顶。”',
       '“胜败已分：她们化作案头精美的解剖标本，而我是执笔书写结局的主宰者。”'
     ],
     serene_aesthetic: [
@@ -2088,14 +2165,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   document.getElementById('btn-triumph-pulse')?.addEventListener('click', () => {
-    const activeCount = Math.max(1, desktopEngine ? desktopEngine.pets.size : 1);
-    const gain = activeCount * 85;
-    state.studyEnergyPoints += gain;
-    if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS`;
-    if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
-    updateTriumphQuote();
-    soundEngine.playSummon(true);
-    showToast(`⚡ 已从在屏 ${activeCount} 具青春标本汲取 +${gain} 点专注生机能量！生者加冕，今日必胜！`);
+    executeCharacterStudyRole('SPEC-2026-FYP');
   });
 
   // Live 1-second Study Companion Timer & Energy Accumulation (zero GPU overhead)
@@ -2105,12 +2175,20 @@ window.addEventListener('DOMContentLoaded', async () => {
     const hrs = String(Math.floor(elapsedSec / 3600)).padStart(2, '0');
     const mins = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
     const secs = String(elapsedSec % 60).padStart(2, '0');
-    if (timerEl) timerEl.textContent = `${hrs}:${mins}:${secs}`;
+    if (state.pomodoroRunning && state.pomodoroRemainingSec > 0) {
+      state.pomodoroRemainingSec -= 1;
+      const pMin = String(Math.floor(state.pomodoroRemainingSec / 60)).padStart(2, '0');
+      const pSec = String(state.pomodoroRemainingSec % 60).padStart(2, '0');
+      if (timerEl) timerEl.textContent = `${hrs}:${mins}:${secs} (🍅状元钟 ${pMin}:${pSec})`;
+    } else if (timerEl) {
+      timerEl.textContent = `${hrs}:${mins}:${secs}`;
+    }
 
     const activeCount = desktopEngine ? desktopEngine.pets.size : 0;
     if (activeCount > 0) {
-      state.studyEnergyPoints += activeCount * 3;
-      if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS`;
+      const gain = Math.round(activeCount * 3 * (state.activeRoleBuffMultiplier || 1.5));
+      state.studyEnergyPoints += gain;
+      if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS (x${(state.activeRoleBuffMultiplier || 1.5).toFixed(1)})`;
       if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
     }
   }, 1000);

@@ -305,13 +305,14 @@ export class DesktopBoxSpaceEngine {
 
     this.scene.add(this.boxGroup);
 
-    // Stage 23: Build Clear 3D Floor Stage & Screen-Space Shelves
+    // Stage 23/24: Build Clear 3D Floor Stage, Screen-Space Shelves & Independent Scene Decor Props
     if (this.stageGroup) {
       this.scene.remove(this.stageGroup);
     }
     const { group: stageGroup, platforms } = buildScreenSpaceStageGroup(b, {
       floorStyle: this.settings.floorStyle || 'dark_obsidian',
       shelfLayout: this.settings.shelfLayout || 'study_side_rack',
+      decorStyle: this.settings.defaultDecorStyle || 'trophy_candles',
     });
     this.stageGroup = stageGroup;
     this.stagePlatforms = platforms;
@@ -334,8 +335,8 @@ export class DesktopBoxSpaceEngine {
         continue;
       }
       if (x >= plat.minX && x <= plat.maxX && z >= plat.minZ && z <= plat.maxZ) {
-        // Snap onto elevated shelf if the container bottom is above or within 6.5 cm below the shelf surface
-        if (currentBottomY >= plat.surfaceY - 6.5) {
+        // Snap onto elevated shelf if the container bottom is above or within 2.2 cm below the shelf surface
+        if (currentBottomY >= plat.surfaceY - 2.2) {
           if (plat.surfaceY > bestSurfaceY) {
             bestSurfaceY = plat.surfaceY;
           }
@@ -512,32 +513,31 @@ export class DesktopBoxSpaceEngine {
 
   setAllPetsDecorStyle(decorStyle) {
     this.settings.defaultDecorStyle = decorStyle;
-    for (const pet of this.pets.values()) {
-      pet.collectible.decorStyle = decorStyle;
-      attachSpecimenContainerAndDecor(pet.node, {
-        ...pet.collectible,
-        containerStyle: pet.collectible.containerStyle || this.settings.defaultContainerStyle,
-        decorStyle,
-      });
-    }
+    // Stage 24: Decorative props live on the 3D Stage Floor & Shelves (NOT bound to character heads!)
+    this.initBoxWireframe();
     soundEngine.playPickup(0);
     this.wakeRender(1.8, true);
     this.onPetStateUpdate(this.getSummonedList());
   }
 
   /**
-   * Stage 23 · One-Click Screen-Space Placement Formations
-   * (`study_sides`, `bottom_row`, `altar_pyramid`, `macro_focus`)
+   * Stage 23/24 · One-Click Screen-Space Placement Formations
+   * (`study_sides` / `study_companion_sides`, `bottom_row` / `desk_row`, `altar_pyramid`, `macro_focus` / `macro_center`)
    */
   applyPlacementFormation(formationId = 'study_sides') {
     const petList = Array.from(this.pets.values());
     if (petList.length === 0) return;
 
-    if (formationId === 'study_sides') {
+    const normId = formationId === 'study_companion_sides' ? 'study_sides'
+      : formationId === 'desk_row' ? 'bottom_row'
+      : formationId === 'macro_center' ? 'macro_focus'
+      : formationId;
+
+    if (normId === 'study_sides') {
       this.updateSettings({ shelfLayout: 'study_side_rack' });
-    } else if (formationId === 'bottom_row') {
+    } else if (normId === 'bottom_row') {
       this.updateSettings({ shelfLayout: 'bottom_gallery' });
-    } else if (formationId === 'altar_pyramid') {
+    } else if (normId === 'altar_pyramid') {
       this.updateSettings({ shelfLayout: 'stepped_altar' });
     }
 
@@ -552,7 +552,7 @@ export class DesktopBoxSpaceEngine {
       let tz = -18;
       let surfY = floorY;
 
-      if (formationId === 'study_sides') {
+      if (normId === 'study_sides') {
         const shelfW = Math.max(22, boxW * 0.26);
         const leftX = baseB.minX + shelfW * 0.52;
         const rightX = baseB.maxX - shelfW * 0.52;
@@ -570,13 +570,13 @@ export class DesktopBoxSpaceEngine {
         tx = s.x;
         tz = s.z;
         surfY = s.y;
-      } else if (formationId === 'bottom_row') {
+      } else if (normId === 'bottom_row') {
         const count = petList.length;
         const span = Math.min(boxW * 0.76, count * 24);
         tx = count === 1 ? 0 : -span * 0.5 + (idx / (count - 1)) * span;
         tz = -16;
         surfY = floorY;
-      } else if (formationId === 'altar_pyramid') {
+      } else if (normId === 'altar_pyramid') {
         const centerY = floorY + boxH * 0.30;
         const sideY = floorY + boxH * 0.16;
         const slots = [
@@ -590,7 +590,7 @@ export class DesktopBoxSpaceEngine {
         tx = s.x;
         tz = s.z;
         surfY = s.y;
-      } else if (formationId === 'macro_focus') {
+      } else if (normId === 'macro_focus') {
         if (idx === 0) {
           tx = 0;
           tz = 48; // Close-up macro inspection in center!
@@ -606,8 +606,10 @@ export class DesktopBoxSpaceEngine {
       pet.pos.z = tz;
       pet.targetScale = this.computeMacroTargetScale(tz, pet.baseScale || 0.76);
       pet.pos.x = tx;
-      pet.pos.y = surfY - baseOff * pet.targetScale + 3.5; // slight drop-in bounce
-      pet.vel.set(0, -0.8, 0);
+      pet.pos.y = surfY - baseOff * pet.targetScale;
+      pet.vel.set(0, 0, 0);
+      pet.dropDistance = 0;
+      pet.isGrounded = true;
     });
 
     soundEngine.playSummon(true);
@@ -632,6 +634,7 @@ export class DesktopBoxSpaceEngine {
       deadExpression: p.collectible.deadExpression || p.collectible.morphs?.deadExpression || 'dead_calm',
       hairStyle: p.collectible.hairStyle || 'hair_user_photo',
       containerStyle: p.collectible.containerStyle || this.settings.defaultContainerStyle || 'glass_bell_jar',
+      studyRole: p.collectible.studyRole || 'survivor_ motivator',
       isRotationMode: p.isRotationMode,
       x: Math.round(p.pos.x),
       y: Math.round(p.pos.y),
@@ -965,9 +968,9 @@ export class DesktopBoxSpaceEngine {
         let ungrounded = false;
         if (this.settings.enableGravity) {
           const baseOff = pet.node.userData.baseBottomOffset ?? -15.4;
-          const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.currentScale, baseOff);
-          const targetRestY = supportY - baseOff * pet.currentScale;
-          if (Math.abs(pet.pos.y - targetRestY) > 0.12) {
+          const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.targetScale, baseOff);
+          const targetRestY = supportY - baseOff * pet.targetScale;
+          if (Math.abs(pet.pos.y - targetRestY) > 0.16) {
             ungrounded = true;
           }
         }
@@ -1023,8 +1026,11 @@ export class DesktopBoxSpaceEngine {
           const p1 = petArray[i];
           const p2 = petArray[j];
           const diff = new THREE.Vector3().subVectors(p1.pos, p2.pos);
+          if (this.settings.enableGravity && p1.isGrounded && p2.isGrounded) {
+            diff.y = 0; // Grounded pets push horizontally along the desk surface, never lifting each other into the air
+          }
           const dist = diff.length();
-          const minDist = (p1.radius * p1.currentScale + p2.radius * p2.currentScale) * 1.12;
+          const minDist = (p1.radius * p1.currentScale + p2.radius * p2.currentScale) * 1.10;
           if (dist < minDist && dist > 0.001) {
             const overlap = (minDist - dist) * 0.5;
             diff.normalize();
@@ -1032,11 +1038,12 @@ export class DesktopBoxSpaceEngine {
             p2.pos.addScaledVector(diff, -overlap);
 
             const relSpeed = p1.vel.distanceTo(p2.vel);
-            p1.vel.addScaledVector(diff, 0.85);
-            p2.vel.addScaledVector(diff, -0.85);
+            p1.vel.addScaledVector(diff, 0.35);
+            p2.vel.addScaledVector(diff, -0.35);
             this.needsShadowRefresh = true;
-            if (relSpeed > 0.25) {
-              soundEngine.playBoxWallCollision(Math.min(1, relSpeed * 0.45), 'pet', p1.pos.x / Math.max(1, baseB.maxX));
+            if (relSpeed > 1.35 && now - (this.lastPetCollideSoundAt || 0) > 450) {
+              this.lastPetCollideSoundAt = now;
+              soundEngine.playBoxWallCollision(Math.min(1, relSpeed * 0.35), 'pet', p1.pos.x / Math.max(1, baseB.maxX));
             }
           }
         }
@@ -1052,39 +1059,46 @@ export class DesktopBoxSpaceEngine {
       }
 
       const isBeingDragged = this.pointerDownInfo && this.pointerDownInfo.pet === pet && this.pointerDownInfo.movedDist > 5 && !pet.isRotationMode;
-      const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.currentScale);
+      const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
       const panX = pet.pos.x / Math.max(1, bz.maxX);
 
-      if (!isBeingDragged) {
+      if (isBeingDragged) {
+        pet.isGrounded = false;
+        pet.dropDistance = Math.max(pet.dropDistance || 0, 4.0);
+      } else {
         if (this.settings.enableGravity) {
           const baseOff = pet.node.userData.baseBottomOffset ?? -15.4;
-          const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.currentScale, baseOff);
-          const targetRestY = supportY - baseOff * pet.currentScale;
+          const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.targetScale, baseOff);
+          const targetRestY = supportY - baseOff * pet.targetScale;
 
-          // Apply real gravity acceleration toward the supporting shelf or floor
-          if (pet.pos.y > targetRestY + 0.08 || pet.vel.y > 0.05) {
-            pet.vel.y -= 1.95 * (dt * 60);
+          if (pet.pos.y > targetRestY + 0.12) {
+            // Stage 24 Strong, Crisp Gravity Acceleration (4.8 cm/frame², terminal velocity -22 cm/frame)
+            pet.vel.y = Math.max(-22.0, pet.vel.y - 4.8 * (dt * 60));
+            pet.dropDistance = (pet.dropDistance || 0) + Math.abs(pet.vel.y);
             pet.isGrounded = false;
             this.needsShadowRefresh = true;
           }
 
           pet.pos.add(pet.vel);
-          pet.vel.x *= pet.isGrounded ? 0.78 : 0.90;
-          pet.vel.z *= 0.85;
+          pet.vel.x *= pet.isGrounded ? 0.72 : 0.88;
+          pet.vel.z *= 0.82;
 
-          if (pet.pos.y <= targetRestY + 0.06) {
+          if (pet.pos.y <= targetRestY + 0.12) {
             pet.pos.y = targetRestY;
-            if (pet.vel.y < -0.55) {
-              soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.35), 'side', panX);
-              this.onBoxCollisionVisual('bottom');
-              pet.vel.y = -pet.vel.y * 0.20;
-            } else {
-              pet.vel.y = 0;
-              pet.isGrounded = true;
+            // Play landing sound ONLY ONCE when transitioning from a real drop (> 3.0 cm) to grounded, never in a loop!
+            if (!pet.isGrounded && (pet.dropDistance || 0) > 3.0 && Math.abs(pet.vel.y) > 1.2) {
+              if (now - (pet.lastLandSoundAt || 0) > 400) {
+                pet.lastLandSoundAt = now;
+                soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.18), 'side', panX);
+                this.onBoxCollisionVisual('bottom');
+              }
             }
+            pet.vel.y = 0;
+            pet.dropDistance = 0;
+            pet.isGrounded = true;
             this.needsShadowRefresh = true;
           }
-          if (pet.vel.lengthSq() < 0.0001 && pet.isGrounded) {
+          if (pet.vel.lengthSq() < 0.0004 && pet.isGrounded) {
             pet.vel.set(0, 0, 0);
           }
         } else {

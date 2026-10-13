@@ -23,20 +23,20 @@ export const SHELF_LAYOUT_CATALOG = [
 ];
 
 export const CONTAINER_STYLE_CATALOG = [
-  { id: 'glass_bell_jar', label: '🧪 维多利亚玻璃钟罩 + 黑金黄铜底座 (默认推荐)' },
-  { id: 'velvet_chalice', label: '👑 黑金丝绒高脚圣杯托座 (无罩露天鉴赏)' },
-  { id: 'formalin_cylinder', label: '🧫 福尔马林圆柱标本缸 + 琥珀防腐液刻度' },
-  { id: 'acrylic_cube', label: '💎 博物馆亚克力水晶方盒 + 底射灯底座' },
-  { id: 'surgical_tray', label: '🩸 法医不锈钢解剖浅盘 + 凝血标本垫' },
-  { id: 'none', label: '🚫 无外置容器 (仅C4/C5解剖断面直接放置)' },
+  { id: 'glass_bell_jar', shortLabel: '玻璃钟罩', label: '🧪 维多利亚玻璃钟罩 + 黑金黄铜底座 (默认推荐)' },
+  { id: 'velvet_chalice', shortLabel: '丝绒圣杯', label: '👑 黑金丝绒高脚圣杯托座 (无罩露天鉴赏)' },
+  { id: 'formalin_cylinder', shortLabel: '福尔马林缸', label: '🧫 福尔马林圆柱标本缸 + 琥珀防腐液刻度' },
+  { id: 'acrylic_cube', shortLabel: '水晶方盒', label: '💎 博物馆亚克力水晶方盒 + 底射灯底座' },
+  { id: 'surgical_tray', shortLabel: '解剖浅盘', label: '🩸 法医不锈钢解剖浅盘 + 凝血标本垫' },
+  { id: 'none', shortLabel: '无外置容器', label: '🚫 无外置容器 (仅C4/C5解剖断面直接放置)' },
 ];
 
 export const DECOR_STYLE_CATALOG = [
-  { id: 'trophy_candles', label: '🕯️ 哥特白烛 + 暗红凋零玫瑰花瓣 (默认唯美)' },
-  { id: 'study_tomes', label: '📚 伴学烫金古籍书堆 + 黄铜怀表' },
-  { id: 'soul_siphon', label: '⚡ 幸存者生机汲取金环 + 悬浮灵子微光' },
-  { id: 'forensic_evidence', label: '🏷️ 法医物证黄牌 (#01) + 标本封条' },
-  { id: 'none', label: '🚫 无额外装饰品' },
+  { id: 'trophy_candles', shortLabel: '白烛玫瑰', label: '🕯️ 案头哥特白烛阵 + 暗红凋零玫瑰花瓣 (独立场景摆件)' },
+  { id: 'study_tomes', shortLabel: '状元古籍', label: '📚 案头状元满分卷 + 烫金古籍书堆 + 黄铜怀表 (独立场景摆件)' },
+  { id: 'soul_siphon', shortLabel: '虹吸法阵', label: '⚡ 案头生机汲取金环阵 + 悬浮灵子微光 (独立场景摆件)' },
+  { id: 'forensic_evidence', shortLabel: '物证黄牌', label: '🏷️ 案头法医物证黄牌 (#01/#02) + 解剖器械盘 (独立场景摆件)' },
+  { id: 'none', shortLabel: '无装饰品', label: '🚫 无场景装饰摆件 (纯享极简展台)' },
 ];
 
 export const PLACEMENT_FORMATIONS = [
@@ -395,6 +395,41 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
       disc.receiveShadow = true;
       group.add(disc);
     }
+  }
+
+  // Stage 24: Place Independent 3D Decorative Props directly on the 3D Desk Floor & Shelves (NOT bound to characters!)
+  const decorStyle = options.decorStyle || 'trophy_candles';
+  if (decorStyle && decorStyle !== 'none') {
+    const stageDecorRoot = new THREE.Group();
+    stageDecorRoot.name = 'StageSceneDecorGroup';
+
+    // Place props at curated desk corners and shelf edges so they never move when heads are dragged
+    const propAnchors = [
+      { x: -boxW * 0.41, y: floorSurfaceY, z: -12, scale: 0.92, rotY: 0.15 },
+      { x: boxW * 0.41, y: floorSurfaceY, z: -12, scale: 0.92, rotY: -0.25 },
+      { x: -boxW * 0.19, y: floorSurfaceY, z: -10, scale: 0.85, rotY: 0.32 },
+      { x: boxW * 0.19, y: floorSurfaceY, z: -10, scale: 0.85, rotY: -0.18 },
+    ];
+    for (const p of platforms) {
+      if (!p.isMainFloor) {
+        propAnchors.push({
+          x: p.centerX + (p.centerX < 0 ? -4.5 : 4.5),
+          y: p.surfaceY,
+          z: p.centerZ + 3.0,
+          scale: 0.72,
+          rotY: p.centerX < 0 ? 0.2 : -0.2,
+        });
+      }
+    }
+
+    for (const anchor of propAnchors) {
+      const propInstance = buildSpecimenDecorGroup(decorStyle, 0);
+      propInstance.position.set(anchor.x, anchor.y, anchor.z);
+      propInstance.scale.setScalar(anchor.scale);
+      propInstance.rotation.y = anchor.rotY;
+      stageDecorRoot.add(propInstance);
+    }
+    group.add(stageDecorRoot);
   }
 
   return { stageGroup: group, group, shelves: platforms, platforms };

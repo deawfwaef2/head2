@@ -3,6 +3,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
+import { buildCurveGroom, groomStyleFor, applyCurveGroomShape } from './curveGroom.js';
+import { repairHairNormals } from './hairGeometry.js';
+import { getHairStrandTextures } from '../textures/hairStrandTexture.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering } from './photorealLighting.js';
 import {
@@ -14,7 +17,6 @@ const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
 
 const arrayBufferCache = new Map();
-const textCache = new Map();
 const BUILTIN_HEAD_URL = '/models/daz_asian_head_base.glb';
 const BUST_WORLD_SCALE = 115.0;
 const CANONICAL_HEAD_HEIGHT = 0.58;
@@ -36,63 +38,91 @@ export const FORENSIC_EXPRESSION_PRESETS = [
     label: '安详永眠 · 双目紧闭',
     shortLabel: '安详永眠',
     desc: '双目完全闭合、长睫低垂、面部肌肉彻底松弛安详',
-    weights: { expr_serene: 0.85 },
+    weights: { expr_serene: 1.0 },
   },
   {
     id: 'dead_hollow',
     label: '死不瞑目 · 翻白微张',
     shortLabel: '死不瞑目',
     desc: '眼帘半垂、黑仁向上翻白、下颌松弛微张露出门齿',
-    weights: { expr_hollow: 0.75 },
+    weights: { expr_hollow: 1.0 },
   },
   {
     id: 'dead_shock',
     label: '惊愕断首 · 圆睁张口',
     shortLabel: '惊愕断首',
     desc: '双目惊恐圆睁、眉头高挑、下颌大张露出上下牙列与舌腔',
-    weights: { expr_shock: 0.65 },
+    weights: { expr_shock: 1.0 },
   },
   {
     id: 'dead_rigor',
     label: '临终痉挛 · 尸僵咬牙',
     shortLabel: '临终痉挛',
     desc: '眉心紧锁、大小眼痉挛抽搐、鼻翼耸起、痛苦咧嘴露齿',
-    weights: { expr_rigor: 0.70 },
+    weights: { expr_rigor: 1.0 },
   },
   {
     id: 'dead_smile',
     label: '诡异尸笑 · 防腐微哂',
     shortLabel: '诡异尸笑',
     desc: '眼帘低垂、嘴角不对称诡异牵拉上扬（尸笑面容）',
-    weights: { expr_smile: 0.65 },
+    weights: { expr_smile: 1.0 },
   },
   {
     id: 'dead_flaccid',
     label: '面瘫弛缓 · 歪嘴吐舌',
     shortLabel: '面瘫吐舌',
     desc: '单侧眼闭合、单侧翻白眼、下颌脱臼偏斜伴舌尖微吐',
-    weights: { expr_flaccid: 0.70 },
+    weights: { expr_flaccid: 1.0 },
   },
 ];
 
 export const HIGH_POLY_HAIR_CATALOG = [
-  { id: 'hair_bob01', label: '大师精雕 · 空气刘海内扣短波波 (Toigo · 2,806v)' },
-  { id: 'hair_long01', label: '大师精雕 · 东方中分八字柔顺黑长直 (Elvs · 7,234v)' },
-  { id: 'hair_braid01', label: '大师精雕 · 新中式侧分斜刘海法式盘发 (Elvs · 6,174v)' },
-  { id: 'daz_hair_hime', label: '大师精雕 · 国风齐刘海姬发式公主切 (Cortu · 848v)' },
-  { id: 'daz_hair_curtain_wave', label: '大师精雕 · 港风八字刘海蓬松大波浪 (Elvs · 5,968v)' },
-  { id: 'hair_user_photo', label: '大师精雕 · 日系清透碎刘海波波头 (LittleRight · 1,919v)' },
-  { id: 'hair_ponytail01', label: '大师精雕 · 飒爽千金露耳高扎长辫 (Elvs · 17,360v)' },
-  { id: 'hair_short04', label: '大师精雕 · 都市轻熟齐眉锁骨中长发 (Elvs · 5,050v)' },
-  { id: 'hair_bob02', label: '大师精雕 · 干练中分内扣A字短波波 (Toigo · 1,836v)' },
-  { id: 'hair_short02', label: '大师精雕 · 中式清纯多层次学生短发 (O4saken · 12,547v)' },
-  { id: 'daz_hair_wavy_bob', label: '大师精雕 · 复古名伶偏分大波浪短发 (Elvs · 4,914v)' },
-  { id: 'daz_hair_side_long', label: '大师精雕 · 知性御姐大偏分柔顺长直发 (Elvs · 4,418v)' },
-  { id: 'daz_hair_hazel_wave', label: '大师精雕 · 温柔千金中分披肩浪漫卷发 (Elvs · 4,891v)' },
-  { id: 'daz_hair_twin_buns', label: '大师精雕 · 甜酷少女高颅顶双丸子头 (Elvs · 1,864v)' },
-  { id: 'daz_hair_glam_wave', label: '大师精雕 · 冷艳超模大背头蓬松女神卷 (CL · 8,985v)' },
-  { id: 'daz_hair_asym_short', label: '大师精雕 · 法式复古齐眉齐颌短波波 (Elvs · 1,679v)' },
-  { id: 'none', label: '无头发 · 纯解剖头骨/光头标本' },
+  {
+    id: 'hair_user_photo',
+    label: '照片同款 · 空气碎刘海束发 (5,029v)',
+    desc: '无缝贴合头骨、清透空气碎刘海 + 脸颊修颜碎发 + 露耳后挽发髻',
+  },
+  {
+    id: 'hair_bob01',
+    label: 'Toigo · 内扣齐刘海波波头 (2,806v)',
+    desc: '经典高精齐刘海内扣短波波，发尾自然包裹下颌线',
+  },
+  {
+    id: 'hair_bob02',
+    label: 'Toigo · 日系层次内卷短波波 (3,031v)',
+    desc: '斜分层次感蓬松短波波，露出修长颈部与解剖断面',
+  },
+  {
+    id: 'hair_short02',
+    label: 'O4saken · 中式空气刘海微卷短发 (12,547v)',
+    desc: '超精细多层Alpha发片交织，真实还原轻盈发丝飞舞感',
+  },
+  {
+    id: 'hair_long01',
+    label: 'Elvs Lara · 中分长发样例 (17,360v)',
+    desc: '内置发型演示网格；实际细节取决于该 GLB 的拓扑和纹理分辨率',
+  },
+  {
+    id: 'hair_ponytail01',
+    label: 'Elvs Hazel · 利落偏分柔顺束发 (4,891v)',
+    desc: '气质偏分刘海配脑后利落挽发，完整展现耳廓与下颌骨相',
+  },
+  {
+    id: 'hair_braid01',
+    label: 'Elvs Adrienne · 法式蓬松微卷盘发 (9,352v)',
+    desc: '9,352顶点浪漫法式微卷刘海与盘发纹理，立体感极强',
+  },
+  {
+    id: 'hair_short04',
+    label: 'Elvs Daisy · 千金感斜刘海半束发 (6,721v)',
+    desc: '柔和斜刘海搭配双侧垂落发缕，温婉东方标本气质',
+  },
+  {
+    id: 'none',
+    label: '无头发 · 纯解剖头骨/光头标本',
+    desc: '完全移除毛发层，仅保留头皮与医学解剖断面',
+  },
 ];
 
 function base64ToArrayBuffer(b64) {
@@ -124,16 +154,6 @@ async function fetchGlbArrayBuffer(url) {
   return buf;
 }
 
-async function fetchObjText(url) {
-  if (textCache.has(url)) return textCache.get(url);
-  const localUrl = await resolvePrivateModelUrl(url);
-  const resp = await fetch(localUrl);
-  if (!resp.ok) throw new Error(`Failed to fetch OBJ ${url}: ${resp.status}`);
-  const txt = await resp.text();
-  textCache.set(url, txt);
-  return txt;
-}
-
 function parseGlbBuffer(buffer) {
   return new Promise((resolve, reject) => {
     gltfLoader.parse(buffer.slice(0), '', (gltf) => resolve(gltf), (err) => reject(err));
@@ -148,6 +168,8 @@ function textureDimensions(texture) {
   };
 }
 
+/** Preserve a user's glTF PBR material. Only annotate texture color spaces and
+ * sampling quality; never replace DAZ/Blender maps with the built-in demo skin. */
 function prepareImportedMaterial(material) {
   if (!material) return;
   const colorTextureSlots = [
@@ -160,6 +182,7 @@ function prepareImportedMaterial(material) {
     texture.anisotropy = 8;
     texture.needsUpdate = true;
   }
+  // glTF data maps (normal/roughness/metalness/AO/height) intentionally stay linear.
   for (const key of Object.keys(material)) {
     const value = material[key];
     if (!value?.isTexture || colorTextureSlots.includes(key)) continue;
@@ -244,21 +267,35 @@ function fitImportedHead(scene) {
   return fitGroup;
 }
 
+// Stage 21: 5 Distinct Chinese Female Bone-Structure Recipes ("五款高辨识度中式骨相")
+// Maps both defaultCollectibles `basePreset` keys and character short-keys.
 const PRESET_MORPH_BIASES = {
-  user_photo: { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-  chuxia:     { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-  female_realistic: { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
-  linxi:            { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
-  female_2: { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-  suwan:    { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-  female_3: { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-  qianxue:  { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-  female_gentle: { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
-  shenzhiwei:    { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
+  // 1. 初夏 · 幼态甜妹鹅蛋脸 (Baby Oval: Plump apple cheeks, short rounded chin, big round doe eyes)
+  user_photo: { jawVLine: 0.28, chinLength: -0.58, cheekSoftness: 0.78, noseBridge: 0.25, eyeAlmond: 0.58, eyeTilt: -0.12, lipFullness: 0.0 },
+  chuxia: { jawVLine: 0.28, chinLength: -0.58, cheekSoftness: 0.78, noseBridge: 0.25, eyeAlmond: 0.58, eyeTilt: -0.12, lipFullness: 0.0 },
+  // 2. 林汐 · 清冷超模折角方圆脸 (Model Square-Oval: Defined mandibular corner, high cheekbones, tall bridge, phoenix eyes)
+  female_realistic: { jawVLine: -0.82, chinLength: 0.15, cheekSoftness: -0.72, noseBridge: 0.85, eyeAlmond: 0.12, eyeTilt: 0.78, lipFullness: 0.0 },
+  linxi: { jawVLine: -0.82, chinLength: 0.15, cheekSoftness: -0.72, noseBridge: 0.85, eyeAlmond: 0.12, eyeTilt: 0.78, lipFullness: 0.0 },
+  // 3. 苏晚 · 江南古典尖俏瓜子V脸 (Classical V-Face: Smooth V-taper jaw, delicate pointed chin, gentle almond eyes)
+  female_2: { jawVLine: 0.95, chinLength: 0.45, cheekSoftness: 0.22, noseBridge: 0.65, eyeAlmond: 0.42, eyeTilt: 0.22, lipFullness: 0.0 },
+  suwan: { jawVLine: 0.95, chinLength: 0.45, cheekSoftness: 0.22, noseBridge: 0.65, eyeAlmond: 0.42, eyeTilt: 0.22, lipFullness: 0.0 },
+  // 4. 千雪 · 甜酷猫系短下庭V脸 (Cat Short-V: Sharp V-jaw, ultra-short lower third, full cheeks, tilted cat eyes)
+  female_3: { jawVLine: 0.82, chinLength: -0.85, cheekSoftness: 0.75, noseBridge: 0.55, eyeAlmond: 0.85, eyeTilt: 0.88, lipFullness: 0.0 },
+  qianxue: { jawVLine: 0.82, chinLength: -0.85, cheekSoftness: 0.75, noseBridge: 0.55, eyeAlmond: 0.85, eyeTilt: 0.88, lipFullness: 0.0 },
+  // 5. 沈知微 · 知性御姐修长菱形脸 (Regal Long Diamond: Elongated lower third, sculpted cheekbones, tall refined nose)
+  female_gentle: { jawVLine: 0.45, chinLength: 0.85, cheekSoftness: -0.68, noseBridge: 0.75, eyeAlmond: 0.18, eyeTilt: 0.32, lipFullness: 0.0 },
+  shenzhiwei: { jawVLine: 0.45, chinLength: 0.85, cheekSoftness: -0.68, noseBridge: 0.75, eyeAlmond: 0.18, eyeTilt: 0.32, lipFullness: 0.0 },
+  // 6. 方尧平 · 广东怀集19岁高考女状元 (Lingnan Campus Top-Scorer: Youthful 19yo soft oval face, bright smiling apple cheeks, gentle crescent eyes)
+  fangyaoping: { jawVLine: 0.18, chinLength: -0.22, cheekSoftness: 0.62, noseBridge: 0.16, eyeAlmond: 0.38, eyeTilt: -0.08, lipFullness: 0.08 },
 };
 
 const characterSkinOverlayCache = new Map();
 
+/**
+ * Overlays character-specific beauty marks (e.g., 初夏's 3 right-cheek moles, 林汐's tear mole,
+ * 苏晚's classical beauty mark, 千雪's nose-bridge mole & winged liner, 沈知微's left-cheek mole)
+ * onto the 2048x2048 base skin texture without mutating the shared GLB image.
+ */
 function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
   if (!baseSkinMap?.image || typeof document === 'undefined') return baseSkinMap;
   const img = baseSkinMap.image;
@@ -276,7 +313,7 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
 
-  const paintMole = (u, v, radPx = 2.4, alpha = 0.72) => {
+  const paintMole = (u, v, radPx = 2.6, alpha = 0.78) => {
     const cx = u * w;
     const cy = v * h;
     const grad = ctx.createRadialGradient(cx, cy, 0.2, cx, cy, radPx);
@@ -290,17 +327,23 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
   };
 
   if (presetKey === 'user_photo' || presetKey === 'chuxia') {
-    paintMole(0.8847, 0.5543, w * 0.0014, 0.72);
-    paintMole(0.8895, 0.5640, w * 0.0015, 0.75);
-    paintMole(0.9042, 0.5718, w * 0.0014, 0.72);
+    // 初夏: Signature 3 delicate beauty marks on her right cheek (matching reference photo `image-1.png`)
+    paintMole(0.8847, 0.5543, w * 0.0016, 0.76);
+    paintMole(0.8895, 0.5640, w * 0.0017, 0.80);
+    paintMole(0.9042, 0.5718, w * 0.0016, 0.78);
   } else if (presetKey === 'female_realistic' || presetKey === 'linxi') {
-    paintMole(0.8475, 0.4685, w * 0.0014, 0.76);
+    // 林汐: High-fashion outer-left-eye tear mole (左眼尾清冷泪痣)
+    paintMole(0.8475, 0.4685, w * 0.0015, 0.82);
   } else if (presetKey === 'female_2' || presetKey === 'suwan') {
-    paintMole(0.8492, 0.5562, w * 0.0013, 0.74);
+    // 苏晚: Classical lower-right-eyelid beauty mark (右眼下古典美人痣) + warm peach-blossom blush boost
+    paintMole(0.8492, 0.5562, w * 0.0014, 0.78);
   } else if (presetKey === 'female_3' || presetKey === 'qianxue') {
-    paintMole(0.8615, 0.5138, w * 0.0013, 0.75);
+    // 千雪: Cute-cool nose-bridge mole (鼻梁甜酷小痣) + subtle cheekbone mole
+    paintMole(0.8615, 0.5138, w * 0.0014, 0.80);
+    paintMole(0.8680, 0.4640, w * 0.0013, 0.72);
   } else if (presetKey === 'female_gentle' || presetKey === 'shenzhiwei') {
-    paintMole(0.8915, 0.4775, w * 0.0014, 0.74);
+    // 沈知微: Intellectual left-cheek beauty mark (左颊知性美人痣)
+    paintMole(0.8915, 0.4775, w * 0.0015, 0.78);
   }
 
   const tex = new THREE.CanvasTexture(canvas);
@@ -316,107 +359,57 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
 }
 
 /**
- * Real-Time Interactive Player Hair Editing & Fine-Tuning ("允许玩家编辑微调")
+ * Applies facial bone morphs, forensic dead-person expressions ("死人各种表情"),
+ * and 3D hair morphs across all morph-enabled meshes inside `rootGroup`.
  */
-export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
-  const hairGroup = rootGroup?.getObjectByName('HairGroup');
-  if (!hairGroup) return;
 
-  const bangsLen = Math.max(-0.6, Math.min(0.9, Number(morphs.bangsLength ?? 0)));
-  const bangsPart = Math.max(-0.6, Math.min(0.6, Number(morphs.bangsParting ?? 0)));
-  const hairVol = Math.max(-0.5, Math.min(0.9, Number(morphs.hairVolume ?? 0)));
-  const hairLen = Math.max(-0.6, Math.min(0.9, Number(morphs.hairLength ?? 0)));
-  const sideburn = Math.max(-0.6, Math.min(0.7, Number(morphs.sideburnLock ?? 0)));
-  const hairFlare = Math.max(-0.7, Math.min(0.7, Number(morphs.hairFlare ?? 0)));
-  const offX = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetX ?? 0)));
-  const offY = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetY ?? 0)));
-  const offZ = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetZ ?? 0)));
-  const uScale = Math.max(0.82, Math.min(1.22, Number(morphs.hairScale ?? 1.0)));
-  const neckClear = Math.max(0.0, Math.min(1.0, Number(rootGroup.userData.neckClearance ?? 0.45)));
-
-  hairGroup.position.set(offX * 0.035, offY * 0.035, offZ * 0.035);
-  hairGroup.scale.setScalar(uScale);
-
-  const hcX = 0.0, hcY = 0.025, hcZ = 0.0;
-
-  hairGroup.traverse((child) => {
-    if (!child.isMesh || !child.geometry?.attributes?.position) return;
-    const geo = child.geometry;
-    const posAttr = geo.attributes.position;
-    if (!geo.userData.basePositions) {
-      geo.userData.basePositions = Float32Array.from(posAttr.array);
+// Stage 18 · 头皮根层跟随头部 Morph：换表情/捏脸时，Groom_ScalpRootDensity 必须和
+// HeadSkinMesh 用同一组 morph 权重重算顶点，否则额头皮肤动了、发际层不动 -> 露头皮。
+function syncScalpRootLayerToMorphs(rootGroup) {
+  const head = rootGroup.getObjectByName('HeadSkinMesh');
+  const root = rootGroup.getObjectByName('Groom_ScalpRootDensity');
+  if (!head || !root) return;
+  const hg = head.geometry, rg = root.geometry;
+  const hp = hg?.attributes?.position, rp = rg?.attributes?.position;
+  if (!hp || !rp || hp.count !== rp.count) return;
+  if (!rg.userData.basePositions) rg.userData.basePositions = Float32Array.from(rp.array);
+  const out = rp.array;
+  out.set(rg.userData.basePositions);
+  const morphAttrs = hg.morphAttributes?.position || [];
+  const dict = head.morphTargetDictionary, infl = head.morphTargetInfluences;
+  const relative = hg.morphTargetsRelative !== false;
+  const vCount = hp.count;
+  if (dict && infl) {
+    for (const [, idx] of Object.entries(dict)) {
+      const w = infl[idx];
+      if (!w || !Number.isFinite(w) || Math.abs(w) < 1e-5) continue;
+      const ma = morphAttrs[idx];
+      if (!ma || ma.count < vCount) continue;
+      // CRITICAL FIX (Stage 20): `ma` in `daz_asian_head_base.glb` is an InterleavedBufferAttribute
+      // with normalized Int16Array (stride=4). Using `ma.getX(v)/getY(v)/getZ(v)` properly
+      // de-interleaves and denormalizes (/32767.0) instead of reading raw Int16 with stride 3!
+      for (let v = 0; v < vCount; v++) {
+        let dx = relative ? ma.getX(v) : ma.getX(v) - hp.getX(v);
+        let dy = relative ? ma.getY(v) : ma.getY(v) - hp.getY(v);
+        let dz = relative ? ma.getZ(v) : ma.getZ(v) - hp.getZ(v);
+        if (!Number.isFinite(dx) || !Number.isFinite(dy) || !Number.isFinite(dz)) continue;
+        dx = Math.max(-0.025, Math.min(0.025, dx));
+        dy = Math.max(-0.025, Math.min(0.025, dy));
+        dz = Math.max(-0.025, Math.min(0.025, dz));
+        const i3 = v * 3;
+        out[i3] += dx * w;
+        out[i3 + 1] += dy * w;
+        out[i3 + 2] += dz * w;
+      }
     }
-    const base = geo.userData.basePositions;
-    const out = posAttr.array;
-    const count = posAttr.count;
-
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      let x = base[i3];
-      let y = base[i3 + 1];
-      let z = base[i3 + 2];
-
-      if (Math.abs(hairVol) > 1e-4 && y > -0.02) {
-        const wCrown = Math.min(1.0, Math.max(0.0, (y + 0.02) / 0.09));
-        const rx = x - hcX;
-        const ry = y - hcY;
-        const rz = z - hcZ;
-        x += rx * (hairVol * 0.16 * wCrown);
-        if (ry > 0) y += ry * (hairVol * 0.22 * wCrown);
-        z += rz * (hairVol * 0.12 * wCrown);
-      }
-
-      if ((Math.abs(bangsLen) > 1e-4 || Math.abs(bangsPart) > 1e-4) && z > 0.042 && y > -0.025 && y < 0.092 && Math.abs(x) < 0.074) {
-        const wZ = Math.min(1.0, (z - 0.042) / 0.035);
-        const wX = Math.max(0.0, 1.0 - Math.pow(Math.abs(x) / 0.072, 2.0));
-        const wTip = Math.min(1.0, Math.max(0.0, (0.088 - y) / 0.055));
-        const wBangs = wZ * wX * wTip;
-        if (Math.abs(bangsLen) > 1e-4) {
-          y -= bangsLen * 0.026 * wBangs;
-          z += Math.max(0, bangsLen) * 0.003 * wBangs;
-        }
-        if (Math.abs(bangsPart) > 1e-4) {
-          const signX = x >= 0 ? 1.0 : -1.0;
-          const centerFalloff = Math.exp(-Math.pow(x / 0.038, 2.0));
-          x += signX * bangsPart * 0.024 * wTip * wZ * (0.35 + 0.65 * centerFalloff);
-          y += Math.max(0, bangsPart) * 0.008 * wTip * wZ * centerFalloff;
-        }
-      }
-
-      if (Math.abs(sideburn) > 1e-4 && y < 0.045 && y > -0.095 && z > -0.02 && Math.abs(x) > 0.035) {
-        const wY = Math.exp(-Math.pow((y + 0.025) / 0.048, 2.0));
-        const wFront = Math.min(1.0, Math.max(0.0, (z + 0.02) / 0.05));
-        const signX = x >= 0 ? 1.0 : -1.0;
-        x -= signX * sideburn * 0.020 * wY * wFront;
-        z += sideburn * 0.008 * wY * wFront;
-      }
-
-      if (y < 0.015) {
-        const depthBelow = 0.015 - y;
-        const wLow = Math.min(1.0, depthBelow / 0.065);
-        if (Math.abs(hairLen) > 1e-4) {
-          y -= depthBelow * (hairLen * 0.48);
-        }
-        if (Math.abs(hairFlare) > 1e-4) {
-          const radXZ = Math.hypot(x, z) || 1e-5;
-          const flareDisp = hairFlare * 0.028 * wLow * wLow;
-          x += (x / radXZ) * flareDisp;
-          z += (z / radXZ) * flareDisp * 0.65;
-        }
-        if (neckClear > 0.55 && y < -0.065) {
-          const lift = (neckClear - 0.55) * 0.045 * Math.min(1.0, (-0.065 - y) / 0.05);
-          y += lift;
-        }
-      }
-
-      out[i3] = x;
-      out[i3 + 1] = y;
-      out[i3 + 2] = z;
-    }
-
-    posAttr.needsUpdate = true;
-    geo.computeBoundingSphere();
-  });
+  }
+  let maxAbs = 0;
+  for (let i = 0; i < out.length; i++) maxAbs = Math.max(maxAbs, Math.abs(out[i]));
+  if (!Number.isFinite(maxAbs) || maxAbs > 0.6) {
+    out.set(rg.userData.basePositions);
+  }
+  rp.needsUpdate = true;
+  rg.computeBoundingSphere();
 }
 
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
@@ -426,59 +419,63 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const presetKey = rootGroup.userData.basePreset || 'user_photo';
   const bias = PRESET_MORPH_BIASES[presetKey] || PRESET_MORPH_BIASES.user_photo;
 
-  const clampHarmony = (val, maxAbs = 0.36) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
+  const jawV = (m.jawVLine ?? -(m.jawWidth ?? 0)) + bias.jawVLine * 0.85;
+  const chin = (m.chinLength ?? 0) + (bias.chinLength ?? 0) * 0.85;
+  const cheek = (m.cheekSoftness ?? m.cheekboneFullness ?? 0) + bias.cheekSoftness * 0.85;
+  const nose = (m.noseBridge ?? m.noseBridgeHeight ?? 0) + bias.noseBridge * 0.85;
+  const eye = (m.eyeAlmond ?? m.eyeSize ?? 0) + bias.eyeAlmond * 0.85;
+  const eyeTilt = (m.eyeTilt ?? 0) + (bias.eyeTilt ?? 0) * 0.85;
+  const lip = (m.lipFullness ?? 0) + bias.lipFullness * 0.4;
+  const forehead = Number(m.foreheadHeight ?? 0);
+  const ear = Number(m.earSize ?? 0);
 
-  const jawV = clampHarmony(m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine));
-  const chin = clampHarmony(m.chinLength ?? bias.chinLength);
-  const cheek = clampHarmony(m.cheekSoftness ?? m.cheekboneFullness ?? bias.cheekSoftness);
-  const nose = clampHarmony(m.noseBridge ?? m.noseBridgeHeight ?? bias.noseBridge);
-  const eye = clampHarmony(m.eyeAlmond ?? m.eyeSize ?? bias.eyeAlmond);
-  const eyeTilt = clampHarmony(m.eyeTilt ?? bias.eyeTilt);
-  const lip = clampHarmony(m.lipFullness ?? bias.lipFullness, 0.28);
-  const forehead = clampHarmony(m.foreheadHeight ?? 0, 0.25);
-  const ear = clampHarmony(m.earSize ?? 0, 0.30);
-
+  // Forensic Post-Mortem Expression Preset + Fine-Tuning Sliders
   const exprId = m.deadExpression || rootGroup.userData.deadExpression || 'dead_calm';
   rootGroup.userData.deadExpression = exprId;
   const exprPreset = FORENSIC_EXPRESSION_PRESETS.find((p) => p.id === exprId) || FORENSIC_EXPRESSION_PRESETS[0];
   const presetW = exprPreset.weights || {};
 
-  const jawOpenVal = Math.max(0, Math.min(0.85, Number(m.jawOpen ?? 0)));
-  const jawSideVal = Math.max(0, Math.min(0.85, Number(m.jawSide ?? 0)));
-  const tongueOutVal = Math.max(0, Math.min(0.85, Number(m.tongueOut ?? 0)));
-  const eyeRollUpVal = Math.max(0, Math.min(0.85, Number(m.eyeRollUp ?? 0)));
+  const jawOpenVal = Math.max(0, Math.min(1.2, Number(m.jawOpen ?? 0)));
+  const jawSideVal = Math.max(0, Math.min(1.2, Number(m.jawSide ?? 0)));
+  const tongueOutVal = Math.max(0, Math.min(1.2, Number(m.tongueOut ?? 0)));
+  const eyeRollUpVal = Math.max(0, Math.min(1.2, Number(m.eyeRollUp ?? 0)));
   const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? 0)));
-  const eyeWideVal = Math.max(0, Math.min(0.85, Number(m.eyeWide ?? 0)));
+  const eyeWideVal = Math.max(0, Math.min(1.0, Number(m.eyeWide ?? 0)));
+
+  // Hair 3D morphs
+  const hairLenVal = Math.max(-0.5, Math.min(1.2, Number(m.hairLength ?? 0)));
+  const hairVolVal = Math.max(-0.5, Math.min(1.2, Number(m.hairVolume ?? 0)));
+  const bangsLenVal = Math.max(-0.5, Math.min(1.2, Number(m.bangsLength ?? 0)));
 
   const targetWeights = {
-    face_jaw_width_decr: jawV > 0 ? jawV : 0,
-    face_jaw_width_incr: jawV < 0 ? -jawV : 0,
-    face_chin_incr: chin > 0 ? chin : 0,
-    face_chin_decr: chin < 0 ? -chin : 0,
-    face_cheekbones_incr: cheek > 0 ? cheek : 0,
-    face_cheekbones_decr: cheek < 0 ? -cheek : 0,
-    face_nose_height_incr: nose > 0 ? nose : 0,
-    face_nose_height_decr: nose < 0 ? -nose : 0,
-    face_nose_width_decr: nose > 0 ? nose * 0.55 : 0,
-    face_nose_width_incr: nose < 0 ? -nose * 0.55 : 0,
-    face_eye_size_incr: eye > 0 ? eye : 0,
-    face_eye_size_decr: eye < 0 ? -eye : 0,
-    face_eye_tilt_incr: eyeTilt > 0 ? eyeTilt : 0,
-    face_eye_tilt_decr: eyeTilt < 0 ? -eyeTilt : 0,
-    face_lips_incr: lip > 0 ? lip : 0,
-    face_lips_decr: lip < 0 ? -lip : 0,
-    face_mouth_width_decr: 0,
-    face_mouth_width_incr: 0,
-    face_forehead_incr: forehead > 0 ? forehead : 0,
-    face_forehead_decr: forehead < 0 ? -forehead : 0,
-    face_ear_size_incr: ear > 0 ? ear : 0,
-    face_ear_size_decr: ear < 0 ? -ear : 0,
+    face_jaw_width_decr: jawV > 0 ? Math.min(1.15, jawV * 1.15) : 0,
+    face_jaw_width_incr: jawV < 0 ? Math.min(1.15, -jawV * 1.15) : 0,
+    face_chin_incr: chin > 0 ? Math.min(1.10, chin * 1.10) : 0,
+    face_chin_decr: chin < 0 ? Math.min(1.10, -chin * 1.10) : 0,
+    face_cheekbones_incr: cheek > 0 ? Math.min(1.15, cheek * 1.15) : 0,
+    face_cheekbones_decr: cheek < 0 ? Math.min(1.15, -cheek * 1.15) : 0,
+    face_nose_height_incr: nose > 0 ? Math.min(1.15, nose * 1.15) : 0,
+    face_nose_height_decr: nose < 0 ? Math.min(1.15, -nose * 1.15) : 0,
+    face_nose_width_decr: nose > 0 ? Math.min(0.9, nose * 0.75) : 0,
+    face_nose_width_incr: nose < 0 ? Math.min(0.9, -nose * 0.75) : 0,
+    face_eye_size_incr: eye > 0 ? Math.min(0.95, eye * 1.0) : 0,
+    face_eye_size_decr: eye < 0 ? Math.min(0.95, -eye * 1.0) : 0,
+    face_eye_tilt_incr: eyeTilt > 0 ? Math.min(1.0, eyeTilt * 1.05) : 0,
+    face_eye_tilt_decr: eyeTilt < 0 ? Math.min(1.0, -eyeTilt * 1.05) : 0,
+    face_lips_incr: lip > 0 ? Math.min(0.75, lip * 0.85) : 0,
+    face_lips_decr: lip < 0 ? Math.min(0.95, -lip * 1.15) : 0,
+    face_mouth_width_decr: 0, // Never pinch mouth width into a pout!
+    face_forehead_incr: forehead > 0 ? Math.min(1.0, forehead * 1.2) : 0,
+    face_forehead_decr: forehead < 0 ? Math.min(1.0, -forehead * 1.2) : 0,
+    face_ear_size_incr: ear > 0 ? Math.min(1.0, ear * 1.2) : 0,
+    face_ear_size_decr: ear < 0 ? Math.min(1.0, -ear * 1.2) : 0,
     blink_left: eyeCloseVal,
     blink_right: eyeCloseVal,
     look_left: 0,
     look_right: 0,
     look_up: eyeRollUpVal * 0.65,
     look_down: 0,
+    // 10 Forensic Post-Mortem Expression Morph Targets
     expr_serene: Number(presetW.expr_serene ?? 0),
     expr_hollow: Number(presetW.expr_hollow ?? 0),
     expr_shock: Number(presetW.expr_shock ?? 0),
@@ -489,6 +486,10 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     jaw_side: jawSideVal,
     tongue_out: tongueOutVal,
     eye_wide: eyeWideVal,
+    // Hair 3D morphs
+    hair_length: hairLenVal,
+    hair_volume: hairVolVal,
+    bangs_length: bangsLenVal,
   };
 
   rootGroup.traverse((child) => {
@@ -502,7 +503,8 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     }
   });
 
-  applyArtistHairFineTuning(rootGroup, m);
+  applyCurveGroomShape(rootGroup, m);
+  syncScalpRootLayerToMorphs(rootGroup);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
@@ -519,72 +521,174 @@ export function applyHeadMorphsToGeometry(geometryOrMesh, basePositions, morphs 
   }
 }
 
+/**
+ * Lifeless Specimen Expression Mode ("不要眨眼，死人表情默认那种感觉"):
+ * Keeps eyelids and eyeballs 100% motionless in their configured post-mortem state.
+ */
 export function updateHeadLifeAnimation() {
-  // Motionless preserved specimen feel
+  // Intentionally motionless for authentic preserved specimen feel
 }
 
 export function triggerCollectibleBlink() {
-  // Disabled ("不要眨眼")
+  // Intentionally disabled ("不要眨眼")
 }
 
 function computeSkinTintColor(skinToneHex = '#ffe8df') {
   const c = new THREE.Color(skinToneHex || '#ffe8df');
-  const r = Math.min(1.04, Math.max(0.86, 0.78 + c.r * 0.24));
-  const g = Math.min(1.03, Math.max(0.84, 0.78 + c.g * 0.24));
-  const b = Math.min(1.03, Math.max(0.83, 0.78 + c.b * 0.25));
+  const r = Math.min(1.06, Math.max(0.82, 0.75 + c.r * 0.27));
+  const g = Math.min(1.05, Math.max(0.79, 0.75 + c.g * 0.28));
+  const b = Math.min(1.05, Math.max(0.78, 0.75 + c.b * 0.29));
   return new THREE.Color(r, g, b);
 }
 
-export function resolveRealHairStyle(styleName = 'hair_bob01') {
+export function resolveRealHairStyle(styleName = 'groom_photo_tied') {
+  if (
+    [
+      'groom_photo_tied',
+      'groom_center_long',
+      'groom_low_chignon',
+      'groom_air_bob',
+      'groom_clavicle_bob',
+      'groom_hime_cut',
+      'groom_high_ponytail',
+      'groom_pixie_short',
+    ].includes(styleName)
+  ) {
+    return styleName;
+  }
   if (styleName === 'none') return 'none';
   const stripped = String(styleName).replace(/^real_/, '');
   const legacyMap = {
-    groom_photo_tied: 'hair_bob01',
-    groom_center_long: 'hair_long01',
-    groom_low_chignon: 'hair_braid01',
-    groom_hime_cut: 'daz_hair_hime',
-    groom_clavicle_bob: 'daz_hair_curtain_wave',
-    groom_air_bob: 'hair_bob01',
-    groom_high_ponytail: 'hair_ponytail01',
-    groom_pixie_short: 'hair_user_photo',
-    user_bangs: 'hair_bob01',
+    user_bangs: 'hair_user_photo',
     photo_tied_wisps: 'hair_user_photo',
     long_straight: 'hair_long01',
-    long_waves: 'daz_hair_curtain_wave',
-    hime_cut: 'daz_hair_hime',
-    hair_hime_cut: 'daz_hair_hime',
-    clavicle_layer: 'hair_short04',
-    hair_clavicle_layer: 'hair_short04',
-    butterfly_halfup: 'hair_long01',
-    hair_butterfly_halfup: 'hair_long01',
-    sleek_bob: 'hair_bob02',
-    short_bob: 'hair_bob01',
+    long_waves: 'hair_short04',
+    hime_cut: 'groom_hime_cut',
+    hair_hime_cut: 'groom_hime_cut',
+    clavicle_layer: 'groom_clavicle_bob',
+    hair_clavicle_layer: 'groom_clavicle_bob',
+    butterfly_halfup: 'groom_center_long',
+    hair_butterfly_halfup: 'groom_center_long',
+    sleek_bob: 'hair_bob01',
+    short_bob: 'hair_bob02',
     low_chignon: 'hair_braid01',
     high_ponytail: 'hair_ponytail01',
-    soft_waves: 'daz_hair_hazel_wave',
+    soft_waves: 'hair_braid01',
   };
   const mapped = legacyMap[stripped] || legacyMap[styleName] || stripped;
   const valid = new Set([
     'hair_user_photo',
+    'hair_long01',
     'hair_bob01',
     'hair_bob02',
-    'hair_short02',
-    'hair_long01',
     'hair_ponytail01',
     'hair_braid01',
+    'hair_short02',
     'hair_short04',
-    'daz_hair_hime',
-    'daz_hair_curtain_wave',
-    'daz_hair_wavy_bob',
-    'daz_hair_side_long',
-    'daz_hair_hazel_wave',
-    'daz_hair_twin_buns',
-    'daz_hair_glam_wave',
-    'daz_hair_asym_short',
+    'groom_photo_tied',
+    'groom_center_long',
+    'groom_low_chignon',
+    'groom_air_bob',
+    'groom_clavicle_bob',
+    'groom_hime_cut',
+    'groom_high_ponytail',
+    'groom_pixie_short',
   ]);
-  return valid.has(mapped) ? mapped : 'hair_bob01';
+  return valid.has(mapped) ? mapped : 'hair_user_photo';
 }
 
+function resolveUnderlayerGlbName(styleName) {
+  const map = {
+    groom_photo_tied: 'hair_user_photo',
+    hair_user_photo: 'hair_user_photo',
+    groom_center_long: 'hair_short04',
+    hair_short04: 'hair_short04',
+    hair_long01: 'hair_long01',
+    groom_low_chignon: 'hair_braid01',
+    hair_braid01: 'hair_braid01',
+    groom_air_bob: 'hair_bob01',
+    hair_bob01: 'hair_bob01',
+    groom_clavicle_bob: 'hair_bob02',
+    hair_bob02: 'hair_bob02',
+    groom_hime_cut: 'hair_bob02',
+    groom_high_ponytail: 'hair_ponytail01',
+    hair_ponytail01: 'hair_ponytail01',
+    groom_pixie_short: 'hair_short02',
+    hair_short02: 'hair_short02',
+  };
+  return map[styleName] || 'hair_user_photo';
+}
+
+async function buildHairVolumeUnderlayer(resolvedStyle, config = {}) {
+  const glbName = resolveUnderlayerGlbName(resolvedStyle);
+  const hairUrl = `/models/${glbName}.glb`;
+  const buf = await fetchGlbArrayBuffer(hairUrl);
+  const gltf = await parseGlbBuffer(buf);
+  const underGroup = new THREE.Group();
+  underGroup.name = 'Groom_VolumeUnderlayer';
+  // Slightly inset so outer 3D silk curve ribbons layer seamlessly above the volume shell
+  underGroup.scale.set(0.992, 0.994, 0.992);
+
+  const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#191518';
+  const baseColor = new THREE.Color(hairColorHex);
+  const displayColor = baseColor.clone().lerp(new THREE.Color(0x3a2b2d), 0.16);
+  const sheenIntensity = Number(config.hairSheen ?? 0.88);
+
+  gltf.scene.traverse((child) => {
+    if (!child.isMesh) return;
+    child.userData.normalRepair = repairHairNormals(child.geometry);
+    const origMat = child.material;
+    let mapTex = origMat?.map || null;
+    let roughTex = null;
+    if (mapTex) {
+      mapTex.colorSpace = THREE.SRGBColorSpace;
+      mapTex.anisotropy = 8;
+      try {
+        const img = mapTex.image;
+        const iw = img ? img.width || img.naturalWidth || 0 : 0;
+        if (img && iw > 0) {
+          const detail = getHairStrandTextures(mapTex, `${hairUrl}|${origMat.name}|${mapTex.name}`);
+          mapTex = detail.map;
+          roughTex = detail.roughnessMap;
+        }
+      } catch (_) {
+        roughTex = null;
+      }
+    }
+    const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
+    const hairEnvI = 0.28 + Math.min(0.32, hairLum * 0.50);
+    child.material = new THREE.MeshPhysicalMaterial({
+      map: mapTex,
+      roughnessMap: roughTex,
+      color: displayColor,
+      roughness: roughTex ? 1.0 : Math.max(0.40, 0.64 - sheenIntensity * 0.16),
+      metalness: 0.0,
+      sheen: Math.min(0.26, sheenIntensity * 0.28),
+      sheenRoughness: 0.52,
+      sheenColor: displayColor.clone().multiplyScalar(1.12),
+      anisotropy: 0.45 + sheenIntensity * 0.30,
+      anisotropyRotation: Math.PI / 2,
+      clearcoat: 0.06,
+      clearcoatRoughness: 0.44,
+      specularIntensity: 0.55,
+      envMapIntensity: hairEnvI,
+      transparent: false,
+      alphaTest: mapTex ? 0.14 : 0.0,
+      alphaToCoverage: true,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+    });
+    child.material.userData.builtInHair = true;
+    child.castShadow = true;
+    child.receiveShadow = true;
+    child.renderOrder = 1;
+  });
+
+  underGroup.add(gltf.scene);
+  return underGroup;
+}
+
+/** Dispose an assembled tree without invalidating shared procedural textures. */
 export function disposeHeadNode(node) {
   if (!node) return;
   const geometries = new Set(), materials = new Set(), textures = new Set();
@@ -606,49 +710,36 @@ export function disposeHeadNode(node) {
 }
 
 export function updateHairSheen(node, value) {
-  const sheen = Math.max(0.2, Math.min(1.0, Number(value) || 0.88));
+  const sheen = Math.max(.2, Math.min(1, Number(value) || .88));
   node?.getObjectByName('HairGroup')?.traverse(child => {
     if (!child.isMesh || !child.material?.userData?.builtInHair) return;
-    child.material.sheen = Math.min(0.32, sheen * 0.32);
-    child.material.roughness = Math.max(0.28, 0.56 - sheen * 0.22);
-    child.material.anisotropy = 0.42 + sheen * 0.38;
-    child.material.clearcoat = 0.06 + sheen * 0.10;
+    if (child.material.userData.curveGroom) {
+      child.material.roughness = .60 - sheen * .18;
+      child.material.specularIntensity = .30 + sheen * .20;
+      return;
+    }
+    child.material.sheen = Math.min(.24, sheen * .25);
+    child.material.roughness = child.material.roughnessMap ? 1 : .65 - sheen * .12;
+    child.material.anisotropy = .35 + sheen * .35;
   });
-}
-
-function computeTrueHairDisplayColor(hairColorHex = '#121216') {
-  const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
-  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16']);
-  const baseColor = new THREE.Color(legacyDarkSet.has(normalizedHex) ? '#121216' : normalizedHex);
-  const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
-  if (lum < 0.08) {
-    return new THREE.Color('#1a1b20');
-  }
-  return baseColor;
-}
-
-function fitImportedHairScene(scene) {
-  const box = new THREE.Box3().setFromObject(scene);
-  const size = box.getSize(new THREE.Vector3());
-  const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z, 1e-4);
-  if (maxDim > 0.85 || maxDim < 0.06) {
-    const scale = 0.24 / maxDim;
-    scene.scale.multiplyScalar(scale);
-    scene.position.set(-center.x * scale, 0.035 - center.y * scale, -center.z * scale);
-  }
 }
 
 export async function attachRealHairModel(rootGroup, config = {}) {
   const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
   if (!modelContainer) return null;
 
-  rootGroup.userData.neckClearance = Number(config.neckClearance ?? rootGroup.userData.neckClearance ?? 0.45);
+  // Remove legacy shell even when changing to bald / a failed hair load.
+  const legacyCap = modelContainer.getObjectByName('ScalpCap');
+  if (legacyCap) {
+    legacyCap.removeFromParent();
+    legacyCap.geometry.dispose();
+    legacyCap.material.dispose();
+  }
   const request = (rootGroup.userData.hairRequestSerial || 0) + 1;
   rootGroup.userData.hairRequestSerial = request;
   const oldHair = modelContainer.getObjectByName('HairGroup');
 
-  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_bob01';
+  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_user_photo';
   const resolvedStyle = resolveRealHairStyle(rawStyle);
   if (resolvedStyle === 'none' && !config.customHairUrl) {
     disposeHeadNode(oldHair);
@@ -657,94 +748,120 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     return null;
   }
 
+  const groomId = !config.customHairUrl ? groomStyleFor(resolvedStyle) : null;
+  if (groomId) {
+    try {
+      const groom = await buildCurveGroom(groomId, rootGroup.getObjectByName('HeadSkinMesh'), config);
+      if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(groom); return null; }
+      disposeHeadNode(oldHair);
+      modelContainer.add(groom);
+      rootGroup.userData.currentHairStyle = groomId;
+      rootGroup.userData.groomStats = groom.userData.groom;
+      if (rootGroup.userData.currentMorphs) applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
+      return groom;
+    } catch (error) {
+      console.error('Groom 曲线构建失败', error);
+      throw error; // Do not silently claim a failed new groom is the old hair.
+    }
+  }
   delete rootGroup.userData.groomStats;
   const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
-  const isCustomObj = Boolean(config.customHairUrl && (config.customHairType === 'obj' || String(config.customHairUrl).toLowerCase().endsWith('.obj')));
 
   try {
-    let loadedScene = null;
-    if (isCustomObj) {
-      const txt = await fetchObjText(hairUrl);
-      loadedScene = objLoader.parse(txt);
-      fitImportedHairScene(loadedScene);
-    } else {
-      const buf = await fetchGlbArrayBuffer(hairUrl);
-      const gltf = await parseGlbBuffer(buf);
-      loadedScene = gltf.scene;
-      if (config.customHairUrl) fitImportedHairScene(loadedScene);
-    }
-
-    if (rootGroup.userData.hairRequestSerial !== request) {
-      disposeHeadNode(loadedScene);
-      return null;
-    }
-
+    const buf = await fetchGlbArrayBuffer(hairUrl);
+    const gltf = await parseGlbBuffer(buf);
+    if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(gltf.scene); return null; }
     const hairGroup = new THREE.Group();
     hairGroup.name = 'HairGroup';
 
-    const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#121216';
-    const displayColor = computeTrueHairDisplayColor(hairColorHex);
-    const sheenIntensity = Number(config.hairSheen ?? 0.90);
-    const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
-    const isJetBlack = hairLum < 0.08;
-    const sheenCol = isJetBlack
-      ? new THREE.Color('#303440')
-      : displayColor.clone().multiplyScalar(1.22);
+    const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#191518';
+    const baseColor = new THREE.Color(hairColorHex);
+    // Keep black/brown hair dark; a heavy grey tint + clearcoat made the demo
+    // hair read as a grey plastic helmet under the studio environment.
+    const displayColor = baseColor.clone().lerp(new THREE.Color(0x493a3c), 0.18);
+    const sheenIntensity = Number(config.hairSheen ?? 0.88);
 
-    let totalVerts = 0;
-    let totalTris = 0;
-
-    loadedScene.traverse((child) => {
-      if (!child.isMesh) return;
-      const g = child.geometry;
-      if (g?.attributes?.position) {
-        totalVerts += g.attributes.position.count;
-        totalTris += g.index ? Math.floor(g.index.count / 3) : Math.floor(g.attributes.position.count / 3);
+    gltf.scene.traverse((child) => {
+      if (child.isMesh) {
+        if (config.customHairUrl) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(prepareImportedMaterial);
+          child.castShadow = child.receiveShadow = true;
+          return; // User-owned atlases/PBR must never be replaced by demo textures.
+        }
+        child.userData.normalRepair = repairHairNormals(child.geometry);
+        const origMat = child.material;
+        let mapTex = origMat?.map || null;
+        let roughTex = null;
+        if (mapTex) {
+          mapTex.colorSpace = THREE.SRGBColorSpace;
+          mapTex.anisotropy = 8;
+          // Stage 10：GLB 内 256² 灰糊发丝 → 运行时重制 1024² 脆发丝 + 配准粗糙图
+          // （保留 GLB alpha 镂空；displayColor 照常染色；失败则回退原图）
+          try {
+            const img = mapTex.image;
+            const iw = img ? img.width || img.naturalWidth || 0 : 0;
+            if (img && iw > 0) {
+              const detail = getHairStrandTextures(mapTex, `${hairUrl}|${origMat.name}|${mapTex.name}`);
+              mapTex = detail.map;
+              roughTex = detail.roughnessMap;
+            }
+          } catch (e) {
+            console.warn('Hair detail enhancement unavailable; retaining original atlas', e);
+            roughTex = null;
+          }
+        }
+        // Stage 8b 发丝束感：黑发底要深但束间要有对比——环境光托底防压黑 + 强各向异性拉出束状挑染高光，
+        // 釉面压到最低只留紧致闪点（去头盔感），绒光放宽变柔（去单团假高光）
+        const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
+        // Stage 8b+9 合并甜点：Stage 9 调暗了整套灯阵（exposure 1.0/弱fill），发丝取中间值——
+        // 既不回到 8a 的黑压碎糊团（env 0.32），也不用 Stage 9 的 0.16 极暗（用户刚抱怨过糊）；
+        // 强各向异性 0.85 保留束状挑染（束感核心），spec 取中保证弱灯下仍有束闪
+        const hairEnvI = 0.32 + Math.min(0.38, hairLum * 0.60);
+        const hairSheen = Math.min(0.30, sheenIntensity * 0.32);
+        child.material = new THREE.MeshPhysicalMaterial({
+          map: mapTex,
+          roughnessMap: roughTex,
+          color: displayColor,
+          // 有 roughnessMap 时标量置 1（粗糙完全由发丝纹理携带）
+          roughness: roughTex ? 1.0 : Math.max(0.36, 0.62 - sheenIntensity * 0.16),
+          metalness: 0.0,
+          sheen: hairSheen,
+          sheenRoughness: 0.55,
+          sheenColor: displayColor.clone().multiplyScalar(1.15),
+          anisotropy: 0.35 + sheenIntensity * 0.35,
+          anisotropyRotation: Math.PI / 2,
+          clearcoat: 0.09,
+          clearcoatRoughness: 0.40,
+          specularIntensity: 0.75,
+          envMapIntensity: hairEnvI,
+          // Stage 10：发片正确做法——不透明 + alphaTest 脆边 + alphaToCoverage 柔边，
+          // 告别 transparent 排序错乱造成的团块/光晕；depthWrite 保证发片间正确遮挡
+          transparent: false,
+          alphaTest: mapTex ? 0.14 : 0.0,
+          alphaToCoverage: true,
+          depthWrite: true,
+          side: THREE.DoubleSide,
+        });
+        child.material.userData.builtInHair = true;
+        // Use actual scene lights. The old KK hook added unshadowed white emission
+        // from a hard-coded direction and mixed world/view normals, lighting cards
+        // as independent silver triangles rather than coherent hair.
+        child.castShadow = true;
+        child.receiveShadow = true;
       }
-      const origMat = Array.isArray(child.material) ? child.material[0] : child.material;
-      const mapTex = origMat?.map || null;
-      if (mapTex) {
-        mapTex.colorSpace = THREE.SRGBColorSpace;
-        mapTex.anisotropy = 8;
-        mapTex.needsUpdate = true;
-      }
-
-      child.material = new THREE.MeshPhysicalMaterial({
-        map: mapTex,
-        color: displayColor,
-        roughness: Math.max(0.30, 0.54 - sheenIntensity * 0.20),
-        metalness: 0.02,
-        sheen: Math.min(0.32, sheenIntensity * 0.30),
-        sheenRoughness: 0.42,
-        sheenColor: sheenCol,
-        anisotropy: 0.45 + sheenIntensity * 0.35,
-        anisotropyRotation: Math.PI / 2,
-        clearcoat: 0.08 + sheenIntensity * 0.08,
-        clearcoatRoughness: 0.34,
-        specularIntensity: 0.68,
-        specularColor: isJetBlack ? new THREE.Color('#cfd6e6') : new THREE.Color('#ffffff'),
-        envMapIntensity: isJetBlack ? 0.38 : 0.48,
-        transparent: false,
-        alphaTest: mapTex ? 0.15 : 0.0,
-        alphaToCoverage: Boolean(mapTex),
-        depthWrite: true,
-        side: THREE.DoubleSide,
-      });
-      child.material.userData.builtInHair = true;
-      child.castShadow = true;
-      child.receiveShadow = true;
     });
 
-    hairGroup.add(loadedScene);
+    hairGroup.add(gltf.scene);
     disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
     rootGroup.userData.currentHairStyle = resolvedStyle;
-    rootGroup.userData.hairStats = { vertices: totalVerts, triangles: totalTris, style: resolvedStyle };
-
-    applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs || {});
+    if (rootGroup.userData.currentMorphs) {
+      applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
+    }
     return hairGroup;
   } catch (err) {
-    console.warn('Failed to load 3D artist hair model:', hairUrl, err);
+    console.warn('Failed to load real 3D hair GLB:', hairUrl, err);
     return null;
   }
 }
@@ -772,13 +889,17 @@ function buildGimbalOverlayGroup() {
   return gimbalGroup;
 }
 
+/**
+ * Builds a collectible head node from either the bundled demo GLB or a user's
+ * head-only GLB. User materials are retained; custom assets are uniformly fit
+ * to the studio viewport without promising automatic photo-to-3D reconstruction.
+ */
 export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
   rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
   rootGroup.userData.collectibleId = config.id || 'StudioDraft';
   rootGroup.userData.basePreset = config.basePreset || 'user_photo';
   rootGroup.userData.deadExpression = config.deadExpression || config.morphs?.deadExpression || 'dead_calm';
-  rootGroup.userData.neckClearance = Number(config.neckClearance ?? 0.45);
 
   const morphs = {
     ...(config.morphs || {}),
@@ -825,6 +946,8 @@ export async function buildCollectibleHeadNode(config = {}) {
 
     const matName = child.material?.name || child.name;
     if (!isBuiltInAsset) {
+      // Keep user-owned DAZ/Blender glTF PBR maps intact. Replacing these with the
+      // demo material was flattening high-resolution skin into a pale, waxy look.
       const materials = Array.isArray(child.material) ? child.material : [child.material];
       materials.forEach(prepareImportedMaterial);
       if (!headSkinMesh) headSkinMesh = child;
@@ -852,10 +975,10 @@ export async function buildCollectibleHeadNode(config = {}) {
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.35, 0.35),
+        normalScale: new THREE.Vector2(0.38, 0.38),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.008,
+        bumpScale: 0.012,
         color: computeSkinTintColor(skinToneHex),
         roughness: Number(materials.skinRoughness ?? 0.54),
         metalness: 0.0,
@@ -926,10 +1049,9 @@ export async function buildCollectibleHeadNode(config = {}) {
       });
     } else if (matName === 'Eyebrow') {
       const browMap = child.material?.map || null;
-      if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
-        color: new THREE.Color('#ffffff'),
+        color: new THREE.Color('#201615'),
         transparent: true,
         alphaTest: 0.04,
         depthWrite: false,
@@ -942,10 +1064,9 @@ export async function buildCollectibleHeadNode(config = {}) {
       });
     } else if (matName === 'Eyelash') {
       const lashMap = child.material?.map || null;
-      if (lashMap) lashMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: lashMap,
-        color: new THREE.Color('#ffffff'),
+        color: new THREE.Color('#0c090a'),
         transparent: true,
         alphaTest: 0.06,
         polygonOffset: true,
@@ -957,7 +1078,9 @@ export async function buildCollectibleHeadNode(config = {}) {
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
       const teethMap = child.material?.map || null;
-      if (teethMap) teethMap.colorSpace = THREE.SRGBColorSpace;
+      if (teethMap) {
+        teethMap.colorSpace = THREE.SRGBColorSpace;
+      }
       child.material = new THREE.MeshPhysicalMaterial({
         map: teethMap,
         color: new THREE.Color('#f4ede2'),
@@ -971,7 +1094,9 @@ export async function buildCollectibleHeadNode(config = {}) {
       });
     } else if (matName === 'Tongue' || child.name === 'Tongue') {
       const tongueMap = child.material?.map || null;
-      if (tongueMap) tongueMap.colorSpace = THREE.SRGBColorSpace;
+      if (tongueMap) {
+        tongueMap.colorSpace = THREE.SRGBColorSpace;
+      }
       child.material = new THREE.MeshPhysicalMaterial({
         map: tongueMap,
         color: new THREE.Color('#d6747a'),
@@ -995,6 +1120,8 @@ export async function buildCollectibleHeadNode(config = {}) {
   if (isBuiltInAsset) {
     modelContainer.add(gltf.scene);
   } else {
+    // DAZ exports can be centimeters/meters and use a different origin. Fit a
+    // head-only GLB into the studio's known head scale without changing its aspect.
     modelContainer.add(fitImportedHead(gltf.scene));
   }
 
@@ -1018,19 +1145,17 @@ export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {
   const oldDecor = rootGroup.getObjectByName('SpecimenDecorGroup');
   if (oldDecor) rootGroup.remove(oldDecor);
 
+  // In Studio preview, default container to 'none' unless explicitly enabled so it doesn't block close-up modeling
   const defaultContainer = config.groomLod === 'studio' ? (config.studioContainerStyle || 'none') : 'glass_bell_jar';
   const containerStyle = config.containerStyle || defaultContainer;
-  const decorStyle = config.decorStyle || (config.groomLod === 'studio' ? 'none' : 'trophy_candles');
 
   const containerGroup = buildSpecimenContainerGroup(containerStyle);
   rootGroup.add(containerGroup);
 
+  // Stage 24: Decorative props (candles, books, watches, trophies) are placed on the 3D Desk/Shelves, NEVER bound to the character head!
   const baseBottomOffset = containerGroup.userData.baseBottomOffset ?? -12.6;
-  const decorGroup = buildSpecimenDecorGroup(decorStyle, baseBottomOffset);
-  rootGroup.add(decorGroup);
-
+  rootGroup.userData.containerGroup = containerGroup;
   rootGroup.userData.containerStyle = containerStyle;
-  rootGroup.userData.decorStyle = decorStyle;
   rootGroup.userData.baseBottomOffset = baseBottomOffset;
 }
 

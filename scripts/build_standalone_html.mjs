@@ -22,21 +22,13 @@ const jsContent = jsFile ? fs.readFileSync(path.join(assetsDir, jsFile), 'utf8')
 const glbFiles = [
   'daz_asian_head_base.glb',
   'hair_user_photo.glb',
+  'hair_long01.glb',
   'hair_bob01.glb',
   'hair_bob02.glb',
-  'hair_short02.glb',
-  'hair_long01.glb',
   'hair_ponytail01.glb',
   'hair_braid01.glb',
-  'hair_short04.glb',
-  'daz_hair_hime.glb',
-  'daz_hair_curtain_wave.glb',
-  'daz_hair_wavy_bob.glb',
-  'daz_hair_side_long.glb',
-  'daz_hair_hazel_wave.glb',
-  'daz_hair_twin_buns.glb',
-  'daz_hair_glam_wave.glb',
-  'daz_hair_asym_short.glb'
+  'hair_short02.glb',
+  'hair_short04.glb'
 ];
 
 const embeddedGlbs = {};
@@ -46,17 +38,26 @@ for (const fname of glbFiles) {
   embeddedGlbs[`/models/${fname}`] = fs.readFileSync(fpath).toString('base64');
 }
 
-// User's own reference photo for the SPEC-2026-000 preset (embedded as data URI for file:// offline mode)
+// User's own reference photos for SPEC-2026-000 & SPEC-2026-FYP (embedded as data URIs for file:// offline mode)
 let refPhotoDataUri = '';
 const refPhotoPath = path.join(projectDir, 'public/models/user_photo_ref.jpg');
 if (fs.existsSync(refPhotoPath)) {
   refPhotoDataUri = 'data:image/jpeg;base64,' + fs.readFileSync(refPhotoPath).toString('base64');
-} else {
-  console.warn(`⚠️ Reference photo not found (dev-server fallback will be used): ${refPhotoPath}`);
+}
+
+let fangPhotoDataUri = '';
+const fangPhotoPath = path.join(projectDir, 'public/models/fang_yaoping_ref.jpg');
+if (fs.existsSync(fangPhotoPath)) {
+  fangPhotoDataUri = 'data:image/jpeg;base64,' + fs.readFileSync(fangPhotoPath).toString('base64');
 }
 
 const embeddedGrooms = {};
-const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_GROOMS__ = ${JSON.stringify(embeddedGrooms)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)};</script>`;
+for (const id of ['photo_tied', 'center_long', 'low_chignon']) {
+  const file = path.join(projectDir, 'public/grooms', `${id}.groom`);
+  if (!fs.existsSync(file)) throw new Error(`Missing required groom source: ${file}`);
+  embeddedGrooms[`/grooms/${id}.groom`] = { encoding: 'gzip-base64', data: gzipSync(fs.readFileSync(file), { level: 9 }).toString('base64') };
+}
+const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_GROOMS__ = ${JSON.stringify(embeddedGrooms)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)}; window.__EMBEDDED_FANG_PHOTO__ = ${JSON.stringify(fangPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw
   .replace(/<link rel="stylesheet"[^>]*>/g, `<style>\n${cssContent}\n</style>`)
@@ -72,5 +73,6 @@ console.log(`✅ Built standalone playable HTML: ${outPath} (${sizeMb} MB)`);
 // Serve the same offline-ready file on GitHub Pages if Pages is configured for /docs.
 const docsDir = path.join(projectDir, 'docs');
 fs.mkdirSync(docsDir, { recursive: true });
+fs.cpSync(distDir, docsDir, { recursive: true, force: true });
 fs.writeFileSync(path.join(docsDir, 'index.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
