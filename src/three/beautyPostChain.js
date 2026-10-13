@@ -20,21 +20,21 @@ export const BeautyGradeShader = {
     tDiffuse: { value: null },
     tSourceAlpha: { value: null },
     uResolution: { value: new THREE.Vector2(1280, 720) },
-    uVignette: { value: 0.30 },
+    uVignette: { value: 0.26 },
     uSaturation: { value: 0.98 },
-    uContrast: { value: 1.08 },
-    uWarmth: { value: 0.06 },
-    uSharpen: { value: 0.24 },
-    uSoftFocus: { value: 0.42 },
-    uDepthBlur: { value: 0.28 },
-    uChromatic: { value: 0.18 },
-    uFilmGrain: { value: 0.10 },
-    uTyndall: { value: 0.52 },
-    uVintagePhoto: { value: 0.26 },
+    uContrast: { value: 1.07 },
+    uWarmth: { value: 0.02 },
+    uSharpen: { value: 0.28 },
+    uSoftFocus: { value: 0.06 },
+    uDepthBlur: { value: 0.0 },
+    uChromatic: { value: 0.08 },
+    uFilmGrain: { value: 0.06 },
+    uTyndall: { value: 0.32 },
+    uVintagePhoto: { value: 0.08 },
     uTyndallAngle: { value: -0.58 },
     uTyndallColor: { value: new THREE.Vector3(1.0, 0.92, 0.82) },
-    uTint: { value: new THREE.Vector3(1.01, 0.995, 0.98) },
-    uShadowTint: { value: new THREE.Vector3(0.04, 0.03, 0.045) },
+    uTint: { value: new THREE.Vector3(1.00, 1.00, 1.00) },
+    uShadowTint: { value: new THREE.Vector3(0.02, 0.02, 0.03) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -166,10 +166,10 @@ export const BeautyGradeShader = {
       col = max(col, vec3(0.0));
       col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(0.75)) * 0.42);
 
-      // Creamy Shadow Split-Toning applied AFTER contrast so dark hair retains velvety tonal depth
+      // Creamy Shadow Split-Toning applied to mid-shadows only (masked out on deep black hair so black hair stays genuinely black)
       float lumaPostC = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.42, lumaPostC), 0.0, 1.0);
-      col += uShadowTint * shadowMask * 0.42;
+      float shadowMask = clamp(1.0 - smoothstep(0.06, 0.42, lumaPostC), 0.0, 1.0) * smoothstep(0.022, 0.075, lumaPostC);
+      col += uShadowTint * shadowMask * 0.28;
 
       // 8. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));

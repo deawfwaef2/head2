@@ -48,6 +48,10 @@ def get_acc_array(gltf, bin_buf, acc_idx):
     offset = bv.get('byteOffset', 0) + acc.get('byteOffset', 0)
     dt = {5126: np.float32, 5123: np.uint16, 5122: np.int16, 5125: np.uint32, 5121: np.uint8, 5120: np.int8}[acc['componentType']]
     ch = {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4}[acc['type']]
+    stride = bv.get('byteStride', 0)
+    if acc['componentType'] == 5122 and stride == 8 and ch == 3:
+        raw = np.frombuffer(bin_buf, dtype='<i2', count=acc['count'] * 4, offset=offset).reshape(acc['count'], 4)
+        return (raw[:, :3].astype(np.float32)) / 32767.0
     arr = np.frombuffer(bin_buf, dtype=dt, count=acc['count'] * ch, offset=offset).copy()
     return arr.reshape(acc['count'], ch) if ch > 1 else arr
 
@@ -56,6 +60,15 @@ def set_acc_array(gltf, bin_buf, acc_idx, arr):
     acc = gltf['accessors'][acc_idx]
     bv = gltf['bufferViews'][acc['bufferView']]
     offset = bv.get('byteOffset', 0) + acc.get('byteOffset', 0)
+    if acc['componentType'] == 5122:
+        q = np.clip(np.round(np.asarray(arr, dtype=np.float32) * 32767.0), -32767, 32767).astype('<i2')
+        padded = np.zeros((len(q), 4), dtype='<i2')
+        padded[:, :3] = q
+        raw = padded.tobytes()
+        bin_buf[offset:offset + len(raw)] = raw
+        acc['min'] = q.min(axis=0).astype(int).tolist()
+        acc['max'] = q.max(axis=0).astype(int).tolist()
+        return
     dt = {5126: np.float32, 5123: np.uint16, 5122: np.int16, 5125: np.uint32, 5121: np.uint8, 5120: np.int8}[acc['componentType']]
     raw = np.ascontiguousarray(arr, dtype=dt).tobytes()
     bin_buf[offset:offset + len(raw)] = raw
@@ -330,7 +343,7 @@ def main():
     mh_verts = parse_mh_obj_vertices('/tmp/mh_base.obj')
     head_prim = gltf['meshes'][0]['primitives'][0]
     head_v = get_acc_array(gltf, bin_buf, head_prim['attributes']['POSITION']).copy()
-    eyelash_v = get_acc_array(gltf, bin_buf, gltf['meshes'][2]['primitives'][0]['attributes']['POSITION']).copy()
+    eyelash_v = get_acc_array(gltf, bin_buf, gltf['meshes'][3]['primitives'][0]['attributes']['POSITION']).copy()
 
     # Map head_v back to MakeHuman vertex indices via cKDTree on Caucasian-female-young shifted coords
     t_cauc = load_target_deltas('/tmp/mpfb_check/caucasian-female-young.target')
@@ -376,8 +389,8 @@ def main():
     head_v_new = head_v + baked_base_delta
     set_acc_array(gltf, bin_buf, head_prim['attributes']['POSITION'], head_v_new)
 
-    # Also apply nearest-neighbor smooth delta to Eyebrows base mesh so eyebrows sit flush on the new Asian brow ridge
-    eb_prim = gltf['meshes'][1]['primitives'][0]
+    # Also apply nearest-neighbor smooth delta to Eyebrows base mesh (meshes[2], NEVER meshes[1] NeckCrossSection!)
+    eb_prim = gltf['meshes'][2]['primitives'][0]
     eb_v = get_acc_array(gltf, bin_buf, eb_prim['attributes']['POSITION']).copy()
     _, eb_to_head = cKDTree(head_v).query(eb_v)
     eb_v_new = eb_v + baked_base_delta[eb_to_head]
@@ -448,8 +461,8 @@ def main():
                 if m_idx == 0:
                     # HeadSkin
                     set_acc_array(gltf, bin_buf, pos_acc_idx, slot_deltas_head[slot])
-                elif m_idx == 1:
-                    # Eyebrows follow HeadSkin
+                elif m_idx == 2:
+                    # Eyebrows (meshes[2], NEVER meshes[1] NeckCrossSection!) follow HeadSkin
                     set_acc_array(gltf, bin_buf, pos_acc_idx, slot_deltas_head[slot][eb_to_head])
                 else:
                     # Eyelashes, Eyes (ALL 3 primitives!), Teeth, Tongue: ZERO OUT repurposed eye/tongue/brow slots!

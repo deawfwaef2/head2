@@ -628,3 +628,45 @@
 
 
 
+
+---
+
+## Stage 33 · 彻底修复红斑眼皮穿模 (`meshes[1]` 误覆写) + 消除锡箔纸死线条恢复乌黑真发 + 恢复多头模与 DAZ 实时多头模混合 + 面部高对比度 HDR 与去硅胶过曝管线
+
+### 1. 根本原因定位与彻底修复清单
+
+1. **眼睛上方血色红斑/穿模破面 (`而且你看这眼睛总有问题`)**：
+   - **根因**：Stage 31 (`3ad5d41`) 的 `scripts/build_real_web_head_assets.py` 误将 `gltf['meshes'][1]` 当作眉毛 (`Eyebrows`)，实际上 `daz_asian_head_base.glb` 的网格顺序为：
+     - `Mesh 0`: `HeadSkin` (`4494` 顶点)
+     - `Mesh 1`: `NeckCrossSection` (`845` 顶点，位于颈部断面 `y ≈ -0.11`)
+     - `Mesh 2`: `Eyebrows` (`124` 顶点)
+     - `Mesh 3`: `Eyelashes` (`250` 顶点)
+     - `Mesh 4`: `Eyes` (`360` 顶点，含 `3` 个 primitive)
+     `3ad5d41` 把 `eyebrow001_pos` 覆写进了 `meshes[1]` (`NeckCrossSection`) 的前 124 个顶点，导致血红色颈部解剖断面三角形直接从脖子拉扯到双眼上眼睑与眉骨表面！
+   - **修复**：从干净的 `37f0260` 恢复 `Mesh 1 (NeckCrossSection)` 全部 845 个顶点于颈部底部 (`y ∈ [-0.1116, -0.1072]`)，将眉毛精确写入 `Mesh 2 (Eyebrows)`，围绕 `Mesh 3 (Eyelashes)` 保护眼眶边界，并将 `Mesh 4 (Eyes)` 全部 3 个 primitive 的 9 个头部/眉骨 morph 槽位清零 (`0.0`)。
+
+2. **消除锡箔纸死线条与恢复乌黑真发 (`头发看起来就像锡箔纸...死线条，而且头发不是黑色的`)**：
+   - **根因**：
+     1) `injectMarschnerHairShader` 使用了屏幕空间偏导数 `dFdx(vStrandReliefField)` / `dFdy(vStrandReliefField)` 法线浮雕凹凸 + `0.18x..2.35x` (`13:1` 极高对比度条纹) + `+ vec3(0.026, 0.019, 0.015)` 暖棕灰抬升；
+     2) `computeTrueHairDisplayColor` 将黑发 `#121216` 强行改成了棕灰色 `#262028`；
+     3) 28 个发型 `.glb` 贴图经过 `PIL.Image.quantize(colors=256)` 256色调色板量化，在半透明发丝边缘产生了银白色锡箔纸锯齿。
+   - **修复**：
+     1) 重建全部 28 个 `public/models/hair_*.glb`，采用 32-bit 真彩 RGBA 丝绸柔化贴图，对半透明发丝边缘 (`alpha < 0.75`) 进行暗化消边，去除重复内层网格与胸前外翻折角，重算平滑 3D 颅顶混合法线；
+     2) `computeTrueHairDisplayColor` 恢复纯正乌黑真发 (`#131418`)；
+     3) `injectMarschnerHairShader` 彻底移除 `dFdx`/`dFdy` 屏幕空间金属刻痕与 `13:1` 死线条对比，改用平滑 3D 经线切线 (`tMeridian`) 的 Kajiya-Kay / Marschner 天使光环 (`Angel Ring`) 柔顺丝绸高光，并开启 `alphaToCoverage: true`；
+     4) `beautyPostChain.js` 中对极暗黑发区域 (`luma < 0.035`) 屏蔽 `uShadowTint`，防止后期暗部染色把黑发漂灰。
+
+3. **恢复多个独立 3D 头模与真正的 DAZ 多头模几何+贴图混合 (`多个模型类似daz那种头部混合的效果`)**：
+   - **根因**：`daz_asian_head_base.glb` 的 morph targets 采用 `componentType = 5122` (`int16`, `normalized = True`, `byteStride = 8`)，其中浮点数 `1.0` 对应 `int16` 的 `32767`。`3ad5d41` 的 `set_acc_array` 直接将米制浮点位移 (`[-0.006, +0.006]`) 转为 `np.int16`，导致所有 morph 槽位被截断为 `0`！
+   - **修复**：
+     1) 结合官方 MPFB2 / Elvaerwyn `.target` 与 `assets_src/gnm/female_asian_variants/gnm_female_asian_01/02/03.obj` 真实多头模颅面差异，将 7 个完整 3D 头模通道 (`mh_head_asian_youth`, `mh_head_round`, `mh_head_heart`, `mh_head_oval`, `mh_head_melon`, `mh_head_diamond`, `mh_head_eurasian`) 按 `* 32767.0` 编码写入 `int16` 8字节步长缓冲（最大颅面几何形变达 `6.6mm ~ 19.4mm`）；
+     2) 内嵌全部 14 套 2K 真实摄影皮肤贴图（6 套原始 MakeHuman 摄影皮肤 + 8 套中韩欧亚精调无皱少女皮肤）；
+     3) 在 `applyRealSkinVariantToGroup` 中实现 **DAZ Studio 实时多头模几何 + 2K 皮肤贴图混合**：当混合多个头模滑块 (`blend_*`) 时，同时混合其 3D 颅面骨骼几何与 1024×1024 离屏 Canvas 皮肤贴图。
+
+4. **修复面部 HDR 环境光效与消除过亮硅胶感 (`HDR在角色面部没体现？而且看上去特别亮特别假特别硅胶感`)**：
+   - **根因**：
+     1) `RoomEnvironment()` 是均匀全白六面盒，且 `applyCustomVisualConfigToEngine` 将面部 `envMapIntensity` 压低至 `0.18 + skinGloss * 0.18` (`0.208`)，叠加 `injectAestheticSubsurfaceScattering` 中 `indirectSpecular *= 0.42`，导致面部丢失了 96% 的 HDR 环境反射；
+     2) `uSssIntensity = 1.48` 的全脸 `chromaticWrap` 加上默认高强度 `uSoftFocus = 0.46` / `uDepthBlur = 0.32` 磨平了毛孔细节并造成橘粉硅胶过曝。
+   - **修复**：
+     1) `ensureSceneEnvironment` 构建高对比度暗天鹅绒影棚穹顶 (`domeScene`)，并在 `applyCustomVisualConfigToEngine` 中将 `hdrMode` (`softbox_portrait`, `golden_hour`, `rainy_window`, `museum_velvet`) 同步注入主光/辅光/轮廓光色温与面部 `envMapIntensity` (`0.72 + skinGloss * 0.55`)；
+     2) 将面部 SSS 限制在明暗交界线 (`penumbra`)，降低默认曝光 (`0.88`) 与默认柔焦 (`uSoftFocus = 0.06`, `uDepthBlur = 0.0`)，对全部 14 套皮肤贴图进行高光曝光校准 (`forehead luma <= 204`)，呈现清透真实的微单摄影肤质。

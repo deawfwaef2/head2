@@ -24,10 +24,10 @@ export const WINDOW_GOBO_CATALOG = [
 ];
 
 export const GLOBAL_CHIAROSCURO_UNIFORMS = {
-  uSssIntensity: { value: 1.42 },
-  uChiaroscuro: { value: 0.58 },
+  uSssIntensity: { value: 0.85 },
+  uChiaroscuro: { value: 0.62 },
   uWindowGoboMode: { value: 1.0 },
-  uWindowGoboStrength: { value: 0.35 },
+  uWindowGoboStrength: { value: 0.30 },
   uWindowLightDir: { value: new THREE.Vector3(0.42, 0.46, 0.78).normalize() },
 };
 
@@ -36,153 +36,153 @@ export const VISUAL_STYLE_PRESETS = {
     id: 'cinema_85mm_portrait',
     label: '📸 85mm 大光圈人像摄影 · 柔焦奶油肌与双柔光箱 HDR (默认首推)',
     hdrMode: 'softbox_portrait',
-    keyColor: '#fff3e4',
-    fillColor: '#9eb6d8',
-    rimColor: '#ffe8d6',
+    keyColor: '#fff5ea',
+    fillColor: '#9eb8dc',
+    rimColor: '#dceaff',
     hemiSky: '#fff8f2',
-    hemiGround: '#241c1a',
-    keyIntensity: 1.92,
-    fillIntensity: 0.58,
-    rimIntensity: 1.15,
-    hemiIntensity: 0.46,
-    upIntensity: 0.32,
-    keyAzimuthDeg: 30,
+    hemiGround: '#1a1516',
+    keyIntensity: 1.58,
+    fillIntensity: 0.48,
+    rimIntensity: 1.28,
+    hemiIntensity: 0.36,
+    upIntensity: 0.22,
+    keyAzimuthDeg: 32,
     keyElevationDeg: 28,
-    exposure: 0.96,
-    envIntensity: 0.52,
-    contrast: 1.06,
+    exposure: 0.88,
+    envIntensity: 0.88,
+    contrast: 1.07,
     saturation: 0.98,
-    warmth: 0.05,
-    vignette: 0.28,
-    sharpen: 0.22,
-    softFocus: 0.46,
-    depthBlur: 0.32,
-    chromatic: 0.18,
-    bloomStrength: 0.08,
-    filmGrain: 0.09,
-    tyndall: 0.45,
-    vintagePhoto: 0.20,
-    skinGloss: 0.16,
-    sssIntensity: 1.48,
-    chiaroscuro: 0.52,
+    warmth: 0.02,
+    vignette: 0.26,
+    sharpen: 0.28,
+    softFocus: 0.06,
+    depthBlur: 0.0,
+    chromatic: 0.08,
+    bloomStrength: 0.05,
+    filmGrain: 0.06,
+    tyndall: 0.32,
+    vintagePhoto: 0.08,
+    skinGloss: 0.36,
+    sssIntensity: 0.82,
+    chiaroscuro: 0.58,
     windowGobo: 'none',
-    windowGoboStrength: 0.22,
-    tint: [1.01, 0.995, 0.98],
-    shadowTint: [0.04, 0.03, 0.045],
+    windowGoboStrength: 0.18,
+    tint: [1.00, 1.00, 1.00],
+    shadowTint: [0.02, 0.02, 0.03],
   },
   korean_magazine_glow: {
     id: 'korean_magazine_glow',
     label: '✨ 韩系画报清透水光 · 高调柔焦冷白凝脂滤镜',
     hdrMode: 'softbox_portrait',
-    keyColor: '#fff8f4',
+    keyColor: '#fff9f6',
     fillColor: '#b8ccf0',
-    rimColor: '#ffeef2',
+    rimColor: '#e8f0ff',
     hemiSky: '#ffffff',
-    hemiGround: '#282026',
-    keyIntensity: 1.85,
-    fillIntensity: 0.72,
-    rimIntensity: 1.18,
-    hemiIntensity: 0.56,
-    upIntensity: 0.36,
-    keyAzimuthDeg: 24,
+    hemiGround: '#1e1920',
+    keyIntensity: 1.56,
+    fillIntensity: 0.56,
+    rimIntensity: 1.32,
+    hemiIntensity: 0.42,
+    upIntensity: 0.26,
+    keyAzimuthDeg: 26,
     keyElevationDeg: 26,
-    exposure: 0.99,
-    envIntensity: 0.62,
-    contrast: 1.04,
-    saturation: 1.02,
-    warmth: 0.02,
+    exposure: 0.90,
+    envIntensity: 0.94,
+    contrast: 1.06,
+    saturation: 1.00,
+    warmth: 0.0,
     vignette: 0.20,
-    sharpen: 0.18,
-    softFocus: 0.56,
-    depthBlur: 0.36,
-    chromatic: 0.14,
-    bloomStrength: 0.10,
-    filmGrain: 0.06,
-    tyndall: 0.38,
-    vintagePhoto: 0.12,
-    skinGloss: 0.26,
-    sssIntensity: 1.55,
-    chiaroscuro: 0.38,
+    sharpen: 0.26,
+    softFocus: 0.08,
+    depthBlur: 0.0,
+    chromatic: 0.06,
+    bloomStrength: 0.06,
+    filmGrain: 0.05,
+    tyndall: 0.28,
+    vintagePhoto: 0.05,
+    skinGloss: 0.46,
+    sssIntensity: 0.85,
+    chiaroscuro: 0.46,
     windowGobo: 'none',
-    windowGoboStrength: 0.15,
-    tint: [1.02, 1.00, 1.01],
-    shadowTint: [0.04, 0.03, 0.05],
+    windowGoboStrength: 0.12,
+    tint: [1.00, 1.00, 1.02],
+    shadowTint: [0.02, 0.02, 0.035],
   },
   wong_kar_wai_film: {
     id: 'wong_kar_wai_film',
     label: '🎞️ 王家卫式电影胶片 · 复古暖金暗调与黑柔镜晕染',
     hdrMode: 'golden_hour',
-    keyColor: '#ffd9a8',
+    keyColor: '#ffd69e',
     fillColor: '#4c7a78',
-    rimColor: '#f59e0b',
+    rimColor: '#fbbf24',
     hemiSky: '#ffe8c8',
-    hemiGround: '#0e1918',
-    keyIntensity: 2.05,
-    fillIntensity: 0.42,
-    rimIntensity: 1.38,
-    hemiIntensity: 0.34,
-    upIntensity: 0.26,
+    hemiGround: '#0e1615',
+    keyIntensity: 1.68,
+    fillIntensity: 0.36,
+    rimIntensity: 1.42,
+    hemiIntensity: 0.28,
+    upIntensity: 0.18,
     keyAzimuthDeg: 38,
     keyElevationDeg: 30,
-    exposure: 0.93,
-    envIntensity: 0.42,
+    exposure: 0.86,
+    envIntensity: 0.85,
     contrast: 1.12,
-    saturation: 0.94,
-    warmth: 0.12,
-    vignette: 0.42,
-    sharpen: 0.16,
-    softFocus: 0.58,
-    depthBlur: 0.42,
-    chromatic: 0.28,
-    bloomStrength: 0.11,
-    filmGrain: 0.22,
-    tyndall: 0.68,
-    vintagePhoto: 0.52,
-    skinGloss: 0.20,
-    sssIntensity: 1.45,
+    saturation: 0.95,
+    warmth: 0.08,
+    vignette: 0.38,
+    sharpen: 0.24,
+    softFocus: 0.10,
+    depthBlur: 0.04,
+    chromatic: 0.14,
+    bloomStrength: 0.07,
+    filmGrain: 0.14,
+    tyndall: 0.48,
+    vintagePhoto: 0.28,
+    skinGloss: 0.38,
+    sssIntensity: 0.88,
     chiaroscuro: 0.72,
     windowGobo: 'venetian_blinds',
-    windowGoboStrength: 0.38,
-    tint: [1.03, 0.99, 0.91],
-    shadowTint: [0.02, 0.05, 0.04],
+    windowGoboStrength: 0.32,
+    tint: [1.02, 0.99, 0.93],
+    shadowTint: [0.015, 0.035, 0.03],
   },
   dreamy_promist_soft: {
     id: 'dreamy_promist_soft',
     label: '☁️ 电影黑柔镜 (1/4 Pro-Mist) · 极致奶油柔焦彻底消除3D硬边',
     hdrMode: 'softbox_portrait',
-    keyColor: '#fff2e6',
+    keyColor: '#fff4ea',
     fillColor: '#a4b8dc',
     rimColor: '#fde2e4',
     hemiSky: '#fff8f6',
-    hemiGround: '#221a1d',
-    keyIntensity: 1.88,
-    fillIntensity: 0.64,
-    rimIntensity: 1.22,
-    hemiIntensity: 0.50,
-    upIntensity: 0.34,
+    hemiGround: '#1c1618',
+    keyIntensity: 1.56,
+    fillIntensity: 0.52,
+    rimIntensity: 1.26,
+    hemiIntensity: 0.38,
+    upIntensity: 0.24,
     keyAzimuthDeg: 28,
     keyElevationDeg: 28,
-    exposure: 0.97,
-    envIntensity: 0.56,
-    contrast: 1.03,
-    saturation: 0.96,
-    warmth: 0.06,
-    vignette: 0.26,
-    sharpen: 0.10,
-    softFocus: 0.72,
-    depthBlur: 0.45,
-    chromatic: 0.22,
-    bloomStrength: 0.12,
-    filmGrain: 0.10,
-    tyndall: 0.55,
-    vintagePhoto: 0.28,
-    skinGloss: 0.18,
-    sssIntensity: 1.55,
-    chiaroscuro: 0.42,
+    exposure: 0.88,
+    envIntensity: 0.90,
+    contrast: 1.05,
+    saturation: 0.97,
+    warmth: 0.03,
+    vignette: 0.24,
+    sharpen: 0.22,
+    softFocus: 0.14,
+    depthBlur: 0.04,
+    chromatic: 0.10,
+    bloomStrength: 0.07,
+    filmGrain: 0.06,
+    tyndall: 0.36,
+    vintagePhoto: 0.12,
+    skinGloss: 0.38,
+    sssIntensity: 0.86,
+    chiaroscuro: 0.50,
     windowGobo: 'none',
-    windowGoboStrength: 0.18,
-    tint: [1.02, 0.995, 0.98],
-    shadowTint: [0.05, 0.035, 0.05],
+    windowGoboStrength: 0.15,
+    tint: [1.01, 1.00, 0.99],
+    shadowTint: [0.025, 0.02, 0.03],
   },
   kodak_portra_400: {
     id: 'kodak_portra_400',
@@ -192,35 +192,35 @@ export const VISUAL_STYLE_PRESETS = {
     fillColor: '#8ea8c8',
     rimColor: '#ffe2bd',
     hemiSky: '#fff4e8',
-    hemiGround: '#201815',
-    keyIntensity: 1.95,
-    fillIntensity: 0.54,
-    rimIntensity: 1.18,
-    hemiIntensity: 0.44,
-    upIntensity: 0.30,
+    hemiGround: '#1a1412',
+    keyIntensity: 1.62,
+    fillIntensity: 0.44,
+    rimIntensity: 1.28,
+    hemiIntensity: 0.34,
+    upIntensity: 0.22,
     keyAzimuthDeg: 32,
     keyElevationDeg: 30,
-    exposure: 0.96,
-    envIntensity: 0.48,
-    contrast: 1.07,
-    saturation: 0.95,
-    warmth: 0.09,
-    vignette: 0.30,
-    sharpen: 0.20,
-    softFocus: 0.44,
-    depthBlur: 0.34,
-    chromatic: 0.20,
-    bloomStrength: 0.08,
-    filmGrain: 0.15,
-    tyndall: 0.50,
-    vintagePhoto: 0.38,
-    skinGloss: 0.16,
-    sssIntensity: 1.46,
-    chiaroscuro: 0.55,
+    exposure: 0.87,
+    envIntensity: 0.86,
+    contrast: 1.08,
+    saturation: 0.96,
+    warmth: 0.05,
+    vignette: 0.28,
+    sharpen: 0.26,
+    softFocus: 0.06,
+    depthBlur: 0.0,
+    chromatic: 0.08,
+    bloomStrength: 0.05,
+    filmGrain: 0.09,
+    tyndall: 0.38,
+    vintagePhoto: 0.18,
+    skinGloss: 0.36,
+    sssIntensity: 0.84,
+    chiaroscuro: 0.58,
     windowGobo: 'tree_dappled',
-    windowGoboStrength: 0.28,
-    tint: [1.03, 0.99, 0.95],
-    shadowTint: [0.05, 0.035, 0.03],
+    windowGoboStrength: 0.24,
+    tint: [1.01, 0.995, 0.97],
+    shadowTint: [0.025, 0.02, 0.02],
   },
   fujifilm_eterna_cinema: {
     id: 'fujifilm_eterna_cinema',
@@ -228,37 +228,37 @@ export const VISUAL_STYLE_PRESETS = {
     hdrMode: 'rainy_window',
     keyColor: '#f4f8ff',
     fillColor: '#88abc8',
-    rimColor: '#e0f2fe',
+    rimColor: '#cceeff',
     hemiSky: '#f0f7ff',
-    hemiGround: '#161e26',
-    keyIntensity: 1.90,
-    fillIntensity: 0.58,
-    rimIntensity: 1.20,
-    hemiIntensity: 0.46,
-    upIntensity: 0.30,
+    hemiGround: '#121820',
+    keyIntensity: 1.58,
+    fillIntensity: 0.48,
+    rimIntensity: 1.32,
+    hemiIntensity: 0.36,
+    upIntensity: 0.22,
     keyAzimuthDeg: 28,
     keyElevationDeg: 32,
-    exposure: 0.96,
-    envIntensity: 0.50,
-    contrast: 1.05,
-    saturation: 0.90,
+    exposure: 0.88,
+    envIntensity: 0.90,
+    contrast: 1.07,
+    saturation: 0.94,
     warmth: -0.02,
-    vignette: 0.28,
-    sharpen: 0.20,
-    softFocus: 0.48,
-    depthBlur: 0.36,
-    chromatic: 0.16,
-    bloomStrength: 0.08,
-    filmGrain: 0.12,
-    tyndall: 0.44,
-    vintagePhoto: 0.24,
-    skinGloss: 0.18,
-    sssIntensity: 1.42,
-    chiaroscuro: 0.50,
+    vignette: 0.26,
+    sharpen: 0.28,
+    softFocus: 0.06,
+    depthBlur: 0.0,
+    chromatic: 0.08,
+    bloomStrength: 0.05,
+    filmGrain: 0.07,
+    tyndall: 0.32,
+    vintagePhoto: 0.10,
+    skinGloss: 0.38,
+    sssIntensity: 0.80,
+    chiaroscuro: 0.54,
     windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.26,
+    windowGoboStrength: 0.22,
     tint: [0.98, 1.00, 1.02],
-    shadowTint: [0.02, 0.04, 0.055],
+    shadowTint: [0.015, 0.025, 0.04],
   },
   sunset_amber_hdr: {
     id: 'sunset_amber_hdr',
@@ -268,35 +268,35 @@ export const VISUAL_STYLE_PRESETS = {
     fillColor: '#7c8db5',
     rimColor: '#fbbf24',
     hemiSky: '#ffedd5',
-    hemiGround: '#1c1210',
-    keyIntensity: 2.02,
-    fillIntensity: 0.48,
+    hemiGround: '#18100e',
+    keyIntensity: 1.66,
+    fillIntensity: 0.42,
     rimIntensity: 1.52,
-    hemiIntensity: 0.40,
-    upIntensity: 0.28,
+    hemiIntensity: 0.32,
+    upIntensity: 0.20,
     keyAzimuthDeg: 40,
     keyElevationDeg: 26,
-    exposure: 0.95,
-    envIntensity: 0.50,
-    contrast: 1.08,
-    saturation: 1.00,
-    warmth: 0.14,
-    vignette: 0.34,
-    sharpen: 0.20,
-    softFocus: 0.50,
-    depthBlur: 0.36,
-    chromatic: 0.20,
-    bloomStrength: 0.10,
-    filmGrain: 0.12,
-    tyndall: 0.72,
-    vintagePhoto: 0.34,
-    skinGloss: 0.20,
-    sssIntensity: 1.52,
-    chiaroscuro: 0.60,
+    exposure: 0.87,
+    envIntensity: 0.92,
+    contrast: 1.09,
+    saturation: 0.99,
+    warmth: 0.09,
+    vignette: 0.30,
+    sharpen: 0.26,
+    softFocus: 0.07,
+    depthBlur: 0.0,
+    chromatic: 0.10,
+    bloomStrength: 0.06,
+    filmGrain: 0.08,
+    tyndall: 0.52,
+    vintagePhoto: 0.18,
+    skinGloss: 0.40,
+    sssIntensity: 0.88,
+    chiaroscuro: 0.62,
     windowGobo: 'tree_dappled',
-    windowGoboStrength: 0.32,
-    tint: [1.04, 0.98, 0.93],
-    shadowTint: [0.06, 0.03, 0.04],
+    windowGoboStrength: 0.28,
+    tint: [1.02, 0.99, 0.95],
+    shadowTint: [0.03, 0.02, 0.025],
   },
   rainy_study: {
     id: 'rainy_study',
@@ -584,7 +584,7 @@ export function requestShadowUpdate(renderer) {
   }
 }
 
-export function ensureSceneEnvironment(renderer, scene, intensity = 0.85, hdrMode = 'softbox_portrait') {
+export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMode = 'softbox_portrait') {
   let envMapByMode = pmremEnvCache.get(renderer);
   if (!envMapByMode) {
     envMapByMode = new Map();
@@ -594,76 +594,95 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.85, hdrMod
   let envTex = envMapByMode.get(modeKey);
   if (!envTex) {
     const pmrem = new THREE.PMREMGenerator(renderer);
-    const room = new RoomEnvironment();
+    // Build a high-contrast dark-velvet studio HDR light dome instead of a flat white box so HDR sculpts facial topography!
+    const domeScene = new THREE.Scene();
 
     const modePalettes = {
       softbox_portrait: {
-        ring: new THREE.Color(10.5, 9.8, 9.5),
-        warmBox: new THREE.Color(7.8, 6.6, 6.2),
-        coolBox: new THREE.Color(6.2, 6.6, 7.6),
-        bounceBox: new THREE.Color(4.5, 3.8, 3.6),
+        bg: new THREE.Color(0.035, 0.040, 0.055),
+        ring: new THREE.Color(12.5, 11.8, 11.2),
+        warmBox: new THREE.Color(9.5, 8.2, 7.4),
+        coolBox: new THREE.Color(5.8, 7.2, 9.8),
+        rimStrip: new THREE.Color(11.0, 12.2, 14.0),
+        bounceBox: new THREE.Color(2.2, 1.8, 1.8),
       },
       golden_hour: {
-        ring: new THREE.Color(11.5, 8.8, 6.2),
-        warmBox: new THREE.Color(10.2, 6.8, 3.8),
-        coolBox: new THREE.Color(4.2, 5.2, 6.8),
-        bounceBox: new THREE.Color(5.8, 3.8, 2.5),
+        bg: new THREE.Color(0.055, 0.028, 0.016),
+        ring: new THREE.Color(14.5, 9.8, 5.2),
+        warmBox: new THREE.Color(13.8, 7.6, 3.2),
+        coolBox: new THREE.Color(3.2, 4.8, 7.8),
+        rimStrip: new THREE.Color(16.0, 10.5, 4.2),
+        bounceBox: new THREE.Color(3.4, 2.0, 1.2),
       },
       rainy_window: {
-        ring: new THREE.Color(8.2, 9.6, 11.4),
-        warmBox: new THREE.Color(6.5, 5.4, 4.6),
-        coolBox: new THREE.Color(5.8, 7.4, 9.8),
-        bounceBox: new THREE.Color(3.2, 3.8, 4.6),
+        bg: new THREE.Color(0.020, 0.038, 0.068),
+        ring: new THREE.Color(8.8, 11.6, 14.8),
+        warmBox: new THREE.Color(6.2, 7.8, 10.5),
+        coolBox: new THREE.Color(7.8, 10.8, 14.5),
+        rimStrip: new THREE.Color(9.5, 13.8, 16.5),
+        bounceBox: new THREE.Color(1.6, 2.2, 3.2),
       },
       museum_velvet: {
-        ring: new THREE.Color(9.2, 8.0, 6.8),
-        warmBox: new THREE.Color(7.4, 5.6, 4.2),
-        coolBox: new THREE.Color(3.8, 4.2, 5.4),
-        bounceBox: new THREE.Color(3.0, 2.2, 2.4),
+        bg: new THREE.Color(0.022, 0.016, 0.030),
+        ring: new THREE.Color(11.5, 9.4, 7.2),
+        warmBox: new THREE.Color(9.8, 7.2, 4.8),
+        coolBox: new THREE.Color(4.2, 3.6, 6.2),
+        rimStrip: new THREE.Color(12.4, 9.6, 6.8),
+        bounceBox: new THREE.Color(1.5, 1.1, 1.4),
       },
     };
     const pal = modePalettes[modeKey] || modePalettes.softbox_portrait;
+    domeScene.background = pal.bg;
 
-    // Circular Portrait Beauty-Dish Ring Light in front (+Z) for soulful circular eye catchlights
-    const ringGeo = new THREE.RingGeometry(1.30, 1.82, 48);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: pal.ring,
-      side: THREE.DoubleSide,
-    });
+    // Circular Portrait Beauty-Dish Ring Light in front (+Z) for circular eye catchlights & nose-tip glint
+    const ringGeo = new THREE.RingGeometry(1.15, 1.72, 48);
+    const ringMat = new THREE.MeshBasicMaterial({ color: pal.ring, side: THREE.DoubleSide });
     const beautyRing = new THREE.Mesh(ringGeo, ringMat);
-    beautyRing.position.set(0.28, 1.15, 4.2);
-    beautyRing.lookAt(0, 0.15, 0);
-    room.add(beautyRing);
+    beautyRing.position.set(0.24, 1.05, 4.0);
+    beautyRing.lookAt(0, 0.12, 0);
+    domeScene.add(beautyRing);
 
-    // Key Softbox Panel (top-right-front)
+    // Key Octabox Softbox Panel (top-right-front)
     const warmBox = new THREE.Mesh(
-      new THREE.PlaneGeometry(4.2, 3.6),
+      new THREE.PlaneGeometry(3.8, 3.4),
       new THREE.MeshBasicMaterial({ color: pal.warmBox, side: THREE.DoubleSide })
     );
-    warmBox.position.set(3.0, 2.2, 3.0);
+    warmBox.position.set(3.2, 2.4, 3.0);
     warmBox.lookAt(0, 0, 0);
-    room.add(warmBox);
+    domeScene.add(warmBox);
 
-    // Rim / Fill Softbox Panel (top-left-back)
+    // Fill Softbox Panel (left-front)
     const coolBox = new THREE.Mesh(
-      new THREE.PlaneGeometry(4.4, 3.6),
+      new THREE.PlaneGeometry(3.8, 3.2),
       new THREE.MeshBasicMaterial({ color: pal.coolBox, side: THREE.DoubleSide })
     );
-    coolBox.position.set(-3.2, 2.1, -2.8);
+    coolBox.position.set(-3.6, 1.4, 2.4);
     coolBox.lookAt(0, 0, 0);
-    room.add(coolBox);
+    domeScene.add(coolBox);
 
-    // Lower Chin Reflector Bounce Card (eliminates harsh under-nose/chin dark shadows!)
+    // High-Contrast Rim Strip Softbox (top-left-back) for cheek & jawline HDR rim sculpting
+    const rimStrip = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.8, 4.6),
+      new THREE.MeshBasicMaterial({ color: pal.rimStrip, side: THREE.DoubleSide })
+    );
+    rimStrip.position.set(-2.8, 2.8, -3.4);
+    rimStrip.lookAt(0, 0, 0);
+    domeScene.add(rimStrip);
+
+    // Subtle Lower Chin Reflector Bounce Card
     const bounceCard = new THREE.Mesh(
-      new THREE.PlaneGeometry(4.0, 3.2),
+      new THREE.PlaneGeometry(3.6, 2.8),
       new THREE.MeshBasicMaterial({ color: pal.bounceBox, side: THREE.DoubleSide })
     );
-    bounceCard.position.set(0.0, -2.4, 2.6);
+    bounceCard.position.set(0.0, -2.8, 2.4);
     bounceCard.lookAt(0, 0, 0);
-    room.add(bounceCard);
+    domeScene.add(bounceCard);
 
-    envTex = pmrem.fromScene(room, 0.042).texture;
-    room.dispose();
+    envTex = pmrem.fromScene(domeScene, 0.032).texture;
+    domeScene.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
     pmrem.dispose();
     envMapByMode.set(modeKey, envTex);
   }
@@ -675,13 +694,12 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.85, hdrMod
 }
 
 /**
- * Stage 29 · Pre-Integrated Dual-Lobe Dermis SSS + Screen-Space Micro-Pore Normal Relief + Anti-Silicone Pore Specular Masking
- * - Fixes Three.js's mutually exclusive `normalMap` vs `bumpMap` limitation by perturbing the fragment `normal`
- *   using screen-space derivatives (`dFdx`/`dFdy`) of `roughnessFactor` (`roughnessMap` tiled at 14×14) on top of `Aksel_Skin_NRM.png`.
- * - Uses the perturbed fragment `normal` (NEVER unperturbed vertex normals) for chiaroscuro & chromatic RGB subsurface wrap.
- * - Eliminates fake 2D sine-stripe face bars; uses soft architectural window falloff + sharp 3D shadow maps.
+ * Stage 33 · Crisp Photographic Dermis SSS + High-Contrast HDR Facial Reflection Pipeline:
+ * - Eliminates the excessive uniform orange-peach SSS wash that made faces look overexposed and silicone-like.
+ * - Preserves full HDR environment reflection (`indirectSpecular`) with natural Fresnel cheek/nose/lip sheen so
+ *   switching HDR modes (`softbox_portrait`, `golden_hour`, `rainy_window`, `museum_velvet`) visibly sculpts the face!
  */
-export function injectAestheticSubsurfaceScattering(material, initialSss = 1.32) {
+export function injectAestheticSubsurfaceScattering(material, initialSss = 0.85) {
   material.userData = material.userData || {};
   material.userData.uSssIntensity = GLOBAL_CHIAROSCURO_UNIFORMS.uSssIntensity;
   if (typeof initialSss === 'number') {
@@ -722,7 +740,6 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 1.32)
         vec3 rightAx = normalize(cross(vec3(0.0, 1.0, 0.0), L) + vec3(1e-4, 0.0, 0.0));
         vec3 upAx = normalize(cross(L, rightAx));
         vec2 p = vec2(dot(worldPos, rightAx), dot(worldPos, upAx));
-        // Soft, wide architectural window light cone (never paints harsh zebra stripes across a face)
         float radialCone = smoothstep(78.0, 14.0, length(p * vec2(0.75, 0.85)));
         float softMullion = 0.88 + 0.12 * smoothstep(-0.6, 0.6, cos(p.y * 0.085 + p.x * 0.04));
         float env = clamp(0.42 + 0.58 * radialCone * softMullion, 0.35, 1.0);
@@ -731,19 +748,16 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 1.32)
 
       vec3 computeDualLobeSkinSSS(vec3 fragNormal, vec3 lightDir, vec3 lightColor) {
         float ndl = dot(fragNormal, lightDir);
-        // Wide Chromatic RGB wrap-lighting (Jimenez/Penner Pre-Integrated Skin profile: Red scatters deep into shadow)
-        float wrapR = clamp((ndl + 0.68) / 1.68, 0.0, 1.0);
-        float wrapG = clamp((ndl + 0.38) / 1.38, 0.0, 1.0);
-        float wrapB = clamp((ndl + 0.18) / 1.18, 0.0, 1.0);
-        // Creamy peach-coral subsurface terminator band right along the light-shadow boundary
-        float penumbra = smoothstep(-0.55, 0.12, ndl) * (1.0 - smoothstep(0.05, 0.58, ndl));
-        vec3 deepDermis = vec3(0.96, 0.34, 0.26) * penumbra * 0.36;
-        vec3 chromaticWrap = vec3(wrapR * 0.18, wrapG * 0.11, wrapB * 0.075);
+        // Focused subsurface scattering right in the shadow terminator penumbra (NEVER blowing out lit highlights!)
+        float penumbra = smoothstep(-0.48, 0.08, ndl) * (1.0 - smoothstep(0.04, 0.52, ndl));
+        vec3 deepDermis = vec3(0.88, 0.32, 0.25) * penumbra * 0.24;
+        float softWrap = clamp((ndl + 0.35) / 1.35, 0.0, 1.0) * (1.0 - smoothstep(0.25, 0.75, ndl));
+        vec3 chromaticWrap = vec3(0.075, 0.042, 0.032) * softWrap;
         return (deepDermis + chromaticWrap) * lightColor * uSssIntensity;
       }`
     );
 
-    // Subtle microscopic dermal pore normal perturbation (kept delicate so young girl skin is silky & wrinkle-free)
+    // Crisp microscopic dermal pore normal relief
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <normal_fragment_maps>',
       `#include <normal_fragment_maps>
@@ -757,7 +771,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 1.32)
         float det = dot( dPosDx, r1 );
         if ( abs( det ) > 1e-6 ) {
           vec3 surfGrad = sign( det ) * ( dPoreDx * r1 + dPoreDy * r2 );
-          normal = normalize( normal - ( 0.0065 / max( abs( det ), 1e-4 ) ) * surfGrad );
+          normal = normalize( normal - ( 0.0085 / max( abs( det ), 1e-4 ) ) * surfGrad );
         }
       #endif`
     );
@@ -770,28 +784,29 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 1.32)
       float winEnv = computeWindowBeamEnvelope(vCervixWorldPos, uWindowLightDir);
       float fragNdl = dot(normal, viewWinL);
 
-      // Soft Portrait Chiaroscuro (prevents harsh 3D-game black shadow lines across the nose and cheeks)
-      float litTerm = smoothstep(-0.45, 0.55, fragNdl) * winEnv;
+      // Sculpted Portrait Chiaroscuro (real 3D light-to-shadow facial topography)
+      float litTerm = smoothstep(-0.38, 0.58, fragNdl) * winEnv;
       float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.5);
-      float chiaroscuroCurve = mix(1.0, mix(0.68, 1.05, litTerm), clamp(chiaroscuroStrength * 0.35, 0.0, 0.55));
+      float chiaroscuroCurve = mix(1.0, mix(0.54, 1.02, litTerm), clamp(chiaroscuroStrength * 0.48, 0.0, 0.68));
 
       reflectedLight.directDiffuse *= chiaroscuroCurve;
-      reflectedLight.indirectDiffuse *= mix(1.0, 0.72 + 0.28 * litTerm, clamp(chiaroscuroStrength * 0.30, 0.0, 0.45));
+      reflectedLight.indirectDiffuse *= mix(0.85, 0.52 + 0.42 * litTerm, clamp(chiaroscuroStrength * 0.42, 0.0, 0.58));
 
-      // Anti-Silicone Pore-Cavity Specular Masking:
-      // Suppresses plastic specular sheets so skin has a soft, translucent velvet-matte sheen
-      float poreSpecMask = clamp(1.32 - roughnessFactor * 1.12, 0.12, 0.95);
-      reflectedLight.directSpecular *= (0.35 + 0.65 * litTerm) * poreSpecMask * 0.48;
-      reflectedLight.indirectSpecular *= (0.30 + 0.55 * litTerm) * poreSpecMask * 0.42;
+      // Natural Skin Micro-Sebum & HDR Environment Specular Response:
+      // Allows HDR environment maps & studio rim lights to visibly gleam on nose bridge, cheekbones, brow arch, and lips
+      float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
+      float fresnelSheen = pow(1.0 - ndotv, 2.6);
+      float poreSpecMask = clamp(1.38 - roughnessFactor * 0.95, 0.28, 1.05);
+      reflectedLight.directSpecular *= (0.52 + 0.48 * litTerm) * poreSpecMask * 0.78;
+      reflectedLight.indirectSpecular *= (0.78 + 0.65 * fresnelSheen) * poreSpecMask;
 
-      // Warm rose-ivory subsurface shadow fill mixed with subtle atmospheric bounce
-      vec3 warmSubsurfaceShadow = vec3(0.96, 0.88, 0.90);
+      // Subtle rose-ivory shadow tone
+      vec3 warmSubsurfaceShadow = vec3(0.95, 0.89, 0.91);
       reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse * warmSubsurfaceShadow, reflectedLight.indirectDiffuse, litTerm);
 
-      // Vellus Hair (Peach Fuzz) Grazing Rim Backscatter along cheek & jawline contour
-      float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
-      float vellusRim = pow(1.0 - ndotv, 3.6) * smoothstep(-0.25, 0.55, fragNdl);
-      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.05, 0.95, 0.90) * vellusRim * 0.16;
+      // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour
+      float vellusRim = pow(1.0 - ndotv, 3.8) * smoothstep(-0.20, 0.55, fragNdl);
+      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.96, 0.94) * vellusRim * 0.09;
 
       #if ( NUM_DIR_LIGHTS > 0 )
         vec3 sssAccum = vec3(0.0);
@@ -800,11 +815,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 1.32)
           sssAccum += computeDualLobeSkinSSS( normal, directionalLights[ i ].direction, directionalLights[ i ].color );
         }
         #pragma unroll_loop_end
-        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.58 + 0.42 * winEnv) * 0.48;
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.55 + 0.45 * winEnv) * 0.28;
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-chiaroscuro-window-sss-v30';
+  material.customProgramCacheKey = () => 'cervix3d-chiaroscuro-window-sss-v33';
 }
 
 /**
@@ -901,6 +916,25 @@ export function buildDesktopLightRig(scene) {
   return { hemi, key, fill, up, rim };
 }
 
+const HDR_MODE_LIGHT_SIGNATURES = {
+  softbox_portrait: {
+    keyTint: '#fff7f0', fillTint: '#a6c4f0', rimTint: '#e2eeff', skyTint: '#fff9f5',
+    keyScale: 1.0, fillScale: 1.0, rimScale: 1.05,
+  },
+  golden_hour: {
+    keyTint: '#ffbe78', fillTint: '#6888c8', rimTint: '#ffb44c', skyTint: '#ffdfba',
+    keyScale: 1.08, fillScale: 0.84, rimScale: 1.32,
+  },
+  rainy_window: {
+    keyTint: '#cfe6ff', fillTint: '#6e96c8', rimTint: '#8ceeff', skyTint: '#d8ecff',
+    keyScale: 0.98, fillScale: 1.06, rimScale: 1.24,
+  },
+  museum_velvet: {
+    keyTint: '#ffe0b2', fillTint: '#7a6898', rimTint: '#ffd098', skyTint: '#f5e2cc',
+    keyScale: 1.05, fillScale: 0.68, rimScale: 1.18,
+  },
+};
+
 /**
  * Applies a complete Visual Customizer configuration (preset + user sliders + HDR mode + optical blur)
  * to either DesktopBoxSpaceEngine or StudioPreviewEngine in real time.
@@ -919,17 +953,21 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     rim: engine.rimLight,
   };
 
-  const chiaroscuro = Number(m.chiaroscuro ?? basePreset.chiaroscuro ?? 0.55);
+  const chiaroscuro = Number(m.chiaroscuro ?? basePreset.chiaroscuro ?? 0.58);
   const goboItem = WINDOW_GOBO_CATALOG.find(g => g.id === (m.windowGobo || basePreset.windowGobo || 'none')) || WINDOW_GOBO_CATALOG[0];
-  const goboStrength = Number(m.windowGoboStrength ?? basePreset.windowGoboStrength ?? 0.25);
+  const goboStrength = Number(m.windowGoboStrength ?? basePreset.windowGoboStrength ?? 0.18);
+  const hdrMode = m.hdrMode || basePreset.hdrMode || 'softbox_portrait';
+  const hdrSig = HDR_MODE_LIGHT_SIGNATURES[hdrMode] || HDR_MODE_LIGHT_SIGNATURES.softbox_portrait;
 
   GLOBAL_CHIAROSCURO_UNIFORMS.uChiaroscuro.value = chiaroscuro;
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboMode.value = goboItem.modeInt;
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboStrength.value = goboStrength;
 
   if (rig.key) {
-    rig.key.color.set(m.keyColor || basePreset.keyColor);
-    rig.key.intensity = Number(m.keyIntensity ?? basePreset.keyIntensity);
+    const baseKeyCol = new THREE.Color(m.keyColor || basePreset.keyColor);
+    baseKeyCol.lerp(new THREE.Color(hdrSig.keyTint), 0.52);
+    rig.key.color.copy(baseKeyCol);
+    rig.key.intensity = Number(m.keyIntensity ?? basePreset.keyIntensity) * hdrSig.keyScale;
     const radius = isStudio ? 64 : 116;
     const az = THREE.MathUtils.degToRad(Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg));
     const el = THREE.MathUtils.degToRad(Number(m.keyElevationDeg ?? basePreset.keyElevationDeg));
@@ -942,43 +980,48 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir.value.copy(rig.key.position).normalize();
   }
   if (rig.fill) {
-    rig.fill.color.set(m.fillColor || basePreset.fillColor);
-    const baseFill = Number(m.fillIntensity ?? basePreset.fillIntensity);
-    rig.fill.intensity = baseFill * Math.max(0.45, 1.15 - chiaroscuro * 0.35);
+    const baseFillCol = new THREE.Color(m.fillColor || basePreset.fillColor);
+    baseFillCol.lerp(new THREE.Color(hdrSig.fillTint), 0.55);
+    rig.fill.color.copy(baseFillCol);
+    const baseFill = Number(m.fillIntensity ?? basePreset.fillIntensity) * hdrSig.fillScale;
+    rig.fill.intensity = baseFill * Math.max(0.42, 1.12 - chiaroscuro * 0.35);
   }
   if (rig.rim) {
-    rig.rim.color.set(m.rimColor || basePreset.rimColor);
-    rig.rim.intensity = Number(m.rimIntensity ?? basePreset.rimIntensity);
+    const baseRimCol = new THREE.Color(m.rimColor || basePreset.rimColor);
+    baseRimCol.lerp(new THREE.Color(hdrSig.rimTint), 0.62);
+    rig.rim.color.copy(baseRimCol);
+    rig.rim.intensity = Number(m.rimIntensity ?? basePreset.rimIntensity) * hdrSig.rimScale;
   }
   if (rig.hemi) {
-    rig.hemi.color.set(m.hemiSky || basePreset.hemiSky);
+    const baseSkyCol = new THREE.Color(m.hemiSky || basePreset.hemiSky);
+    baseSkyCol.lerp(new THREE.Color(hdrSig.skyTint), 0.50);
+    rig.hemi.color.copy(baseSkyCol);
     rig.hemi.groundColor.set(m.hemiGround || basePreset.hemiGround);
     const baseHemi = Number(m.hemiIntensity ?? basePreset.hemiIntensity);
-    rig.hemi.intensity = baseHemi * Math.max(0.50, 1.12 - chiaroscuro * 0.30);
+    rig.hemi.intensity = baseHemi * Math.max(0.45, 1.08 - chiaroscuro * 0.30);
   }
   if (rig.up) {
     rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity);
   }
 
   engine.renderer.toneMappingExposure = Number(m.exposure ?? basePreset.exposure);
-  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.50);
-  const effectiveEnv = baseEnv * Math.max(0.55, 1.10 - chiaroscuro * 0.25);
-  const hdrMode = m.hdrMode || basePreset.hdrMode || 'softbox_portrait';
+  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.88);
+  const effectiveEnv = baseEnv * Math.max(0.68, 1.12 - chiaroscuro * 0.20);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
-  // Update skin subsurface scattering & matte-velvet human dermis
-  const skinGloss = Number(m.skinGloss ?? basePreset.skinGloss ?? 0.16);
-  const sssIntensity = Number(m.sssIntensity ?? basePreset.sssIntensity ?? 1.48);
+  // Update skin subsurface scattering & natural hydrated skin HDR reflection
+  const skinGloss = Number(m.skinGloss ?? basePreset.skinGloss ?? 0.36);
+  const sssIntensity = Number(m.sssIntensity ?? basePreset.sssIntensity ?? 0.82);
   GLOBAL_CHIAROSCURO_UNIFORMS.uSssIntensity.value = sssIntensity;
 
   engine.scene.traverse((obj) => {
     if (!obj.isMesh || !obj.material) return;
     if (obj.name === 'HeadSkinMesh' || obj.material.userData?.uSssIntensity) {
-      obj.material.roughness = Math.max(0.50, 0.78 - skinGloss * 0.30);
-      obj.material.clearcoat = skinGloss > 0.70 ? (skinGloss - 0.70) * 0.35 : 0.0;
-      obj.material.clearcoatRoughness = Math.max(0.38, 0.68 - skinGloss * 0.25);
-      obj.material.specularIntensity = 0.14 + skinGloss * 0.20;
-      obj.material.envMapIntensity = 0.18 + skinGloss * 0.18;
+      obj.material.roughness = Math.max(0.44, 0.68 - skinGloss * 0.28);
+      obj.material.clearcoat = 0.04 + skinGloss * 0.14;
+      obj.material.clearcoatRoughness = Math.max(0.32, 0.56 - skinGloss * 0.24);
+      obj.material.specularIntensity = 0.34 + skinGloss * 0.36;
+      obj.material.envMapIntensity = 0.72 + skinGloss * 0.55;
     }
   });
 
