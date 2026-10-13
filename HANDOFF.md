@@ -291,3 +291,10 @@
 - 工坊“极致”新增2x采样（DPR=1时也有效）减少亚像素细丝噪点；桌宠全屏不强制2x以维持开销。高密度依然需要目标GPU验收。
 - 压缩属性+默认6k版本file://已成功启动3桌宠，Groom元数据/默认9,932丝读回正确，0控制台/页面错误并生成真实实时近景截图。仍存在实时细丝锯齿/别名风险，不用Cycles静帧冒充桌宠画质。
 - 源工程已同步耳廓排除、插值子丝、melanin与柔和灯光；当前.rootHTML17.74MB，工作区保持<128MB。继续最终三发型/密度/控件测试和文档交付。
+
+### [2026-10-13 Stage 13a / playable checkpoint] 电影级唯美后期链：阈值辉光 + 暗角调色（双引擎）
+- 用户要求大规模提升真实感/画质/光影/渲染/材质（唯美感、全自动）。本轮是渲染升级包第 1 段；不碰 groom 发丝几何与断面纹理（前轮已反复调优且本轮沙箱无浏览器/Blender可做视觉 QA，只做代码可审查的低风险渲染增强）。
+- 新增 `src/three/beautyPostChain.js`：RenderPass(线性HDR) → UnrealBloomPass(强度0.22/半径0.55/阈值0.85，只让眼球高光·发丝束闪·轮廓光晕开) → 自研 BeautyGrade(暗角0.30/饱和1.07/对比1.05，只压RGB不碰alpha) → OutputPass(ACES+sRGB)。全部 three/addons 随 Vite 内联，file:// 零外部请求；透明背景全程保留。
+- 双引擎接入（studioPreviewEngine + desktopBoxSpaceEngine）：init 末尾 try/catch 创建（异常回退直渲永不黑屏）、resize 同步 composer 尺寸/像素比、animate 按 `beautyPost.enabled` 分流；流畅档(low)强制关闭后期省显存，中/高档默认开启；新增 `setBeautyPostEnabled(v)` 供下段设置页开关接线。
+- 验证：3 文件 node --check 通过；`node scripts/build_standalone_html.mjs` 一次跑通（Vite 2s），根目录 HTML 17.76MB 且与 docs/index.html byte-for-byte 一致；包内指纹 renderTarget1/_outputColorSpace/separableBlurMaterials/uVignette/uSaturation/setBeautyPostEnabled 全命中；无外部脚本引用。
+- 工作区 hygiene：node_modules 移至 /tmp/head2-node_modules 并软链（仿 11c），dist/ 构建后删除，工作区回落 70MB；token 只走内存 header 推送，不进任何文件；本轮未 force-push。

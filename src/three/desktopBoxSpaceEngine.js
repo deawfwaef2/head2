@@ -14,6 +14,7 @@ import {
   buildDesktopLightRig,
   applyRenderQualityToEngine
 } from './photorealLighting.js';
+import { createBeautyPostChain } from './beautyPostChain.js';
 
 /**
  * Full-Screen 3D Perspective Box Space & Desktop Pet Physics/Interaction Engine
@@ -94,6 +95,17 @@ export class DesktopBoxSpaceEngine {
     this.fillLight = this.lightRig.fill;
     this.anatomyUpLight = this.lightRig.up;
     this.rimLight = this.lightRig.rim;
+
+    // Stage 13a 电影级后期链（辉光 + 唯美调色；异常则回退直渲，永不黑屏）
+    this.beautyPost = null;
+    this.beautyPostUserEnabled = true;
+    try {
+      this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
+      this.beautyPost.setEnabled(true);
+    } catch (err) {
+      console.warn('后期链初始化失败，已回退直渲:', err);
+      this.beautyPost = null;
+    }
 
     this.updateCameraProjection();
   }
@@ -563,14 +575,28 @@ export class DesktopBoxSpaceEngine {
     const w = window.innerWidth;
     const h = window.innerHeight;
     this.renderer.setSize(w, h);
+    if (this.beautyPost) this.beautyPost.syncSize(w, h, this.renderer.getPixelRatio());
     this.updateCameraProjection();
     this.initBoxWireframe();
   }
 
   /** Stage 7：三档写实画质（low/medium/high），由设置页统一调度 */
   setRenderQuality(level) {
-    applyRenderQualityToEngine(this, level);
+    const lvl = applyRenderQualityToEngine(this, level);
+    if (this.beautyPost) {
+      // 流畅档强制关闭后期（省显存保帧率），其余档位跟随用户开关
+      this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled !== false);
+    }
     this.resize();
+  }
+
+  /** Stage 13a：用户可随时开关辉光后期（设置页持久化） */
+  setBeautyPostEnabled(v) {
+    this.beautyPostUserEnabled = v !== false;
+    if (this.beautyPost) {
+      const lvl = this.currentRenderQuality || 'high';
+      this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled);
+    }
   }
 
   animate() {
@@ -719,6 +745,10 @@ export class DesktopBoxSpaceEngine {
       }
     }
 
-    this.renderer.render(this.scene, this.camera);
+    if (this.beautyPost && this.beautyPost.enabled) {
+      this.beautyPost.render();
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }
