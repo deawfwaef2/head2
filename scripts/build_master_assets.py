@@ -82,15 +82,15 @@ def build_stochastic_hair_field(res=512, seed=2026):
     warped_u_idx = np.mod((grid_u + warp_u * res).astype(np.int32), res)
 
     fiber_mix = (
-        0.52 * s_fine[grid_v.astype(np.int32), warped_u_idx] +
-        0.32 * s_med[grid_v.astype(np.int32), warped_u_idx] +
+        0.50 * s_fine[grid_v.astype(np.int32), warped_u_idx] +
+        0.34 * s_med[grid_v.astype(np.int32), warped_u_idx] +
         0.16 * s_clump
     )
     v_norm = np.linspace(0.0, 1.0, res, dtype=np.float32)[:, None]
     u_norm = np.linspace(0.0, 1.0, res, dtype=np.float32)[None, :]
-    root_tip_shade = 0.89 + 0.11 * np.sin(v_norm * np.pi)
-    # Subtle, organic melanin variation (mean ~168, std ~8.5 -> zero harsh stripes!)
-    albedo_v = np.clip((174.0 + fiber_mix * 9.5) * root_tip_shade, 142.0, 202.0)
+    root_tip_shade = 0.82 + 0.18 * np.sin(v_norm * np.pi)
+    # Rich, high-dynamic non-periodic strand relief (range 42..242, std ~38 -> crisp 3D hair locks, zero flat blob!)
+    albedo_v = np.clip((146.0 + fiber_mix * 36.0) * root_tip_shade, 42.0, 242.0)
 
     # Non-periodic stochastic strand-tip comb
     n_tip1 = gaussian_filter1d(rng.randn(res).astype(np.float32), sigma=0.75, mode='wrap')
@@ -117,34 +117,41 @@ def synthesize_photoreal_hair_png(valid_tex_path, folder_name):
     u_coord = V_GRID.T if is_horiz else U_GRID
     v_coord = U_GRID.T if is_horiz else V_GRID
 
-    # Extract subtle organic local strand detail from the artist's original texture (excluding white halos & horizontal bands)
-    lum_smooth = gaussian_filter(lum, sigma=(6.0, 6.0))
-    artist_detail = np.clip(lum - lum_smooth, -14.0, 14.0) * np.clip((a_orig - 0.20) / 0.40, 0.0, 1.0)
+    # Preserve 100% of the artist's real painted 3D lock & strand shading normalized to [44, 236]!
+    valid_mask = a_orig > 0.12
+    if valid_mask.sum() > 200:
+        p08 = float(np.percentile(lum[valid_mask], 8))
+        p92 = float(np.percentile(lum[valid_mask], 92))
+    else:
+        p08, p92 = float(lum.min()), float(lum.max())
+    span = max(p92 - p08, 18.0)
+    artist_norm = np.clip(46.0 + (lum - p08) / span * 188.0, 34.0, 244.0)
+    lum_smooth = gaussian_filter(artist_norm, sigma=(5.0, 5.0))
+    artist_hi = np.clip(artist_norm - lum_smooth, -42.0, 42.0)
 
     if 'o4saken_' in folder_name:
-        # o4saken_chinesebob01 & o4saken_long01 have a scalp cap in u<0.56 and 5 narrow vertical ribbons in u>=0.56.
-        # Gently widen the 5 vertical ribbons so the 1,000+ hair cards overlap naturally while keeping fine wispy separation!
-        a_wide = maximum_filter1d(a_orig, size=7, axis=1)
-        a_soft = gaussian_filter1d(a_wide, sigma=1.6, axis=1)
+        a_wide = maximum_filter1d(a_orig, size=6, axis=1)
+        a_soft = gaussian_filter1d(a_wide, sigma=1.4, axis=1)
         tip_zone = np.clip((v_coord - 0.65) / 0.30, 0.0, 1.0)
-        a_ribbons = a_soft * (0.72 + 0.28 * comb) * (1.0 - 0.55 * tip_zone * (1.0 - comb))
-        a_final = np.where(u_coord > 0.55, np.maximum(a_orig * 0.92, a_ribbons), a_orig)
+        a_ribbons = a_soft * (0.76 + 0.24 * comb) * (1.0 - 0.48 * tip_zone * (1.0 - comb))
+        a_final = np.where(u_coord > 0.55, np.maximum(a_orig * 0.94, a_ribbons), a_orig)
     else:
         zero_frac = (a_orig < 0.05).sum() / float(res * res)
         semi_frac = ((a_orig >= 0.05) & (a_orig <= 0.92)).sum() / float(res * res)
         if zero_frac < 0.015 and semi_frac < 0.02:
-            # Solid opaque texture: keep interior dense and feather the tips with stochastic strands
             tip_dist = np.minimum(v_coord, 1.0 - v_coord)
-            tip_feather = np.clip(tip_dist / 0.065, 0.0, 1.0)
-            a_final = np.where(tip_feather > 0.88, 1.0, tip_feather * (0.45 + 0.55 * comb))
+            side_dist = np.minimum(u_coord, 1.0 - u_coord)
+            tip_feather = np.clip(tip_dist / 0.085, 0.0, 1.0)
+            side_feather = np.clip(side_dist / 0.035, 0.25, 1.0)
+            base_f = tip_feather * side_feather
+            a_final = np.where(base_f > 0.88, 1.0, base_f * (0.52 + 0.48 * comb))
         else:
-            # Artist alpha mask: preserve full coverage and add subtle stochastic micro-strand wisps along feathered edges
             edge_zone = np.clip(4.0 * a_orig * (1.0 - a_orig), 0.0, 1.0)
-            a_final = np.clip(a_orig * (1.0 - 0.22 * edge_zone * (1.0 - comb)), 0.0, 1.0)
+            a_final = np.clip(a_orig * (1.0 - 0.16 * edge_zone * (1.0 - comb)), 0.0, 1.0)
 
-    # Darken low-alpha wispy edges so bilinear filtering NEVER produces white or silver halos!
-    edge_darken = 0.72 + 0.28 * np.clip(a_final / 0.48, 0.0, 1.0)
-    rgb_val = np.clip((albedo_base + 0.35 * artist_detail) * edge_darken, 118.0, 204.0)
+    edge_darken = 0.58 + 0.42 * np.clip(a_final / 0.45, 0.0, 1.0)
+    combined_luma = 0.60 * artist_norm + 0.40 * albedo_base + 0.45 * artist_hi
+    rgb_val = np.clip(combined_luma * edge_darken, 28.0, 246.0)
 
     g_u8 = rgb_val.astype(np.uint8)
     a_u8 = np.clip(a_final * 255.0, 0.0, 255.0).astype(np.uint8)
@@ -234,23 +241,23 @@ def subdivide_conforming_watertight(pos, norm, uv, tris, max_edge=0.018):
 # 28 Curated Multi-Layer Hair-Card Master Hairstyles (ZERO toigo_* 1-layer helmets!)
 selected_28 = [
     # 1-6: Short Bobs, Student Bobs & Pixie Cuts
-    ('hair_bob01',             'culturalibre_hair_18',          (0.000, 0.002, 0.96, 0.99, 0.98, 'bob_drape')),
-    ('hair_user_photo',        'littleright_bobcut_hair',       (0.000, 0.001, 0.95, 0.99, 0.98, 'bob_drape')),
-    ('hair_bob02',             'o4saken_chinesebob01',          (-0.004, 0.001, 0.92, 0.93, 0.94, 'bob_clean_bangs')),
-    ('hair_short02',           'elvs_wavy_bob',                 (0.000, 0.001, 0.88, 0.97, 0.95, 'bob_drape')),
+    ('hair_bob01',             'littleright_bobcut_hair',       (0.000, 0.001, 0.95, 0.99, 0.98, 'bob_drape')),
+    ('hair_user_photo',        'o4saken_chinesebob01',          (-0.004, 0.001, 0.92, 0.93, 0.94, 'bob_clean_bangs')),
+    ('hair_bob02',             'culturalibre_hair_18',          (0.000, 0.002, 0.96, 0.99, 0.98, 'bob_clean_bangs')),
+    ('hair_short02',           'elvs_ashley_may_hair',          (0.000, 0.001, 0.93, 0.98, 0.97, 'clavicle_drape')),
     ('daz_hair_asym_short',    'elvs_witchy_lil_bob',           (-0.001, 0.002, 0.96, 1.00, 0.98, 'bob_drape')),
     ('daz_hair_pixie_chic',    'elvs_grump_hair',               (0.000, 0.001, 0.98, 0.98, 0.99, 'bob_drape')),
     # 7-12: Straight Long, Hime Cut & Clavicle Lobs
-    ('hair_long01',            'punkduck_alpha7_long',          (0.000, 0.001, 0.95, 0.99, 0.98, 'long_drape')),
+    ('hair_long01',            'o4saken_long01',                (-0.004, 0.001, 0.91, 0.94, 0.93, 'long_part_front')),
     ('daz_hair_hime',          'cortu_straight_bangs',          (0.002, 0.001, 0.98, 1.00, 0.99, 'long_drape')),
     ('hair_short04',           'elvs_katherine_hair',           (0.006, 0.002, 0.97, 0.99, 0.99, 'lift_bangs')),
-    ('daz_hair_side_long',     'o4saken_long01',                (-0.005, 0.001, 0.91, 0.92, 0.93, 'long_part_front')),
+    ('daz_hair_side_long',     'punkduck_alpha7_long2',         (0.000, 0.001, 0.92, 0.97, 0.96, 'long_drape')),
     ('daz_hair_air_bangs_long','elvs_daisy_hair',               (0.000, 0.001, 0.92, 0.99, 0.97, 'sleek_daisy_long')),
-    ('daz_hair_wolf_clavicle', 'punkduck_alpha7_long2',         (0.000, 0.001, 0.92, 0.97, 0.96, 'clavicle_drape')),
+    ('daz_hair_wolf_clavicle', 'punkduck_alpha7_long',          (0.000, 0.001, 0.95, 0.99, 0.98, 'clavicle_drape')),
     # 13-18: Glamorous Waves & Curls
     ('daz_hair_curtain_wave',  'elvs_that_80s_babe_hair',       (0.000, 0.001, 0.95, 0.99, 0.98, 'long_drape')),
     ('daz_hair_hazel_wave',    'elvs_hazel_hair',               (0.000, 0.002, 0.92, 0.99, 0.97, 'long_drape')),
-    ('daz_hair_wavy_bob',      'elvs_ashley_may_hair',          (0.000, 0.001, 0.93, 0.98, 0.97, 'clavicle_drape')),
+    ('daz_hair_wavy_bob',      'elvs_wavy_bob',                 (0.000, 0.001, 0.89, 0.98, 0.96, 'bob_drape')),
     ('daz_hair_glam_wave',     'culturalibre_hair_17',          (0.000, 0.001, 0.92, 0.98, 0.96, 'long_drape')),
     ('daz_hair_mermaid_curl',  'punkduck_alpha7_curly',         (0.000, 0.002, 0.93, 0.98, 0.96, 'long_drape')),
     ('daz_hair_french_lazy_roll','punkduck_alpha7_curly2',      (0.000, 0.002, 0.90, 0.96, 0.95, 'clavicle_drape')),
@@ -520,7 +527,7 @@ for gid, folder_name, tune in selected_28:
     n_len = np.linalg.norm(v_norm_obj, axis=1, keepdims=True)
     rad_n = (fitted_v - hc) / np.maximum(np.linalg.norm(fitted_v - hc, axis=1, keepdims=True), 1e-6)
     v_norm_obj = np.where(n_len > 1e-8, v_norm_obj / np.maximum(n_len, 1e-8), rad_n)
-    v_norm_obj = 0.24 * v_norm_obj + 0.76 * rad_n
+    v_norm_obj = 0.76 * v_norm_obj + 0.24 * rad_n
     v_norm_obj /= np.maximum(np.linalg.norm(v_norm_obj, axis=1, keepdims=True), 1e-8)
 
     pair_map, out_pos, out_norm, out_uv, out_tris = {}, [], [], [], []
@@ -539,40 +546,6 @@ for gid, folder_name, tune in selected_28:
     norm_hr = np.array(out_norm, dtype=np.float32)
     uv_hr = np.array(out_uv, dtype=np.float32)
     tris_hr = np.array(out_tris, dtype=np.uint32)
-
-    # Add 3D Volumetric Inner Under-Lock Layer for meshes with < 7500 tris so outer ribbon gaps never show empty air!
-    if len(tris_hr) < 7500:
-        fc_hr = (pos_hr[tris_hr[:, 0]] + pos_hr[tris_hr[:, 1]] + pos_hr[tris_hr[:, 2]]) / 3.0
-        back_side_tris = tris_hr[(fc_hr[:, 2] < 0.042) & (fc_hr[:, 1] < 0.065)]
-        if len(back_side_tris) > 0:
-            used_v = np.unique(back_side_tris)
-            remap = np.zeros(len(pos_hr), dtype=np.uint32)
-            base_idx = len(pos_hr)
-            remap[used_v] = np.arange(base_idx, base_idx + len(used_v), dtype=np.uint32)
-            p_sub = pos_hr[used_v].copy()
-            n_sub = norm_hr[used_v].copy()
-            u_sub = uv_hr[used_v].copy()
-            # Rotate inner under-locks by +4.2 degrees around Y and inset by -1.8 mm toward head center
-            theta = np.deg2rad(4.2)
-            cos_t, sin_t = np.cos(theta), np.sin(theta)
-            px = p_sub[:, 0] * cos_t - (p_sub[:, 2] + 0.01) * sin_t
-            pz = p_sub[:, 0] * sin_t + (p_sub[:, 2] + 0.01) * cos_t - 0.01
-            p_sub[:, 0], p_sub[:, 2] = px, pz
-            rel_sub = p_sub - hc.astype(np.float32)
-            r_sub = np.maximum(np.linalg.norm(rel_sub, axis=1, keepdims=True), 1e-6)
-            p_sub = p_sub - (rel_sub / r_sub) * 0.0018
-            # Push above scalp if needed
-            sc_check = p_sub[:, 1] > -0.025
-            if sc_check.any():
-                _, idx_sc = scalp_tree.query(p_sub[sc_check], k=1)
-                n_pt = scalp_pts[idx_sc].astype(np.float32)
-                n_nm = scalp_norms[idx_sc].astype(np.float32)
-                sd = np.sum((p_sub[sc_check] - n_pt) * n_nm, axis=1)
-                p_sub[sc_check] += n_nm * np.clip(0.0012 - sd, 0.0, 0.010)[:, None]
-            pos_hr = np.vstack([pos_hr, p_sub])
-            norm_hr = np.vstack([norm_hr, n_sub])
-            uv_hr = np.vstack([uv_hr, u_sub])
-            tris_hr = np.vstack([tris_hr, remap[back_side_tris]])
 
     for sub_thresh, max_t in ((0.022, 11000), (0.016, 5500)):
         if len(tris_hr) < max_t:

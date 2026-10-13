@@ -603,6 +603,27 @@
     - 默认启用 **`📸 85mm 影棚柔焦人像写真 (cinema_85mm_portrait)`**，并提供 `✨ 韩系水光画报`、`☁️ 黑柔镜奶油柔焦`、`📷 柯达 Portra 400 胶卷`、`🍃 富士 Eterna 电影空气感`、`🎞️ 王家卫暖金暗调胶片`、`🌅 暮色琥珀逆光 HDR`、`🌧️ 雨夜书房窗畔`、`🌸 晨光凝脂无影箱` 等 **14 套一键预设**；
     - 定制器抽屉提供 **18 项全自由度实时滑杆**（含新增的 `🌫️ 电影黑柔镜柔焦扩散模糊`、`📷 85mm 大光圈景深虚化模糊`、`🌈 光学定焦微色散`、`🌐 HDR 环境柔光箱漫反射强度` 等），玩家可随时一键切换或深度微调。
 
+### [2026-10-13 Stage 32] 彻底解决头发“变成一坨纯粹的黑、生硬别扭”问题：修复 Three.js 线性空间贴图采样与后处理暗部截断 Bug + 100% 恢复艺术家手绘发束明暗体积层次 + 屏幕空间发丝微法线凹凸 + 逐顶点渐变颅顶发帽与自然长发垂顺（建立在 `3ad5d41` 之上）
+- **用户真机截图与核心指令（对应最新 `uploads/image-1.png`）**：
+  - 用户明确指出：`“现在你这个头发不就变成一坨纯粹的黑了么，看上去好生硬好别扭好低级？”`。
+- **五大根因精准定位与彻底修复**：
+  1. **修复 Three.js `#include <map_fragment>` 线性空间采样 Bug (`sampledDiffuseColor` vs `diffuseColor`)**：
+     - 根因：Three.js 的 `#include <map_fragment>` 内部已将贴图 `sampledDiffuseColor` 乘入 `diffuseColor`（即 `0.0085 * 0.35 = 0.003`），而此前误对已相乘的 `diffuseColor.rgb` 取亮度并计算 `(texLuma - 0.50) * 1.65 + 0.50`，导致全头发的 `strandDetail` 恒等于 `0.000`，发丝明暗对比 100% 归零！
+     - 修复：直接从 `sampledDiffuseColor.rgb` 提取感知 sRGB 发丝亮度 (`sqrt(dot(sampledDiffuseColor.rgb, ...))`)，驱动 12:1 的发缝暗部 (`0.18 * diffuse`) 到发束亮脊 (`2.35 * diffuse`) 立体层次。
+  2. **修复 `BeautyGradeShader` (`src/three/beautyPostChain.js`) 暗部硬截断为纯黑 (`#000000`) 的 Bug**：
+     - 根因：`beautyPostChain.js` 中 `(col - 0.24) * uContrast + 0.24` 对全屏每个像素直接减去 `-0.0384` 并截断 `max(col, 0.0)`，导致线性值 `< 0.0384` 的所有深色发丝像素被强行归零成一坨死黑 (`RGB(0,0,0)`)。
+     - 修复：改用保留暗部趾部层次的胶片平滑 S 曲线 (`filmicS` + `toeProtect = smoothstep(0.02, 0.22, lumaPre)`)，100% 保留黑发内部的深浅发丝纹理层次。
+  3. **恢复艺术家原贴图真实手绘发束圆柱体明暗 (`artist_norm`) + 85% 真实发片几何法线 + 屏幕空间发丝法线凹凸 (`dFdx`/`dFdy`)**：
+     - 根因：此前贴图亮度被压缩至 `174 ± 9.5` 均匀灰片，且 `smoothHairCardNormals` 与顶点着色器将 `84%+` 的顶点法线覆盖为光滑球面法线 (`cranSphereN`)，抹平了不同波浪与发束之间的立体光影夹角。
+     - 修复：在 `build_master_assets.py` 与 `public/models/*.glb` 中完整保留艺术家原贴图真实发束明暗体积 (`34..244`) 叠加非周期微纤维；保留 `85%` 真实发束 3D 几何法线；并在片元着色器 `#include <normal_fragment_maps>` 中利用 `dFdx(vStrandReliefField)` / `dFdy(vStrandReliefField)` 实时扰动每根发丝与发束的 3D 微法线，配合双瓣 Marschner (`R` + `TRT`) 与边缘逆光散射 (`rimStrand`)，令每一缕黑发都呈现清晰的立体光泽。
+  4. **彻底消除额头硬边黑发帽 (`ScalpRootFeatherCap`)、眉毛斜刺与长发齐下巴截断 (`好生硬好别扭`)**：
+     - 修复 `buildScalpRootShadowCap`：改用逐顶点 RGBA 平滑渐变透明通道，在额头与眉眼区域 (`z > 0.045, y < 0.066`) 透明度严格为 `0.0`（彻底消除林汐额头上的生硬黑线），仅在颅顶与后脑平滑过渡至 `0.82`；
+     - 删除 `build_master_assets.py` 中复制并旋转 `4.2°` 的内衬网格代码（彻底消除初夏右眉上方的僵硬黑刺与刘海死黑堆积）；
+     - 修复 `applyArtistHairFineTuning` 中的 `neckClearance`：改为沿颈部圆柱径向柔和分开两侧长发，不再将 `y < -0.072` 的长发向上硬推截断；
+     - 将林汐 (`hair_long01`) 升级为 `o4saken_long01`（`15,033` 顶点、`1,018` 层精细长发片），初夏 (`hair_bob01`) 升级为 `littleright_bobcut_hair`（轻盈碎刘海内扣波波头），苏晚 (`daz_hair_wavy_bob`) 升级为 `elvs_wavy_bob`（120 层柔美波浪卷），并关闭发片对脸部投射的硬边多边形阴影块 (`castShadow = false`)。
+  5. **100% 无损合入 `3ad5d41` (Stage 31)**：完整保留 `3ad5d41` 的零皱纹年轻少女法线贴图、红眼修复 (`Eyes` 3 Primitives 归零)、`asian-female-young.target` 少女基底 + 7 通道多头模自由混合器、8 款少女皮肤材质与 8 款 3D 眉毛实时秒切、建筑滚轮远近推拉与 14 套电影色调/HDR/黑柔镜预设。
+
+
 
 
 

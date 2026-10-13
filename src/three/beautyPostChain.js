@@ -154,16 +154,22 @@ export const BeautyGradeShader = {
       col.b -= uWarmth * 0.052;
       col = max(col, vec3(0.0));
 
-      // 6. Highlight / Midtone Art-Style Tint & Creamy Shadow Split-Toning
+      // 6. Highlight / Midtone Art-Style Tint
       col *= uTint;
-      float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.46, lumaPre), 0.0, 1.0);
-      col += uShadowTint * shadowMask * 0.42;
 
-      // 7. Filmic S-Curve Contrast & Soft Highlight Shoulder Roll-Off (prevents digital plastic clipping)
-      col = (col - vec3(0.24)) * uContrast + vec3(0.24);
+      // 7. Toe-Preserving Filmic S-Curve Contrast & Soft Highlight Shoulder Roll-Off
+      // (Never subtracts a flat constant that clips dark hair strands to 0.0)
+      float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      float contrastPower = mix(1.0, clamp(uContrast, 0.75, 1.45), smoothstep(0.02, 0.22, lumaPre));
+      vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.26, 1.0 - contrastPower);
+      col = mix(col, filmicS, 0.78);
       col = max(col, vec3(0.0));
       col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(0.75)) * 0.42);
+
+      // Creamy Shadow Split-Toning applied AFTER contrast so dark hair retains velvety tonal depth
+      float lumaPostC = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.42, lumaPostC), 0.0, 1.0);
+      col += uShadowTint * shadowMask * 0.42;
 
       // 8. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
