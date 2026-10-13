@@ -453,13 +453,15 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
 
 /**
  * Stage 7 · 皮肤微观细节贴图（程序化生成，全离线）
- * 生成 512px 灰度噪声：同时用作皮肤 roughnessMap（粗糙度变化）与 bumpMap（毛孔凹凸），
+ * Stage 13c 升级为 1024px 灰度噪声：同时用作皮肤 roughnessMap（粗糙度变化）与 bumpMap（毛孔凹凸），
  * 消除“塑料皮”廉价感。单例缓存，多颗头共用同一张，不占多余显存。
  * 注意：数据贴图必须保持线性色彩空间（不设 SRGB），否则粗糙度会偏亮失真。
  */
 let _skinMicroCache = null;
-export function createSkinMicroMaps(size = 512) {
+export function createSkinMicroMaps(size = 1024) {
   if (_skinMicroCache) return _skinMicroCache;
+  // 斑点/皮纹数量按面积缩放、尺寸按边长缩放，保证 1024 与 512 观感密度一致
+  const unit = size / 512;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -484,10 +486,10 @@ export function createSkinMicroMaps(size = 512) {
   }
 
   // 毛孔与微观噪点：随机深浅斑点
-  for (let i = 0; i < 9000; i++) {
+  for (let i = 0; i < Math.round(9000 * unit * unit); i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = Math.random() < 0.12 ? 1.6 + Math.random() * 1.4 : 0.5 + Math.random() * 1.0;
+    const r = (Math.random() < 0.12 ? 1.6 + Math.random() * 1.4 : 0.5 + Math.random() * 1.0) * unit;
     const dark = Math.random() < 0.55;
     const v = dark ? 60 + Math.random() * 60 : 190 + Math.random() * 55;
     ctx.fillStyle = `rgba(${v | 0},${v | 0},${v | 0},${0.05 + Math.random() * 0.09})`;
@@ -497,12 +499,12 @@ export function createSkinMicroMaps(size = 512) {
   }
 
   // 细小皮纹短线（增强近看真实感）
-  ctx.lineWidth = 0.7;
-  for (let i = 0; i < 900; i++) {
+  ctx.lineWidth = 0.7 * unit;
+  for (let i = 0; i < Math.round(900 * unit * unit); i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
     const a = Math.random() * Math.PI;
-    const len = 2 + Math.random() * 5;
+    const len = (2 + Math.random() * 5) * unit;
     const v = 95 + Math.random() * 90;
     ctx.strokeStyle = `rgba(${v | 0},${v | 0},${v | 0},0.10)`;
     ctx.beginPath();
@@ -514,7 +516,7 @@ export function createSkinMicroMaps(size = 512) {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 4;
+  tex.anisotropy = 8; // Stage 13c：掠射角毛孔更锐利
   tex.needsUpdate = true;
   _skinMicroCache = { roughnessMap: tex, bumpMap: tex };
   return _skinMicroCache;

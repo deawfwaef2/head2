@@ -74,7 +74,7 @@ export function buildStudioLightRig(scene) {
   fill.position.set(-34, 10, 35);
   const up = new THREE.DirectionalLight('#f2c9c0', 0.62);
   up.position.set(0, -48, 22);
-  const rim = new THREE.DirectionalLight('#d1e2ef', 0.92);
+  const rim = new THREE.DirectionalLight('#d1e2ef', 1.05); // Stage 13c：+0.13 发丝边缘分离
   rim.position.set(0, 26, -42);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
@@ -93,7 +93,7 @@ export function buildDesktopLightRig(scene) {
   fill.position.set(-55, 15, 70);
   const up = new THREE.DirectionalLight('#fde2e4', 0.95);
   up.position.set(0, -65, 55);
-  const rim = new THREE.DirectionalLight('#7dd3fc', 1.5);
+  const rim = new THREE.DirectionalLight('#7dd3fc', 1.70); // Stage 13c：+0.20 发丝边缘分离
   rim.position.set(0, 35, -80);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };

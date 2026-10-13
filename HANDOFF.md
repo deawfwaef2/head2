@@ -305,3 +305,16 @@
 - 设置页渲染卡新增 `chk-beauty-post`（辉光后期）与 `chk-atmosphere`（氛围）两个 checkbox（`index.html`），`main.js` 接线双引擎同步 + localStorage 持久化（cervix3d-beauty-post / cervix3d-atmosphere）+ Toast 反馈。
 - ⚠️ 环境教训：node_modules 外移到 /tmp 时叶目录名必须仍叫 `node_modules`（如 /tmp/head2-project/node_modules），否则 Node ESM 按字面名向上查找依赖失败（本次曾误命名导致 vite 报 picomatch 缺失，已修复并复现构建成功）。
 - 验证：4 文件 node --check 通过；重建 HTML 17.76MB，双包 byte 一致；指纹 BokehDustAtmosphere/chk-beauty-post/chk-atmosphere/setAtmosphereEnabled/StudioBackdropGlow/uVignette 全命中；无外部脚本；dist 已删。
+
+### [2026-10-13 Stage 13c / final] 轮廓光增强 + 皮肤微观 1024 + 启动页 pill + 交付
+- `photorealLighting.js`：桌面轮廓光 1.50→1.70、工坊轮廓光 0.92→1.05（冷调发丝边缘分离，配合辉光阈值只晕高光，不洗皮肤）。
+- `skinTextureGenerator.js`：`createSkinMicroMaps` 默认 512→1024（斑点/皮纹数量按面积缩放、尺寸按边长缩放，密度观感一致；anisotropy 4→8，掠射角毛孔更锐利；仍单例，一次性生成）。
+- `index.html` 启动页新增特性 pill「🌟 辉光后期 + 氛围尘埃唯美渲染」（功能真实存在，非宣传）。
+- 验证：调用点唯一（assembler 用默认值）；node --check 通过；重建 HTML 17.76MB，双包 byte 一致；指纹全命中；无外部脚本；dist 已删。
+- ⚠️ 本轮沙箱无浏览器/Blender（which 为空、无 playwright），视觉 QA 只能靠用户真机截图回传：重点看辉光是否过强（阈值0.85/强度0.22 可调）、尘埃是否过亮、1024 毛孔近看是否还有蜡感。下一轮若有浏览器，优先做 file:// 截图验收再调参。
+- Stage 13 渲染包三段（13a 后期链 / 13b 氛围+开关 / 13c 灯光+皮肤）全部已推 main，未 force-push；token 未进文件，用后请用户立即撤销。
+
+### [Stage 13 总览 / 给后续 Agent] 本轮未动项与诚实边界
+- 未动：groom 发丝几何/材质、断面纹理与材质、眼/牙/舌材质、 morph/表情系统、物理/音效、Electron 层——前轮已调优且无视觉 QA，不宜盲调。
+- 未做：几何体升级（缺 Blender + 缺用户授权高精资产 + 缺视觉验证，任何“程序化加面数”都是虚假提升，拒绝）；单张照片自动重建（不存在，按 Stage 9 诚实口径）。
+- 实时 WebGL 上限内已做满：ACES + IBL + 柔和阴影 + 阈值辉光 + 暗角调色 + 氛围尘埃 + 1024 微观皮肤。再往上需用户提供合法 DAZ/扫描高精头 + 高分 PBR + 真机截图迭代。

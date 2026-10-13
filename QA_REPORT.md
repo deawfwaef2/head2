@@ -36,3 +36,9 @@
 3. 当前只是修复图集对位、错误球壳、颅顶压缩和无效法线；更好的毛发结构仍需要高质量、许可明确的发型资产与正确烘焙。
 4. 私人模型和浏览器档案不是完整跨电脑备份；ZIP不含GLB本体。系统桌宠仍需Electron，未提供一键安装包。
 5. 内置资产上游授权仍待核验；本轮没有获取或分发商业DAZ原件。解剖盖为艺术示意。
+
+## Stage 13 (2026-10-13) 渲染升级包 QA
+- 构建：vite 6 生产构建通过；`node scripts/build_standalone_html.mjs` 跑通；根目录 `点击开始游戏_CERVIX3D.html` 17.76MB，与 `docs/index.html` byte-for-byte 一致；包内无外部脚本引用。
+- 指纹：renderTarget1 / _outputColorSpace / separableBlurMaterials / uVignette / uSaturation / setBeautyPostEnabled / BokehDustAtmosphere / StudioBackdropGlow / chk-beauty-post / chk-atmosphere / setAtmosphereEnabled 全命中。
+- 语法：新增与改动的 7 个 JS 文件 `node --check` 全过。
+- 未做：浏览器 file:// 实机渲染验证（本轮沙箱无浏览器二进制）——需用户在 Chrome/Edge 双击验证辉光/尘埃/背幕效果并回传截图。
