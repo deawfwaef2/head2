@@ -17,7 +17,7 @@ export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high'];
 // 每个 WebGLRenderer 只生成一张 PMREM 环境贴图，避免重复烘焙
 const pmremEnvCache = new WeakMap();
 
-export function applyBaseRendererSettings(renderer, exposure = 1.06) {
+export function applyBaseRendererSettings(renderer, exposure = 1.0) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = exposure;
@@ -64,15 +64,17 @@ function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
  * 工坊预览 5 点写实灯阵（key 主光带阴影 + fill 补光 + 底部解剖检查灯 + 背部轮廓光 + 半球光）
  */
 export function buildStudioLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff7f2', '#26314a', 0.55);
-  const key = new THREE.DirectionalLight('#fff6ef', 1.85);
+  // A shaped studio key/fill ratio keeps facial planes readable instead of
+  // filling every shadow into the flat, porcelain/plastic look.
+  const hemi = new THREE.HemisphereLight('#fff5ef', '#34272b', 0.30);
+  const key = new THREE.DirectionalLight('#fff4ed', 1.70);
   key.position.set(28, 34, 48);
   configureKeyShadow(key, 26, 2048, 220);
-  const fill = new THREE.DirectionalLight('#9cc2ff', 0.55);
+  const fill = new THREE.DirectionalLight('#b7c9e5', 0.24);
   fill.position.set(-34, 10, 35);
-  const up = new THREE.DirectionalLight('#ffe4e6', 1.0);
+  const up = new THREE.DirectionalLight('#f2c9c0', 0.62);
   up.position.set(0, -48, 22);
-  const rim = new THREE.DirectionalLight('#7dd3fc', 1.55);
+  const rim = new THREE.DirectionalLight('#d1e2ef', 0.92);
   rim.position.set(0, 26, -42);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
@@ -98,9 +100,9 @@ export function buildDesktopLightRig(scene) {
 }
 
 const QUALITY_CONFIGS = {
-  low: { pixelRatioCap: 1, shadowSize: 0, envIntensity: 0.35 },
-  medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.65 },
-  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.85 },
+  low: { pixelRatioCap: 1, shadowSize: 0, envIntensity: 0.28 },
+  medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.50 },
+  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.70 },
 };
 
 /**

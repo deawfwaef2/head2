@@ -27,7 +27,7 @@
       </div>
       <div class="os-icon" data-action="open-tab" data-tab="tutorial">
         <div class="os-icon-glyph">📘</div>
-        <span>Daz照片级建模教程</span>
+        <span>DAZ 头模导入教程</span>
       </div>
     </div>
 
@@ -135,7 +135,7 @@
         <span class="win-logo">◈</span>
         <div>
           <div class="win-title">CERVIX-3D · 颅相典藏馆 <span class="win-ver">PRO v4.0 · REAL GLB</span></div>
-          <div class="win-desc">真实高精亚洲女性3D头模(.glb) · 7款真实3D发模 · C4/C5无缝医学解剖断面 · 非遮挡多模式窗口</div>
+          <div class="win-desc">收藏品管理与桌宠 · 内置演示头模 + 自有高精度 GLB 导入 · 参考照对位 · 颈部断面预览</div>
         </div>
       </div>
       <div class="win-controls">
@@ -166,8 +166,8 @@
       <button class="nav-tab" data-tab="tutorial">
         <span class="tab-icon">📘</span>
         <div>
-          <div class="tab-name">Daz3D 高精度建模教程</div>
-          <div class="tab-sub">照片级还原亚洲女性头模与写实发丝指南</div>
+          <div class="tab-name">DAZ / Blender 建模教程</div>
+          <div class="tab-sub">多视角照片对位、DAZ/Blender 导入与许可检查</div>
         </div>
       </button>
       <button class="nav-tab" data-tab="settings">
@@ -214,7 +214,7 @@
           <div class="studio-col studio-col-left">
             <div class="card-block">
               <h3>📸 步骤 1：输入参考照片 & 半自动对位</h3>
-              <p class="hint-text">上传人物正面照片或选择预设参考照，支持 1:1 叠图对位建模与一键提取肤色/骨相参数。</p>
+              <p class="hint-text">上传正面照片可做前视叠图对位，并粗略采样肤色；照片不会自动变成准确的 3D 网格或贴图。真实骨相与发型仍需在 DAZ/Blender 等工具中多视角手工拟合。</p>
 
               <div class="photo-preview-box" id="photo-preview-box">
                 <canvas id="ref-photo-canvas" width="260" height="300"></canvas>
@@ -226,8 +226,8 @@
                   📷 上传本地照片
                   <input type="file" id="input-photo-upload" accept="image/*" hidden />
                 </label>
-                <button id="btn-auto-sample-photo" class="btn accent" title="从参考照片自动吸取肤色、红润度并匹配东亚女性骨相微调参数">
-                  ✨ 半自动采样对位
+                <button id="btn-auto-sample-photo" class="btn accent" title="粗略采样照片肤色并切换正面相机；不会自动重建3D网格">
+                  ✨ 采样肤色 / 正面对位
                 </button>
               </div>
 
@@ -249,29 +249,24 @@
                   <input type="range" id="slider-overlay-opacity" min="0.1" max="0.85" step="0.05" value="0.42" />
                   <span id="val-overlay-opacity">42%</span>
                 </div>
-                <div class="slider-row">
-                  <span>照片UV贴图投射融合</span>
-                  <input type="range" id="slider-photo-uv-blend" min="0" max="0.75" step="0.05" value="0" />
-                  <span id="val-photo-uv-blend">0%</span>
-                </div>
               </div>
             </div>
 
             <div class="card-block">
-              <h3>📥 导入外部高精度 Daz3D 模型 (可选)</h3>
+              <h3>📥 导入你自己的 DAZ / Blender 头部模型</h3>
               <p class="hint-text">
-                请导入您有权使用、已在 Blender <strong>裁成头部并封好颈口</strong>、贴图内嵌的 <code>.glb</code>。本版不能对任意全身网格自动完成精确布尔裁切/封口；导入文件保存在当前浏览器私人仓库（IndexedDB），档案 ZIP 不包含模型本体，请自行保留原文件。
+                推荐从已获授权的 DAZ Genesis 角色出发，在 Blender 中整理成<strong>只有头部、已封好颈口</strong>的单个 <code>.glb</code>。导入会按头部外包框统一大小，并保留原 GLB 的 base-color、法线、粗糙度等 PBR 贴图；不会自动生成解剖封口。模型只保存在本机浏览器 IndexedDB，档案 ZIP 不含模型本体，请自行保留源文件。
               </p>
               <div class="btn-row">
                 <label class="btn secondary file-btn">
                   📂 导入头部 .GLB
                   <input type="file" id="input-model-upload" accept=".glb" hidden />
                 </label>
-                <button id="btn-test-scan-glb" class="btn ghost" title="一键轮播测试内置7款真实3D发型GLB模型">
-                  💇‍♀️ 轮播7款真实3D发模(.glb)
+                <button id="btn-test-scan-glb" class="btn ghost" title="轮播内置示例发型模型">
+                  💇‍♀️ 轮播内置发型样例
                 </button>
               </div>
-              <div id="custom-model-status" class="status-pill">当前使用：真实高精亚洲女性3D头模 (daz_asian_head_base.glb · 4,494v + 32 Morphs)</div>
+              <div id="custom-model-status" class="status-pill">正在检查内置演示头模…</div>
             </div>
           </div>
 
@@ -425,14 +420,14 @@
 
             <!-- B. High-Poly MhcloFit Hair & Anatomical Neck Cross-Section -->
             <div class="card-block">
-              <h3>💇‍♀️ 步骤 3：8款高精 MhcloFit 3D发型与颈部断面</h3>
+              <h3>💇‍♀️ 步骤 3：内置发型样例与颈部断面</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>8款高多边形艺术家精雕 3D 发型 (.GLB · 0.67µm颅骨拟合)</label>
+                  <label>8 款内置 GLB 发型演示样例（质量取决于各自网格与贴图）</label>
                   <select id="sel-hair-style">
                     <option value="hair_user_photo">照片同款 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)</option>
                     <option value="hair_short02">O4saken · 中式空气刘海多层微卷波波 (hair_short02.glb · 12,547顶点)</option>
-                    <option value="hair_long01">Elvs Lara · 殿堂级中分柔顺长发 (hair_long01.glb · 17,360顶点)</option>
+                    <option value="hair_long01">Elvs Lara · 中分长发样例 (hair_long01.glb · 17,360顶点)</option>
                     <option value="hair_braid01">Elvs Adrienne · 法式蓬松微卷刘海盘发 (hair_braid01.glb · 9,352顶点)</option>
                     <option value="hair_short04">Elvs Daisy · 千金感斜刘海半束发 (hair_short04.glb · 6,721顶点)</option>
                     <option value="hair_ponytail01">Elvs Hazel · 利落偏分高颅顶束发 (hair_ponytail01.glb · 4,891顶点)</option>
@@ -497,7 +492,7 @@
                 <div class="two-col-inputs">
                   <div>
                     <label>副标题 / 骨相定位</label>
-                    <input type="text" id="inp-col-subtitle" value="东亚写实照片级高精头雕标本" />
+                    <input type="text" id="inp-col-subtitle" value="东亚头部收藏品" />
                   </div>
                   <div>
                     <label>典藏评级</label>
@@ -530,7 +525,7 @@
       <section id="tab-tutorial" class="tab-panel">
         <div class="panel-banner">
           <div>
-            <h2>📘 Daz3D 亚洲女性高精度照片级头模 & 写实发丝建模全流程教程</h2>
+            <h2>📘 DAZ / Blender 亚洲女性头模制作与 GLB 导入流程</h2>
             <p>
               本指南介绍使用 <strong>Daz Studio (Genesis 8.1 / 9) + Blender / FaceBuilder</strong> 辅助照片对位、制作发型并导出 GLB；任何单张照片都不能保证特定相似度，颈部真实封口需在 Blender 中检查与手工修整。购买/分发 DAZ 资产前请逐件确认授权。
             </p>
@@ -600,16 +595,16 @@
 
           <!-- Photoreal Render Quality Settings (Stage 7) -->
           <div class="card-block">
-            <h3>✨ 写实渲染画质 (IBL + 柔和阴影 + 皮肤/发丝PBR)</h3>
+            <h3>✨ 实时 PBR 预览画质（采样与阴影）</h3>
             <p class="hint-text">
-              极致档开启 2K 柔和阴影与完整环境反射，皮肤毛孔、发丝釉光与眼球高光最接近照片质感；若电脑较卡可切至标准/流畅档。工坊预览与屏幕桌宠同步生效，档位会自动记住。
+              档位调整像素密度、阴影与环境反射；它不会增加模型面数、补回低分辨率贴图，也不会把实时 WebGL 变成 DAZ Iray 光追。真实细节主要取决于导入 GLB 本身的网格与 PBR 贴图。工坊与桌宠同步生效，选择会保存在本机。
             </p>
 
             <div class="control-group">
               <div class="field-row">
                 <label>渲染画质档位</label>
                 <select id="sel-render-quality">
-                  <option value="high">✨ 极致 (2K阴影 + 完整IBL反射，推荐独显)</option>
+                  <option value="high">✨ 极致 (2K阴影 + 较高环境反射)</option>
                   <option value="medium">⚖️ 标准 (1K阴影 + 中等反射，核显流畅)</option>
                   <option value="low">🚀 流畅 (关闭阴影 + 弱反射，老电脑救星)</option>
                 </select>
@@ -747,7 +742,7 @@
         <span>🛞 滚轮推拉远近3D景深</span>
         <span>🔄 单击桌宠切换360°旋转模式</span>
         <span>📋 鼠标悬停显示收藏品档案</span>
-        <span>✨ 照片级PBR写实渲染</span>
+        <span>✨ PBR 模型材质导入与高画质预览</span>
         <span>🔊 拾取/拖动/盒壁碰撞物理音效</span>
       </div>
       <div class="start-btn-group">
