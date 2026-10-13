@@ -10,6 +10,7 @@ import {
 import { soundEngine } from '../audio/tactileSoundEngine.js';
 import {
   applyBaseRendererSettings,
+  isSoftwareRenderer,
   ensureSceneEnvironment,
   buildDesktopLightRig,
   applyRenderQualityToEngine
@@ -82,6 +83,7 @@ export class DesktopBoxSpaceEngine {
     });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
     // Stage 7 写实管线：ACES + sRGB + PCF 柔和阴影 + 离线 IBL 环境
     applyBaseRendererSettings(this.renderer, 1.0);
@@ -214,7 +216,7 @@ export class DesktopBoxSpaceEngine {
       this.recallCollectible(collectible.id, false);
     }
 
-    const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop' });
+    const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
     const b = this.getBoxBounds();
 
     const startX = Math.max(b.minX + 10, Math.min(b.maxX - 10, collectible.boxPosition?.x ?? 0));
@@ -302,7 +304,7 @@ export class DesktopBoxSpaceEngine {
     const pet = this.pets.get(id);
     if (!pet || !pet.node) return;
     pet.collectible.hairStyle = hairStyle;
-    await attachRealHairModel(pet.node, pet.collectible);
+    await attachRealHairModel(pet.node, { ...pet.collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
     soundEngine.playPickup(0);
     this.onPetStateUpdate(this.getSummonedList());
   }

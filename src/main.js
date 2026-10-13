@@ -544,7 +544,7 @@ async function refreshStudio3DModel() {
     const groom = studioEngine.headNode?.userData?.groomStats;
     status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (groom ? ` · 新Groom：源 ${groom.sourceCurves.toLocaleString()} 曲线 / 实时 ${groom.renderedStrands.toLocaleString()} 发丝` : '');
     const groomStatus = document.getElementById('groom-quality-status');
-    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
+    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面${groom.softwareFallback ? ' · 检测到软件渲染，已保守降级；完整效果需开启硬件加速' : ''}` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
     status.title = '实时 PBR 的最终细节受原始网格密度、贴图分辨率和材质图完整度限制。';
   }
   update2DAnatomyInspector();

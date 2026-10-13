@@ -118,7 +118,7 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
   // Portrait supersampling reduces subpixel hair shimmer on DPR=1 displays.
   // Desktop stays native DPR to avoid quadrupling the full-screen render cost.
-  const ratio = lvl === 'high' && engine.controls ? Math.max(dpr, 2) : dpr;
+  const ratio = lvl === 'high' && engine.controls && !engine.softwareRenderer ? Math.max(dpr, 2) : dpr;
   renderer.setPixelRatio(Math.min(ratio, cfg.pixelRatioCap));
 
   const key = engine.keyLight;
@@ -141,4 +141,13 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   }
   engine.currentRenderQuality = lvl;
   return lvl;
+}
+
+export function isSoftwareRenderer(renderer) {
+  try {
+    const gl = renderer.getContext();
+    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return /swiftshader|llvmpipe|softpipe|software raster/i.test(String(name));
+  } catch (_) { return false; }
 }

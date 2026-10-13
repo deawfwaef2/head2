@@ -181,7 +181,8 @@ export async function buildCurveGroom(style, head, config = {}) {
   if (!id) throw new Error('未知 Groom 发型');
   const source = await decodeSource(id);
   const desktop = config.groomLod !== 'studio';
-  const budget = desktop ? 3000 : Math.min(source.count, Number(config.groomDensity || 9000));
+  const requested = desktop ? 3000 : Math.min(source.count, Number(config.groomDensity || 6000));
+  const budget = config.groomSoftware ? Math.min(requested, desktop ? 1200 : 2000) : requested;
   const count = Math.max(600, Math.min(source.count, budget));
   const families = [[], [], [], []];
   for (let i = 0; i < count; i++) {
@@ -211,10 +212,10 @@ export async function buildCurveGroom(style, head, config = {}) {
     material.userData.builtInHair = true; material.userData.curveGroom = true;
     const mesh = new THREE.Mesh(g, material); mesh.name = `Groom_${names[f]}`;
     mesh.userData.isGroomMesh = true; mesh.userData.groomFamily = f;
-    mesh.castShadow = !desktop && f !== 3; mesh.receiveShadow = false;
+    mesh.castShadow = !desktop && !config.groomSoftware && f !== 3; mesh.receiveShadow = false;
     group.add(mesh); triangles += g.index.count / 3;
   }
-  group.userData.groom = { id, sourceCurves: source.count, selectedGuides: count, renderedStrands: rendered, interpolatedChildren: rendered - count, triangles, lod: desktop ? 'desktop' : 'portrait', nativeSource: 'public/grooms/Chinese_Grooms_Source.blend' };
+  group.userData.groom = { id, sourceCurves: source.count, selectedGuides: count, renderedStrands: rendered, interpolatedChildren: rendered - count, triangles, lod: config.groomSoftware ? (desktop ? 'software-desktop' : 'software-portrait') : (desktop ? 'desktop' : 'portrait'), softwareFallback: !!config.groomSoftware, nativeSource: 'public/grooms/Chinese_Grooms_Source.blend' };
   return group;
 }
 
