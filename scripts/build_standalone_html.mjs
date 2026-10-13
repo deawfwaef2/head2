@@ -22,13 +22,21 @@ const jsContent = jsFile ? fs.readFileSync(path.join(assetsDir, jsFile), 'utf8')
 const glbFiles = [
   'daz_asian_head_base.glb',
   'hair_user_photo.glb',
-  'hair_long01.glb',
   'hair_bob01.glb',
   'hair_bob02.glb',
+  'hair_short02.glb',
+  'hair_long01.glb',
   'hair_ponytail01.glb',
   'hair_braid01.glb',
-  'hair_short02.glb',
-  'hair_short04.glb'
+  'hair_short04.glb',
+  'daz_hair_hime.glb',
+  'daz_hair_curtain_wave.glb',
+  'daz_hair_wavy_bob.glb',
+  'daz_hair_side_long.glb',
+  'daz_hair_hazel_wave.glb',
+  'daz_hair_twin_buns.glb',
+  'daz_hair_glam_wave.glb',
+  'daz_hair_asym_short.glb'
 ];
 
 const embeddedGlbs = {};
@@ -48,11 +56,6 @@ if (fs.existsSync(refPhotoPath)) {
 }
 
 const embeddedGrooms = {};
-for (const id of ['photo_tied', 'center_long', 'low_chignon']) {
-  const file = path.join(projectDir, 'public/grooms', `${id}.groom`);
-  if (!fs.existsSync(file)) throw new Error(`Missing required groom source: ${file}`);
-  embeddedGrooms[`/grooms/${id}.groom`] = { encoding: 'gzip-base64', data: gzipSync(fs.readFileSync(file), { level: 9 }).toString('base64') };
-}
 const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_GROOMS__ = ${JSON.stringify(embeddedGrooms)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw

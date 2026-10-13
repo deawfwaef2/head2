@@ -436,6 +436,23 @@
   - 在 `defaultCollectibles.js` 中为 5 位角色补充完整的 `fateRecord`（18–23 岁巅峰健康态名校/海归/千金在突发意外中骤然终结的伴学档案与生者加冕寄语）。
   - 新增顶部可折叠/可开关的 **「👑 伴学能量汲取 · 生者加冕台」 (`#study-triumph-hud`)**，实时记录伴学专注时长、自动从在屏标本虹吸青春生机能量点数 (`PTS`)、支持切换 4 种心理能量模式（或一键关闭切换为纯享静态美学模式）。
 
+### [2026-10-13 Stage 24] 彻底废除程序化手写建模：恢复 MakeHuman 官方大师级和谐面部解剖形变 + 引入 16 款 MakeHuman 社区艺术家精雕 3D 发型库 + 修复发色发棕偏色 + 玩家 9 维实时发型微调系统
+- **用户真机截图与核心指令（对应 `uploads/image-1.png`）**：
+  - 用户明确指出：1) Stage 21 的三颗头脸部极不协调（林汐嘴巴大张扭曲、苏晚脸颊内凹嘬嘴、初夏下巴凹凸不平且鬓角秃块）；2) 程序化生成的 `.groom` 头发太低级且发色偏棕；3) **核心指令：「记住你建模能力不行你不要建精致模型了，最好用其他手段」「直接网上找高级大师级各种完善的发型，而且允许玩家编辑微调」**。
+- **根因诊断与彻底重构（100% 遵循用户禁止手写建模指令）**：
+  1. **废除手写数学公式 Morph，100% 恢复 MakeHuman 官方 `.target` 真实解剖形变与完整 316 个 BufferView**：
+     - 定位到 Stage 20/21 的 `upgrade_skin_and_grooms.py` 用粗糙的手写正余弦公式覆盖了 `daz_asian_head_base.glb` 中原本来自 MakeHuman 官方 `.target` 库的 `GL_SHORT` 骨骼/肌肉形变通道，且在 `collectibleHeadAssembler.js` 中将 `PRESET_MORPH_BIASES` 翻倍叠加，导致面部严重畸变。
+     - 现通过 `scripts/build_master_assets.py` 从 `37f0260` 完整恢复全部 316 个 `bufferViews`（`bv 0..7` 贴图 + `bv 8..315` 原始 MakeHuman 顶点与 42 通道 `GL_SHORT` 官方 `.target` 表情/骨相形变），融合 MakeHuman 官方 `2048×2048` 真实亚洲女性摄影皮肤贴图 (`skins_young_asian_female` + `skins_toigo_light_skin_with_natural_makeup` + `skins_onlytheghosts_young_eurasian_female`)、真实琥珀棕虹膜贴图与羽化眉睫贴图，并将 5 位角色的面部预设权重控制在自然协调区间（`|w| <= 0.16`，默认 `jawOpen = 0`），彻底恢复端庄、和谐、柔美的东方女性骨相。
+  2. **彻底移除程序化 `.groom` 曲线头发，直接引入 16 款 MakeHuman 社区大师精雕 3D 发型模型（`.mhclo` 19,158 顶点精确头骨拟合）**：
+     - 从官方 MakeHuman 社区资产库（`hair01_cc0` / `hair02_ccby` / `hair03_ccby`）提取由 **Toigo、Elvs、O4saken、Cortu、LittleRight、CulturaLibre** 等 3D 艺术家手工雕琢的 16 款完整多边形发型，修复 `.mhclo` 分米/米缩放与颅顶净空（`+4.2mm`），导出至 `/public/models/*.glb` 并全部内嵌至单文件可玩 HTML：
+       - `hair_bob01.glb`（Toigo 空气刘海内扣短波波 · 2,806v）、`hair_long01.glb`（Elvs 东方中分八字柔顺黑长直 · 7,234v）、`hair_braid01.glb`（Elvs 新中式侧分法式盘发 · 6,174v）、`daz_hair_hime.glb`（Cortu 国风齐刘海姬发式公主切 · 848v）、`daz_hair_curtain_wave.glb`（Elvs 港风八字刘海蓬松大波浪 · 5,968v）、`hair_user_photo.glb`（LittleRight 日系清透碎刘海波波头 · 1,919v）、`hair_ponytail01.glb`（Elvs 飒爽千金露耳高扎长辫 · 17,360v）、`hair_short04.glb`（Elvs 都市轻熟齐眉锁骨中长发 · 5,050v）、`hair_bob02.glb`（Toigo 干练中分内扣A字短波波 · 1,836v）、`hair_short02.glb`（O4saken 中式清纯多层次学生短发 · 12,547v）、`daz_hair_wavy_bob.glb`（Elvs 复古名伶偏分大波浪短发 · 4,914v）、`daz_hair_side_long.glb`（Elvs 知性御姐大偏分柔顺长直发 · 4,418v）、`daz_hair_hazel_wave.glb`（Elvs 温柔千金中分披肩浪漫卷发 · 4,891v）、`daz_hair_twin_buns.glb`（Elvs 甜酷少女高颅顶双丸子头 · 1,864v）、`daz_hair_glam_wave.glb`（CulturaLibre 冷艳超模大背头蓬松女神卷 · 8,985v）、`daz_hair_asym_short.glb`（Elvs 法式复古齐眉齐颌短波波 · 1,679v）。
+  3. **根治头发发棕偏色问题（回应“而且看上去为什么是棕色的”）**：
+     - 将全部 16 款艺术家发型的漫反射贴图去色相归一化为纯净中性灰阶丝缕纹理（保留原始手绘高光/阴影细节与 Alpha 镂空），移除旧版 `curveGroom.js` 中强制向暖棕 `0x493a3c` 插值与暖色自发光的代码，并在 `collectibleHeadAssembler.js` 中采用冷调丝绸高光（`#121216` 纯正乌黑基底 + `#303440` 冷银灰丝绸光泽），呈现纯正浓郁的东方乌黑秀发，同时支持玩家使用取色器自由染发。
+  4. **新增玩家 9 维实时发型编辑微调系统 + 外部 3D 发型导入（回应“而且允许玩家编辑微调”）**：
+     - 在 `collectibleHeadAssembler.js` 中新增 `applyArtistHairFineTuning()`，并在工坊「步骤 3：大师级 3D 发型库与玩家实时微调系统」中提供 9 项实时非破坏性形变滑杆：**✂️ 前额刘海长度微调**、**↔️ 刘海八字中分/分缝开合**、**☁️ 高颅顶与发丝蓬松度**、**📏 整体发尾长度微调**、**🎀 脸颊两侧鬓角收拢修颜**、**〰️ 发尾内扣/外翘弧度**、**↕️ 发型整体高低位置**、**🔄 发型整体前后贴合**、**🔍 发型整体包裹缩放比例**，外加一键重置按钮与 **📂 导入外部 3D 发型 (.GLB / .OBJ)** 按钮。
+  5. **完整合并远端 Stage 22 & 23 成果并同步构建**：完整保留远端 `d222cd9` 的静音 GPU 管线、微距滚轮缩放、画质光影定制器、物理重力落地、3D 地板/层架、6 款标本容器、5 款伴学摆件与伴学加冕系统；升级 `STORAGE_KEY = 'cervix3d-collectibles-stage24-master-v1'`，重新打包 `/home/user/点击开始游戏_CERVIX3D.html`（12.39 MB）与 `/home/user/docs/index.html`。
+
+
 
 
 

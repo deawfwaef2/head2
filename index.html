@@ -615,77 +615,119 @@
 
                 <div class="color-picker-grid">
                   <label>肤色 <input type="color" id="col-skin" value="#ffe9df" /></label>
-                  <label>唇色 <input type="color" id="col-lip" value="#bf6872" /></label>
+                  <label>唇色 <input type="color" id="col-lip" value="#c46470" /></label>
                   <label>瞳色 <input type="color" id="col-iris" value="#3b2014" /></label>
-                  <label>发色 <input type="color" id="col-hair" value="#191518" /></label>
+                  <label>发色 <input type="color" id="col-hair" value="#121216" /></label>
                 </div>
               </div>
             </div>
 
-            <!-- B. High-Poly MhcloFit Hair & Anatomical Neck Cross-Section -->
+            <!-- B. High-Poly MhcloFit Artist Hair & Interactive Player Fine-Tuning -->
             <div class="card-block">
-              <h3>💇‍♀️ 步骤 3：曲线 Groom 发型与颈部断面</h3>
+              <h3>💇‍♀️ 步骤 3：大师级 3D 发型库与玩家实时微调系统</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>现代中国女性 Groom 高定发型库（双层真发丝 + 体积内胆）</label>
+                  <label>16 款 MakeHuman 社区大师精雕 3D 发型库（19,158 顶点头骨精确拟合 + 乌黑真发色）</label>
                   <select id="sel-hair-style">
-                    <option value="groom_photo_tied">✨ 照片同款 · 清透碎刘海露耳低束发 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_center_long">✨ 中式黑长直 · 高颅顶八字中分柔顺发 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_low_chignon">✨ 新中式温婉 · 侧分斜刘海低盘发髻 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_hime_cut">✨ 国风清冷 · 姬发式公主切高定长发 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_clavicle_bob">✨ 都市轻熟 · 法式八字刘海内扣锁骨发 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_air_bob">✨ 元气初恋 · 空气刘海甜美内扣短波波 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_high_ponytail">✨ 飒爽千金 · 高颅顶露耳元气高束发 (12,000 曲线 + 内胆)</option>
-                    <option value="groom_pixie_short">✨ 智感清冷 · 露耳碎发层次超短发 (12,000 曲线 + 内胆)</option>
-                    <option value="hair_user_photo">经典网格 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)</option>
-                    <option value="hair_short02">经典网格 · O4saken 中式空气刘海波波 (hair_short02.glb · 12,547顶点)</option>
-                    <option value="hair_long01">经典网格 · Elvs Lara 中分束发样例 (hair_long01.glb · 17,360顶点)</option>
-                    <option value="hair_braid01">经典网格 · Elvs Adrienne 法式微卷盘发 (hair_braid01.glb · 9,352顶点)</option>
-                    <option value="hair_short04">经典网格 · Elvs Daisy 千金感斜刘海半束发 (hair_short04.glb · 6,721顶点)</option>
-                    <option value="hair_ponytail01">经典网格 · Elvs Hazel 利落偏分高颅顶束发 (hair_ponytail01.glb · 4,891顶点)</option>
-                    <option value="hair_bob02">经典网格 · Toigo 日系层次内卷短波波 (hair_bob02.glb · 3,031顶点)</option>
-                    <option value="hair_bob01">经典网格 · Toigo 经典齐刘海内扣学生波波 (hair_bob01.glb · 2,806顶点)</option>
+                    <option value="hair_bob01">✨ 大师精雕 · 空气刘海内扣短波波 (Toigo Curled Bob · 2,806顶点)</option>
+                    <option value="hair_long01">✨ 大师精雕 · 东方中分八字柔顺黑长直 (Elvs Princess Long · 7,234顶点)</option>
+                    <option value="hair_braid01">✨ 大师精雕 · 新中式侧分斜刘海法式盘发 (Elvs French Updo · 6,174顶点)</option>
+                    <option value="daz_hair_hime">✨ 大师精雕 · 国风齐刘海姬发式公主切 (Cortu Straight Hime · 848顶点)</option>
+                    <option value="daz_hair_curtain_wave">✨ 大师精雕 · 港风八字刘海蓬松大波浪 (Elvs Curtain Wave · 5,968顶点)</option>
+                    <option value="hair_user_photo">✨ 大师精雕 · 日系清透碎刘海波波头 (LittleRight Wispy Bob · 1,919顶点)</option>
+                    <option value="hair_ponytail01">✨ 大师精雕 · 飒爽千金露耳高扎长辫 (Elvs Lara Braid Tail · 17,360顶点)</option>
+                    <option value="hair_short04">✨ 大师精雕 · 都市轻熟齐眉锁骨中长发 (Elvs Katherine Lob · 5,050顶点)</option>
+                    <option value="hair_bob02">✨ 大师精雕 · 干练中分内扣A字短波波 (Toigo Sleek Bob · 1,836顶点)</option>
+                    <option value="hair_short02">✨ 大师精雕 · 中式清纯多层次学生短发 (O4saken Chinese Bob · 12,547顶点)</option>
+                    <option value="daz_hair_wavy_bob">✨ 大师精雕 · 复古名伶偏分大波浪短发 (Elvs Glam Wavy Bob · 4,914顶点)</option>
+                    <option value="daz_hair_side_long">✨ 大师精雕 · 知性御姐大偏分柔顺长直发 (Elvs Side-Swept Long · 4,418顶点)</option>
+                    <option value="daz_hair_hazel_wave">✨ 大师精雕 · 温柔千金中分披肩浪漫卷发 (Elvs Hazel Wave · 4,891顶点)</option>
+                    <option value="daz_hair_twin_buns">✨ 大师精雕 · 甜酷少女高颅顶双丸子头 (Elvs Twin Space Buns · 1,864顶点)</option>
+                    <option value="daz_hair_glam_wave">✨ 大师精雕 · 冷艳超模大背头蓬松女神卷 (CL Voluminous Wave · 8,985顶点)</option>
+                    <option value="daz_hair_asym_short">✨ 大师精雕 · 法式复古齐眉齐颌短波波 (Elvs Witchy French Bob · 1,679顶点)</option>
                     <option value="none">无发模式 (纯医学头颈骨相标本展示)</option>
                   </select>
                 </div>
 
                 <div class="preset-photo-row" id="hair-style-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-                  <span>中国女性发型图鉴:</span>
-                  <button type="button" class="chip-btn active" data-hair-preset="groom_photo_tied">照片碎刘海低束</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_center_long">八字中分黑长直</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_low_chignon">新中式温婉低盘</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_hime_cut">国风清冷公主切</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_clavicle_bob">法式内扣锁骨发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_air_bob">空气刘海短波波</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_high_ponytail">高颅顶元气束发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="groom_pixie_short">智感露耳超短发</button>
+                  <span>大师发型速选:</span>
+                  <button type="button" class="chip-btn active" data-hair-preset="hair_bob01">空气刘海波波</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_long01">中分黑长直</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_braid01">新中式法式盘发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_hime">国风姬发式</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_curtain_wave">港风八字大波浪</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_user_photo">清透碎刘海短发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_ponytail01">露耳高扎长辫</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_short04">齐眉锁骨发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_short02">中式清纯短发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_wavy_bob">复古波浪短发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_side_long">御姐偏分长直</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_twin_buns">甜酷双丸子头</button>
                 </div>
 
-                <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">新 Groom 来自可编辑 Blender Hair Curves：真实引导曲线、立体渐细发丝、独立碎鬓与飞发，无旧 Alpha 发片。桌宠使用 3,000 根 LOD；工坊可显示全部 12,000 引导曲线与插值子丝；默认 6,000 引导采样减少显存占用。Cycles 源工程与浏览器实时材质不同，质量以实际效果验收。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>
-                <div class="field-row">
-                  <label>新 Groom 工坊密度（只影响预览；桌宠自动 LOD）</label>
-                  <select id="sel-groom-density"><option value="3000">流畅 · 3,000 引导采样</option><option value="6000" selected>细致 · 6,000 引导采样</option><option value="12000">完整 · 12,000 引导采样（需较强GPU）</option></select>
-                  <p id="groom-quality-status" class="hint-text">正在准备新 Groom…</p>
+                <div class="field-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                  <label class="btn ghost small" style="cursor:pointer;margin:0;flex:1;text-align:center;">
+                    📂 导入外部 3D 发型 (.GLB / .OBJ)
+                    <input type="file" id="inp-custom-hair-model" accept=".glb,.gltf,.obj" hidden />
+                  </label>
+                  <button type="button" id="btn-reset-hair-morphs" class="btn ghost small" title="恢复当前发型默认出厂形态">↺ 重置发型微调</button>
                 </div>
+                <p id="groom-quality-status" class="hint-text">已加载 MakeHuman 艺术家精雕 3D 发型网格（支持下方 9 项实时微调）</p>
+
                 <div class="slider-row">
-                  <span>前额刘海长度微调 (3D Morph)</span>
-                  <input type="range" id="morph-bangs-len" min="-0.35" max="0.80" step="0.05" value="0.00" />
+                  <span>✂️ 前额刘海长度微调</span>
+                  <input type="range" id="morph-bangs-len" min="-0.50" max="0.80" step="0.05" value="0.00" />
                   <span id="val-morph-bangs-len">+0.00</span>
                 </div>
                 <div class="slider-row">
-                  <span>发丝蓬松度微调 (3D Morph)</span>
-                  <input type="range" id="morph-hair-vol" min="-0.30" max="0.80" step="0.05" value="0.00" />
+                  <span>↔️ 刘海八字中分/分缝开合</span>
+                  <input type="range" id="morph-bangs-part" min="-0.50" max="0.55" step="0.05" value="0.00" />
+                  <span id="val-morph-bangs-part">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>☁️ 高颅顶与发丝蓬松度</span>
+                  <input type="range" id="morph-hair-vol" min="-0.35" max="0.80" step="0.05" value="0.00" />
                   <span id="val-morph-hair-vol">+0.00</span>
                 </div>
                 <div class="slider-row">
-                  <span>发丝物理光泽度（实时调整）</span>
+                  <span>📏 整体发尾长度微调</span>
+                  <input type="range" id="morph-hair-len" min="-0.50" max="0.80" step="0.05" value="0.00" />
+                  <span id="val-morph-hair-len">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>🎀 脸颊两侧鬓角收拢修颜</span>
+                  <input type="range" id="morph-sideburn-lock" min="-0.50" max="0.65" step="0.05" value="0.00" />
+                  <span id="val-morph-sideburn-lock">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>〰️ 发尾内扣 (-) / 外翘 (+)</span>
+                  <input type="range" id="morph-hair-flare" min="-0.60" max="0.60" step="0.05" value="0.00" />
+                  <span id="val-morph-hair-flare">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>↕️ 发型整体高低位置微调</span>
+                  <input type="range" id="morph-hair-off-y" min="-0.40" max="0.40" step="0.02" value="0.00" />
+                  <span id="val-morph-hair-off-y">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>🔄 发型整体前后贴合微调</span>
+                  <input type="range" id="morph-hair-off-z" min="-0.40" max="0.40" step="0.02" value="0.00" />
+                  <span id="val-morph-hair-off-z">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>🔍 发型整体包裹缩放比例</span>
+                  <input type="range" id="morph-hair-scale" min="0.88" max="1.15" step="0.01" value="1.00" />
+                  <span id="val-morph-hair-scale">100%</span>
+                </div>
+                <div class="slider-row">
+                  <span>✨ 发丝物理丝绸光泽度</span>
                   <input type="range" id="slider-hair-sheen" min="0.2" max="1.0" step="0.05" value="0.90" />
                   <span id="val-hair-sheen">90%</span>
                 </div>
                 <div class="slider-row">
                   <span>后发避让解剖断面高度</span>
-                  <input type="range" id="slider-neck-clearance" min="0.0" max="1.0" step="0.05" value="0.38" />
-                  <span id="val-neck-clearance">38%</span>
+                  <input type="range" id="slider-neck-clearance" min="0.0" max="1.0" step="0.05" value="0.45" />
+                  <span id="val-neck-clearance">45%</span>
                 </div>
                 <div class="slider-row">
                   <span>颈部截断高度 (C3~C6)</span>
