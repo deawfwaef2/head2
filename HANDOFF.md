@@ -186,3 +186,8 @@
 - **发丝束感**（同文件 hair 材质）：Stage 8 去灰矫枉过正（env 0.32 致黑压碎+头盔感）。新甜点：env 基底 0.50+自适应（黑发≈0.55，仍远低于致灰的 1.35）、anisotropy 0.85 拉束状挑染、clearcoat 0.10 去头盔片光、spec 1.0 紧致闪点、sheen 放宽到 0.45/0.55 去单团假高光。`isMask` 逻辑不动。
 - 附带发现（未修）：右侧长发头脸部中线有红色竖线（疑新头模 UV 接缝/血纹渗色），待用户确认是否多角度存在再定。
 - 已重建双击 HTML（11.18MB）并同步 docs；vite 构建 + 包内参数指纹（anisotropy:.85 / emissiveIntensity:.6）验证通过。真机视觉效果待用户回传截图确认。
+
+### [2026-10-13 Stage 8c] 脸中线"红纹身"根因：旋转环红色矢状环正对相机
+- 用户截图右侧长发头脸部中线红竖线：排查排除皮肤 albedo（已解包 GLB 看过，无红线）与血迹烘焙；根因为旋转模式 gimbal 第二环（红色 #f43f5e，矢状面 X=0）——头正对相机时该环被侧视成一条竖线叠在脸上，且环自身动画旋转会让红线周期性扫过脸。
+- 修复（`desktopBoxSpaceEngine.js` animate + `toggleRotationMode`，`collectibleHeadAssembler.js` 记环面法线/基准透明度）：每帧算环面世界法线与相机视线夹角，facing<0.10 全隐、0.10~0.38 渐显；开旋转模式时恢复基准透明度。工坊引擎无 gimbal，无需改。
+- 已重建双击 HTML（11.18MB）并同步 docs；包内指纹 planeNormal×3 / baseOpacity×3 验证通过。

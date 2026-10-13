@@ -403,12 +403,16 @@ function buildGimbalOverlayGroup() {
   const ringGeo1 = new THREE.TorusGeometry(13.2, 0.16, 12, 64);
   const ringMat1 = new THREE.MeshBasicMaterial({ color: '#38bdf8', transparent: true, opacity: 0.65 });
   const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+  ring1.userData.planeNormal = new THREE.Vector3(0, 0, 1);
+  ring1.userData.baseOpacity = 0.65;
   gimbalGroup.add(ring1);
 
   const ringGeo2 = new THREE.TorusGeometry(12.4, 0.12, 12, 64);
   ringGeo2.rotateY(Math.PI / 2);
   const ringMat2 = new THREE.MeshBasicMaterial({ color: '#f43f5e', transparent: true, opacity: 0.52 });
   const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+  ring2.userData.planeNormal = new THREE.Vector3(1, 0, 0);
+  ring2.userData.baseOpacity = 0.52;
   gimbalGroup.add(ring2);
 
   return gimbalGroup;

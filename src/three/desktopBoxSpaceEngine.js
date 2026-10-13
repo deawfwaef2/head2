@@ -690,6 +690,16 @@ export class DesktopBoxSpaceEngine {
         if (pet.node.userData.gimbalGroup) {
           pet.node.userData.gimbalGroup.children[0].rotation.z += dt * 0.8;
           pet.node.userData.gimbalGroup.children[1].rotation.y -= dt * 0.6;
+          // Stage 8b: 红色矢状环正对相机时会糊成脸中线"红纹身"，掠射角视角下淡出
+          for (const ring of pet.node.userData.gimbalGroup.children) {
+            const n = (ring.userData.planeNormal || new THREE.Vector3(0, 0, 1)).clone()
+              .applyQuaternion(ring.getWorldQuaternion(new THREE.Quaternion()));
+            const toCam = this.camera.position.clone()
+              .sub(ring.getWorldPosition(new THREE.Vector3())).normalize();
+            const facing = Math.abs(n.dot(toCam));
+            const fade = Math.min(1, Math.max(0, (facing - 0.10) / 0.28));
+            ring.material.opacity = (ring.userData.baseOpacity ?? 0.6) * fade;
+          }
         }
       } else {
         const targetYaw = follow > 0.01
