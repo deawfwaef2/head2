@@ -37,7 +37,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage30-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage34-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -54,6 +54,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage30-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage28-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage27-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage25-master-v1') ||
@@ -99,28 +100,28 @@ const state = {
   visualCustomConfig: {
     presetId: 'cinema_85mm_portrait',
     hdrMode: 'softbox_portrait',
-    envIntensity: 0.52,
+    envIntensity: 0.72,
     windowGobo: 'none',
-    windowGoboStrength: 0.22,
-    chiaroscuro: 0.52,
-    tyndall: 0.45,
-    vintagePhoto: 0.20,
-    softFocus: 0.46,
-    depthBlur: 0.32,
-    chromatic: 0.18,
-    keyColor: '#fff3e4',
-    rimColor: '#ffe8d6',
-    keyAzimuthDeg: 30,
+    windowGoboStrength: 0.18,
+    chiaroscuro: 0.65,
+    tyndall: 0.28,
+    vintagePhoto: 0.04,
+    softFocus: 0.04,
+    depthBlur: 0.0,
+    chromatic: 0.06,
+    keyColor: '#fff5ea',
+    rimColor: '#dceaff',
+    keyAzimuthDeg: 36,
     keyElevationDeg: 28,
-    keyIntensity: 1.92,
-    rimIntensity: 1.15,
-    sssIntensity: 1.48,
-    skinGloss: 0.16,
-    wetGloss: 0.16,
-    sharpen: 0.22,
-    contrast: 1.06,
-    warmth: 0.05,
-    bloomStrength: 0.08
+    keyIntensity: 1.38,
+    rimIntensity: 1.24,
+    sssIntensity: 0.68,
+    skinGloss: 0.36,
+    wetGloss: 0.36,
+    sharpen: 0.30,
+    contrast: 1.08,
+    warmth: 0.02,
+    bloomStrength: 0.04
   },
   studioDraft: {
     basePreset: 'fangyaoping',
@@ -2539,24 +2540,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       const p = VISUAL_STYLE_PRESETS[patch.presetId];
       Object.assign(state.visualCustomConfig, {
         hdrMode: p.hdrMode || 'softbox_portrait',
-        envIntensity: p.envIntensity ?? 0.52,
+        envIntensity: p.envIntensity ?? 0.72,
         windowGobo: p.windowGobo || 'none',
-        windowGoboStrength: p.windowGoboStrength ?? 0.22,
-        chiaroscuro: p.chiaroscuro ?? 0.52,
-        tyndall: p.tyndall ?? 0.45,
-        vintagePhoto: p.vintagePhoto ?? 0.20,
-        softFocus: p.softFocus ?? 0.46,
-        depthBlur: p.depthBlur ?? 0.32,
-        chromatic: p.chromatic ?? 0.18,
-        keyColor: p.keyColor || '#fff3e4',
-        rimColor: p.rimColor || '#ffe8d6',
+        windowGoboStrength: p.windowGoboStrength ?? 0.18,
+        chiaroscuro: p.chiaroscuro ?? 0.65,
+        tyndall: p.tyndall ?? 0.28,
+        vintagePhoto: p.vintagePhoto ?? 0.04,
+        softFocus: p.softFocus ?? 0.04,
+        depthBlur: p.depthBlur ?? 0.0,
+        chromatic: p.chromatic ?? 0.06,
+        keyColor: p.keyColor || '#fff5ea',
+        rimColor: p.rimColor || '#dceaff',
         keyAzimuthDeg: p.keyAzimuthDeg,
         keyElevationDeg: p.keyElevationDeg,
         keyIntensity: p.keyIntensity,
         rimIntensity: p.rimIntensity,
         sssIntensity: p.sssIntensity,
-        skinGloss: p.skinGloss ?? 0.16,
-        wetGloss: p.skinGloss ?? 0.16,
+        skinGloss: p.skinGloss ?? 0.36,
+        wetGloss: p.skinGloss ?? 0.36,
         sharpen: p.sharpen,
         contrast: p.contrast,
         warmth: p.warmth,

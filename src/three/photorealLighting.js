@@ -41,30 +41,30 @@ export const VISUAL_STYLE_PRESETS = {
     rimColor: '#dceaff',
     hemiSky: '#fff8f2',
     hemiGround: '#1a1516',
-    keyIntensity: 1.58,
-    fillIntensity: 0.48,
-    rimIntensity: 1.28,
-    hemiIntensity: 0.36,
-    upIntensity: 0.22,
-    keyAzimuthDeg: 32,
+    keyIntensity: 1.38,
+    fillIntensity: 0.24,
+    rimIntensity: 1.24,
+    hemiIntensity: 0.22,
+    upIntensity: 0.12,
+    keyAzimuthDeg: 36,
     keyElevationDeg: 28,
-    exposure: 0.88,
-    envIntensity: 0.88,
-    contrast: 1.07,
-    saturation: 0.98,
+    exposure: 0.84,
+    envIntensity: 0.72,
+    contrast: 1.08,
+    saturation: 0.99,
     warmth: 0.02,
     vignette: 0.26,
-    sharpen: 0.28,
-    softFocus: 0.06,
+    sharpen: 0.30,
+    softFocus: 0.04,
     depthBlur: 0.0,
-    chromatic: 0.08,
-    bloomStrength: 0.05,
-    filmGrain: 0.06,
-    tyndall: 0.32,
-    vintagePhoto: 0.08,
+    chromatic: 0.06,
+    bloomStrength: 0.04,
+    filmGrain: 0.05,
+    tyndall: 0.28,
+    vintagePhoto: 0.04,
     skinGloss: 0.36,
-    sssIntensity: 0.82,
-    chiaroscuro: 0.58,
+    sssIntensity: 0.68,
+    chiaroscuro: 0.65,
     windowGobo: 'none',
     windowGoboStrength: 0.18,
     tint: [1.00, 1.00, 1.00],
@@ -800,13 +800,14 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.85)
       reflectedLight.directSpecular *= (0.52 + 0.48 * litTerm) * poreSpecMask * 0.78;
       reflectedLight.indirectSpecular *= (0.78 + 0.65 * fresnelSheen) * poreSpecMask;
 
-      // Subtle rose-ivory shadow tone
-      vec3 warmSubsurfaceShadow = vec3(0.95, 0.89, 0.91);
+      // Sculptural 3D chiaroscuro shadow attenuation on indirect diffuse so nose bridge, eye sockets, cheekbones & jaw retain rich depth
+      vec3 warmSubsurfaceShadow = vec3(0.94, 0.87, 0.89);
+      reflectedLight.indirectDiffuse *= (0.48 + 0.44 * litTerm);
       reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse * warmSubsurfaceShadow, reflectedLight.indirectDiffuse, litTerm);
 
       // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour
       float vellusRim = pow(1.0 - ndotv, 3.8) * smoothstep(-0.20, 0.55, fragNdl);
-      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.96, 0.94) * vellusRim * 0.09;
+      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.96, 0.94) * vellusRim * 0.06;
 
       #if ( NUM_DIR_LIGHTS > 0 )
         vec3 sssAccum = vec3(0.0);
@@ -815,11 +816,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.85)
           sssAccum += computeDualLobeSkinSSS( normal, directionalLights[ i ].direction, directionalLights[ i ].color );
         }
         #pragma unroll_loop_end
-        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.55 + 0.45 * winEnv) * 0.28;
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.55 + 0.45 * winEnv) * 0.22;
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-chiaroscuro-window-sss-v33';
+  material.customProgramCacheKey = () => 'cervix3d-chiaroscuro-window-sss-v34';
 }
 
 /**
@@ -887,30 +888,30 @@ function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
 }
 
 export function buildStudioLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff6ee', '#221a18', 0.46);
-  const key = new THREE.DirectionalLight('#fff2e2', 1.92);
-  key.position.set(32, 30, 46);
+  const hemi = new THREE.HemisphereLight('#fff6ee', '#1a1414', 0.22);
+  const key = new THREE.DirectionalLight('#fff2e2', 1.38);
+  key.position.set(34, 30, 44);
   configureKeyShadow(key, 20, 2048, 220);
-  const fill = new THREE.DirectionalLight('#9eb6d8', 0.58);
+  const fill = new THREE.DirectionalLight('#9eb6d8', 0.24);
   fill.position.set(-34, 14, 38);
-  const up = new THREE.DirectionalLight('#f7d5ce', 0.32);
+  const up = new THREE.DirectionalLight('#f7d5ce', 0.12);
   up.position.set(0, -48, 26);
-  const rim = new THREE.DirectionalLight('#ffe8d6', 1.15);
+  const rim = new THREE.DirectionalLight('#ffe8d6', 1.24);
   rim.position.set(-18, 28, -42);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
 }
 
 export function buildDesktopLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff6ee', '#221a18', 0.46);
-  const key = new THREE.DirectionalLight('#fff2e2', 1.95);
-  key.position.set(52, 48, 88);
+  const hemi = new THREE.HemisphereLight('#fff6ee', '#1a1414', 0.22);
+  const key = new THREE.DirectionalLight('#fff2e2', 1.38);
+  key.position.set(56, 48, 84);
   configureKeyShadow(key, 54, 2048, 480);
-  const fill = new THREE.DirectionalLight('#9eb6d8', 0.58);
+  const fill = new THREE.DirectionalLight('#9eb6d8', 0.24);
   fill.position.set(-55, 18, 72);
-  const up = new THREE.DirectionalLight('#f7d5ce', 0.32);
+  const up = new THREE.DirectionalLight('#f7d5ce', 0.12);
   up.position.set(0, -65, 55);
-  const rim = new THREE.DirectionalLight('#ffe8d6', 1.18);
+  const rim = new THREE.DirectionalLight('#ffe8d6', 1.24);
   rim.position.set(-28, 42, -80);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };

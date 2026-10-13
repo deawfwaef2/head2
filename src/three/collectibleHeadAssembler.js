@@ -610,17 +610,6 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
         z += hairFlare * 0.014 * (wTip * wTip);
       }
 
-      if (neckClear > 0.05 && y < -0.042 && z < 0.025) {
-        const wBelow = Math.min(1.0, Math.max(0.0, (-0.042 - y) / 0.055));
-        const rNeck = Math.hypot(x, z + 0.014);
-        if (rNeck < 0.050) {
-          const push = (0.050 - rNeck) * neckClear * 0.72 * wBelow;
-          const signX = x >= 0 ? 1.0 : -1.0;
-          x += signX * push * 0.88;
-          z -= push * 0.32;
-        }
-      }
-
       out[i3] = x;
       out[i3 + 1] = y;
       out[i3 + 2] = z;
@@ -835,11 +824,11 @@ export function triggerCollectibleBlink() {
 
 function computeSkinTintColor(skinToneHex = '#ffe8df') {
   const c = new THREE.Color(skinToneHex || '#ffe8df');
-  // Subtle neutral tint (0.93..1.02) so the real downloaded photographic female skin texture
-  // retains 100% of its natural dermal pores, eyelids, lips, and subsurface complexion without plastic wash!
-  const r = Math.min(1.02, Math.max(0.93, 0.80 + c.r * 0.21));
-  const g = Math.min(1.02, Math.max(0.92, 0.80 + c.g * 0.21));
-  const b = Math.min(1.02, Math.max(0.91, 0.80 + c.b * 0.21));
+  // Balanced linear albedo multiplier (0.74..0.84) so the 24-bit photographic skin texture
+  // retains rich 3D chiaroscuro shadow depth, nostrils, eyelids, and lips without overexposed white-out!
+  const r = Math.min(0.84, Math.max(0.74, 0.64 + c.r * 0.19));
+  const g = Math.min(0.82, Math.max(0.72, 0.62 + c.g * 0.19));
+  const b = Math.min(0.81, Math.max(0.71, 0.61 + c.b * 0.19));
   return new THREE.Color(r, g, b);
 }
 
@@ -1052,7 +1041,7 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
         #endif
         float rawLinearLuma = clamp(dot(sampledDiffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
         float texSrgbLuma = sqrt(rawLinearLuma);
-        float artistLockShade = smoothstep(0.22, 0.86, texSrgbLuma);
+        float artistLockShade = smoothstep(0.18, 0.88, texSrgbLuma);
 
         float texAlpha = sampledDiffuseColor.a;
         float edgeSoftness = smoothstep(0.14, 0.68, texAlpha);
@@ -1062,13 +1051,13 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
 
         // Subtle root-parting & inner-neck depth AO
         float rFromCore = length(vHairLocalPos - vec3(0.0, 0.020, -0.008));
-        float innerDepthAO = smoothstep(0.060, 0.092, rFromCore);
-        float crownPartAO = 1.0 - 0.18 * exp(-pow(vHairLocalPos.x / 0.016, 2.0)) * smoothstep(0.050, 0.095, vHairLocalPos.y);
-        float hairVolAO = (0.78 + 0.22 * innerDepthAO) * crownPartAO;
+        float innerDepthAO = smoothstep(0.058, 0.092, rFromCore);
+        float crownPartAO = 1.0 - 0.22 * exp(-pow(vHairLocalPos.x / 0.016, 2.0)) * smoothstep(0.050, 0.095, vHairLocalPos.y);
+        float hairVolAO = (0.74 + 0.26 * innerDepthAO) * crownPartAO;
 
-        // Soft, velvety silk lock shading (NO harsh 13:1 wire stripes or grey-brown wash)
-        vec3 deepSilk = diffuse * 0.62;
-        vec3 litSilk = diffuse * 1.24;
+        // Keratin fiber depth: deep jet-black crevices + clearly visible dark espresso/charcoal strand relief
+        vec3 deepSilk = diffuse * 0.42;
+        vec3 litSilk = diffuse * 2.35 + vec3(0.022, 0.020, 0.024) * pow(artistLockShade, 1.25);
         diffuseColor.rgb = mix(deepSilk, litSilk, artistLockShade) * hairVolAO * (0.45 + 0.55 * edgeSoftness);
 
         ${isWispLayer ? `
@@ -1096,45 +1085,45 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
         vec3 tMeridian = normalize(cross(bAzim, nCran));
         if (tMeridian.y > 0.0) tMeridian = -tMeridian;
 
-        float lockTilt = (vArtistLockRidge - 0.5) * 0.06;
-        vec3 keyLightDir = normalize(vec3(0.26, 0.68, 0.68));
+        float lockTilt = (vArtistLockRidge - 0.5) * 0.07;
+        vec3 keyLightDir = normalize(vec3(0.28, 0.66, 0.70));
         vec3 HKey = normalize(keyLightDir + viewDir);
 
         // Primary R cuticle silk band (smooth halo across crown & mid-locks)
         vec3 T1 = normalize(tMeridian + (-0.08 + lockTilt) * surfNorm);
         float tdoth1 = clamp(dot(T1, HKey), -1.0, 1.0);
         float sinTH1 = sqrt(max(0.0, 1.0 - tdoth1 * tdoth1));
-        float specR = pow(max(0.0, sinTH1), 46.0) * (0.55 + 0.45 * vArtistLockRidge);
+        float specR = pow(max(0.0, sinTH1), 36.0) * (0.35 + 0.65 * vArtistLockRidge);
 
         // Secondary TRT soft cortex sheen
         vec3 T2 = normalize(tMeridian + (0.12 - lockTilt) * surfNorm);
         float tdoth2 = clamp(dot(T2, HKey), -1.0, 1.0);
         float sinTH2 = sqrt(max(0.0, 1.0 - tdoth2 * tdoth2));
-        float specTRT = pow(max(0.0, sinTH2), 20.0) * (0.45 + 0.55 * vArtistLockRidge);
+        float specTRT = pow(max(0.0, sinTH2), 16.0) * (0.30 + 0.70 * vArtistLockRidge);
 
-        // Subtle grazing-angle rim separation (faded to zero on semi-transparent edges)
+        // Subtle grazing-angle rim separation
         float ndotv = clamp(abs(dot(surfNorm, viewDir)), 0.0, 1.0);
-        float fresnelRim = pow(1.0 - ndotv, 3.4) * 0.35;
+        float fresnelRim = pow(1.0 - ndotv, 3.2) * (0.30 + 0.45 * vArtistLockRidge);
 
-        float ndotlKey = smoothstep(-0.15, 0.68, dot(surfNorm, keyLightDir));
+        float ndotlKey = smoothstep(-0.20, 0.65, dot(surfNorm, keyLightDir));
         float edgeMask = vHairEdgeSoftness * vHairEdgeSoftness;
 
-        vec3 rTint = mix(vec3(0.048, 0.050, 0.058), diffuse * 2.2 + vec3(0.032, 0.032, 0.038), 0.50);
-        vec3 trtTint = diffuse * 2.4 + vec3(0.022, 0.020, 0.024);
-        vec3 rimTint = diffuse * 1.8 + vec3(0.020, 0.020, 0.025);
+        vec3 rTint = mix(vec3(0.068, 0.068, 0.078), diffuse * 3.0 + vec3(0.045, 0.042, 0.050), 0.50);
+        vec3 trtTint = diffuse * 3.2 + vec3(0.036, 0.032, 0.038);
+        vec3 rimTint = diffuse * 2.2 + vec3(0.028, 0.026, 0.032);
 
         vec3 anisoGlint = (
-          specR * rTint * 0.58 +
-          specTRT * trtTint * 0.42
-        ) * ndotlKey * edgeMask * ${(0.55 + sheenIntensity * 0.38).toFixed(3)};
+          specR * rTint * 0.62 +
+          specTRT * trtTint * 0.48
+        ) * ndotlKey * edgeMask * ${(0.65 + sheenIntensity * 0.45).toFixed(3)};
 
-        vec3 rimStrand = fresnelRim * rimTint * edgeMask * 0.38;
+        vec3 rimStrand = fresnelRim * rimTint * edgeMask * 0.45;
 
-        float wrapLight = 0.32 + 0.68 * smoothstep(-0.40, 0.75, dot(surfNorm, keyLightDir));
-        reflectedLight.directDiffuse = max(reflectedLight.directDiffuse, diffuseColor.rgb * wrapLight * 0.72);
+        float wrapLight = 0.42 + 0.58 * smoothstep(-0.45, 0.75, dot(surfNorm, keyLightDir));
+        reflectedLight.directDiffuse = max(reflectedLight.directDiffuse, diffuseColor.rgb * wrapLight * 0.92);
 
-        reflectedLight.directSpecular *= 0.18 * edgeMask;
-        reflectedLight.indirectSpecular *= 0.22 * edgeMask;
+        reflectedLight.directSpecular *= 0.16 * edgeMask;
+        reflectedLight.indirectSpecular *= 0.20 * edgeMask;
         reflectedLight.indirectSpecular += (anisoGlint + rimStrand) * smoothstep(0.18, 0.68, diffuseColor.a);
       #endif
       `
@@ -1158,8 +1147,8 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const a = idx[i], b = idx[i + 1], c = idx[i + 2];
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Strictly keep cap behind upper hairline (never cover the forehead or brow area!)
-    if (ym > 0.030 && zm < 0.048 && (zm < 0.032 || ym > 0.066)) {
+    // Strictly keep cap on the upper/back cranial crown (NEVER on the forehead or temples!)
+    if (ym > 0.056 && zm < 0.024) {
       capIndices.push(a, b, c);
     }
   }
@@ -1181,11 +1170,9 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     newPos[i * 3 + 1] = y + (dy / len) * 0.00035;
     newPos[i * 3 + 2] = z + (dz / len) * 0.00035;
 
-    // Smoothly feather vertex alpha to 0.0 near the front forehead hairline & side temples
-    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.034) / 0.026));
-    const fadeFront = Math.min(1.0, Math.max(0.0, (0.045 - z) / 0.028));
-    const fadeTemple = Math.min(1.0, Math.max(0.0, (0.068 - Math.abs(x)) / 0.018));
-    const alpha = fadeY * fadeFront * (z > 0.005 ? fadeTemple : 1.0) * 0.82;
+    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.056) / 0.020));
+    const fadeFront = Math.min(1.0, Math.max(0.0, (0.024 - z) / 0.022));
+    const alpha = fadeY * fadeFront * 0.62;
 
     colors[i * 4] = baseR;
     colors[i * 4 + 1] = baseG;
@@ -1509,20 +1496,20 @@ export async function buildCollectibleHeadNode(config = {}) {
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.56, 0.56),
+        normalScale: new THREE.Vector2(0.82, 0.82),
         roughnessMap: skinMicro.roughnessMap,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Math.max(0.52, Number(materials.skinRoughness ?? 0.60)),
+        roughness: Math.max(0.50, Number(materials.skinRoughness ?? 0.56)),
         metalness: 0.0,
-        sheen: 0.22,
+        sheen: 0.16,
         sheenRoughness: 0.78,
         sheenColor: new THREE.Color('#ebd2ca'),
-        clearcoat: 0.08,
-        clearcoatRoughness: 0.42,
-        specularIntensity: 0.42,
+        clearcoat: 0.06,
+        clearcoatRoughness: 0.44,
+        specularIntensity: 0.36,
         specularColor: new THREE.Color('#fff8f4'),
         ior: 1.38,
-        envMapIntensity: 0.85,
+        envMapIntensity: 0.68,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -1539,7 +1526,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.32,
+        emissiveIntensity: 0.24,
         bumpMap: bumpTex,
         bumpScale: 0.005,
         roughness: Math.max(0.34, 0.72 - wetness * 0.40),
@@ -1547,7 +1534,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         clearcoat: 0.25,
         clearcoatRoughness: 0.35,
         specularIntensity: 0.40,
-        envMapIntensity: 0.32,
+        envMapIntensity: 0.28,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -1558,26 +1545,26 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       child.material = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.05,
+        roughness: 0.36,
         metalness: 0.0,
-        clearcoat: 0.94,
-        clearcoatRoughness: 0.02,
-        specularIntensity: 0.95,
+        clearcoat: 0.16,
+        clearcoatRoughness: 0.06,
+        specularIntensity: 0.24,
         ior: 1.38,
-        envMapIntensity: 1.32,
+        envMapIntensity: 0.14,
       });
     } else if (matName === 'Cornea') {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.04,
-        roughness: 0.02,
+        opacity: 0.02,
+        roughness: 0.03,
         metalness: 0.0,
-        clearcoat: 0.65,
-        clearcoatRoughness: 0.01,
-        specularIntensity: 0.75,
+        clearcoat: 0.35,
+        clearcoatRoughness: 0.02,
+        specularIntensity: 0.38,
         ior: 1.38,
-        envMapIntensity: 0.62,
+        envMapIntensity: 0.18,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
@@ -1588,15 +1575,15 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
-        color: new THREE.Color('#ffffff'),
+        color: new THREE.Color('#221c1d'),
         transparent: true,
-        alphaTest: 0.02,
+        alphaTest: 0.015,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.56,
-        envMapIntensity: 0.35,
+        roughness: 0.78,
+        envMapIntensity: 0.06,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {
@@ -1604,14 +1591,14 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (lashMap) lashMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: lashMap,
-        color: new THREE.Color('#ffffff'),
+        color: new THREE.Color('#141114'),
         transparent: true,
-        alphaTest: 0.06,
+        alphaTest: 0.04,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.36,
-        envMapIntensity: 0.45,
+        roughness: 0.48,
+        envMapIntensity: 0.06,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
@@ -1619,13 +1606,13 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (teethMap) teethMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshPhysicalMaterial({
         map: teethMap,
-        color: new THREE.Color('#f4ede2'),
-        roughness: 0.18,
+        color: new THREE.Color('#ffffff'),
+        roughness: 0.22,
         metalness: 0.0,
-        clearcoat: 0.75,
-        clearcoatRoughness: 0.10,
+        clearcoat: 0.65,
+        clearcoatRoughness: 0.12,
         ior: 1.52,
-        envMapIntensity: 0.65,
+        envMapIntensity: 0.42,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Tongue' || child.name === 'Tongue') {
@@ -1633,7 +1620,7 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (tongueMap) tongueMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshPhysicalMaterial({
         map: tongueMap,
-        color: new THREE.Color('#d6747a'),
+        color: new THREE.Color('#e0888e'),
         roughness: 0.28,
         metalness: 0.0,
         clearcoat: 0.65,

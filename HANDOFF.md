@@ -670,3 +670,19 @@
    - **修复**：
      1) `ensureSceneEnvironment` 构建高对比度暗天鹅绒影棚穹顶 (`domeScene`)，并在 `applyCustomVisualConfigToEngine` 中将 `hdrMode` (`softbox_portrait`, `golden_hour`, `rainy_window`, `museum_velvet`) 同步注入主光/辅光/轮廓光色温与面部 `envMapIntensity` (`0.72 + skinGloss * 0.55`)；
      2) 将面部 SSS 限制在明暗交界线 (`penumbra`)，降低默认曝光 (`0.88`) 与默认柔焦 (`uSoftFocus = 0.06`, `uDepthBlur = 0.0`)，对全部 14 套皮肤贴图进行高光曝光校准 (`forehead luma <= 204`)，呈现清透真实的微单摄影肤质。
+
+## Stage 34: Complete Visual Quality Overhaul (Eyes Dual-UV Iris Fix, Unblurred 24-Bit Skins, Dilated Ivory Teeth, High-Coverage Sleek Hair & 4:1 Portrait Chiaroscuro)
+- **Root-Cause Fixes for Stage 33b Screenshot (`uploads/image-1.png`)**:
+  1. **Milky Grey-White Cataract Eyes Fixed (`Image 2` & `Mesh 4` `prim 1`)**:
+     - Discovered that `Mesh 4` (`prim 1`, Iris & Pupil) maps its left eye UV to `(0.2939, 0.6995)` (`px = 150.5, 358.1`, `r = 55.5 px`) and right eye UV to `(0.7050, 0.2982)` (`px = 361.0, 152.7`, `r = 55.5 px`), whereas an earlier stage had painted a single iris at `(256, 256)` and bleached the actual iris UV islands at `(150.5, 358.1)` and `(361.0, 152.7)` into milky white sclera (`RGB ~ 225`).
+     - Rebuilt `Image 2 (eye)` with dual high-definition East Asian espresso-amber irises (`limbal ring`, radial iris fibers, jet-black pupil `RGB 4,4,6`, and dual studio catchlights) aligned 100% to `(150.5, 358.1)` and `(361.0, 152.7)`, and reduced `Eye`/`Cornea` environment reflection (`envMapIntensity: 0.14..0.18`) so the iris is never washed out.
+  2. **Unblurred 24-Bit Photographic Skin Textures (`cn_porcelain_ivory` .. `eurasian_velvet_rose`)**:
+     - Removed the `sigma = 36` Gaussian blur and 256-color palette quantization that had turned the 8 character faces into flat, foggy, posterized masks; rebuilt all 8 variants as 24-bit true-color PNGs preserving 100% of sharp photographic eyelids, nostrils, philtrum, Cupid's bow lip creases, and skin pores.
+  3. **Crisp Dark Eyebrows, Eyelashes & Dilated Ivory Enamel Teeth (`Image 3, 4, 6, 7`)**:
+     - Boosted eyebrow and eyelash fiber alpha (`2.35x..2.55x`) with dark charcoal-espresso pigment (`#221c1d` / `#141114`).
+     - Upgraded `Image 6 (teeth)` (`512x512`) to bright ivory enamel crowns and coral-pink gums with full Euclidean distance-transform UV dilation (zero `0,0,0` black pixels to bleed across tooth seams).
+  4. **High-Coverage Sleek Hair & Keratin Strand Relief (`public/models/*.glb` & `injectMarschnerHairShader`)**:
+     - Rebuilt the 4 low-UV-coverage hairstyles (`hair_long01`, `daz_hair_french_lazy_roll`, `daz_hair_mermaid_curl`, `daz_hair_wolf_clavicle`) from 95%–99% opaque multi-layer grooms (`hair_long01` UV hit rate increased from `66.5%` to `95.5%`, eliminating the horizontal forehead cut and bare scalp hole), and smoothly tapered lateral shoulder flare below `y = -0.020` across all 28 hairstyles to eliminate sideways jaw accordion wings.
+     - Updated `injectMarschnerHairShader` so dark `#121216` hair displays visible keratin strand relief and anisotropic silk bands instead of a flat black silhouette.
+  5. **4:1 Portrait Chiaroscuro Lighting & `localStorage` Version Bump (`src/main.js`, `src/three/photorealLighting.js`)**:
+     - Updated `state.visualCustomConfig` in `src/main.js` (`softFocus: 0.04`, `depthBlur: 0.0`, `vintagePhoto: 0.04`, `keyIntensity: 1.38`, `fillIntensity: 0.24`, `hemiIntensity: 0.22`, `sssIntensity: 0.68`) and bumped `STORAGE_KEY` to `cervix3d-collectibles-stage34-master-v1`.
