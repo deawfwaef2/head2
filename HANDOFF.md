@@ -220,3 +220,11 @@
 - 发丝冲突取中（Stage 9 整套灯变暗，纯用哪边都会偏）：env 0.32+自适应、sheen 0.30、anisotropy 保留 0.85（束感核心）、spec 0.75、clearcoat 0.09。Stage 9 的 0.16 极暗在用户刚抱怨糊团的背景下风险太高，已弃。
 - 断面冲突取中：emissive 0.35（8b 自发光可读 vs Stage 9 防霓虹）、rough max(0.34, 0.72-wet*0.40)、cc 0.25/0.35、spec 0.40、env 0.32、metalness 0。
 - 保留：Stage 9 PBR 保留/灯阵/vite6、我方 8c gimbal 侧视淡出 + BOLD 断面 + QA 钩子。HTML 由合并源码重建（11.19MB），双包一致。
+
+### [2026-10-13 Stage 10] 发丝大规模重制：程序化 1024 脆发丝 + Kajiya-Kay + 头皮衬底（用户：头发完全不行，要真实感）
+- **根因实锤**：8 款 GLB 内嵌发丝贴图仅 256² 且烘焙成灰糊——参数无解，必须换纹理。已解包确认 alpha 镂空真实存在（long: 24% 透明/23% 半透）。
+- **新模块 `src/textures/hairStrandTexture.js`**：运行时按发型烘焙 1024²（~1050 根发丝：束明暗/挑染闪丝/发根分区/缕块带）叠乘 GLB 明暗（保留体积感）+ 收紧 alpha + 同循环配准 roughness 图；按 style 单例缓存。2D 隔离渲染验证：发丝脆、覆盖对。
+- **新模块 `src/three/hairKajiyaKay.js`**：onBeforeCompile 注入 KK 双重镜面（primary pow110 + secondary pow16，T 从 V 向导数反推，无需切线属性/逐材质 uniform，染色取 diffuseColor），所有发丝共用程序。
+- **装配器改动**：发片改不透明 + alphaTest 0.28 + alphaToCoverage（告别 transparent 排序团块），roughness 标量置 1（由纹理携带），新增 `addScalpCap`（按发片包围盒自动贴合深色穹顶，只盖头顶不碰脸，Multiplicative 0.30×displayColor）。
+- **验证**：无头启动 0 错误（GLSL 编译通过）；探针 `transparent:false/alphaTest:0.28/hasRough/hasKK/mapW:1024` 全绿；截图见 KK 光带已作用、头皮衬底盖住头顶秃皮且未遮脸（无头下 canvas 贴图全黑属已知环境问题，真机看束感）。
+- 已重建双击 HTML（11.19MB）并同步 docs。待用户真机截图确认束感/光带强度（KK 光方向为固定值，与主光略有偏差，v1 可接受）。

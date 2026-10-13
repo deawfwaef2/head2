@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
+import { getHairStrandTextures } from '../textures/hairStrandTexture.js';
+import { injectHairKajiyaKay, HAIR_KK_CACHE_KEY } from './hairKajiyaKay.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 
 const gltfLoader = new GLTFLoader();
@@ -424,6 +426,35 @@ export function resolveRealHairStyle(styleName = 'hair_user_photo') {
   return valid.has(mapped) ? mapped : 'hair_user_photo';
 }
 
+/**
+ * Stage 10 · 深色头皮衬底：按发片包围盒自动贴合的穹顶，只盖头顶、不碰脸。
+ * GLB 发片在头顶覆盖薄/缺处会露白头皮（读作秃）；衬底让缺口读作浓密发根阴影。
+ * 全包在 try/catch 里调用，失败不影响主体。
+ */
+function addScalpCap(hairGroup, modelContainer, displayColor) {
+  const old = modelContainer.getObjectByName('ScalpCap');
+  if (old) modelContainer.remove(old);
+  const box = new THREE.Box3().setFromObject(hairGroup);
+  if (!box || box.isEmpty()) return;
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  if (size.length() < 1e-6) return;
+  const inv = 1 / (modelContainer.scale.x || 1);
+  const rWorld = Math.max(size.x, size.z) * 0.5 * 0.9;
+  const capGeo = new THREE.SphereGeometry(rWorld * inv, 28, 14, 0, Math.PI * 2, 0, Math.PI * 0.46);
+  const capColor = displayColor.clone().multiplyScalar(0.3);
+  const capMesh = new THREE.Mesh(
+    capGeo,
+    new THREE.MeshStandardMaterial({ color: capColor, roughness: 0.92, metalness: 0 })
+  );
+  capMesh.name = 'ScalpCap';
+  const local = center.clone();
+  modelContainer.worldToLocal(local);
+  capMesh.position.set(local.x, local.y + size.y * inv * 0.1, local.z - rWorld * inv * 0.06);
+  capMesh.scale.set(0.96, 1.02, 0.88);
+  modelContainer.add(capMesh);
+}
+
 export async function attachRealHairModel(rootGroup, config = {}) {
   const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
   if (!modelContainer) return null;
@@ -458,12 +489,25 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
         const origMat = child.material;
-        const mapTex = origMat?.map || null;
+        let mapTex = origMat?.map || null;
+        let roughTex = null;
         if (mapTex) {
           mapTex.colorSpace = THREE.SRGBColorSpace;
           mapTex.anisotropy = 8;
+          // Stage 10：GLB 内 256² 灰糊发丝 → 运行时重制 1024² 脆发丝 + 配准粗糙图
+          // （保留 GLB alpha 镂空；displayColor 照常染色；失败则回退原图）
+          try {
+            const img = mapTex.image;
+            const iw = img ? img.width || img.naturalWidth || 0 : 0;
+            if (img && iw > 0) {
+              const detail = getHairStrandTextures(resolvedStyle, img);
+              mapTex = detail.map;
+              roughTex = detail.roughnessMap;
+            }
+          } catch (e) {
+            roughTex = null;
+          }
         }
-        const isMask = origMat?.alphaMode === 'MASK' || resolvedStyle === 'hair_short02';
         // Stage 8b 发丝束感：黑发底要深但束间要有对比——环境光托底防压黑 + 强各向异性拉出束状挑染高光，
         // 釉面压到最低只留紧致闪点（去头盔感），绒光放宽变柔（去单团假高光）
         const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
@@ -474,8 +518,10 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         const hairSheen = Math.min(0.30, sheenIntensity * 0.32);
         child.material = new THREE.MeshPhysicalMaterial({
           map: mapTex,
+          roughnessMap: roughTex,
           color: displayColor,
-          roughness: Math.max(0.36, 0.62 - sheenIntensity * 0.16),
+          // 有 roughnessMap 时标量置 1（粗糙完全由发丝纹理携带）
+          roughness: roughTex ? 1.0 : Math.max(0.36, 0.62 - sheenIntensity * 0.16),
           metalness: 0.0,
           sheen: hairSheen,
           sheenRoughness: 0.55,
@@ -485,11 +531,19 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           clearcoatRoughness: 0.40,
           specularIntensity: 0.75,
           envMapIntensity: hairEnvI,
-          transparent: isMask,
-          alphaTest: isMask ? 0.18 : 0.0,
-          alphaToCoverage: isMask,
+          // Stage 10：发片正确做法——不透明 + alphaTest 脆边 + alphaToCoverage 柔边，
+          // 告别 transparent 排序错乱造成的团块/光晕；depthWrite 保证发片间正确遮挡
+          transparent: false,
+          alphaTest: mapTex ? 0.28 : 0.0,
+          alphaToCoverage: true,
+          depthWrite: true,
           side: THREE.DoubleSide,
         });
+        // Stage 10：Kajiya-Kay 发丝双重镜面（挑染光带，没有它就没有真发感）
+        if (mapTex) {
+          child.material.onBeforeCompile = injectHairKajiyaKay;
+          child.material.customProgramCacheKey = () => HAIR_KK_CACHE_KEY;
+        }
         child.castShadow = true;
         child.receiveShadow = true;
       }
@@ -498,6 +552,13 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     hairGroup.add(gltf.scene);
     modelContainer.add(hairGroup);
     rootGroup.userData.currentHairStyle = resolvedStyle;
+    // Stage 10：深色头皮衬底（GLB 发片覆盖薄/缺处不再露白头皮，读作浓密发根阴影）
+    try {
+      rootGroup.updateMatrixWorld(true);
+      addScalpCap(hairGroup, modelContainer, displayColor);
+    } catch (e) {
+      /* 衬底失败不影响发丝主体 */
+    }
 
     if (rootGroup.userData.currentMorphs) {
       applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
