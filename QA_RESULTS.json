@@ -1,0 +1,192 @@
+{
+  "earlyStart": true,
+  "initial": {
+    "pets": 3,
+    "bootRemoved": true
+  },
+  "hair": [
+    {
+      "style": "hair_user_photo",
+      "nodes": [
+        {
+          "name": "hair_user_photo",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 0,
+            "seamVertices": 368
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_bob01",
+      "nodes": [
+        {
+          "name": "hair_bob01",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 1,
+            "seamVertices": 192
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_bob02",
+      "nodes": [
+        {
+          "name": "hair_bob02",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 1,
+            "seamVertices": 660
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_short02",
+      "nodes": [
+        {
+          "name": "hair_short02",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 0,
+            "seamVertices": 52
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_long01",
+      "nodes": [
+        {
+          "name": "hair_long01",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 826,
+            "seamVertices": 2087
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_ponytail01",
+      "nodes": [
+        {
+          "name": "hair_ponytail01",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 0,
+            "seamVertices": 2255
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_braid01",
+      "nodes": [
+        {
+          "name": "hair_braid01",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 0,
+            "seamVertices": 5172
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    },
+    {
+      "style": "hair_short04",
+      "nodes": [
+        {
+          "name": "hair_short04",
+          "invalidNormals": 0,
+          "repairs": {
+            "repaired": 0,
+            "seamVertices": 3176
+          },
+          "flipY": false,
+          "alphaTest": 0.14,
+          "textureSize": 1024,
+          "emissiveBlack": true
+        }
+      ],
+      "noLegacyCap": true
+    }
+  ],
+  "rotation": {
+    "enabled": true,
+    "disabled": true
+  },
+  "race": {
+    "lastRequestWon": true,
+    "noHair": true,
+    "noCap": true
+  },
+  "archive": {
+    "filename": "SPEC-2026-000_UserPhoto.zip",
+    "bytes": 3089
+  },
+  "errors": [],
+  "pointerInteraction": {
+    "hover": {
+      "picked": true,
+      "cardVisible": true
+    },
+    "rotate": true,
+    "rotateOff": true,
+    "wheelChangedDepth": true,
+    "dragChangedX": true,
+    "pageErrors": []
+  },
+  "privateImport": {
+    "imported": {
+      "privateSaved": true,
+      "hairStyle": "none",
+      "originalMaterialRetained": true,
+      "roughness": 0.44,
+      "sourceNormalRetained": true
+    },
+    "afterReload": {
+      "registered": true,
+      "summoned": true
+    },
+    "pageErrors": []
+  }
+}
