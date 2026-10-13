@@ -73,6 +73,6 @@ console.log(`✅ Built standalone playable HTML: ${outPath} (${sizeMb} MB)`);
 // Serve the same offline-ready file on GitHub Pages if Pages is configured for /docs.
 const docsDir = path.join(projectDir, 'docs');
 fs.mkdirSync(docsDir, { recursive: true });
-fs.cpSync(distDir, docsDir, { recursive: true, force: true });
 fs.writeFileSync(path.join(docsDir, 'index.html'), standaloneHtml, 'utf8');
 fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
+fs.rmSync(distDir, { recursive: true, force: true });
