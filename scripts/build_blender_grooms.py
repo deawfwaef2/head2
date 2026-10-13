@@ -165,10 +165,37 @@ head.name='REFERENCE_HEAD_do_not_replace'
 mat=bpy.data.materials.new('Cycles_Melanin_Black_Hair');mat.use_nodes=True
 nodes=mat.node_tree.nodes;nodes.clear()
 h=nodes.new('ShaderNodeBsdfHairPrincipled');h.parametrization='MELANIN'
-h.inputs['Melanin'].default_value=.93;h.inputs['Melanin Redness'].default_value=.12
+h.inputs['Melanin'].default_value=.987;h.inputs['Melanin Redness'].default_value=.12
 h.inputs['Roughness'].default_value=.32;h.inputs['Radial Roughness'].default_value=.44
 h.inputs['Random Color'].default_value=.12;h.inputs['Random Roughness'].default_value=.07
 out=nodes.new('ShaderNodeOutputMaterial');mat.node_tree.links.new(h.outputs[0],out.inputs['Surface'])
+
+# Soft follicle-density layer follows the exact scalp, not a bounding sphere.
+def make_root_density(collection,style):
+    p=head_pos.astype(np.float64).copy()
+    n=accessor(prim['attributes']['NORMAL']).astype(np.float64)
+    n/=np.maximum(np.linalg.norm(n,axis=1)[:,None],1e-12)
+    phi=np.arctan2(p[:,0],p[:,2]+.014);front=np.maximum(0,np.cos(phi))
+    photo=style=='photo_tied';line=-.026+(.060 if photo else .084)*front
+    a=np.clip((p[:,1]-line)/(.037 if photo else .026),0,1);a=a*a*(3-2*a)
+    if style=='center_long':a*=np.where(p[:,1]>.065,1-np.exp(-(p[:,0]/.0011)**2),1)
+    faces=tri[np.sum(a[tri],axis=1)>.03]
+    p+=n*.00014
+    coords=np.stack([p[:,0],-p[:,2],p[:,1]],axis=-1)
+    mesh=bpy.data.meshes.new(style+'_ScalpDensity_Mesh');mesh.from_pydata(coords.tolist(),[],faces.tolist());mesh.update()
+    attr=mesh.color_attributes.new(name='RootCoverage',type='FLOAT_COLOR',domain='POINT')
+    rgba=np.ones((len(p),4),dtype=np.float32);rgba[:,3]=a;attr.data.foreach_set('color',rgba.ravel())
+    material=bpy.data.materials.new(style+'_SoftRootDensity');material.use_nodes=True
+    nodes=material.node_tree.nodes;nodes.clear()
+    transparent=nodes.new('ShaderNodeBsdfTransparent');diffuse=nodes.new('ShaderNodeBsdfDiffuse')
+    diffuse.inputs['Color'].default_value=(.004,.0025,.002,1);diffuse.inputs['Roughness'].default_value=.88
+    attribute=nodes.new('ShaderNodeAttribute');attribute.attribute_name='RootCoverage'
+    mix=nodes.new('ShaderNodeMixShader');output=nodes.new('ShaderNodeOutputMaterial')
+    material.node_tree.links.new(attribute.outputs['Alpha'],mix.inputs[0]);material.node_tree.links.new(transparent.outputs[0],mix.inputs[1]);material.node_tree.links.new(diffuse.outputs[0],mix.inputs[2]);material.node_tree.links.new(mix.outputs[0],output.inputs['Surface'])
+    mesh.materials.append(material)
+    obj=bpy.data.objects.new(style+'_ScalpDensity',mesh);collection.objects.link(obj)
+    obj.hide_render=style!=STYLES[0];obj.hide_set(style!=STYLES[0])
+    for polygon in mesh.polygons:polygon.use_smooth=True
 
 all_metadata=[]
 for style in STYLES:
@@ -191,25 +218,42 @@ for style in STYLES:
     encoded=planes[:,0].tobytes()+planes[:,1].tobytes()
     (OUT/(style+'.groom')).write_bytes(header+records.tobytes()+encoded)
     collection=bpy.data.collections.new('GROOM_'+style);bpy.context.scene.collection.children.link(collection)
+    make_root_density(collection,style)
+    native_count=COUNT
     group_names={0:'Scalp_Flow',1:'Feathered_Fringe',2:'Temple_Wisps',3:'Fine_Flyaways'}
     for group_id,label in group_names.items():
         mask=np.asarray(groups)==group_id
         if not mask.any():continue
         data=bpy.data.hair_curves.new(style+'_'+label)
-        data.add_curves([SAMPLES]*int(mask.sum()))
-        selected=pos[mask].copy(); xyz=np.stack([selected[:,:,0],-selected[:,:,2],selected[:,:,1]],axis=-1)
+        selected=pos[mask].copy()
+        selected_radii=radii[mask].copy()
+        if group_id==1:
+            parent=selected.copy(); original_indices=np.flatnonzero(mask)
+            env=.65+.35*np.sin(np.linspace(0,np.pi,SAMPLES))
+            children=[]
+            for child in (1,2):
+                phase=original_indices*2.39996+child*np.pi
+                offset=np.zeros_like(parent)
+                offset[:,:,0]=np.cos(phase)[:,None]*.00015*env[None,:]
+                offset[:,:,2]=np.sin(phase)[:,None]*.00015*env[None,:]
+                children.append(parent+offset)
+            selected=np.concatenate([parent,*children],axis=0)
+            selected_radii=np.tile(selected_radii,3)
+            native_count+=len(parent)*2
+        data.add_curves([SAMPLES]*len(selected))
+        xyz=np.stack([selected[:,:,0],-selected[:,:,2],selected[:,:,1]],axis=-1)
         data.attributes['position'].data.foreach_set('vector',xyz.ravel())
         radius_attr=data.attributes.new('radius','FLOAT','POINT')
         taper=(.98*(1-np.linspace(0,1,SAMPLES))**.32+.02)
-        rr=(radii[mask,None]*taper).astype(np.float32)
+        rr=(selected_radii[:,None]*taper).astype(np.float32)
         radius_attr.data.foreach_set('value',rr.ravel())
-        data.attributes.new('curve_type','INT8','CURVE').data.foreach_set('value',np.zeros(int(mask.sum()),dtype=np.int32))
+        data.attributes.new('curve_type','INT8','CURVE').data.foreach_set('value',np.zeros(len(selected),dtype=np.int32))
         data.materials.append(mat)
         obj=bpy.data.objects.new(style+'_'+label,data);collection.objects.link(obj)
         obj.hide_render=style!=STYLES[0];obj.hide_set(style!=STYLES[0])
         obj['source']='Original guide-field groom, authored for this project; not photo reconstruction.'
-        obj['family']=label;obj['strand_count']=int(mask.sum())
-    meta={'id':style,'curves':COUNT,'pointsPerCurve':SAMPLES,'groups':{group_names[g]:int(np.count_nonzero(np.asarray(groups)==g)) for g in group_names},'bounds':[lo.tolist(),hi.tolist()], 'coordinateSystem':'Y-up meters','origin':'Original authored guide fields fitted to repository head; photographic style reference only.', 'sourceImage':'public/models/user_photo_ref.jpg','license':'New groom curves CC0; bundled reference head has separate, unresolved upstream license.'}
+        obj['family']=label;obj['strand_count']=len(selected)
+    meta={'id':style,'curves':COUNT,'nativeCurvesWithChildren':native_count,'pointsPerCurve':SAMPLES,'groups':{group_names[g]:int(np.count_nonzero(np.asarray(groups)==g)) for g in group_names},'bounds':[lo.tolist(),hi.tolist()], 'coordinateSystem':'Y-up meters','origin':'Original authored guide fields fitted to repository head; photographic style reference only.', 'sourceImage':'public/models/user_photo_ref.jpg','license':'New groom curves CC0; bundled reference head has separate, unresolved upstream license.'}
     (OUT/(style+'.json')).write_text(json.dumps(meta,ensure_ascii=False,indent=2))
     all_metadata.append(meta)
     print('GROOM_BUILT',style,meta['groups'],flush=True)
@@ -220,9 +264,9 @@ def aim(obj, target):
 def area(name,loc,energy,size,color):
     d=bpy.data.lights.new(name,'AREA');d.energy=energy;d.shape='DISK';d.size=size;d.color=color
     o=bpy.data.objects.new(name,d);bpy.context.scene.collection.objects.link(o);o.location=loc;aim(o,(0,0,.025))
-area('Soft_Key',(.28,-.40,.42),15,.30,(1,.91,.82))
-area('Soft_Fill',(-.3,-.18,.15),5,.26,(.78,.86,1))
-area('Hair_Rim',(.18,.28,.35),18,.20,(.85,.91,1))
+area('Soft_Key',(.28,-.40,.42),7,.30,(1,.91,.82))
+area('Soft_Fill',(-.3,-.18,.15),2,.26,(.78,.86,1))
+area('Hair_Rim',(.18,.28,.35),5,.20,(.85,.91,1))
 camera_data=bpy.data.cameras.new('Groom_Review_Camera');camera=bpy.data.objects.new('Groom_Review_Camera',camera_data)
 bpy.context.scene.collection.objects.link(camera);camera.location=(.14,-.53,.10);aim(camera,(0,0,.015))
 camera_data.type='ORTHO';camera_data.ortho_scale=.35;bpy.context.scene.camera=camera

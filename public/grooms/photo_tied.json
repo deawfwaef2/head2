@@ -1,6 +1,7 @@
 {
   "id": "photo_tied",
   "curves": 12000,
+  "nativeCurvesWithChildren": 19936,
   "pointsPerCurve": 36,
   "groups": {
     "Scalp_Flow": 7213,

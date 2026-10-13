@@ -86,7 +86,8 @@ function buildStrands(source, indices, steps, sides, desktop) {
   const p = new THREE.Vector3(), before = new THREE.Vector3(), after = new THREE.Vector3(), tangent = new THREE.Vector3();
   const normal = new THREE.Vector3(), binormal = new THREE.Vector3(), radial = new THREE.Vector3();
   let vi = 0, ti = 0;
-  for (const strand of indices) {
+  for (const encoded of indices) {
+    const strand = encoded % source.count, child = Math.floor(encoded / source.count);
     const start = vi;
     normal.set(1, 0, 0);
     const pigment = .72 + source.pigment[strand] / 255 * .54;
@@ -101,9 +102,14 @@ function buildStrands(source, indices, steps, sides, desktop) {
       normal.addScaledVector(tangent, -normal.dot(tangent));
       if (normal.lengthSq() < .01) normal.set(0, 0, 1).addScaledVector(tangent, -tangent.z);
       normal.normalize(); binormal.crossVectors(tangent, normal).normalize();
+      if (child) {
+        const phase = strand * 2.39996 + child * Math.PI;
+        const spread = .00015 * (.65 + .35 * Math.sin(t * Math.PI));
+        p.addScaledVector(normal, Math.cos(phase) * spread).addScaledVector(binormal, Math.sin(phase) * spread);
+      }
       // Real tapered cylindrical strands. Desktop LOD slightly widens subpixel
       // fibers for stable coverage; source and portrait preserve physical radii.
-      const radius = source.radius[strand] * (desktop ? 1.7 : 1.15) * (.98 * Math.pow(1 - t, .32) + .02);
+      const radius = source.radius[strand] * (desktop ? 1.8 : (source.family[strand] === 1 ? 1.55 : 1.15)) * (.98 * Math.pow(1 - t, .32) + .02);
       for (let k = 0; k < sides; k++) {
         const angle = k / sides * Math.PI * 2;
         radial.copy(normal).multiplyScalar(Math.cos(angle)).addScaledVector(binormal, Math.sin(angle));
@@ -133,7 +139,7 @@ function buildStrands(source, indices, steps, sides, desktop) {
   return g;
 }
 
-function makeRootLayer(head, color) {
+function makeRootLayer(head, color, style) {
   if (!head?.geometry?.attributes.position) return null;
   const p = head.geometry.attributes.position, n = head.geometry.attributes.normal, index = head.geometry.index;
   if (!n || !index) return null;
@@ -141,8 +147,10 @@ function makeRootLayer(head, color) {
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
     const phi = Math.atan2(x, z + .014), front = Math.max(0, Math.cos(phi));
-    const hairline = -.026 + .084 * front;
-    const a = THREE.MathUtils.smoothstep(y, hairline, hairline + .013);
+    const photo = style === 'groom_photo_tied';
+    const hairline = -.026 + (photo ? .060 : .084) * front;
+    let a = THREE.MathUtils.smoothstep(y, hairline, hairline + (photo ? .037 : .026));
+    if (style === 'groom_center_long' && y > .065) a *= 1 - Math.exp(-Math.pow(x / .0011, 2));
     for (let k = 0; k < 3; k++) {
       const v = k === 0 ? x : k === 1 ? y : z;
       const nn = k === 0 ? n.getX(i) : k === 1 ? n.getY(i) : n.getZ(i);
@@ -160,7 +168,7 @@ function makeRootLayer(head, color) {
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
   g.setAttribute('color', new THREE.BufferAttribute(colors, 4)); g.setIndex(selected);
   g.computeBoundingSphere();
-  const m = new THREE.MeshStandardMaterial({ color, roughness: .88, vertexColors: true, alphaTest: .08, alphaToCoverage: true });
+  const m = new THREE.MeshStandardMaterial({ color, roughness: .88, vertexColors: true, transparent: true, depthWrite: false, alphaTest: 0, alphaToCoverage: false });
   const layer = new THREE.Mesh(g, m); layer.name = 'Groom_ScalpRootDensity';
   layer.userData.isGroomRoot = true; layer.castShadow = false; layer.receiveShadow = true;
   return layer;
@@ -178,11 +186,15 @@ export async function buildCurveGroom(style, head, config = {}) {
     const strand = Math.floor(i * source.count / count);
     families[Math.min(3, source.family[strand])].push(strand);
   }
+  // Two smoothly offset child fibers per fringe guide increase natural coverage.
+  const fringeParents = families[1].slice();
+  for (const strand of fringeParents) families[1].push(strand + source.count, strand + source.count * 2);
+  const rendered = families.reduce((n, family) => n + family.length, 0);
   const group = new THREE.Group(); group.name = 'HairGroup';
   const base = new THREE.Color(config.hairColor || config.materials?.hairColorHex || '#191518');
   base.lerp(new THREE.Color('#31231e'), .16);
   const names = ['GuideFlow', 'FeatheredFringe', 'TempleWisps', 'Flyaways'];
-  const root = makeRootLayer(head, base); if (root) group.add(root);
+  const root = makeRootLayer(head, base, id); if (root) group.add(root);
   let triangles = 0;
   for (let f = 0; f < families.length; f++) {
     if (!families[f].length) continue;
@@ -200,7 +212,7 @@ export async function buildCurveGroom(style, head, config = {}) {
     mesh.castShadow = !desktop && f !== 3; mesh.receiveShadow = false;
     group.add(mesh); triangles += g.index.count / 3;
   }
-  group.userData.groom = { id, sourceCurves: source.count, renderedStrands: count, triangles, lod: desktop ? 'desktop' : 'portrait', nativeSource: 'public/grooms/Chinese_Grooms_Source.blend' };
+  group.userData.groom = { id, sourceCurves: source.count, selectedGuides: count, renderedStrands: rendered, interpolatedChildren: rendered - count, triangles, lod: desktop ? 'desktop' : 'portrait', nativeSource: 'public/grooms/Chinese_Grooms_Source.blend' };
   return group;
 }
 

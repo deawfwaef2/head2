@@ -1,6 +1,7 @@
 {
   "id": "center_long",
   "curves": 12000,
+  "nativeCurvesWithChildren": 12000,
   "pointsPerCurve": 36,
   "groups": {
     "Scalp_Flow": 11552,
