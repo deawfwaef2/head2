@@ -353,22 +353,23 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           mapTex.anisotropy = 8;
         }
         const isMask = origMat?.alphaMode === 'MASK' || resolvedStyle === 'hair_short02';
-        // Stage 8 发丝去灰：深色发必须压低环境反射/釉面/绒光，否则 RoomEnvironment 会把黑发洗成灰白塑料感
+        // Stage 8b 发丝束感：黑发底要深但束间要有对比——环境光托底防压黑 + 强各向异性拉出束状挑染高光，
+        // 釉面压到最低只留紧致闪点（去头盔感），绒光放宽变柔（去单团假高光）
         const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
-        const hairEnvI = 0.32 + Math.min(0.55, hairLum * 0.85);
-        const hairSheen = Math.min(0.30, sheenIntensity * 0.30);
+        const hairEnvI = 0.50 + Math.min(0.45, hairLum * 0.70);
+        const hairSheen = Math.min(0.45, sheenIntensity * 0.45);
         child.material = new THREE.MeshPhysicalMaterial({
           map: mapTex,
           color: displayColor,
-          roughness: Math.max(0.30, 0.58 - sheenIntensity * 0.22),
+          roughness: Math.max(0.30, 0.60 - sheenIntensity * 0.22),
           metalness: 0.0,
           sheen: hairSheen,
-          sheenRoughness: 0.42,
-          sheenColor: displayColor.clone().multiplyScalar(1.15),
-          anisotropy: 0.60,
-          clearcoat: 0.22,
-          clearcoatRoughness: 0.42,
-          specularIntensity: 0.70,
+          sheenRoughness: 0.55,
+          sheenColor: displayColor.clone().multiplyScalar(1.30),
+          anisotropy: 0.85,
+          clearcoat: 0.10,
+          clearcoatRoughness: 0.30,
+          specularIntensity: 1.0,
           envMapIntensity: hairEnvI,
           transparent: isMask,
           alphaTest: isMask ? 0.18 : 0.0,
@@ -513,15 +514,17 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.74,
+        // Stage 8b 断面去泛白：湿性默认值 0.92 会把 roughness 压到 0.17 近镜面 + 全釉面，
+        // 掠射角清漆/环境反射直接洗掉纹理。改为缎面自发光图谱：各角度可读，只留微湿润感
+        emissiveIntensity: 0.60,
         bumpMap: bumpTex,
         bumpScale: 0.004,
-        roughness: Math.max(0.06, 1.0 - wetness * 0.90),
+        roughness: Math.max(0.38, 1.0 - wetness * 0.55),
         metalness: 0.02,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.08,
-        specularIntensity: 0.70,
-        envMapIntensity: 0.75,
+        clearcoat: 0.25,
+        clearcoatRoughness: 0.45,
+        specularIntensity: 0.35,
+        envMapIntensity: 0.25,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
