@@ -425,6 +425,37 @@ export function resolveRealHairStyle(styleName = 'hair_user_photo') {
   return valid.has(mapped) ? mapped : 'hair_user_photo';
 }
 
+/** Dispose an assembled tree without invalidating shared procedural textures. */
+export function disposeHeadNode(node) {
+  if (!node) return;
+  const geometries = new Set(), materials = new Set(), textures = new Set();
+  node.traverse(child => {
+    if (!child.isMesh) return;
+    if (child.geometry) geometries.add(child.geometry);
+    for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+      if (!material) continue;
+      materials.add(material);
+      for (const value of Object.values(material)) {
+        if (value?.isTexture && !value.userData?.sharedHairAtlas && !value.userData?.sharedSkinMicro) textures.add(value);
+      }
+    }
+  });
+  geometries.forEach(value => value.dispose());
+  materials.forEach(value => value.dispose());
+  textures.forEach(value => value.dispose());
+  node.removeFromParent();
+}
+
+export function updateHairSheen(node, value) {
+  const sheen = Math.max(.2, Math.min(1, Number(value) || .88));
+  node?.getObjectByName('HairGroup')?.traverse(child => {
+    if (!child.isMesh || !child.material?.userData?.builtInHair) return;
+    child.material.sheen = Math.min(.24, sheen * .25);
+    child.material.roughness = child.material.roughnessMap ? 1 : .65 - sheen * .12;
+    child.material.anisotropy = .35 + sheen * .35;
+  });
+}
+
 export async function attachRealHairModel(rootGroup, config = {}) {
   const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
   if (!modelContainer) return null;
@@ -436,14 +467,14 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     legacyCap.geometry.dispose();
     legacyCap.material.dispose();
   }
+  const request = (rootGroup.userData.hairRequestSerial || 0) + 1;
+  rootGroup.userData.hairRequestSerial = request;
   const oldHair = modelContainer.getObjectByName('HairGroup');
-  if (oldHair) {
-    modelContainer.remove(oldHair);
-  }
 
   const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_user_photo';
   const resolvedStyle = resolveRealHairStyle(rawStyle);
-  if (resolvedStyle === 'none') {
+  if (resolvedStyle === 'none' && !config.customHairUrl) {
+    disposeHeadNode(oldHair);
     rootGroup.userData.currentHairStyle = 'none';
     return null;
   }
@@ -453,6 +484,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   try {
     const buf = await fetchGlbArrayBuffer(hairUrl);
     const gltf = await parseGlbBuffer(buf);
+    if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(gltf.scene); return null; }
     const hairGroup = new THREE.Group();
     hairGroup.name = 'HairGroup';
 
@@ -465,6 +497,12 @@ export async function attachRealHairModel(rootGroup, config = {}) {
 
     gltf.scene.traverse((child) => {
       if (child.isMesh) {
+        if (config.customHairUrl) {
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          materials.forEach(prepareImportedMaterial);
+          child.castShadow = child.receiveShadow = true;
+          return; // User-owned atlases/PBR must never be replaced by demo textures.
+        }
         const origMat = child.material;
         let mapTex = origMat?.map || null;
         let roughTex = null;
@@ -477,11 +515,12 @@ export async function attachRealHairModel(rootGroup, config = {}) {
             const img = mapTex.image;
             const iw = img ? img.width || img.naturalWidth || 0 : 0;
             if (img && iw > 0) {
-              const detail = getHairStrandTextures(resolvedStyle, img);
+              const detail = getHairStrandTextures(mapTex, `${hairUrl}|${origMat.name}|${mapTex.name}`);
               mapTex = detail.map;
               roughTex = detail.roughnessMap;
             }
           } catch (e) {
+            console.warn('Hair detail enhancement unavailable; retaining original atlas', e);
             roughTex = null;
           }
         }
@@ -503,7 +542,8 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           sheen: hairSheen,
           sheenRoughness: 0.55,
           sheenColor: displayColor.clone().multiplyScalar(1.15),
-          anisotropy: 0.85,
+          anisotropy: 0.35 + sheenIntensity * 0.35,
+          anisotropyRotation: Math.PI / 2,
           clearcoat: 0.09,
           clearcoatRoughness: 0.40,
           specularIntensity: 0.75,
@@ -511,11 +551,12 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           // Stage 10：发片正确做法——不透明 + alphaTest 脆边 + alphaToCoverage 柔边，
           // 告别 transparent 排序错乱造成的团块/光晕；depthWrite 保证发片间正确遮挡
           transparent: false,
-          alphaTest: mapTex ? 0.28 : 0.0,
+          alphaTest: mapTex ? 0.14 : 0.0,
           alphaToCoverage: true,
           depthWrite: true,
           side: THREE.DoubleSide,
         });
+        child.material.userData.builtInHair = true;
         // Use actual scene lights. The old KK hook added unshadowed white emission
         // from a hard-coded direction and mixed world/view normals, lighting cards
         // as independent silver triangles rather than coherent hair.
@@ -525,6 +566,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     });
 
     hairGroup.add(gltf.scene);
+    disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
     rootGroup.userData.currentHairStyle = resolvedStyle;
     if (rootGroup.userData.currentMorphs) {
@@ -640,6 +682,9 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       // Stage 7/8 写实皮肤：微观粗糙/毛孔 + 次表面暖调 + IBL（Stage 8 降低自发光洗白、增强毛孔法线）
       const skinMicro = createSkinMicroMaps();
+      for (const texture of Object.values(skinMicro)) {
+        if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
+      }
       child.material = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,

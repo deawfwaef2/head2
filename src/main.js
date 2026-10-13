@@ -1,7 +1,7 @@
 import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS } from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
-import { FORENSIC_EXPRESSION_PRESETS } from './three/collectibleHeadAssembler.js';
+import { FORENSIC_EXPRESSION_PRESETS, updateHairSheen } from './three/collectibleHeadAssembler.js';
 import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGenerator.js';
 import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
@@ -795,6 +795,33 @@ function setWindowVisibility(hidden, fromMainProcess = false) {
 // INITIALIZE EVERYTHING ON DOM READY
 // ============================================================================
 window.addEventListener('DOMContentLoaded', async () => {
+  // Bind BEFORE expensive WebGL/GLB work: a first click must never be lost.
+  // 4. Bind Start Game Overlay Buttons (Unlocks WebAudio & starts game)
+  const startOverlay = document.getElementById('start-game-overlay');
+  const btnStartPure = document.getElementById('btn-start-pure-desktop');
+  const btnStartStudio = document.getElementById('btn-start-with-studio');
+
+  if (btnStartPure) {
+    btnStartPure.addEventListener('click', () => {
+      if (startOverlay) startOverlay.classList.add('hidden');
+      setWindowVisibility(true);
+      soundEngine.playSummon(true);
+      showToast('🎮 已进入屏幕 3D 桌宠把玩模式！悬停看档案 | 单击模型切换360°旋转 | 滚轮推拉景深 | 拖拽碰撞盒壁');
+    });
+  }
+
+  if (btnStartStudio) {
+    btnStartStudio.addEventListener('click', () => {
+      if (startOverlay) startOverlay.classList.add('hidden');
+      setWindowVisibility(false);
+      soundEngine.playSummon(true);
+      showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！可随时点击右上角「隐藏软件窗口」看屏幕桌宠');
+    });
+  }
+
+  const bootStatus = document.getElementById('boot-status');
+  try {
+
   if (window.cervixDesktopBridge?.isDesktop) {
     document.body.classList.remove('bg-mode-os', 'bg-mode-void');
     document.body.classList.add('bg-mode-transparent', 'real-desktop-manager');
@@ -848,6 +875,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   renderVaultGrid();
 
+  if (bootStatus) bootStatus.textContent = '桌宠已加载，正在准备建模工坊…';
+
   // 2. Initialize 3D Studio Preview Engine
   const studioCanvas = document.getElementById('studio-preview-canvas');
   studioEngine = new StudioPreviewEngine(studioCanvas);
@@ -866,29 +895,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderTutorialTab();
   fetchAndRenderArchives();
   initWindowDragging();
-
-  // 4. Bind Start Game Overlay Buttons (Unlocks WebAudio & starts game)
-  const startOverlay = document.getElementById('start-game-overlay');
-  const btnStartPure = document.getElementById('btn-start-pure-desktop');
-  const btnStartStudio = document.getElementById('btn-start-with-studio');
-
-  if (btnStartPure) {
-    btnStartPure.addEventListener('click', () => {
-      if (startOverlay) startOverlay.classList.add('hidden');
-      setWindowVisibility(true);
-      soundEngine.playSummon(true);
-      showToast('🎮 已进入屏幕 3D 桌宠把玩模式！悬停看档案 | 单击模型切换360°旋转 | 滚轮推拉景深 | 拖拽碰撞盒壁');
-    });
-  }
-
-  if (btnStartStudio) {
-    btnStartStudio.addEventListener('click', () => {
-      if (startOverlay) startOverlay.classList.add('hidden');
-      setWindowVisibility(false);
-      soundEngine.playSummon(true);
-      showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！可随时点击右上角「隐藏软件窗口」看屏幕桌宠');
-    });
-  }
 
   // Bind Navigation Tabs & Desktop Shortcut Icons
   document.querySelectorAll('.nav-tab').forEach(btn => {
@@ -1191,11 +1197,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     await refreshStudio3DModel();
   });
 
-  document.getElementById('slider-hair-sheen').addEventListener('input', async (e) => {
+  document.getElementById('slider-hair-sheen').addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
     state.studioDraft.hairSheen = v;
     document.getElementById('val-hair-sheen').textContent = `${Math.round(v * 100)}%`;
-    await refreshStudio3DModel();
+    updateHairSheen(studioEngine.headNode, v);
   });
 
   document.getElementById('slider-neck-clearance').addEventListener('input', async (e) => {
@@ -1492,4 +1498,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     reader.readAsText(file);
   });
+  if (bootStatus) bootStatus.remove();
+  if (window.__cervixQA) window.__cervixQA.ready = true;
+  } catch (error) {
+    console.error('本地 3D 初始化失败', error);
+    if (bootStatus) bootStatus.textContent = `启动失败：${String(error.message).slice(0, 160)}。请使用支持 WebGL2 的 Chrome/Edge 并开启硬件加速。`;
+  }
+
 });

@@ -4,7 +4,8 @@ import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
   updateHeadLifeAnimation,
-  triggerCollectibleBlink
+  triggerCollectibleBlink,
+  disposeHeadNode
 } from './collectibleHeadAssembler.js';
 import {
   applyBaseRendererSettings,
@@ -105,15 +106,16 @@ export class StudioPreviewEngine {
   }
 
   async loadOrRebuild(config) {
+    const request = (this.loadRequest || 0) + 1;
+    this.loadRequest = request;
     this.currentConfig = JSON.parse(JSON.stringify(config));
     if (config.photoElement) {
       this.currentConfig.photoElement = config.photoElement;
     }
 
     const newNode = await buildCollectibleHeadNode(this.currentConfig);
-    if (this.headNode) {
-      this.scene.remove(this.headNode);
-    }
+    if (request !== this.loadRequest) { disposeHeadNode(newNode); return this.headNode; }
+    disposeHeadNode(this.headNode);
     this.headNode = newNode;
     this.scene.add(this.headNode);
     this.updateCutHelperPosition(config.morphs);

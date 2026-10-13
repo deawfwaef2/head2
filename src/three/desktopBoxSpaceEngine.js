@@ -4,7 +4,8 @@ import {
   applyHeadMorphsToGroup,
   attachRealHairModel,
   updateHeadLifeAnimation,
-  triggerCollectibleBlink
+  triggerCollectibleBlink,
+  disposeHeadNode
 } from './collectibleHeadAssembler.js';
 import { soundEngine } from '../audio/tactileSoundEngine.js';
 import {
@@ -250,7 +251,9 @@ export class DesktopBoxSpaceEngine {
   recallCollectible(id, playSound = true) {
     const entry = this.pets.get(id);
     if (!entry) return;
-    this.scene.remove(entry.node);
+    // Invalidate an in-flight style replacement before releasing this pet.
+    entry.node.userData.hairRequestSerial = (entry.node.userData.hairRequestSerial || 0) + 1;
+    disposeHeadNode(entry.node);
     this.pets.delete(id);
     if (this.hoveredPetId === id) {
       this.hoveredPetId = null;

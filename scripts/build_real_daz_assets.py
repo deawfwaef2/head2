@@ -1198,8 +1198,7 @@ p_bob, uv_bob, t_bob = load_mhclo_fitted_hair(
 p_sculpt = p_bob.copy()
 for i in range(len(p_sculpt)):
     x, y, z = p_sculpt[i]
-    if y > 0.065:
-        p_sculpt[i, 1] = 0.065 + (y - 0.065) * 0.72
+    # Keep the authored crown height: the old .72 compression buried it in the skull.
     if z > 0.065 and y < 0.060 and abs(x) < 0.062:
         wisp_wave = 0.0022 * math.sin(x * 165.0) + 0.0012 * math.cos(x * 310.0)
         t_tip = max(0.0, min(1.0, (0.048 - y) / 0.036))

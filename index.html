@@ -437,6 +437,7 @@
                   </select>
                 </div>
 
+                <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">发型修复：保持原始透明遮罩与 UV 对位，默认发型已恢复颅顶高度。细纹增强不是新增扫描细节。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>
                 <div class="slider-row">
                   <span>前额刘海长度微调 (3D Morph)</span>
                   <input type="range" id="morph-bangs-len" min="-0.35" max="0.80" step="0.05" value="0.00" />
@@ -448,7 +449,7 @@
                   <span id="val-morph-hair-vol">+0.00</span>
                 </div>
                 <div class="slider-row">
-                  <span>发丝天使光圈光泽度</span>
+                  <span>发丝物理光泽度（实时调整）</span>
                   <input type="range" id="slider-hair-sheen" min="0.2" max="1.0" step="0.05" value="0.90" />
                   <span id="val-hair-sheen">90%</span>
                 </div>
@@ -730,12 +731,13 @@
   <div id="toast-notification" class="hidden"></div>
 
   <!-- Launch / Start Game Modal (Ensures instant playability & WebAudio unlock on local HTML download) -->
+  <div id="boot-status" role="status" aria-live="polite" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:20000;padding:10px 20px;border-radius:12px;background:#102037;color:#c2def1;font-size:13px;pointer-events:none;max-width:90vw">正在准备本地 3D 模型，首次加载可能需要几秒…</div>
   <div id="start-game-overlay">
     <div class="start-game-card">
-      <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v2.7 (离线直玩版)</div>
+      <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v2.8 · 发片对位修复版 (离线直玩版)</div>
       <h1>3D 解剖断面头部收藏品 · 桌宠生成与盒型透视空间系统</h1>
       <p>
-        内置头部与 7 款 GLB 发型是本项目的可离线使用示例，<strong>并非 DAZ Genesis 原版，也不能仅凭一张照片自动还原人物</strong>。想制作接近参考照片的收藏品，请在工坊导入您有权使用、已在 Blender 裁切封口并烘焙贴图的头部 GLB；切面为艺术解剖示意。
+        内置头部与 8 款 GLB 发型是本项目的可离线使用示例，<strong>并非 DAZ Genesis 原版，也不能仅凭一张照片自动还原人物</strong>。想制作接近参考照片的收藏品，请在工坊导入您有权使用、已在 Blender 裁切封口并烘焙贴图的头部 GLB；切面为艺术解剖示意。
       </p>
       <div class="start-feature-pills">
         <span>✦ 屏幕中心透视消失点</span>
