@@ -467,6 +467,210 @@ eye_buf = io.BytesIO()
 Image.fromarray(eye_scaled_rgb).save(eye_buf, format='JPEG', quality=90)
 eye_bytes = eye_buf.getvalue()
 
+# ==============================================================================
+# STAGE 8 UPGRADE:
+# 1. Exact MakeHuman .mhclo Vertex-Binding (0.67 um precision) for 8 High-Poly
+#    Artist-Sculpted Hair Meshes (elvs_*, toigo_*, o4saken_*, rehmanpolanski_*)
+# 2. 3D Teeth (Upper Maxilla + Lower Mandible) & 3D Tongue inside Oral Cavity
+# 3. 10 Forensic Post-Mortem / Dead-Person Expression Morph Targets ("死人各种表情")
+#    transferred from MakeHuman faceunits01 ARKit .target files across HeadSkin,
+#    Eyebrows, Eyelashes, Eyes, Teeth, and Tongue.
+# ==============================================================================
+from scipy.spatial import cKDTree
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import connected_components
+
+# Reconstruct the full 19,158-vertex MakeHuman basemesh (`hv_m` & `hv_sculpted`)
+hv_raw, uvs_raw, pairs_raw = [], [], []
+with open('/tmp/dl_inspect/base.obj') as f:
+    for line in f:
+        if line.startswith('v '):
+            p = line.split()
+            hv_raw.append([float(p[1]) * 0.1, float(p[2]) * 0.1, float(p[3]) * 0.1])
+        elif line.startswith('vt '):
+            p = line.split()
+            uvs_raw.append([float(p[1]), 1.0 - float(p[2])])
+        elif line.startswith('f '):
+            for tok in line.split()[1:]:
+                pts = tok.split('/')
+                vi, ti = int(pts[0]) - 1, int(pts[1]) - 1
+                if vi < 13380:
+                    pairs_raw.append((vi, ti))
+hv_raw = np.array(hv_raw, dtype=np.float64)
+uvs_raw = np.array(uvs_raw, dtype=np.float64)
+hv_m = hv_raw.copy()
+hv_m[:, 1] += -hv_raw[:13380, 1].min()
+
+p0_base = gltf['meshes'][0]['primitives'][0]
+bpos_neutral = glbutil._read_accessor(gltf, b, p0_base['attributes']['POSITION']).astype(np.float64)
+buv_neutral = glbutil._read_accessor(gltf, b, p0_base['attributes']['TEXCOORD_0']).astype(np.float64)
+pair_set = list(set(pairs_raw))
+pair_vi = np.array([p[0] for p in pair_set])
+# Weight UV by 80.0 so upper/lower lip seam and eyelid seam never cross-match
+pair_feat = np.hstack([uvs_raw[[p[1] for p in pair_set]] * 80.0, hv_m[pair_vi]])
+_, idx_m = cKDTree(pair_feat).query(np.hstack([buv_neutral * 80.0, bpos_neutral]))
+glb_to_mh_vi = pair_vi[idx_m]
+
+# Also build hv_sculpted (19,158 verts) for exact .mhclo hair fitting
+pair_feat12 = np.hstack([uvs_raw[[p[1] for p in pair_set]] * 12.0, hv_m[pair_vi]])
+_, idx_m12 = cKDTree(pair_feat12).query(np.hstack([buv_neutral * 12.0, bpos_neutral]))
+glb_to_mh_vi12 = pair_vi[idx_m12]
+
+hv_sculpted = np.zeros_like(hv_m)
+known_mask = np.zeros(len(hv_m), dtype=bool)
+for glb_i, mh_i in enumerate(glb_to_mh_vi12):
+    hv_sculpted[mh_i] = pos_skin[glb_i]
+    known_mask[mh_i] = True
+known_vi = np.where(known_mask)[0]
+tree_known = cKDTree(hv_m[known_vi])
+unk_vi = np.where(~known_mask)[0]
+d_u, idx_u = tree_known.query(hv_m[unk_vi], k=4)
+w_u = 1.0 / np.maximum(d_u, 1e-6)
+w_u /= w_u.sum(axis=1, keepdims=True)
+disp_known = hv_sculpted[known_vi] - hv_m[known_vi]
+hv_sculpted[unk_vi] = hv_m[unk_vi] + (w_u[:, :, None] * disp_known[idx_u]).sum(axis=1)
+
+# Load all ARKit faceunits .target files (in metres)
+faceunits = {}
+fu_dir = '/tmp/mh_packs/faceunits/targets/faceunits'
+for fname in os.listdir(fu_dir):
+    if not fname.endswith('.target'):
+        continue
+    k = fname[:-7]
+    arr = np.zeros((len(hv_m), 3), dtype=np.float64)
+    with open(os.path.join(fu_dir, fname)) as f:
+        for line in f:
+            if not line.startswith('#'):
+                p = line.split()
+                if len(p) == 4:
+                    arr[int(p[0])] = [float(p[1]) * 0.1, float(p[2]) * 0.1, float(p[3]) * 0.1]
+    faceunits[k] = arr
+
+# Define 10 Forensic Post-Mortem / Dead-Person Expression Morph Targets ("死人各种表情")
+FORENSIC_EXPR_SPECS = [
+    ('expr_serene', {
+        'units': {'eyeBlinkLeft': 0.88, 'eyeBlinkRight': 0.88, 'mouthClose': 0.12},
+        'look': (0.0, 0.0),
+    }),
+    ('expr_hollow', {
+        'units': {'eyeBlinkLeft': 0.18, 'eyeBlinkRight': 0.22, 'jawOpen': 0.34, 'mouthLowerDownLeft': 0.25, 'mouthLowerDownRight': 0.25},
+        'look': (0.0, 0.45),
+    }),
+    ('expr_shock', {
+        'units': {'eyeWideLeft': 0.85, 'eyeWideRight': 0.85, 'browInnerUp': 0.75, 'browOuterUpLeft': 0.45, 'browOuterUpRight': 0.45, 'jawOpen': 0.65, 'mouthStretchLeft': 0.25, 'mouthStretchRight': 0.25, 'mouthLowerDownLeft': 0.30, 'mouthLowerDownRight': 0.30},
+        'look': (0.0, 0.22),
+    }),
+    ('expr_rigor', {
+        'units': {'browDownLeft': 0.88, 'browDownRight': 0.88, 'browInnerUp': 0.72, 'eyeBlinkLeft': 0.48, 'eyeBlinkRight': 0.18, 'eyeSquintLeft': 0.65, 'eyeSquintRight': 0.65, 'cheekSquintLeft': 0.55, 'cheekSquintRight': 0.55, 'noseSneerLeft': 0.70, 'noseSneerRight': 0.70, 'mouthUpperUpLeft': 0.58, 'mouthUpperUpRight': 0.58, 'mouthFrownLeft': 0.78, 'mouthFrownRight': 0.78, 'jawOpen': 0.28, 'mouthLowerDownLeft': 0.38, 'mouthLowerDownRight': 0.38},
+        'look': (-0.15, 0.32),
+    }),
+    ('expr_smile', {
+        'units': {'eyeBlinkLeft': 0.48, 'eyeBlinkRight': 0.42, 'mouthSmileLeft': 0.58, 'mouthSmileRight': 0.42, 'mouthDimpleLeft': 0.35, 'mouthDimpleRight': 0.35, 'cheekSquintLeft': 0.28, 'cheekSquintRight': 0.22},
+        'look': (0.0, 0.18),
+    }),
+    ('expr_flaccid', {
+        'units': {'eyeBlinkLeft': 0.76, 'eyeBlinkRight': 0.08, 'eyeWideRight': 0.35, 'jawOpen': 0.50, 'jawLeft': 0.58, 'mouthLeft': 0.42, 'mouthFrownLeft': 0.62, 'mouthLowerDownLeft': 0.48, 'tongueOut': 0.62},
+        'look': (0.28, 0.52),
+    }),
+    ('jaw_open', {
+        'units': {'jawOpen': 0.72, 'mouthLowerDownLeft': 0.28, 'mouthLowerDownRight': 0.28},
+        'look': (0.0, 0.0),
+    }),
+    ('jaw_side', {
+        'units': {'jawLeft': 0.72, 'mouthLeft': 0.45, 'mouthFrownLeft': 0.35},
+        'look': (0.0, 0.0),
+    }),
+    ('tongue_out', {
+        'units': {'tongueOut': 0.85, 'jawOpen': 0.26, 'mouthLowerDownLeft': 0.24, 'mouthLowerDownRight': 0.24},
+        'look': (0.0, 0.0),
+    }),
+    ('eye_wide', {
+        'units': {'eyeWideLeft': 0.90, 'eyeWideRight': 0.90, 'browInnerUp': 0.55, 'browOuterUpLeft': 0.38, 'browOuterUpRight': 0.38},
+        'look': (0.0, 0.0),
+    }),
+]
+
+ALL_TARGET_NAMES = KEEP_TARGETS + [name for name, _ in FORENSIC_EXPR_SPECS]
+head_mh_vi = glb_to_mh_vi[used_v]
+chin_mh_mask = (np.abs(hv_m[:13380, 0]) < 0.012) & (hv_m[:13380, 1] > 1.460) & (hv_m[:13380, 1] < 1.478) & (hv_m[:13380, 2] > 0.115)
+chin_mh_vi = np.where(chin_mh_mask)[0]
+
+# Precompute full-human deltas and head deltas for the 10 forensic expressions
+forensic_head_deltas = []
+forensic_jaw_deltas = []
+forensic_tongue_out = []
+forensic_eye_looks = []
+for ename, espec in FORENSIC_EXPR_SPECS:
+    d_mh = np.zeros_like(hv_m)
+    for uname, uw in espec['units'].items():
+        if uname in faceunits:
+            d_mh += uw * faceunits[uname]
+    d_h = d_mh[head_mh_vi].astype(np.float32)
+    # Taper expression delta smoothly to 0 near the neck cut rim (y < -0.085)
+    for vi_l in range(len(head_pos)):
+        if head_pos[vi_l, 1] < -0.075:
+            t_fade = max(0.0, min(1.0, (head_pos[vi_l, 1] - cut_y_local) / 0.035))
+            d_h[vi_l] *= t_fade
+    forensic_head_deltas.append(d_h)
+    forensic_jaw_deltas.append(d_mh[chin_mh_vi].mean(axis=0).astype(np.float32))
+    forensic_tongue_out.append(float(espec['units'].get('tongueOut', 0.0)))
+    forensic_eye_looks.append(espec['look'])
+
+head_deltas_all = head_deltas + forensic_head_deltas
+head_kdtree_local = cKDTree(head_pos)
+
+# Extract Teeth (mesh 4) and Tongue (mesh 5) and keep visible front/premolar teeth (z > 0.084 in baked space)
+t_pos_full, t_norm_full, t_uv_full, t_tris_full, t_deltas_full = get_baked_primitive(gltf, b, 4, 0)
+t_rows = np.concatenate([t_tris_full[:, 0], t_tris_full[:, 1], t_tris_full[:, 2]])
+t_cols = np.concatenate([t_tris_full[:, 1], t_tris_full[:, 2], t_tris_full[:, 0]])
+t_adj = csr_matrix((np.ones(len(t_rows)), (t_rows, t_cols)), shape=(len(t_pos_full), len(t_pos_full)))
+_, t_labels_full = connected_components(t_adj, directed=False)
+lower_full = np.isin(t_labels_full, [0, 1, 4, 5] + list(range(8, 24)))
+
+t_pos_local_full = t_pos_full - HEAD_CENTER
+# Filter triangles to z > 0.046 in local head coords (front 22 teeth + visible gums, saving ~60% vertices)
+t_vis_v = (t_pos_local_full[:, 2] > 0.065) & (np.abs(t_pos_local_full[:, 0]) < 0.025)
+t_tri_keep = t_vis_v[t_tris_full[:, 0]] | t_vis_v[t_tris_full[:, 1]] | t_vis_v[t_tris_full[:, 2]]
+t_kept_tris = t_tris_full[t_tri_keep]
+t_used_v = np.unique(t_kept_tris)
+t_remap = {old: new for new, old in enumerate(t_used_v)}
+teeth_pos = t_pos_local_full[t_used_v].astype(np.float32)
+teeth_norm = t_norm_full[t_used_v].astype(np.float32)
+teeth_uv = t_uv_full[t_used_v].astype(np.float32)
+teeth_tris = np.array([[t_remap[a], t_remap[b_i], t_remap[c]] for a, b_i, c in t_kept_tris], dtype=np.uint16)
+lower_teeth_mask = lower_full[t_used_v].astype(np.float32)[:, None]
+
+FORENSIC_TARGET_NAMES = [name for name, _ in FORENSIC_EXPR_SPECS]
+teeth_deltas_all = []
+for j_d in forensic_jaw_deltas:
+    td = lower_teeth_mask * (j_d * np.array([0.85, 0.88, 0.85], dtype=np.float32))
+    teeth_deltas_all.append(td)
+
+# Tongue (mesh 5, only 253 verts!)
+to_pos, to_norm, to_uv, to_tris, to_deltas = get_baked_primitive(gltf, b, 5, 0)
+to_pos = (to_pos - HEAD_CENTER).astype(np.float32)
+to_tris = to_tris.astype(np.uint16)
+tongue_deltas_all = []
+# Weight tongue tip (front vertices with higher Z) more strongly when protruding tongueOut
+to_z_min, to_z_max = float(to_pos[:, 2].min()), float(to_pos[:, 2].max())
+to_tip_w = np.clip((to_pos[:, 2] - to_z_min) / max(1e-5, to_z_max - to_z_min), 0.0, 1.0)[:, None].astype(np.float32)
+for j_d, t_out in zip(forensic_jaw_deltas, forensic_tongue_out):
+    tod = (j_d * 0.82) + to_tip_w * np.array([0.0, -0.004 * t_out, 0.022 * t_out], dtype=np.float32)
+    tongue_deltas_all.append(tod)
+
+# Extract original Teeth & Tongue textures from base_body.glb
+def get_raw_image_bytes(g, bin_b, img_idx):
+    im_def = g['images'][img_idx]
+    bv = g['bufferViews'][im_def['bufferView']]
+    off = bv.get('byteOffset', 0)
+    return bin_b[off:off + bv['byteLength']]
+
+def compact_jpeg(raw_b):
+    im = Image.open(io.BytesIO(raw_b)).convert("RGB").resize((256, 256), Image.Resampling.LANCZOS)
+    bf = io.BytesIO(); im.save(bf, format="JPEG", quality=85); return bf.getvalue()
+teeth_tex_bytes = compact_jpeg(get_raw_image_bytes(gltf, b, 5))
+tongue_tex_bytes = compact_jpeg(get_raw_image_bytes(gltf, b, 6))
+
 # Assemble `daz_asian_head_base.glb`
 bin_chunks, buffer_views, accessors = [], [], []
 
@@ -532,6 +736,8 @@ img_defs = [
     ('eyebrow', 'image/png', orig_images['eyebrow']),
     ('eyelash', 'image/png', orig_images['eyelash']),
     ('neck_section', 'image/jpeg', neck_sec_bytes),
+    ('teeth', 'image/jpeg', teeth_tex_bytes),
+    ('tongue', 'image/jpeg', tongue_tex_bytes),
 ]
 gltf_images, gltf_textures = [], []
 for name, mime, ibytes in img_defs:
@@ -573,12 +779,22 @@ gltf_materials = [
         'pbrMetallicRoughness': {'baseColorFactor': [1.0, 1.0, 1.0, 0.14], 'metallicFactor': 0.0, 'roughnessFactor': 0.04},
         'alphaMode': 'BLEND',
     },
+    {
+        'name': 'Teeth',
+        'pbrMetallicRoughness': {'baseColorTexture': {'index': 6}, 'baseColorFactor': [0.94, 0.91, 0.86, 1.0], 'metallicFactor': 0.0, 'roughnessFactor': 0.22},
+        'doubleSided': True,
+    },
+    {
+        'name': 'Tongue',
+        'pbrMetallicRoughness': {'baseColorTexture': {'index': 7}, 'baseColorFactor': [0.82, 0.44, 0.48, 1.0], 'metallicFactor': 0.0, 'roughnessFactor': 0.34},
+        'doubleSided': True,
+    },
 ]
 
 gltf_meshes = [
     {
         'name': 'HeadSkin',
-        'extras': {'targetNames': KEEP_TARGETS},
+        'extras': {'targetNames': ALL_TARGET_NAMES},
         'primitives': [{
             'attributes': {
                 'POSITION': add_acc(head_pos.astype('<f4'), 5126, 'VEC3', 34962),
@@ -587,7 +803,7 @@ gltf_meshes = [
             },
             'indices': add_acc(head_tris.flatten().astype('<u4'), 5125, 'SCALAR', 34963),
             'material': 0,
-            'targets': add_morph_targets(head_deltas),
+            'targets': add_morph_targets(head_deltas_all),
         }]
     },
     {
@@ -606,9 +822,11 @@ gltf_meshes = [
 
 b_pos, b_norm, b_uv, b_tris, b_deltas = get_baked_primitive(gltf, b, 1, 0)
 b_pos -= HEAD_CENTER
+_, b_near = head_kdtree_local.query(b_pos)
+b_deltas_all = list(b_deltas) + [fh[b_near] for fh in forensic_head_deltas]
 gltf_meshes.append({
     'name': 'Eyebrows',
-    'extras': {'targetNames': KEEP_TARGETS},
+    'extras': {'targetNames': ALL_TARGET_NAMES},
     'primitives': [{
         'attributes': {
             'POSITION': add_acc(b_pos.astype('<f4'), 5126, 'VEC3', 34962),
@@ -617,15 +835,17 @@ gltf_meshes.append({
         },
         'indices': add_acc(b_tris.flatten().astype('<u2'), 5123, 'SCALAR', 34963),
         'material': 3,
-        'targets': add_morph_targets(b_deltas),
+        'targets': add_morph_targets(b_deltas_all),
     }]
 })
 
 l_pos, l_norm, l_uv, l_tris, l_deltas = get_baked_primitive(gltf, b, 2, 0)
 l_pos -= HEAD_CENTER
+_, l_near = head_kdtree_local.query(l_pos)
+l_deltas_all = list(l_deltas) + [fh[l_near] for fh in forensic_head_deltas]
 gltf_meshes.append({
     'name': 'Eyelashes',
-    'extras': {'targetNames': KEEP_TARGETS},
+    'extras': {'targetNames': ALL_TARGET_NAMES},
     'primitives': [{
         'attributes': {
             'POSITION': add_acc(l_pos.astype('<f4'), 5126, 'VEC3', 34962),
@@ -634,7 +854,7 @@ gltf_meshes.append({
         },
         'indices': add_acc(l_tris.flatten().astype('<u2'), 5123, 'SCALAR', 34963),
         'material': 4,
-        'targets': add_morph_targets(l_deltas),
+        'targets': add_morph_targets(l_deltas_all),
     }]
 })
 
@@ -642,6 +862,24 @@ eye_prims_out = []
 for p_i in range(len(gltf['meshes'][3]['primitives'])):
     e_pos, e_norm, e_uv, e_tris, e_deltas = get_baked_primitive(gltf, b, 3, p_i)
     e_pos -= HEAD_CENTER
+    # Build eye look deltas for the 10 forensic expressions
+    e_forensic = []
+    idx_up = KEEP_TARGETS.index('look_up')
+    idx_down = KEEP_TARGETS.index('look_down')
+    idx_left = KEEP_TARGETS.index('look_left')
+    idx_right = KEEP_TARGETS.index('look_right')
+    for lx, ly in forensic_eye_looks:
+        ed = np.zeros_like(e_pos)
+        if ly > 0:
+            ed += ly * e_deltas[idx_up]
+        elif ly < 0:
+            ed += (-ly) * e_deltas[idx_down]
+        if lx > 0:
+            ed += lx * e_deltas[idx_left]
+        elif lx < 0:
+            ed += (-lx) * e_deltas[idx_right]
+        e_forensic.append(ed)
+    e_deltas_all = list(e_deltas) + e_forensic
     orig_mat_name = gltf['materials'][gltf['meshes'][3]['primitives'][p_i]['material']]['name']
     mat_idx = 5 if orig_mat_name == 'Cornea' else 2
     eye_prims_out.append({
@@ -652,24 +890,56 @@ for p_i in range(len(gltf['meshes'][3]['primitives'])):
         },
         'indices': add_acc(e_tris.flatten().astype('<u2'), 5123, 'SCALAR', 34963),
         'material': mat_idx,
-        'targets': add_morph_targets(e_deltas),
+        'targets': add_morph_targets(e_deltas_all),
     })
 
-gltf_meshes.append({'name': 'Eyes', 'extras': {'targetNames': KEEP_TARGETS}, 'primitives': eye_prims_out})
+gltf_meshes.append({'name': 'Eyes', 'extras': {'targetNames': ALL_TARGET_NAMES}, 'primitives': eye_prims_out})
+
+gltf_meshes.append({
+    'name': 'Teeth',
+    'extras': {'targetNames': FORENSIC_TARGET_NAMES},
+    'primitives': [{
+        'attributes': {
+            'POSITION': add_acc(teeth_pos.astype('<f4'), 5126, 'VEC3', 34962),
+            'NORMAL': add_acc(teeth_norm.astype('<f4'), 5126, 'VEC3', 34962),
+            'TEXCOORD_0': add_acc(teeth_uv.astype('<f4'), 5126, 'VEC2', 34962),
+        },
+        'indices': add_acc(teeth_tris.flatten().astype('<u2'), 5123, 'SCALAR', 34963),
+        'material': 6,
+        'targets': add_morph_targets(teeth_deltas_all),
+    }]
+})
+
+gltf_meshes.append({
+    'name': 'Tongue',
+    'extras': {'targetNames': FORENSIC_TARGET_NAMES},
+    'primitives': [{
+        'attributes': {
+            'POSITION': add_acc(to_pos.astype('<f4'), 5126, 'VEC3', 34962),
+            'NORMAL': add_acc(to_norm.astype('<f4'), 5126, 'VEC3', 34962),
+            'TEXCOORD_0': add_acc(to_uv.astype('<f4'), 5126, 'VEC2', 34962),
+        },
+        'indices': add_acc(to_tris.flatten().astype('<u2'), 5123, 'SCALAR', 34963),
+        'material': 7,
+        'targets': add_morph_targets(tongue_deltas_all),
+    }]
+})
 
 out_bin = b''.join(bin_chunks)
 out_gltf = {
-    'asset': {'version': '2.0', 'generator': 'CERVIX-3D Stage 5 Compiler'},
+    'asset': {'version': '2.0', 'generator': 'CERVIX-3D Stage 8 Forensic & High-Poly Compiler'},
     'extensionsUsed': ['KHR_mesh_quantization'],
     'extensionsRequired': ['KHR_mesh_quantization'],
     'scene': 0,
-    'scenes': [{'nodes': [0, 1, 2, 3, 4]}],
+    'scenes': [{'nodes': [0, 1, 2, 3, 4, 5, 6]}],
     'nodes': [
         {'name': 'HeadSkin', 'mesh': 0},
         {'name': 'NeckCrossSection', 'mesh': 1},
         {'name': 'Eyebrows', 'mesh': 2},
         {'name': 'Eyelashes', 'mesh': 3},
         {'name': 'Eyes', 'mesh': 4},
+        {'name': 'Teeth', 'mesh': 5},
+        {'name': 'Tongue', 'mesh': 6},
     ],
     'meshes': gltf_meshes,
     'materials': gltf_materials,
@@ -682,193 +952,350 @@ out_gltf = {
 
 head_glb_path = os.path.join(OUT_DIR, 'daz_asian_head_base.glb')
 glbutil.write_glb(head_glb_path, out_gltf, out_bin)
-print(f"Saved {head_glb_path}: {os.path.getsize(head_glb_path) / 1024:.1f} KB")
-
-# 6. Build `hair_user_photo.glb` (Wispy Straight Bangs + Temple Side-Locks + Tied-Back Cranial Hair matching the user's photo!)
-# Let's read `hair_ponytail01.glb` from public/models/ and add a 3D multi-layered Wispy Forehead Bangs & Side-Lock mesh with a full-coverage feathered strand texture!
-hg_pt, hb_pt = glbutil.read_glb(os.path.join(OUT_DIR, 'hair_ponytail01.glb'))
-pt_prim = hg_pt['meshes'][0]['primitives'][0]
-pt_pos = glbutil._read_accessor(hg_pt, hb_pt, pt_prim['attributes']['POSITION']).copy()
-pt_norm = glbutil._read_accessor(hg_pt, hb_pt, pt_prim['attributes']['NORMAL']).copy()
-pt_uv = glbutil._read_accessor(hg_pt, hb_pt, pt_prim['attributes']['TEXCOORD_0']).copy()
-pt_tris = glbutil._read_accessor(hg_pt, hb_pt, pt_prim['indices']).astype(np.uint16).reshape(-1, 3)
-
-# Trim the low-hanging ponytail tail below the neck (`y < -0.095` in centered head coords) so it matches the user's medium/tied-back hair in the photo!
-keep_pt_tris = []
-for i0, i1, i2 in pt_tris:
-    if min(pt_pos[i0, 1], pt_pos[i1, 1], pt_pos[i2, 1]) > -0.095:
-        keep_pt_tris.append([i0, i1, i2])
-keep_pt_tris = np.array(keep_pt_tris, dtype=np.uint16)
-
-# Generate a custom 3D Skull-Conforming Wispy Bangs + Temple Side-Locks mesh (`f_verts, f_norms, f_uvs, f_tris`)
-# Query the actual `head_pos` front skull surface Z(x, y) so the bangs NEVER sink into the forehead!
-front_head = head_pos[head_pos[:, 2] > -0.01]
+print(f"Saved {head_glb_path}: {os.path.getsize(head_glb_path) / 1024:.1f} KB (7 meshes, {len(ALL_TARGET_NAMES)} morph targets)")
 
 
-def get_skull_front_z(x_q, y_q):
-    d2 = (front_head[:, 0] - x_q) ** 2 + (front_head[:, 1] - y_q) ** 2
-    near = front_head[d2 < 0.018 ** 2]
-    if len(near) > 0:
-        return float(np.max(near[:, 2]))
-    best = int(np.argmin(d2))
-    return float(front_head[best, 2])
+# ==============================================================================
+# 6. Compile All 8 High-Precision .mhclo-Fitted Artist 3D Hair GLB Models
+# ==============================================================================
+def load_mhclo_fitted_hair(mhclo_path, obj_path, trim_below_y=None):
+    vs_h = []
+    with open(mhclo_path, 'r', errors='ignore') as f:
+        lines_h = [l.strip() for l in f]
+    idx_l = 0
+    xscale, yscale, zscale = 1.0, 1.0, 1.0
+    while idx_l < len(lines_h):
+        l = lines_h[idx_l]
+        if l.startswith('x_scale '):
+            p = l.split()
+            v0, v1 = int(p[1]), int(p[2])
+            xscale = abs(hv_sculpted[v0, 0] - hv_sculpted[v1, 0]) / float(p[3])
+        elif l.startswith('y_scale '):
+            p = l.split()
+            v0, v1 = int(p[1]), int(p[2])
+            yscale = abs(hv_sculpted[v0, 1] - hv_sculpted[v1, 1]) / float(p[3])
+        elif l.startswith('z_scale '):
+            p = l.split()
+            v0, v1 = int(p[1]), int(p[2])
+            zscale = abs(hv_sculpted[v0, 2] - hv_sculpted[v1, 2]) / float(p[3])
+        elif l == 'verts 0':
+            idx_l += 1
+            while idx_l < len(lines_h):
+                l2 = lines_h[idx_l]
+                if not l2 or l2.startswith('#') or l2.startswith('material') or l2.startswith('delete'):
+                    break
+                p = l2.split()
+                if len(p) == 9:
+                    vs_h.append((
+                        [int(p[0]), int(p[1]), int(p[2])],
+                        [float(p[3]), float(p[4]), float(p[5])],
+                        [float(p[6]) * 0.1, float(p[7]) * 0.1, float(p[8]) * 0.1]
+                    ))
+                elif len(p) == 1:
+                    vs_h.append(([int(p[0]), int(p[0]), int(p[0])], [1.0, 0.0, 0.0], [0.0, 0.0, 0.0]))
+                idx_l += 1
+            break
+        idx_l += 1
+
+    v_idx_h = np.array([x[0] for x in vs_h], dtype=np.int32)
+    w_h = np.array([x[1] for x in vs_h], dtype=np.float64)
+    off_h = np.array([x[2] for x in vs_h], dtype=np.float64)
+    scale_vec = np.array([xscale, yscale, zscale], dtype=np.float64)
+    fitted_v = (w_h[:, :, None] * hv_sculpted[v_idx_h]).sum(axis=1) + off_h * scale_vec
+    fitted_v -= HEAD_CENTER
+
+    # Slight cranial clearance (1.5 mm) so inner hair layers never z-fight with the scalp
+    for i in range(len(fitted_v)):
+        x, y, z = fitted_v[i]
+        if y > -0.02:
+            r_xz = math.hypot(x, z)
+            if r_xz > 1e-4:
+                fitted_v[i, 0] += (x / r_xz) * 0.0014
+                fitted_v[i, 2] += (z / r_xz) * 0.0014
+            if y > 0.03:
+                fitted_v[i, 1] += 0.0015
+
+    # If long hair extends below neck cross-section, smoothly gather/trim above trim_below_y
+    if trim_below_y is not None:
+        for i in range(len(fitted_v)):
+            if fitted_v[i, 1] < trim_below_y + 0.035:
+                # Smoothly compress lower hair strands above trim_below_y so C4/C5 cut is 100% visible
+                dy = (trim_below_y + 0.035) - fitted_v[i, 1]
+                fitted_v[i, 1] = (trim_below_y + 0.035) - 0.035 * math.tanh(dy / 0.045)
+
+    uvs_h, faces_h = [], []
+    with open(obj_path, 'r', errors='ignore') as f:
+        for line in f:
+            if line.startswith('vt '):
+                p = line.split()
+                uvs_h.append([float(p[1]), 1.0 - float(p[2])])
+            elif line.startswith('f '):
+                pts = line.split()[1:]
+                poly = []
+                for tok in pts:
+                    sp = tok.split('/')
+                    vi = int(sp[0]) - 1
+                    ti = int(sp[1]) - 1 if len(sp) > 1 and sp[1] else 0
+                    poly.append((vi, ti))
+                for k in range(1, len(poly) - 1):
+                    faces_h.append((poly[0], poly[k], poly[k + 1]))
+
+    uvs_h = np.array(uvs_h, dtype=np.float32) if uvs_h else np.zeros((1, 2), dtype=np.float32)
+    pair_map, out_pos, out_uv, out_tris = {}, [], [], []
+    for p0_f, p1_f, p2_f in faces_h:
+        tri = []
+        for vi, ti in (p0_f, p1_f, p2_f):
+            key = (vi, ti)
+            if key not in pair_map:
+                pair_map[key] = len(out_pos)
+                out_pos.append(fitted_v[vi])
+                out_uv.append(uvs_h[ti] if ti < len(uvs_h) else [0.0, 0.0])
+            tri.append(pair_map[key])
+        out_tris.append(tri)
+
+    return np.array(out_pos, dtype=np.float32), np.array(out_uv, dtype=np.float32), np.array(out_tris, dtype=np.uint32)
 
 
-f_verts, f_norms, f_uvs, f_tris = [], [], [], []
+def compute_smooth_normals(pos, tris):
+    v0, v1, v2 = pos[tris[:, 0]], pos[tris[:, 1]], pos[tris[:, 2]]
+    fn = np.cross(v1 - v0, v2 - v0)
+    fn /= np.maximum(np.linalg.norm(fn, axis=1, keepdims=True), 1e-8)
+    vn = np.zeros_like(pos)
+    np.add.at(vn, tris[:, 0], fn)
+    np.add.at(vn, tris[:, 1], fn)
+    np.add.at(vn, tris[:, 2], fn)
+    vn /= np.maximum(np.linalg.norm(vn, axis=1, keepdims=True), 1e-8)
+    return vn.astype(np.float32)
 
-# 1) Full-coverage Dome-Curved Wispy Straight Bangs from Crown Parting down to Eyebrows (Y=+0.016)
-for layer_idx, (z_off, y_bot) in enumerate([(0.0040, 0.016), (0.0065, 0.020)]):
-    rows, cols = 22, 38
-    base_idx = len(f_verts)
-    for r in range(rows + 1):
-        v = r / rows  # 0 = top crown dome, 1 = eyebrow tip
-        for c in range(cols + 1):
-            u = c / cols
-            s = (u - 0.5) * 2.0  # -1..+1 across forehead width
-            # Dome-shaped width & height so bangs seamlessly overlap the temple side-locks!
-            half_w = 0.042 * (1.0 - v) + 0.068 * (v ** 0.52)
-            x = s * half_w
-            crown_drop = 0.018 * (s ** 2) * (1.0 - 0.65 * v)
-            y_base = 0.120 * (1.0 - v) + y_bot * v - crown_drop
-            z_sk = get_skull_front_z(x, max(0.020, y_base))
-            # Tuck top root (v=0) smoothly into the scalp (z_off * sin(v*pi/2)) so crown is seamless!
-            root_blend = math.sin(min(1.0, v * 1.6) * (math.pi * 0.5))
-            z = z_sk + (0.0012 + z_off * root_blend)
-            f_verts.append([x, y_base, z])
-            n = np.array([x * 0.45, max(0.05, y_base), z + 0.05])
-            n /= np.linalg.norm(n)
-            f_norms.append(n)
-            f_uvs.append([0.05 + 0.90 * u, 0.65 + 0.34 * v])
-    stride = cols + 1
-    for r in range(rows):
-        for c in range(cols):
-            a = base_idx + r * stride + c
-            b_i = a + 1
-            c_i = a + stride
-            d_i = c_i + 1
-            f_tris.append([a, c_i, b_i])
-            f_tris.append([b_i, c_i, d_i])
 
-# 2) Cheek-Framing Wispy Side Locks in front of both ears (seamlessly tucked into temple scalp at v=0!)
-for side in (-1.0, 1.0):
-    rows, cols = 18, 10
-    base_idx = len(f_verts)
-    for r in range(rows + 1):
-        v = r / rows
-        y = 0.082 * (1.0 - v) + (-0.046) * v
-        root_blend = math.sin(min(1.0, v * 1.8) * (math.pi * 0.5))
-        for c in range(cols + 1):
-            u = c / cols
-            x_in = side * (0.048 + 0.010 * (v ** 0.6))
-            x_out = side * (0.060 + 0.010 * (v ** 0.6))
-            x = x_in * (1.0 - u) + x_out * u
-            z_sk = get_skull_front_z(x, max(-0.035, y))
-            z = max(0.022, z_sk + 0.001 + 0.0038 * root_blend) - u * 0.012
-            f_verts.append([x, y, z])
-            n = np.array([side * 0.7, 0.05, 0.5])
-            n /= np.linalg.norm(n)
-            f_norms.append(n)
-            f_uvs.append([0.08 + 0.28 * u, 0.65 + 0.34 * v])
-    stride = cols + 1
-    for r in range(rows):
-        for c in range(cols):
-            a = base_idx + r * stride + c
-            b_i = a + 1
-            c_i = a + stride
-            d_i = c_i + 1
-            if side < 0:
-                f_tris.append([a, b_i, c_i])
-                f_tris.append([b_i, d_i, c_i])
-            else:
-                f_tris.append([a, c_i, b_i])
-                f_tris.append([b_i, c_i, d_i])
+def build_hair_morph_deltas(pos):
+    # 1. hair_length: extends lower hair strands (y < 0.03) downward by up to 2.8 cm
+    d_len = np.zeros_like(pos)
+    # 2. hair_volume: puffs outer hair volume radially outward by up to 1.4 cm
+    d_vol = np.zeros_like(pos)
+    # 3. bangs_length: extends front forehead bangs (z > 0.055, y > -0.01, abs(x) < 0.068) downward by up to 1.8 cm
+    d_bng = np.zeros_like(pos)
+    for i in range(len(pos)):
+        x, y, z = pos[i]
+        if y < 0.035:
+            t_l = max(0.0, min(1.0, (0.035 - y) / 0.12))
+            d_len[i, 1] = -0.026 * t_l
+        r_xz = math.hypot(x, z)
+        if r_xz > 1e-4:
+            t_v = max(0.15, min(1.0, (0.12 - y) / 0.16))
+            d_vol[i, 0] = (x / r_xz) * 0.012 * t_v
+            d_vol[i, 2] = (z / r_xz) * 0.010 * t_v
+            if y > 0.02:
+                d_vol[i, 1] = 0.008 * ((y - 0.02) / 0.12)
+        if z > 0.055 and -0.015 < y < 0.068 and abs(x) < 0.068:
+            t_b = max(0.0, min(1.0, (0.068 - y) / 0.055)) * max(0.0, min(1.0, (z - 0.055) / 0.025))
+            d_bng[i, 1] = -0.016 * t_b
+            d_bng[i, 2] = 0.002 * t_b
+    return [d_len, d_vol, d_bng]
 
-f_verts = np.array(f_verts, dtype=np.float32)
-f_norms = np.array(f_norms, dtype=np.float32)
-f_uvs = np.array(f_uvs, dtype=np.float32)
-f_tris = np.array(f_tris, dtype=np.uint16) + len(pt_pos)
 
-comb_pos = np.concatenate([pt_pos, f_verts], axis=0)
-comb_norm = np.concatenate([pt_norm, f_norms], axis=0)
-comb_uv = np.concatenate([pt_uv, f_uvs], axis=0)
-comb_tris = np.concatenate([keep_pt_tris, f_tris], axis=0)
+def encode_normalized_hair_tex(tex_path, feather_bangs=False):
+    im = Image.open(tex_path).convert('RGBA').resize((256, 256), Image.Resampling.LANCZOS)
+    arr = np.asarray(im, dtype=np.float32) / 255.0
+    rgb = arr[:, :, :3]
+    alpha = arr[:, :, 3].copy()
+    lum = 0.299 * rgb[:, :, 0] + 0.587 * rgb[:, :, 1] + 0.114 * rgb[:, :, 2]
+    valid = alpha > 0.05
+    mean_l = float(lum[valid].mean()) if valid.any() else 0.5
+    std_l = max(0.06, float(lum[valid].std()) if valid.any() else 0.12)
+    # High-contrast neutral strand luminance (0.24..0.92, mean ~0.60) so Three.js baseColor tints cleanly with crisp strand detail!
+    norm_l = np.clip(0.60 + ((lum - mean_l) / std_l) * 0.18, 0.20, 0.94)
+    # Add fine vertical micro-strand modulation for high-frequency strand sheen
+    W_t = 256
+    u_grid = np.linspace(0.0, 1.0, W_t, dtype=np.float32)[None, :]
+    micro = 0.05 * np.sin(u_grid * 380.0) + 0.03 * np.cos(u_grid * 790.0)
+    norm_l = np.clip(norm_l + micro, 0.18, 0.96)
 
-# Enhance the hair texture in the bottom band (v in 0.64..0.99):
-# Solid opaque hair from crown to mid-forehead (v_n < 0.58), feathering into natural wispy bangs at the eyebrows (v_n in 0.58..1.0)!
-im_bv = hg_pt['bufferViews'][hg_pt['images'][0]['bufferView']]
-im_off = im_bv.get('byteOffset', 0)
-pt_tex = np.array(Image.open(io.BytesIO(hb_pt[im_off:im_off+im_bv['byteLength']])).convert('RGBA')).copy()
-Ht, Wt = pt_tex.shape[:2]
-for x_px in range(Wt):
-    u_n = x_px / Wt
-    strand_wave = (
-        0.52
-        + 0.28 * math.sin(u_n * 115.0)
-        + 0.22 * math.cos(u_n * 240.0 + 0.9)
-        + 0.16 * math.sin(u_n * 32.0 - 0.5)
-    )
-    # Subtle natural parted wisps in the lower half of the bangs (matching the user's photo!)
-    wisp_gap = (
-        0.48 * math.exp(-(((u_n - 0.56) / 0.032) ** 2))
-        + 0.35 * math.exp(-(((u_n - 0.38) / 0.024) ** 2))
-        + 0.35 * math.exp(-(((u_n - 0.72) / 0.025) ** 2))
-    )
-    for y_px in range(int(Ht * 0.64), Ht):
-        v_n = (y_px - Ht * 0.64) / (Ht * 0.36)  # 0 at root -> 1 at eyebrow tip
-        if v_n < 0.52:
-            alpha = 1.0
-        else:
-            t_tip = (v_n - 0.52) / 0.48  # 0 -> 1 in lower 48% of bangs
-            # Individual strand length variation
-            max_len = 0.68 + 0.32 * max(0.0, min(1.0, strand_wave - wisp_gap * t_tip))
-            alpha = 1.0 if t_tip < max_len * 0.75 else max(0.0, 1.0 - (t_tip - max_len * 0.75) / max(0.08, max_len * 0.25))
-        shade = int(np.clip(105 + 48 * math.sin(u_n * 190.0) + 25 * math.sin(v_n * math.pi), 60, 185))
-        pt_tex[y_px, x_px] = [shade, shade, shade, int(alpha * 255)]
+    out_rgba = np.zeros((256, 256, 4), dtype=np.uint8)
+    out_rgba[:, :, 0] = (norm_l * 255.0).astype(np.uint8)
+    out_rgba[:, :, 1] = (norm_l * 248.0).astype(np.uint8)
+    out_rgba[:, :, 2] = (norm_l * 252.0).astype(np.uint8)
+    out_rgba[:, :, 3] = (alpha * 255.0).astype(np.uint8)
 
-user_hair_im_buf = io.BytesIO()
-Image.fromarray(pt_tex).save(user_hair_im_buf, format='PNG', optimize=True)
-user_hair_im_bytes = user_hair_im_buf.getvalue()
+    has_alpha = bool((alpha < 0.92).sum() > 250)
+    buf = io.BytesIO()
+    if has_alpha:
+        Image.fromarray(out_rgba, 'RGBA').save(buf, format='PNG', optimize=True)
+        return buf.getvalue(), 'image/png', 'MASK'
+    else:
+        Image.fromarray(out_rgba[:, :, :3], 'RGB').save(buf, format='JPEG', quality=88)
+        return buf.getvalue(), 'image/jpeg', 'OPAQUE'
 
-# Write `hair_user_photo.glb`
-bin_chunks, buffer_views, accessors = [], [], []
-tex_bv = add_bv(user_hair_im_bytes)
-u_mesh = {
-    'name': 'hair_user_photo',
-    'primitives': [{
-        'attributes': {
-            'POSITION': add_acc(comb_pos.astype('<f4'), 5126, 'VEC3', 34962),
-            'NORMAL': add_acc(comb_norm.astype('<f4'), 5126, 'VEC3', 34962),
-            'TEXCOORD_0': add_acc(comb_uv.astype('<f4'), 5126, 'VEC2', 34962),
-        },
-        'indices': add_acc(comb_tris.flatten().astype('<u2'), 5123, 'SCALAR', 34963),
-        'material': 0,
-    }]
-}
-u_bin = b''.join(bin_chunks)
-u_gltf = {
-    'asset': {'version': '2.0'},
-    'scene': 0,
-    'scenes': [{'nodes': [0]}],
-    'nodes': [{'name': 'hair_user_photo', 'mesh': 0}],
-    'meshes': [u_mesh],
-    'materials': [{
-        'name': 'Mat_hair_user_photo',
+
+def write_hair_glb(out_filename, pos, uv, tris, tex_bytes, mime_type, alpha_mode):
+    global bin_chunks, buffer_views, accessors
+    bin_chunks, buffer_views, accessors = [], [], []
+    norm = compute_smooth_normals(pos, tris)
+    h_deltas = build_hair_morph_deltas(pos)
+    tex_bv = add_bv(tex_bytes)
+    idx_ctype = 5123 if len(pos) < 65535 else 5125
+    idx_arr = tris.flatten().astype('<u2' if idx_ctype == 5123 else '<u4')
+
+    mat_def = {
+        'name': f'Mat_{out_filename[:-4]}',
         'pbrMetallicRoughness': {
             'baseColorTexture': {'index': 0},
-            'baseColorFactor': [0.16, 0.13, 0.14, 1.0],
-            'metallicFactor': 0.03,
-            'roughnessFactor': 0.40,
+            'baseColorFactor': [0.28, 0.24, 0.25, 1.0],
+            'metallicFactor': 0.04,
+            'roughnessFactor': 0.36,
         },
-        'alphaMode': 'MASK',
-        'alphaCutoff': 0.18,
         'doubleSided': True,
-    }],
-    'textures': [{'source': 0}],
-    'images': [{'name': 'hair_user_photo', 'mimeType': 'image/png', 'bufferView': tex_bv}],
-    'accessors': accessors,
-    'bufferViews': buffer_views,
-    'buffers': [{'byteLength': len(u_bin)}],
-}
-u_hair_path = os.path.join(OUT_DIR, 'hair_user_photo.glb')
-glbutil.write_glb(u_hair_path, u_gltf, u_bin)
-print(f"Saved {u_hair_path}: {os.path.getsize(u_hair_path) / 1024:.1f} KB ({len(comb_pos)} verts)")
+    }
+    if alpha_mode != 'OPAQUE':
+        mat_def['alphaMode'] = 'MASK'
+        mat_def['alphaCutoff'] = 0.20
+
+    h_mesh = {
+        'name': out_filename[:-4],
+        'extras': {'targetNames': ['hair_length', 'hair_volume', 'bangs_length']},
+        'primitives': [{
+            'attributes': {
+                'POSITION': add_acc(pos.astype('<f4'), 5126, 'VEC3', 34962),
+                'NORMAL': add_acc(norm.astype('<f4'), 5126, 'VEC3', 34962),
+                'TEXCOORD_0': add_acc(uv.astype('<f4'), 5126, 'VEC2', 34962),
+            },
+            'indices': add_acc(idx_arr, idx_ctype, 'SCALAR', 34963),
+            'material': 0,
+            'targets': add_morph_targets(h_deltas),
+        }]
+    }
+    h_bin = b''.join(bin_chunks)
+    h_gltf = {
+        'asset': {'version': '2.0', 'generator': 'CERVIX-3D Stage 8 MhcloFit Hair Compiler'},
+        'extensionsUsed': ['KHR_mesh_quantization'],
+        'extensionsRequired': ['KHR_mesh_quantization'],
+        'scene': 0,
+        'scenes': [{'nodes': [0]}],
+        'nodes': [{'name': out_filename[:-4], 'mesh': 0}],
+        'meshes': [h_mesh],
+        'materials': [mat_def],
+        'textures': [{'source': 0}],
+        'images': [{'name': out_filename[:-4], 'mimeType': mime_type, 'bufferView': tex_bv}],
+        'accessors': accessors,
+        'bufferViews': buffer_views,
+        'buffers': [{'byteLength': len(h_bin)}],
+    }
+    out_path = os.path.join(OUT_DIR, out_filename)
+    glbutil.write_glb(out_path, h_gltf, h_bin)
+    print(f"Saved {out_path}: {os.path.getsize(out_path) / 1024:.1f} KB ({len(pos)} verts, {len(tris)} tris)")
+
+
+# 6A. Build `hair_user_photo.glb` (Seamless MhcloFit sculpted bangs + tapered cheek wisps + exposed ears + back bun)
+p_bun, uv_bun, t_bun = load_mhclo_fitted_hair(
+    '/tmp/mh_packs/extracted/hair/rehmanpolanski_hair_bun_brown/rehmanpolanski_hair_bun_brown.mhclo',
+    '/tmp/mh_packs/extracted/hair/rehmanpolanski_hair_bun_brown/hair_bun_brown.obj'
+)
+p_bob, uv_bob, t_bob = load_mhclo_fitted_hair(
+    '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/toigo_curled_under_bob_with_bangs.mhclo',
+    '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/bob_curled_under_bangs.obj'
+)
+
+p_sculpt = p_bob.copy()
+for i in range(len(p_sculpt)):
+    x, y, z = p_sculpt[i]
+    if y > 0.065:
+        p_sculpt[i, 1] = 0.065 + (y - 0.065) * 0.72
+    if z > 0.065 and y < 0.060 and abs(x) < 0.062:
+        wisp_wave = 0.0022 * math.sin(x * 165.0) + 0.0012 * math.cos(x * 310.0)
+        t_tip = max(0.0, min(1.0, (0.048 - y) / 0.036))
+        p_sculpt[i, 1] += wisp_wave * t_tip
+        p_sculpt[i, 2] -= 0.003 * t_tip * (0.5 + 0.5 * math.sin(x * 210.0))
+    if y < 0.040:
+        t_down = max(0.0, min(1.0, (0.040 - y) / 0.110))
+        if z < 0.034:
+            t_back = max(0.0, min(1.0, (0.034 - z) / 0.045))
+            pull = t_down * t_back
+            p_sculpt[i, 0] *= (1.0 - 0.52 * pull)
+            p_sculpt[i, 1] = p_sculpt[i, 1] * (1.0 - 0.48 * pull) + (-0.022) * (0.48 * pull)
+            if z > -0.025:
+                ear_w = math.exp(-((y - (-0.012)) / 0.035) ** 2) * math.exp(-((z - 0.002) / 0.028) ** 2)
+                p_sculpt[i, 0] *= (1.0 - 0.24 * ear_w)
+                p_sculpt[i, 2] -= 0.018 * ear_w
+        else:
+            # Cheek-framing side lock: taper smoothly toward the jawline tip
+            p_sculpt[i, 0] *= (1.0 - 0.14 * t_down)
+            p_sculpt[i, 1] = p_sculpt[i, 1] * (1.0 - 0.22 * t_down) + (-0.064) * (0.22 * t_down)
+            if y < -0.020:
+                t_point = max(0.0, min(1.0, (-0.020 - y) / 0.055))
+                z_mid = 0.052
+                p_sculpt[i, 2] = p_sculpt[i, 2] * (1.0 - 0.55 * t_point) + z_mid * (0.55 * t_point)
+
+v0_b, v1_b, v2_b = p_bun[t_bun[:, 0]], p_bun[t_bun[:, 1]], p_bun[t_bun[:, 2]]
+tc_bun = (v0_b + v1_b + v2_b) / 3.0
+keep_bun_t = t_bun[tc_bun[:, 2] < -0.045]
+used_bun = np.unique(keep_bun_t)
+remap_bun = {old: new for new, old in enumerate(used_bun)}
+p_backbun = p_bun[used_bun].copy()
+uv_backbun = uv_bun[used_bun].copy()
+t_backbun = np.array([[remap_bun[a], remap_bun[b_i], remap_bun[c]] for a, b_i, c in keep_bun_t], dtype=np.uint32)
+
+p_user = np.vstack([p_sculpt, p_backbun]).astype(np.float32)
+uv_user = np.vstack([uv_bob, uv_backbun]).astype(np.float32)
+t_user = np.vstack([t_bob, t_backbun + len(p_sculpt)]).astype(np.uint32)
+u_tex_bytes, u_mime, u_amode = encode_normalized_hair_tex(
+    '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/BlondHair.png'
+)
+write_hair_glb('hair_user_photo.glb', p_user, uv_user, t_user, u_tex_bytes, u_mime, u_amode)
+
+# 6B. Compile the other 7 Catalog High-Poly Hair GLB Models using exact MhcloFit
+CATALOG_HAIRS = [
+    (
+        'hair_bob01.glb',
+        '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/toigo_curled_under_bob_with_bangs.mhclo',
+        '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/bob_curled_under_bangs.obj',
+        '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/BlondHair.png',
+        None,
+    ),
+    (
+        'hair_bob02.glb',
+        '/tmp/mh_packs/extracted/hair/toigo_inverted_bob_with_bangs/toigo_inverted_bob_with_bangs.mhclo',
+        '/tmp/mh_packs/extracted/hair/toigo_inverted_bob_with_bangs/bob_inverted_bangs.obj',
+        '/tmp/mh_packs/extracted/hair/toigo_curled_under_bob_with_bangs/BlondHair.png',
+        None,
+    ),
+    (
+        'hair_short02.glb',
+        '/tmp/mh_packs/extracted/hair/o4saken_chinesebob01/o4saken_chinesebob01.mhclo',
+        '/tmp/mh_packs/extracted/hair/o4saken_chinesebob01/o4saken_chinesebob01.obj',
+        '/tmp/mh_packs/extracted/hair/o4saken_chinesebob01/o4saken_chinesebob01.png',
+        None,
+    ),
+    (
+        'hair_long01.glb',
+        '/tmp/mh_packs/extracted/hair/elvs_lara_hair/elvs_lara_hair.mhclo',
+        '/tmp/mh_packs/extracted/hair/elvs_lara_hair/elvs_laracroft_hair1a.obj',
+        '/tmp/mh_packs/extracted/hair/elvs_lara_hair/larahairtexture1.png',
+        -0.098,
+    ),
+    (
+        'hair_ponytail01.glb',
+        '/tmp/mh_packs/extracted/hair/elvs_hazel_hair/elvs_hazel_hair.mhclo',
+        '/tmp/mh_packs/extracted/hair/elvs_hazel_hair/elvs_hazel_hair.obj',
+        '/tmp/mh_packs/extracted/hair/elvs_hazel_hair/elvs_hazel_hair_diffuse.png',
+        None,
+    ),
+    (
+        'hair_braid01.glb',
+        '/tmp/mh_packs/extracted/hair/elvs_adrienne_hair/elvs_adrienne_hair.mhclo',
+        '/tmp/mh_packs/extracted/hair/elvs_adrienne_hair/elvs_adrienne_hair1.obj',
+        '/tmp/mh_packs/extracted/hair/elvs_adrienne_hair/Adriennehairtex1.png',
+        None,
+    ),
+    (
+        'hair_short04.glb',
+        '/tmp/mh_packs/extracted/hair/elvs_daisy_hair/elvs_daisy_hair.mhclo',
+        '/tmp/mh_packs/extracted/hair/elvs_daisy_hair/elvs_daisyhair1.obj',
+        '/tmp/mh_packs/extracted/hair/elvs_daisy_hair/daisyhair1.png',
+        None,
+    ),
+]
+
+for h_fname, mhclo_p, obj_p, tex_p, trim_y in CATALOG_HAIRS:
+    hp, huv, ht = load_mhclo_fitted_hair(mhclo_p, obj_p, trim_below_y=trim_y)
+    tb, tm, tam = encode_normalized_hair_tex(tex_p)
+    write_hair_glb(h_fname, hp, huv, ht, tb, tm, tam)

@@ -11,6 +11,109 @@ const objLoader = new OBJLoader();
 const arrayBufferCache = new Map();
 const BUST_WORLD_SCALE = 115.0;
 
+/**
+ * 7 Forensic Post-Mortem / Dead-Person Expression Presets ("死人各种表情")
+ */
+export const FORENSIC_EXPRESSION_PRESETS = [
+  {
+    id: 'dead_calm',
+    label: '失活标本 · 默认微阖',
+    shortLabel: '失活标本',
+    desc: '瞳孔失焦、眼睑半阖、双唇松弛平直闭合（默认失活态）',
+    weights: {},
+  },
+  {
+    id: 'dead_serene',
+    label: '安详永眠 · 双目紧闭',
+    shortLabel: '安详永眠',
+    desc: '双目完全闭合、长睫低垂、面部肌肉彻底松弛安详',
+    weights: { expr_serene: 1.0 },
+  },
+  {
+    id: 'dead_hollow',
+    label: '死不瞑目 · 翻白微张',
+    shortLabel: '死不瞑目',
+    desc: '眼帘半垂、黑仁向上翻白、下颌松弛微张露出门齿',
+    weights: { expr_hollow: 1.0 },
+  },
+  {
+    id: 'dead_shock',
+    label: '惊愕断首 · 圆睁张口',
+    shortLabel: '惊愕断首',
+    desc: '双目惊恐圆睁、眉头高挑、下颌大张露出上下牙列与舌腔',
+    weights: { expr_shock: 1.0 },
+  },
+  {
+    id: 'dead_rigor',
+    label: '临终痉挛 · 尸僵咬牙',
+    shortLabel: '临终痉挛',
+    desc: '眉心紧锁、大小眼痉挛抽搐、鼻翼耸起、痛苦咧嘴露齿',
+    weights: { expr_rigor: 1.0 },
+  },
+  {
+    id: 'dead_smile',
+    label: '诡异尸笑 · 防腐微哂',
+    shortLabel: '诡异尸笑',
+    desc: '眼帘低垂、嘴角不对称诡异牵拉上扬（尸笑面容）',
+    weights: { expr_smile: 1.0 },
+  },
+  {
+    id: 'dead_flaccid',
+    label: '面瘫弛缓 · 歪嘴吐舌',
+    shortLabel: '面瘫吐舌',
+    desc: '单侧眼闭合、单侧翻白眼、下颌脱臼偏斜伴舌尖微吐',
+    weights: { expr_flaccid: 1.0 },
+  },
+];
+
+export const HIGH_POLY_HAIR_CATALOG = [
+  {
+    id: 'hair_user_photo',
+    label: '照片同款 · 空气碎刘海束发 (5,029v)',
+    desc: '无缝贴合头骨、清透空气碎刘海 + 脸颊修颜碎发 + 露耳后挽发髻',
+  },
+  {
+    id: 'hair_bob01',
+    label: 'Toigo · 内扣齐刘海波波头 (2,806v)',
+    desc: '经典高精齐刘海内扣短波波，发尾自然包裹下颌线',
+  },
+  {
+    id: 'hair_bob02',
+    label: 'Toigo · 日系层次内卷短波波 (3,031v)',
+    desc: '斜分层次感蓬松短波波，露出修长颈部与解剖断面',
+  },
+  {
+    id: 'hair_short02',
+    label: 'O4saken · 中式空气刘海微卷短发 (12,547v)',
+    desc: '超精细多层Alpha发片交织，真实还原轻盈发丝飞舞感',
+  },
+  {
+    id: 'hair_long01',
+    label: 'Elvs Lara · 高精中分柔顺长发 (17,360v)',
+    desc: '1.7万顶点殿堂级垂顺长发，颈部切口上方自然收束不遮挡断面',
+  },
+  {
+    id: 'hair_ponytail01',
+    label: 'Elvs Hazel · 利落偏分柔顺束发 (4,891v)',
+    desc: '气质偏分刘海配脑后利落挽发，完整展现耳廓与下颌骨相',
+  },
+  {
+    id: 'hair_braid01',
+    label: 'Elvs Adrienne · 法式蓬松微卷盘发 (9,352v)',
+    desc: '9,352顶点浪漫法式微卷刘海与盘发纹理，立体感极强',
+  },
+  {
+    id: 'hair_short04',
+    label: 'Elvs Daisy · 千金感斜刘海半束发 (6,721v)',
+    desc: '柔和斜刘海搭配双侧垂落发缕，温婉东方标本气质',
+  },
+  {
+    id: 'none',
+    label: '无头发 · 纯解剖头骨/光头标本',
+    desc: '完全移除毛发层，仅保留头皮与医学解剖断面',
+  },
+];
+
 function base64ToArrayBuffer(b64) {
   const binaryString = window.atob(b64);
   const len = binaryString.length;
@@ -56,8 +159,8 @@ const PRESET_MORPH_BIASES = {
 };
 
 /**
- * Applies facial morph sliders to all morph-enabled meshes inside `rootGroup`.
- * Never narrows mouth width automatically so lips remain flat, calm, and lifeless.
+ * Applies facial bone morphs, forensic dead-person expressions ("死人各种表情"),
+ * and 3D hair morphs across all morph-enabled meshes inside `rootGroup`.
  */
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   if (!rootGroup) return;
@@ -73,6 +176,24 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const lip = (m.lipFullness ?? 0) + bias.lipFullness * 0.4;
   const forehead = Number(m.foreheadHeight ?? 0);
   const ear = Number(m.earSize ?? 0);
+
+  // Forensic Post-Mortem Expression Preset + Fine-Tuning Sliders
+  const exprId = m.deadExpression || rootGroup.userData.deadExpression || 'dead_calm';
+  rootGroup.userData.deadExpression = exprId;
+  const exprPreset = FORENSIC_EXPRESSION_PRESETS.find((p) => p.id === exprId) || FORENSIC_EXPRESSION_PRESETS[0];
+  const presetW = exprPreset.weights || {};
+
+  const jawOpenVal = Math.max(0, Math.min(1.2, Number(m.jawOpen ?? 0)));
+  const jawSideVal = Math.max(0, Math.min(1.2, Number(m.jawSide ?? 0)));
+  const tongueOutVal = Math.max(0, Math.min(1.2, Number(m.tongueOut ?? 0)));
+  const eyeRollUpVal = Math.max(0, Math.min(1.2, Number(m.eyeRollUp ?? 0)));
+  const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? 0)));
+  const eyeWideVal = Math.max(0, Math.min(1.0, Number(m.eyeWide ?? 0)));
+
+  // Hair 3D morphs
+  const hairLenVal = Math.max(-0.5, Math.min(1.2, Number(m.hairLength ?? 0)));
+  const hairVolVal = Math.max(-0.5, Math.min(1.2, Number(m.hairVolume ?? 0)));
+  const bangsLenVal = Math.max(-0.5, Math.min(1.2, Number(m.bangsLength ?? 0)));
 
   const targetWeights = {
     face_jaw_width_decr: jawV > 0 ? Math.min(1.1, jawV * 1.25) : 0,
@@ -96,12 +217,27 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     face_forehead_decr: forehead < 0 ? Math.min(1.0, -forehead * 1.2) : 0,
     face_ear_size_incr: ear > 0 ? Math.min(1.0, ear * 1.2) : 0,
     face_ear_size_decr: ear < 0 ? Math.min(1.0, -ear * 1.2) : 0,
-    blink_left: 0,
-    blink_right: 0,
+    blink_left: eyeCloseVal,
+    blink_right: eyeCloseVal,
     look_left: 0,
     look_right: 0,
-    look_up: 0,
+    look_up: eyeRollUpVal * 0.65,
     look_down: 0,
+    // 10 Forensic Post-Mortem Expression Morph Targets
+    expr_serene: Number(presetW.expr_serene ?? 0),
+    expr_hollow: Number(presetW.expr_hollow ?? 0),
+    expr_shock: Number(presetW.expr_shock ?? 0),
+    expr_rigor: Number(presetW.expr_rigor ?? 0),
+    expr_smile: Number(presetW.expr_smile ?? 0),
+    expr_flaccid: Number(presetW.expr_flaccid ?? 0),
+    jaw_open: jawOpenVal,
+    jaw_side: jawSideVal,
+    tongue_out: tongueOutVal,
+    eye_wide: eyeWideVal,
+    // Hair 3D morphs
+    hair_length: hairLenVal,
+    hair_volume: hairVolVal,
+    bangs_length: bangsLenVal,
   };
 
   rootGroup.traverse((child) => {
@@ -132,7 +268,7 @@ export function applyHeadMorphsToGeometry(geometryOrMesh, basePositions, morphs 
 
 /**
  * Lifeless Specimen Expression Mode ("不要眨眼，死人表情默认那种感觉"):
- * Keeps eyelids and eyeballs 100% motionless in their calm, still specimen state.
+ * Keeps eyelids and eyeballs 100% motionless in their configured post-mortem state.
  */
 export function updateHeadLifeAnimation() {
   // Intentionally motionless for authentic preserved specimen feel
@@ -154,10 +290,11 @@ export function resolveRealHairStyle(styleName = 'hair_user_photo') {
   if (styleName === 'none') return 'none';
   const legacyMap = {
     user_bangs: 'hair_user_photo',
+    photo_tied_wisps: 'hair_user_photo',
     long_straight: 'hair_long01',
     long_waves: 'hair_long01',
     hime_cut: 'hair_user_photo',
-    sleek_bob: 'hair_bob02',
+    sleek_bob: 'hair_bob01',
     short_bob: 'hair_bob02',
     low_chignon: 'hair_ponytail01',
     high_ponytail: 'hair_ponytail01',
@@ -203,11 +340,8 @@ export async function attachRealHairModel(rootGroup, config = {}) {
 
     const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#191518';
     const baseColor = new THREE.Color(hairColorHex);
-    const displayColor = new THREE.Color(
-      Math.max(0.13, baseColor.r * 1.20),
-      Math.max(0.11, baseColor.g * 1.20),
-      Math.max(0.13, baseColor.b * 1.20)
-    );
+    // Stage 8 High-Contrast Strand Tint: keeps dark hair rich & dimensional so embedded strand textures never crush to flat black
+    const displayColor = baseColor.clone().lerp(new THREE.Color(0x6e605c), 0.34);
     const sheenIntensity = Number(config.hairSheen ?? 0.88);
 
     gltf.scene.traverse((child) => {
@@ -218,6 +352,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           mapTex.colorSpace = THREE.SRGBColorSpace;
           mapTex.anisotropy = 8;
         }
+        const isMask = origMat?.alphaMode === 'MASK' || resolvedStyle === 'hair_short02';
         // Stage 8 发丝去灰：深色发必须压低环境反射/釉面/绒光，否则 RoomEnvironment 会把黑发洗成灰白塑料感
         const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
         const hairEnvI = 0.32 + Math.min(0.55, hairLum * 0.85);
@@ -235,9 +370,9 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           clearcoatRoughness: 0.42,
           specularIntensity: 0.70,
           envMapIntensity: hairEnvI,
-          transparent: true,
-          alphaTest: 0.16,
-          alphaToCoverage: true,
+          transparent: isMask,
+          alphaTest: isMask ? 0.18 : 0.0,
+          alphaToCoverage: isMask,
           side: THREE.DoubleSide,
         });
         child.castShadow = true;
@@ -280,15 +415,19 @@ function buildGimbalOverlayGroup() {
 
 /**
  * Builds the complete High-Precision Collectible Head Bust Node
- * (`只有头 + 切口真实血迹 + 高亮度 C4/C5 医学解剖断面 + 照片定制发型/7款真实3D头发 + 静态失活表情`)
+ * (`只有头 + 切口真实血迹 + 高亮度 C4/C5 医学解剖断面 + 8款高精MhcloFit真实3D发型 + 7种法医死人表情 + 3D牙齿与舌头`)
  */
 export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
   rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
   rootGroup.userData.collectibleId = config.id || 'StudioDraft';
   rootGroup.userData.basePreset = config.basePreset || 'user_photo';
+  rootGroup.userData.deadExpression = config.deadExpression || config.morphs?.deadExpression || 'dead_calm';
 
-  const morphs = config.morphs || {};
+  const morphs = {
+    ...(config.morphs || {}),
+    deadExpression: config.deadExpression || config.morphs?.deadExpression || 'dead_calm',
+  };
   const materials = config.materials || {};
   rootGroup.userData.currentMorphs = { ...morphs };
 
@@ -370,8 +509,6 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.geometry.userData.parentHeadGroup = rootGroup;
       child.userData.basePositions = true;
 
-      // High-brightness, glistening wet C4/C5 anatomical cross-section!
-      // Using emissiveMap guarantees the downward-facing section is NEVER dark or black!
       child.material = new THREE.MeshPhysicalMaterial({
         map: colorTex,
         emissiveMap: colorTex,
@@ -438,6 +575,39 @@ export async function buildCollectibleHeadNode(config = {}) {
         alphaTest: 0.10,
         roughness: 0.40,
         envMapIntensity: 0.50,
+        side: THREE.DoubleSide,
+      });
+    } else if (matName === 'Teeth' || child.name === 'Teeth') {
+      const teethMap = child.material?.map || null;
+      if (teethMap) {
+        teethMap.colorSpace = THREE.SRGBColorSpace;
+      }
+      child.material = new THREE.MeshPhysicalMaterial({
+        map: teethMap,
+        color: new THREE.Color('#f4ede2'),
+        roughness: 0.18,
+        metalness: 0.0,
+        clearcoat: 0.75,
+        clearcoatRoughness: 0.10,
+        ior: 1.52,
+        envMapIntensity: 0.65,
+        side: THREE.DoubleSide,
+      });
+    } else if (matName === 'Tongue' || child.name === 'Tongue') {
+      const tongueMap = child.material?.map || null;
+      if (tongueMap) {
+        tongueMap.colorSpace = THREE.SRGBColorSpace;
+      }
+      child.material = new THREE.MeshPhysicalMaterial({
+        map: tongueMap,
+        color: new THREE.Color('#d6747a'),
+        roughness: 0.28,
+        metalness: 0.0,
+        clearcoat: 0.65,
+        clearcoatRoughness: 0.16,
+        sheen: 0.35,
+        sheenColor: new THREE.Color('#ff9aa2'),
+        envMapIntensity: 0.55,
         side: THREE.DoubleSide,
       });
     }

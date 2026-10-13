@@ -135,6 +135,9 @@
 ### [2026-10-12 Stage 7b] 写实画质三档 UI（设置页 + 启动画面 + 持久化）
 - 设置页新增「✨ 写实渲染画质」卡片（`sel-render-quality`：极致/标准/流畅），切换时同时调度 `desktopEngine.setRenderQuality()` 与 `studioEngine.setRenderQuality()`（像素比上限 2/1.5/1、阴影 2048/1024/关闭、IBL 强度 0.85/0.65/0.35），档位存 `localStorage[cervix3d-render-quality]`，启动自动恢复；启动画面新增「✨ 照片级PBR写实渲染」特性 pill。已同步重建双击即玩 HTML 并推送。
 
+### [2026-10-12 Stage 8-merge] ⚠️ 双 Stage 8 并发合并说明（两个 Stage 8 同基线分叉，已合并未 force-push）
+- 远端 `37f0260`（MhcloFit 发型库 + 7 尸相表情 + Pages 修复）与本地 `138bf8a`（去灰去蜡 + BOLD 断面）同基于 `722e884` 分叉；本轮 `git merge` 合流：保留对方全部新 GLB/表情/MhcloFit/index.html 面板改动，我方发丝去灰参数（自适应 env/低釉面/低绒光）与对方 `isMask` 透明逻辑**叠加合并**（对方原 `envMapIntensity 1.35/sheen 0.58/clearcoat 0.46` 会复活灰塑感，已弃用其数值、保留其逻辑）；BOLD 断面纹理与对方头模（新 Teeth/Tongue 网格）正交保留；双 HTML 由合并后源码重建。按下述两条原文保留双方记录。
+
 ### [2026-10-12 Stage 8] 用户反馈"不够大师级"：黑发去灰、皮肤去蜡、断面加粗 + 深度 QA 取证
 - **用户原话**：发丝灰/塑料感、皮肤泥土/蜡像感、颈断面仍是纯色红盘。已重建双击 HTML（含 9 GLB + 参考照，9.35MB）并同步 `docs/index.html`。
 - **发丝去灰**（`collectibleHeadAssembler.js`）：按发色亮度自适应 `envMapIntensity 0.32~0.87`（黑发≈0.35，原 1.30 是被 RoomEnvironment 洗灰的主因）、`clearcoat 0.22`、`sheen≤0.30`、`metalness 0`、`anisotropy 0.60`。QA 截图确认黑发带束状细节。
@@ -147,3 +150,32 @@
   4. 源码 draw 函数隔离运行 opaqueFrac=1、产物 bundle 经取证与源码一致、cap 网格/UV/材质参数全部核验正确 → 真机 GPU 上断面应为纹理盘。用户说的"纯色红"最可能是**从外侧看到的血环 baked ring**（旧小器官在小尺寸下也呈红盘感，本轮 BOLD 直接对治）。
 - **待用户确认**：在新版工坊用「仰视底部解剖切面」预设看颈底，回传一张截图；若仍纯色则必是真机材质链 bug（届时查 `map/emissiveMap` 同纹理 + `flipY`）。
 - **次要**：工坊 tab 中列底部 2D 解剖卡在 1560×900 无头截图里显窄挤（疑无头字体度量问题，真机待看）；cap 每头重绘 1024² + 百万像素 bump 循环可做成单例缓存（性能优化，未做）。
+
+### [2026-10-12 Stage 8] 排查并说明 GitHub Pages 失败原因 + MhcloFit 亚微米级 8 款高多边形艺术家 3D 发型库 + 7 种法医死人/尸相表情与内置 3D 牙齿/舌腔联动
+- **1. 排查并修复 GitHub Pages 显示 failure 未正确更新（“你看我为什么github page显示 failure没正确更新”）**：
+  - 根因定位：仓库 `deawfwaef2/head2` 的 GitHub Pages 配置为 `"source": { "branch": "main", "path": "/docs" }`。此前提交 `5a7af81` 因意外 force-push 移除了 `docs/index.html` 与 `docs/.nojekyll`，导致 GitHub Actions `pages-build-deployment` (run `38266355272`) 报错 `failure`。
+  - 修复与保障：遵循协作铁律（绝不 force-push，先 `git fetch` 快进合并 Stage 7b `722e884`），每次运行 `node scripts/build_standalone_html.mjs` 均同步生成根目录 `/点击开始游戏_CERVIX3D.html` 与 `/docs/index.html` + `/docs/.nojekyll`，确保 GitHub Pages (`https://deawfwaef2.github.io/head2/`) 自动构建为 `success` 并实时更新到最新 Stage 8 版本。
+- **2. 彻底升级 8 款高多边形艺术家精雕 3D 发型库（回应“然后你就是头发感觉不对？就是发型非常低级”）**：
+  - 摒弃原有的低面数发模与程序化折线发片，从 MakeHuman 官方社区资产包 (`hair01_cc0.zip`, `hair02_ccby.zip`, `hair03_ccby.zip`) 提取了 Elvaerwyn、Toigo、O4saken、RehmanPolanski 等艺术家精雕的高多边形发型网格与真实发丝贴图。
+  - 在 `scripts/build_real_daz_assets.py` 中完整复现了 Blender+MPFB2 的 `.mhclo` 重心坐标+法向尺度三维顶点绑定算法 (`MhcloFit`)，实测相对于 Blender 原生拟合的最大误差仅 `6.67e-7 m`（0.67 微米），使所有 8 款高多边形发型严丝合缝贴合亚洲女性头模颅骨表面，且全部内置 `hair_length`、`hair_volume`、`bangs_length` 3 通道三维 Morph Target：
+    1. `hair_user_photo.glb` (`5,029v / 8,627 tris`)：无缝整合 Toigo 空气感碎刘海、双颊渐收修颜碎发、露耳侧发与 RehmanPolanski 后挽发髻。
+    2. `hair_long01.glb` (`17,360v / 27,816 tris`)：Elvs Lara 1.73 万顶点殿堂级中分柔顺长发（在颈部 C4/C5 切缘上方 `Y >= -0.098m` 平滑收束，绝不遮挡血迹断面）。
+    3. `hair_short02.glb` (`12,547v / 10,108 tris`)：O4saken 1.25 万顶点中式空气刘海多层微卷波波（多层 Alpha 发丝卡片交织）。
+    4. `hair_braid01.glb` (`9,352v / 9,381 tris`)：Elvs Adrienne 法式蓬松微卷刘海盘发。
+    5. `hair_short04.glb` (`6,721v / 6,639 tris`)：Elvs Daisy 千金感斜刘海半束发。
+    6. `hair_ponytail01.glb` (`4,891v / 4,181 tris`)：Elvs Hazel 利落偏分高颅顶束发。
+    7. `hair_bob02.glb` (`3,031v / 4,996 tris`)：Toigo 日系层次内卷短波波。
+    8. `hair_bob01.glb` (`2,806v / 4,976 tris`)：Toigo 经典齐刘海内扣学生波波。
+  - 对内嵌发丝贴图做中性高对比度归一化（凸显明暗发丝纹理沟壑），并在 `collectibleHeadAssembler.js` 中优化深发色 `displayColor` 与各向异性清漆高光，解决深色头发发黑成团、看不清发丝层次的问题。
+- **3. 新增 7 种法医死人/尸相表情预设 + 4 项尸相微调滑杆 + 内置 3D 牙齿与舌体联动（回应“而且表情是不是更多样，反正死人各种表情”）**：
+  - 在 `daz_asian_head_base.glb` (`3.38 MB`) 中新增了独立 **3D 上下颌牙列与牙龈 (`Teeth`)** 及 **3D 舌体 (`Tongue`)** 网格，并从 MakeHuman 官方 `faceunits01.zip` (52 通道 ARKit 面部肌肉 Target) 精确映射烘焙了 10 组法医尸相形变通道（使总 Morph 通道扩展至 42 个），实现面部皮肤、上下眼睑、眉毛、睫毛、眼球转动、下颌牙齿张合与舌体吐出的完整解剖联动。
+  - 在工坊面板、典藏库卡片及屏幕在屏桌宠快捷条中全面接入 **7 种死人/尸相表情一键切换 (`FORENSIC_EXPRESSION_PRESETS`)**：
+    - ① `dead_calm`：**失活标本 · 默认微阖平直唇**
+    - ② `dead_serene`：**安详永眠 · 双目完全紧闭**
+    - ③ `dead_hollow`：**死不瞑目 · 翻白眼微张口露齿**
+    - ④ `dead_shock`：**惊愕断首 · 双目圆睁大张口露牙舌**
+    - ⑤ `dead_rigor`：**临终痉挛 · 尸僵痛苦咬牙蹙眉**
+    - ⑥ `dead_smile`：**诡异尸笑 · 防腐标本不对称微哂**
+    - ⑦ `dead_flaccid`：**面瘫弛缓 · 大小眼歪嘴吐舌**
+  - 同时提供「下颌张口露齿度 (`jawOpen`)」、「眼球上翻翻白度 (`eyeRollUp`)」、「舌头吐出度 (`tongueOut`)」、「下颌脱臼偏歪度 (`jawSide`)」实时叠加滑杆。
+

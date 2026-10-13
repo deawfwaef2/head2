@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {
   buildCollectibleHeadNode,
+  applyHeadMorphsToGroup,
+  attachRealHairModel,
   updateHeadLifeAnimation,
   triggerCollectibleBlink
 } from './collectibleHeadAssembler.js';
@@ -282,10 +284,32 @@ export class DesktopBoxSpaceEngine {
     pet.customRot.set(-0.18, 0, 0);
   }
 
+  setPetExpression(id, exprId) {
+    const pet = this.pets.get(id);
+    if (!pet || !pet.node) return;
+    pet.collectible.deadExpression = exprId;
+    pet.collectible.morphs = { ...(pet.collectible.morphs || {}), deadExpression: exprId };
+    applyHeadMorphsToGroup(pet.node, { deadExpression: exprId });
+    soundEngine.playPickup(0);
+    this.onPetStateUpdate(this.getSummonedList());
+    this.refreshHoverHUD();
+  }
+
+  async setPetHairStyle(id, hairStyle) {
+    const pet = this.pets.get(id);
+    if (!pet || !pet.node) return;
+    pet.collectible.hairStyle = hairStyle;
+    await attachRealHairModel(pet.node, pet.collectible);
+    soundEngine.playPickup(0);
+    this.onPetStateUpdate(this.getSummonedList());
+  }
+
   getSummonedList() {
     return Array.from(this.pets.values()).map(p => ({
       id: p.id,
       name: p.collectible.name,
+      deadExpression: p.collectible.deadExpression || p.collectible.morphs?.deadExpression || 'dead_calm',
+      hairStyle: p.collectible.hairStyle || 'hair_user_photo',
       isRotationMode: p.isRotationMode,
       x: Math.round(p.pos.x),
       y: Math.round(p.pos.y),
