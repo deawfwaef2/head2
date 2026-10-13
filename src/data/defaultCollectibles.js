@@ -331,7 +331,46 @@ export const SKIN_MATERIAL_CATALOG = [
 ];
 
 /**
- * Stage 30 · 7 通道多头模自由混合器 (`HEAD_BLEND_CHANNELS` · 支持中/韩/古典/幼态/御姐/欧亚头模任意比例混合)
+ * Stage 35 · 玩家自由组合发型设计器 — 4 大模块化组件目录
+ * (前发刘海模块 + 两侧鬓角修颜模块 + 后脑马尾/发髻叠加模块 + 双色渐变挑染预设)
+ */
+export const HAIR_FRONT_BANGS_CATALOG = [
+  { id: 'default', shortLabel: '💇‍♀️ 原配前发', label: '💇‍♀️ 原配前发 · 保持主发型自带刘海结构' },
+  { id: 'wispy_air', shortLabel: '✨ 照片空气碎刘海', label: '✨ 照片同款·轻薄空气感碎刘海 (Wispy Air Bangs · 隐约透出额头肌肤)' },
+  { id: 'curtain_part', shortLabel: '🌙 韩系八字中分', label: '🌙 韩系高颅顶八字修颜长刘海 (Curtain Bangs · 修饰太阳穴与颧弓)' },
+  { id: 'hime_blunt', shortLabel: '🌸 漫画齐眉姬刘海', label: '🌸 漫画感齐眉平切姬发刘海 (Hime Blunt Bangs · 浓密减龄齐刘海)' },
+  { id: 'side_swept', shortLabel: '🍃 清纯三七斜分', label: '🍃 清纯学姐三七斜分柔顺刘海 (Side-Swept Bangs · 自然斜拨修颜)' },
+  { id: 'forehead_bare', shortLabel: '💎 露额大光明', label: '💎 清爽露额无刘海 (Bare Forehead · 将前发向两侧与颅顶平滑挽起)' }
+];
+
+export const HAIR_SIDE_LOCKS_CATALOG = [
+  { id: 'default', shortLabel: '💇‍♀️ 原配鬓角', label: '💇‍♀️ 原配鬓角 · 保持主发型自带两侧发丝' },
+  { id: 'photo_wisp', shortLabel: '🎀 照片耳前碎鬓', label: '🎀 照片同款·耳前轻薄修颜碎发鬓角 (露出双耳轮廓 + 柔和贴颊碎发)' },
+  { id: 'hime_cheek', shortLabel: '🗡️ 国风齐腮公主切', label: '🗡️ 国风齐腮一刀切公主切侧发 (Hime Cheek Locks · 强力修饰下颌宽窄)' },
+  { id: 'wavy_tendril', shortLabel: '🌊 法式微卷龙须', label: '🌊 法式慵懒微卷龙须刘海侧发 (Wavy Tendrils · 灵动S型修饰脸颊)' },
+  { id: 'tucked_ear', shortLabel: '👂 清爽挽耳后', label: '👂 清爽挽耳后露耳廓 (Tucked Behind Ears · 完整展露双耳与下颌骨线)' }
+];
+
+export const HAIR_BACK_ATTACHMENT_CATALOG = [
+  { id: 'none', shortLabel: '🚫 无附加后发', label: '🚫 无附加后发模块 · 保持主发型原有后脑造型' },
+  { id: 'high_ponytail', shortLabel: '🎀 元气高束马尾', label: '🎀 叠加：照片同款元气脑后束马尾 (Sport Ponytail · 干练露颈)' },
+  { id: 'low_chignon', shortLabel: '🌺 温婉低盘发髻', label: '🌺 叠加：温婉名媛脑后低盘发髻 (Low Chignon Bun · 优雅古典)' },
+  { id: 'twin_buns', shortLabel: '🍒 甜酷双丸子头', label: '🍒 叠加：甜酷高颅顶双侧丸子头 (Twin Space Buns · 俏皮元气)' },
+  { id: 'twin_braids', shortLabel: '🌿 学院双麻花辫', label: '🌿 叠加：清纯学院风双侧垂落麻花辫 (Twin Braids · 书卷少女)' }
+];
+
+export const HAIR_DYE_PRESET_CATALOG = [
+  { id: 'natural_raven', label: '🖤 原生东方乌黑真发 (无挑染)', root: '#121216', tip: '#18181f', mix: 0.0 },
+  { id: 'cold_tea_ombre', label: '🍵 冷茶青棕渐变挑染 (发梢冷茶棕)', root: '#141316', tip: '#4a3528', mix: 0.65 },
+  { id: 'caramel_mocha', label: '☕ 焦糖摩卡暖棕挑染 (发梢蜜糖棕)', root: '#181412', tip: '#6e4730', mix: 0.72 },
+  { id: 'sakura_ash_pink', label: '🌸 雾感樱粉挂耳尾染 (乌黑配灰粉发梢)', root: '#131216', tip: '#a85d74', mix: 0.68 },
+  { id: 'haze_ocean_blue', label: '🌊 雾霾星空蓝黑渐变 (二次元冷艳蓝尾)', root: '#101218', tip: '#29527a', mix: 0.70 },
+  { id: 'burgundy_velvet', label: '🍷 微醺波尔多酒红尾染 (冷白皮显白神器)', root: '#151114', tip: '#6e1e32', mix: 0.68 },
+  { id: 'platinum_silver', label: '❄️ 极光月白银灰渐变 (清冷神女挑染)', root: '#181a20', tip: '#8c96a6', mix: 0.65 }
+];
+
+/**
+ * Stage 35 · 7 通道多头模自由混合器 (`HEAD_BLEND_CHANNELS` · 默认全部 0.0 关闭混合，保证初始脸型 100% 纯净自然；玩家可按需手动拉动滑杆自由混合)
  */
 export const HEAD_BLEND_CHANNELS = [
   {
@@ -339,7 +378,7 @@ export const HEAD_BLEND_CHANNELS = [
     morphKey: 'mh_head_asian_youth',
     shortLabel: '🇨🇳 中式少女头模',
     label: '🇨🇳 中式清纯少女头模 (Asian Youth · 柔和额弓与饱满胶原感)',
-    defaultVal: 0.45
+    defaultVal: 0.0
   },
   {
     id: 'blend_cn_scholar',
@@ -386,88 +425,90 @@ export const HEAD_BLEND_CHANNELS = [
 ];
 
 /**
- * Stage 30 · 10 款中式/韩风/古典/幼态/御姐/混血预设头模配方 (支持一键套用 + 多头模滑杆自由叠加混合)
+ * Stage 35 · 10 款纯净高审美头模预设 (`FACE_ARCHETYPE_CATALOG`)
+ * 遵循用户指示：「模型各种预设默认不要混合，混合很多脸看上去违和怪异不好看」
+ * 所有预设默认 `headBlend` 全部为 0.0（零多头叠加变形），仅切换纯净原模 + 对应无瑕摄影级肤质；需要混血时由玩家手动拖动滑杆！
  */
 export const FACE_ARCHETYPE_CATALOG = [
   {
     id: 'cn_oval_scholar',
-    shortLabel: '📖 中式书卷清秀鹅蛋脸 (方尧平同款)',
-    label: '📖 中式书卷清秀鹅蛋脸 · 55%中式少女 + 75%书卷鹅蛋头模混合 (19岁女状元方尧平默认)',
-    desc: '流畅端庄的岭南少女鹅蛋脸型，面部胶原饱满零皱纹，兼具书卷气与少女感',
+    shortLabel: '📖 纯净中式书卷鹅蛋脸 (方尧平)',
+    label: '📖 纯净中式书卷清秀鹅蛋脸 · 零混合原生清纯杏眼骨相 (19岁女状元方尧平默认)',
+    desc: '100% 纯净无混合的东方少女清秀鹅蛋脸，明亮圆润杏眼配自然舒展眉弓，拒绝多脸叠加违和感',
     defaultSkinVariant: 'cn_scholar_natural',
-    headBlend: { blend_asian_youth: 0.55, blend_cn_scholar: 0.75, blend_cn_baby: 0.15, blend_kr_vline: 0.0, blend_cn_melon: 0.10, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_round_babyface',
-    shortLabel: '🍑 中韩甜妹胶原娃娃脸 (初夏同款)',
-    label: '🍑 中韩甜妹胶原圆润娃娃脸 · 65%中式少女 + 85%幼态娃娃头模混合 (初夏默认)',
-    desc: '软糯饱满的18岁少女苹果肌与微圆下巴，满满青春胶原蛋白，毫无岁月痕迹',
+    shortLabel: '🍑 纯净照片同款清纯少女脸 (初夏)',
+    label: '🍑 纯净照片同款清纯圆润少女脸 · 零混合原生圆润大杏眼骨相 (初夏默认)',
+    desc: '100% 纯净无混合的19岁少女骨相，还原参考照片明亮圆润大杏眼、清爽眉眼间距与柔和下颌',
     defaultSkinVariant: 'kr_dewy_peach',
-    headBlend: { blend_asian_youth: 0.65, blend_cn_scholar: 0.15, blend_cn_baby: 0.85, blend_kr_vline: 0.20, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'kr_idol_vline',
-    shortLabel: '✨ 韩系财阀千金心形V脸 (林汐同款)',
-    label: '✨ 韩系财阀千金精致心形V脸 · 40%中式少女 + 85%韩系心形V脸头模混合 (林汐默认)',
-    desc: '首尔清담洞财阀千金标准上镜心形小V脸，苹果肌高挑饱满、下颌线收束利落',
+    shortLabel: '✨ 纯净韩系财阀千金脸 (林汐)',
+    label: '✨ 纯净韩系财阀千金上镜脸 · 零混合冷白高定骨相 (林汐默认)',
+    desc: '100% 纯净无混合的上镜鹅蛋轮廓，线条干净利落，搭配冷白千金肤质与泪痣',
     defaultSkinVariant: 'kr_chaebol_cool',
-    headBlend: { blend_asian_youth: 0.40, blend_cn_scholar: 0.10, blend_cn_baby: 0.0, blend_kr_vline: 0.85, blend_cn_melon: 0.25, blend_cn_royal: 0.15, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_classical_melon',
-    shortLabel: '🌙 江南古典温婉瓜子脸 (苏晚同款)',
-    label: '🌙 江南古典温婉瓜子脸 · 45%书卷鹅蛋 + 85%江南古典瓜子头模混合 (苏晚默认)',
-    desc: '古典东方名门闺秀柳叶瓜子脸，双颊柔美内收、下颏纤巧温婉',
+    shortLabel: '🌙 纯净江南古典仕女脸 (苏晚)',
+    label: '🌙 纯净江南古典温婉仕女脸 · 零混合羊脂白玉骨相 (苏晚默认)',
+    desc: '100% 纯净无混合的古典东方闺秀面容，眉目含情、比例自然和谐',
     defaultSkinVariant: 'cn_jiangnan_jade',
-    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.45, blend_cn_baby: 0.0, blend_kr_vline: 0.15, blend_cn_melon: 0.85, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'kr_sweet_heart',
-    shortLabel: '💖 韩系女团初恋上镜脸 (千雪同款)',
-    label: '💖 韩系女团初恋甜美心形脸 · 60%中式少女 + 55%韩系V脸 + 45%幼态娃娃混合 (千雪默认)',
-    desc: '兼具少女圆润苹果肌与女团精致小尖下巴的初恋上镜脸型',
+    shortLabel: '💖 纯净韩系初恋舞台脸 (千雪)',
+    label: '💖 纯净韩系女团初恋舞台脸 · 零混合雪瓷桃花骨相 (千雪默认)',
+    desc: '100% 纯净无混合的初恋感少女面庞，五官舒展大气、眼眸清澈',
     defaultSkinVariant: 'kr_firstlove_camellia',
-    headBlend: { blend_asian_youth: 0.60, blend_cn_scholar: 0.20, blend_cn_baby: 0.45, blend_kr_vline: 0.55, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_cold_royal',
-    shortLabel: '❄️ 中式清冷高智御姐脸 (沈知微同款)',
-    label: '❄️ 中式清冷高智感骨相脸 · 85%清冷御姐 + 35%古典瓜子头模混合 (沈知微默认)',
-    desc: '清瘦立体的东方智感学姐骨相，颧骨微挑、下颌清晰冷冽',
+    shortLabel: '❄️ 纯净清冷高智学姐脸 (沈知微)',
+    label: '❄️ 纯净中式清冷高智学姐脸 · 零混合冷艳骨相 (沈知微默认)',
+    desc: '100% 纯净无混合的知性学姐骨相，轮廓端庄立体、毫无挤压变形',
     defaultSkinVariant: 'cn_intellectual_olive',
-    headBlend: { blend_asian_youth: 0.25, blend_cn_scholar: 0.20, blend_cn_baby: 0.0, blend_kr_vline: 0.25, blend_cn_melon: 0.35, blend_cn_royal: 0.85, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_pure_campus_bell',
-    shortLabel: '🌸 中式纯欲清纯校花脸 (中韩混合)',
-    label: '🌸 中式纯欲清纯校花脸 · 85%中式少女 + 50%书卷鹅蛋 + 35%韩系V脸混合',
-    desc: '中式清纯校花鹅蛋轮廓融合韩系精致下巴，清透无辜、极具初恋感',
+    shortLabel: '🌸 纯净东方冷白校花脸',
+    label: '🌸 纯净东方冷白凝脂校花脸 · 零混合素颜初恋骨相',
+    desc: '100% 纯净无混合的清纯校花原模，配零瑕疵冷白凝脂肌',
     defaultSkinVariant: 'cn_porcelain_ivory',
-    headBlend: { blend_asian_youth: 0.85, blend_cn_scholar: 0.50, blend_cn_baby: 0.25, blend_kr_vline: 0.35, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'kr_waterglow_idol',
-    shortLabel: '💎 韩系张元英式水光神颜 (韩风幼态V脸)',
-    label: '💎 韩系水光甜欲神颜脸 · 75%韩系心形V脸 + 60%幼态娃娃 + 50%中式少女混合',
-    desc: '高饱满度幼态苹果肌配极致精致的V型小下巴，典型韩系五代女团视觉中心脸型',
+    shortLabel: '💎 纯净首尔水光画报脸',
+    label: '💎 纯净首尔水光画报神颜 · 零混合奶油水光肌骨相',
+    desc: '100% 纯净无混合的韩系画报少女原模，水润饱满、自然协调',
     defaultSkinVariant: 'kr_dewy_peach',
-    headBlend: { blend_asian_youth: 0.50, blend_cn_scholar: 0.0, blend_cn_baby: 0.60, blend_kr_vline: 0.75, blend_cn_melon: 0.20, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'cn_tang_peony',
-    shortLabel: '🌺 盛唐珠圆玉润国风贵女脸',
-    label: '🌺 盛唐珠圆玉润国风贵女脸 · 70%书卷鹅蛋 + 70%幼态娃娃 + 45%中式少女混合',
-    desc: '丰润端庄的古典国风少女面庞，面若银盘、笑靥饱满',
+    shortLabel: '🌺 纯净国风温润贵女脸',
+    label: '🌺 纯净国风温润贵女脸 · 零混合古典东方骨相',
+    desc: '100% 纯净无混合的国风少女面庞，端庄温婉',
     defaultSkinVariant: 'cn_jiangnan_jade',
-    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.70, blend_cn_baby: 0.70, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   },
   {
     id: 'eurasian_sculpted_mix',
-    shortLabel: '🌍 亚欧混血深邃立体颜 (中欧头模混合)',
-    label: '🌍 亚欧轻混血深邃立体颜 · 65%欧风立体头模 + 45%韩系V脸 + 35%书卷鹅蛋混合',
-    desc: '保留欧风深邃眼窝与高挺鼻梁选项，与东方柔和鹅蛋下颌按黄金比例混合，立体感十足',
+    shortLabel: '🌍 纯净丝绒轻混血骨相',
+    label: '🌍 纯净丝绒玫瑰轻混血脸 · 零叠加畸变原生骨相',
+    desc: '100% 纯净无混合原模配欧亚丝绒玫瑰肤质（如需深眼窝混血可手动拉动下方欧风头模滑杆）',
     defaultSkinVariant: 'eurasian_velvet_rose',
-    headBlend: { blend_asian_youth: 0.15, blend_cn_scholar: 0.35, blend_cn_baby: 0.0, blend_kr_vline: 0.45, blend_cn_melon: 0.15, blend_cn_royal: 0.25, blend_eurasian: 0.65 }
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 }
   }
 ];
 
@@ -597,8 +638,14 @@ export const DEFAULT_COLLECTIBLES = [
     blushIntensity: 0.16,
     lipColor: '#c47478',
     irisColor: '#301b12',
-    hairStyle: 'daz_hair_air_bangs_long',
+    hairStyle: 'hair_user_photo',
+    frontBangsStyle: 'wispy_air',
+    sideLocksStyle: 'photo_wisp',
+    backAttachmentStyle: 'high_ponytail',
     hairColor: '#121216',
+    hairTipColor: '#1a181e',
+    hairOmbreMix: 0.0,
+    hairWispyFeather: 0.62,
     hairSheen: 0.90,
     neckClearance: 0.55,
     containerStyle: 'none',
@@ -613,13 +660,13 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_calm',
-      jawVLine: 0.08,
-      chinLength: -0.08,
-      cheekSoftness: 0.14,
-      noseBridge: 0.06,
-      eyeAlmond: 0.10,
-      eyeTilt: -0.02,
-      lipFullness: 0.04,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
+      lipFullness: 0.0,
       jawOpen: 0.0,
       eyeRollUp: 0.0,
       tongueOut: 0.0,
@@ -633,6 +680,10 @@ export const DEFAULT_COLLECTIBLES = [
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
+      frontBangsStyle: 'wispy_air',
+      sideLocksStyle: 'photo_wisp',
+      backAttachmentStyle: 'high_ponytail',
+      hairWispyFeather: 0.62,
       neckDiameter: 0.95,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
@@ -671,8 +722,14 @@ export const DEFAULT_COLLECTIBLES = [
     blushIntensity: 0.42,
     lipColor: '#e2687c',
     irisColor: '#3b2014',
-    hairStyle: 'hair_bob01',
+    hairStyle: 'hair_user_photo',
+    frontBangsStyle: 'wispy_air',
+    sideLocksStyle: 'photo_wisp',
+    backAttachmentStyle: 'high_ponytail',
     hairColor: '#121216',
+    hairTipColor: '#1a181e',
+    hairOmbreMix: 0.0,
+    hairWispyFeather: 0.65,
     hairSheen: 0.90,
     neckClearance: 0.55,
     containerStyle: 'none',
@@ -687,12 +744,12 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_calm',
-      jawVLine: 0.08,
-      chinLength: -0.08,
-      cheekSoftness: 0.12,
-      noseBridge: 0.05,
-      eyeAlmond: 0.10,
-      eyeTilt: -0.02,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
       lipFullness: 0.0,
       jawOpen: 0.0,
       eyeRollUp: 0.0,
@@ -707,6 +764,10 @@ export const DEFAULT_COLLECTIBLES = [
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
+      frontBangsStyle: 'wispy_air',
+      sideLocksStyle: 'photo_wisp',
+      backAttachmentStyle: 'high_ponytail',
+      hairWispyFeather: 0.65,
       neckDiameter: 0.96,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
@@ -761,13 +822,13 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_calm',
-      jawVLine: -0.06,
-      chinLength: 0.04,
-      cheekSoftness: -0.06,
-      noseBridge: 0.12,
-      eyeAlmond: 0.08,
-      eyeTilt: 0.08,
-      lipFullness: -0.02,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
+      lipFullness: 0.0,
       jawOpen: 0.0,
       eyeRollUp: 0.0,
       tongueOut: 0.0,
@@ -835,13 +896,13 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_half_open',
-      jawVLine: 0.04,
-      chinLength: 0.02,
-      cheekSoftness: 0.08,
-      noseBridge: 0.04,
-      eyeAlmond: 0.05,
-      eyeTilt: -0.04,
-      lipFullness: 0.08,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
+      lipFullness: 0.0,
       jawOpen: 0.28,
       eyeRollUp: 0.25,
       tongueOut: 0.0,
@@ -909,13 +970,13 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_shock',
-      jawVLine: 0.14,
-      chinLength: -0.04,
-      cheekSoftness: 0.04,
-      noseBridge: 0.08,
-      eyeAlmond: 0.14,
-      eyeTilt: 0.10,
-      lipFullness: 0.02,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
+      lipFullness: 0.0,
       jawOpen: 0.62,
       eyeRollUp: 0.38,
       tongueOut: 0.0,
@@ -983,12 +1044,12 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_smile',
-      jawVLine: 0.10,
-      chinLength: 0.10,
-      cheekSoftness: -0.05,
-      noseBridge: 0.12,
-      eyeAlmond: 0.06,
-      eyeTilt: 0.08,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
       lipFullness: 0.0,
       jawOpen: 0.0,
       eyeRollUp: 0.0,

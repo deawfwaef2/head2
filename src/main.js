@@ -3,6 +3,10 @@ import {
   DAZ_TUTORIAL_STEPS,
   REAL_HAIR_CATALOG,
   SKIN_MATERIAL_CATALOG,
+  HAIR_FRONT_BANGS_CATALOG,
+  HAIR_SIDE_LOCKS_CATALOG,
+  HAIR_BACK_ATTACHMENT_CATALOG,
+  HAIR_DYE_PRESET_CATALOG,
   HEAD_BLEND_CHANNELS,
   FACE_ARCHETYPE_CATALOG,
   EYEBROW_STYLE_CATALOG,
@@ -15,6 +19,7 @@ import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
 import {
   FORENSIC_EXPRESSION_PRESETS,
   updateHairSheen,
+  updateHairDesignOnGroup,
   attachSpecimenContainerAndDecor,
   resolveRealHairStyle,
   setHeadFaceArchetype,
@@ -23,7 +28,11 @@ import {
   getHeadBlendStateFromGroup,
   applyHeadMorphsToGroup
 } from './three/collectibleHeadAssembler.js';
-import { VISUAL_STYLE_PRESETS, HDR_ENVIRONMENT_CATALOG } from './three/photorealLighting.js';
+import {
+  VISUAL_STYLE_PRESETS,
+  HDR_ENVIRONMENT_CATALOG,
+  updateInteractiveCursorLight
+} from './three/photorealLighting.js';
 import {
   CONTAINER_STYLE_CATALOG,
   DECOR_STYLE_CATALOG
@@ -37,7 +46,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage34-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage35-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -100,28 +109,32 @@ const state = {
   visualCustomConfig: {
     presetId: 'cinema_85mm_portrait',
     hdrMode: 'softbox_portrait',
-    envIntensity: 0.72,
+    envIntensity: 0.88,
     windowGobo: 'none',
-    windowGoboStrength: 0.18,
-    chiaroscuro: 0.65,
-    tyndall: 0.28,
-    vintagePhoto: 0.04,
-    softFocus: 0.04,
-    depthBlur: 0.0,
-    chromatic: 0.06,
-    keyColor: '#fff5ea',
-    rimColor: '#dceaff',
-    keyAzimuthDeg: 36,
-    keyElevationDeg: 28,
-    keyIntensity: 1.38,
-    rimIntensity: 1.24,
-    sssIntensity: 0.68,
-    skinGloss: 0.36,
-    wetGloss: 0.36,
+    windowGoboStrength: 0.16,
+    chiaroscuro: 0.28,
+    tyndall: 0.36,
+    vintagePhoto: 0.06,
+    softFocus: 0.14,
+    depthBlur: 0.12,
+    chromatic: 0.08,
+    keyColor: '#fff6ee',
+    rimColor: '#fff0e4',
+    keyAzimuthDeg: 26,
+    keyElevationDeg: 22,
+    keyIntensity: 1.55,
+    rimIntensity: 1.35,
+    sssIntensity: 0.92,
+    skinGloss: 0.54,
+    wetGloss: 0.54,
     sharpen: 0.30,
-    contrast: 1.08,
+    contrast: 1.05,
     warmth: 0.02,
-    bloomStrength: 0.04
+    bloomStrength: 0.12,
+    irisSparkle: 0.82,
+    halation: 0.48,
+    skinLumen: 0.58,
+    cursorTorch: 0.75
   },
   studioDraft: {
     basePreset: 'fangyaoping',
@@ -142,7 +155,14 @@ const state = {
     blushIntensity: 0.18,
     lipColor: '#bc646e',
     irisColor: '#382015',
-    hairStyle: 'daz_hair_air_bangs_long',
+    hairStyle: 'hair_user_photo',
+    frontBangs: 'wispy_air',
+    sideLocks: 'photo_wisp',
+    backAttachment: 'high_ponytail',
+    hairDyePreset: 'natural_ebony',
+    hairTipColor: '#4a3528',
+    hairOmbreMix: 0.0,
+    hairWispyFeather: 0.58,
     groomDensity: 6000,
     hairColor: '#121216',
     hairSheen: 0.90,
@@ -155,6 +175,12 @@ const state = {
       eyeRollUp: 0.0,
       tongueOut: 0.0,
       jawSide: 0.0,
+      frontBangs: 'wispy_air',
+      sideLocks: 'photo_wisp',
+      backAttachment: 'high_ponytail',
+      hairTipColor: '#4a3528',
+      hairOmbreMix: 0.0,
+      hairWispyFeather: 0.58,
       bangsLength: 0.0,
       bangsParting: 0.0,
       hairVolume: 0.0,
@@ -164,13 +190,13 @@ const state = {
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
-      jawVLine: 0.08,
-      chinLength: -0.08,
-      cheekSoftness: 0.14,
-      noseBridge: 0.06,
-      eyeAlmond: 0.10,
-      eyeTilt: -0.02,
-      lipFullness: 0.04,
+      jawVLine: 0.0,
+      chinLength: 0.0,
+      cheekSoftness: 0.0,
+      noseBridge: 0.0,
+      eyeAlmond: 0.0,
+      eyeTilt: 0.0,
+      lipFullness: 0.0,
       neckDiameter: 0.95,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
@@ -822,7 +848,8 @@ function renderActivePetsStrip(summonedList = []) {
 
   for (const p of summonedList) {
     const col = state.collectibles.find(c => c.id === p.id) || p;
-    const curHair = resolveRealHairStyle(col.hairStyle || p.hairStyle || 'hair_bob01');
+    const curHair = resolveRealHairStyle(col.hairStyle || p.hairStyle || 'hair_user_photo');
+    const curBangs = col.frontBangs || col.morphs?.frontBangs || 'default';
     const curSkin = col.skinVariant || col.morphs?.skinVariant || 'cn_porcelain_ivory';
     const curFace = col.faceArchetype || col.morphs?.faceArchetype || 'cn_oval_scholar';
     const curBrow = col.eyebrowStyle || col.morphs?.eyebrowStyle || 'cn_scholar_natural';
@@ -841,6 +868,9 @@ function renderActivePetsStrip(summonedList = []) {
     const hairShortOpts = REAL_HAIR_CATALOG.map(
       hp => `<option value="${hp.id}" ${hp.id === curHair ? 'selected' : ''}>${hp.shortLabel || hp.label}</option>`
     ).join('');
+    const bangsShortOpts = HAIR_FRONT_BANGS_CATALOG.map(
+      bg => `<option value="${bg.id}" ${bg.id === curBangs ? 'selected' : ''}>${bg.shortLabel}</option>`
+    ).join('');
     const exprShortOpts = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀${ep.shortLabel}</option>`
     ).join('');
@@ -857,27 +887,30 @@ function renderActivePetsStrip(summonedList = []) {
     const pill = document.createElement('div');
     pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
     pill.innerHTML = `
-      <strong>${p.name.split('·')[0].trim()}</strong>
-      <select class="pill-mini-btn" data-pill-skin="${p.id}" title="独立切换 8 款无皱纹中式/韩系/混血少女真摄影皮肤材质" style="padding:1px 4px;background:rgba(56,22,34,0.92);color:#fecdd3;border:1px solid rgba(251,113,133,0.5);border-radius:4px;">
+      <strong style="min-width:48px;color:#f8fafc;">${p.name.split('·')[0].trim()}</strong>
+      <select class="pill-mini-btn" data-pill-skin="${p.id}" title="独立切换 8 款无皱纹中式/韩系/混血少女真摄影皮肤材质" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#fecdd3;border:1px solid rgba(251,113,133,0.42);border-radius:6px;">
         ${skinShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换 10 款中韩青年女头型流派（圆润娃娃脸 / 韩国鹅蛋V脸 / 中式书卷鹅蛋脸等）" style="padding:1px 4px;background:rgba(46,16,38,0.92);color:#fbcfe8;border:1px solid rgba(244,114,182,0.5);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换 10 款纯净独立中韩青年女头型（默认单头模不混合）" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#fbcfe8;border:1px solid rgba(244,114,182,0.42);border-radius:6px;">
         ${faceShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换 8 款中韩高对比度立体 3D 眉毛模型" style="padding:1px 4px;background:rgba(36,24,16,0.92);color:#fde68a;border:1px solid rgba(245,158,11,0.5);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换 8 款中韩高对比度立体 3D 眉毛模型" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#fde68a;border:1px solid rgba(245,158,11,0.42);border-radius:6px;">
         ${browShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-hair="${p.id}" title="一键切换 28 款大师级真发丝 3D 发型" style="padding:1px 4px;background:rgba(12,26,46,0.92);color:#7dd3fc;border:1px solid rgba(56,189,248,0.5);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-hair="${p.id}" title="一键切换 28 款大师级真发丝 3D 基底发型" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#7dd3fc;border:1px solid rgba(56,189,248,0.45);border-radius:6px;">
         ${hairShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-role="${p.id}" title="分配该角色绑定的伴学职能" style="padding:1px 4px;background:rgba(6,78,59,0.85);color:#a7f3d0;border:1px solid rgba(16,185,129,0.5);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-bangs="${p.id}" title="模块化拼装前额刘海（空气碎刘海 / 八字刘海 / 齐刘海 / 斜刘海 / 露额）" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#f9a8d4;border:1px solid rgba(236,72,153,0.45);border-radius:6px;">
+        ${bangsShortOpts}
+      </select>
+      <select class="pill-mini-btn" data-pill-role="${p.id}" title="分配该角色绑定的伴学职能" style="padding:2px 5px;background:rgba(15,35,34,0.88);color:#a7f3d0;border:1px solid rgba(16,185,129,0.42);border-radius:6px;">
         ${roleShortOpts}
       </select>
       <button class="pill-role-trigger-btn" data-pill-trigger-role="${p.id}" title="一键激发该角色的伴学赋能">⚡督学</button>
-      <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换死人表情" style="padding:1px 4px;background:rgba(15,23,42,0.9);color:#fda4af;border:1px solid rgba(244,63,94,0.4);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换死人表情" style="padding:2px 5px;background:rgba(20,28,44,0.88);color:#fda4af;border:1px solid rgba(244,63,94,0.38);border-radius:6px;">
         ${exprShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-container="${p.id}" title="切换标本容器" style="padding:1px 4px;background:rgba(15,23,42,0.9);color:#fde68a;border:1px solid rgba(251,191,36,0.4);border-radius:4px;">
+      <select class="pill-mini-btn" data-pill-container="${p.id}" title="切换标本容器" style="padding:2px 5px;background:rgba(20,28,44,0.88);color:#fde68a;border:1px solid rgba(251,191,36,0.38);border-radius:6px;">
         ${contShortOpts}
       </select>
       <button class="pill-mini-btn" data-pill-rot="${p.id}">
@@ -968,6 +1001,31 @@ function renderActivePetsStrip(summonedList = []) {
       renderVaultGrid();
       const hp = REAL_HAIR_CATALOG.find(x => x.id === hairId);
       showToast(`💇‍♀️ 已为「${col ? col.name.split('·')[0].trim() : id}」切换发型：${hp ? hp.label : hairId}`);
+    });
+  });
+
+  pillsContainer.querySelectorAll('[data-pill-bangs]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillBangs;
+      const bangsId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (col) {
+        col.frontBangs = bangsId;
+        col.morphs = { ...(col.morphs || {}), frontBangs: bangsId };
+        persistCollectibles();
+      }
+      const petEntry = desktopEngine?.pets.get(id);
+      const headGroup = petEntry?.node || petEntry?.headNode;
+      if (headGroup) {
+        if (petEntry.collectible) {
+          petEntry.collectible.frontBangs = bangsId;
+          petEntry.collectible.morphs = { ...(petEntry.collectible.morphs || {}), frontBangs: bangsId };
+        }
+        updateHairDesignOnGroup(headGroup, { frontBangs: bangsId });
+        desktopEngine.wakeRender(1.5, true);
+      }
+      const bg = HAIR_FRONT_BANGS_CATALOG.find(x => x.id === bangsId);
+      showToast(`✂️ 已为「${col ? col.name.split('·')[0].trim() : id}」拼装刘海模块：${bg ? bg.label : bangsId}`);
     });
   });
 
@@ -1877,8 +1935,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customModelUrl = null;
     state.studioDraft.basePreset = e.target.value;
     const presetHairMap = {
-      fangyaoping: 'daz_hair_air_bangs_long',
-      user_photo: 'hair_bob01',
+      fangyaoping: 'hair_user_photo',
+      user_photo: 'hair_user_photo',
       linxi: 'hair_long01',
       suwan: 'hair_braid01',
       qianxue: 'daz_hair_hime',
@@ -1924,17 +1982,30 @@ window.addEventListener('DOMContentLoaded', async () => {
       qianxue: 'dead_shock',
       shenzhiwei: 'dead_smile'
     };
+    const ZERO_SCULPT = { jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 };
     const presetMorphMap = {
-      fangyaoping: { jawVLine: 0.08, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.04, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.04 },
-      user_photo:  { jawVLine: -0.18, chinLength: -0.22, cheekSoftness: 0.28, noseBridge: 0.02, eyeAlmond: 0.18, eyeTilt: -0.08, lipFullness: 0.12 },
-      linxi:       { jawVLine: 0.24, chinLength: -0.04, cheekSoftness: 0.16, noseBridge: 0.22, eyeAlmond: 0.12, eyeTilt: 0.16, lipFullness: 0.10 },
-      suwan:       { jawVLine: 0.22, chinLength: 0.04, cheekSoftness: 0.04, noseBridge: 0.12, eyeAlmond: 0.08, eyeTilt: 0.10, lipFullness: 0.06 },
-      qianxue:     { jawVLine: 0.26, chinLength: -0.16, cheekSoftness: 0.22, noseBridge: 0.10, eyeAlmond: 0.20, eyeTilt: -0.04, lipFullness: 0.16 },
-      shenzhiwei:  { jawVLine: 0.16, chinLength: 0.14, cheekSoftness: -0.12, noseBridge: 0.20, eyeAlmond: 0.04, eyeTilt: 0.14, lipFullness: 0.02 },
+      fangyaoping: { ...ZERO_SCULPT, frontBangs: 'wispy_air', sideLocks: 'photo_wisp', backAttachment: 'high_ponytail' },
+      user_photo:  { ...ZERO_SCULPT, frontBangs: 'wispy_air', sideLocks: 'photo_wisp', backAttachment: 'high_ponytail' },
+      linxi:       { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
+      suwan:       { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
+      qianxue:     { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
+      shenzhiwei:  { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
     };
     if (e.target.value === 'fangyaoping' || e.target.value === 'user_photo') {
       drawPresetReferencePortrait(refPhotoCanvas, e.target.value);
     }
+    for (const ch of HEAD_BLEND_CHANNELS) {
+      state.studioDraft.morphs[ch.id] = 0.0;
+    }
+    syncStudioHeadBlendSliders({
+      blend_asian_youth: 0.0,
+      blend_cn_scholar: 0.0,
+      blend_cn_baby: 0.0,
+      blend_kr_vline: 0.0,
+      blend_cn_melon: 0.0,
+      blend_cn_royal: 0.0,
+      blend_eurasian: 0.0,
+    });
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
       syncStudioHairUI(state.studioDraft.hairStyle);
@@ -1966,6 +2037,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (presetMorphMap[e.target.value]) {
       Object.assign(state.studioDraft.morphs, presetMorphMap[e.target.value]);
+      state.studioDraft.frontBangs = state.studioDraft.morphs.frontBangs || 'default';
+      state.studioDraft.sideLocks = state.studioDraft.morphs.sideLocks || 'default';
+      state.studioDraft.backAttachment = state.studioDraft.morphs.backAttachment || 'none';
       for (const [sId, vId, mKey] of [
         ['morph-jaw', 'val-morph-jaw', 'jawVLine'],
         ['morph-cheek', 'val-morph-cheek', 'cheekSoftness'],
@@ -2540,28 +2614,32 @@ window.addEventListener('DOMContentLoaded', async () => {
       const p = VISUAL_STYLE_PRESETS[patch.presetId];
       Object.assign(state.visualCustomConfig, {
         hdrMode: p.hdrMode || 'softbox_portrait',
-        envIntensity: p.envIntensity ?? 0.72,
+        envIntensity: p.envIntensity ?? 0.88,
         windowGobo: p.windowGobo || 'none',
-        windowGoboStrength: p.windowGoboStrength ?? 0.18,
-        chiaroscuro: p.chiaroscuro ?? 0.65,
-        tyndall: p.tyndall ?? 0.28,
-        vintagePhoto: p.vintagePhoto ?? 0.04,
-        softFocus: p.softFocus ?? 0.04,
-        depthBlur: p.depthBlur ?? 0.0,
-        chromatic: p.chromatic ?? 0.06,
-        keyColor: p.keyColor || '#fff5ea',
-        rimColor: p.rimColor || '#dceaff',
+        windowGoboStrength: p.windowGoboStrength ?? 0.16,
+        chiaroscuro: p.chiaroscuro ?? 0.28,
+        tyndall: p.tyndall ?? 0.36,
+        vintagePhoto: p.vintagePhoto ?? 0.06,
+        softFocus: p.softFocus ?? 0.14,
+        depthBlur: p.depthBlur ?? 0.12,
+        chromatic: p.chromatic ?? 0.08,
+        keyColor: p.keyColor || '#fff6ee',
+        rimColor: p.rimColor || '#fff0e4',
         keyAzimuthDeg: p.keyAzimuthDeg,
         keyElevationDeg: p.keyElevationDeg,
         keyIntensity: p.keyIntensity,
         rimIntensity: p.rimIntensity,
         sssIntensity: p.sssIntensity,
-        skinGloss: p.skinGloss ?? 0.36,
-        wetGloss: p.skinGloss ?? 0.36,
+        skinGloss: p.skinGloss ?? 0.54,
+        wetGloss: p.skinGloss ?? 0.54,
         sharpen: p.sharpen,
         contrast: p.contrast,
         warmth: p.warmth,
-        bloomStrength: p.bloomStrength
+        bloomStrength: p.bloomStrength,
+        irisSparkle: p.irisSparkle ?? 0.82,
+        halation: p.halation ?? 0.48,
+        skinLumen: p.skinLumen ?? 0.58,
+        cursorTorch: p.cursorTorch ?? 0.75
       });
       const syncSlider = (id, valId, val, fmt) => {
         const el = document.getElementById(id);
@@ -2569,6 +2647,10 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (el) el.value = String(val);
         if (vEl) vEl.textContent = fmt(val);
       };
+      syncSlider('vc-cursor-torch', 'val-vc-cursor-torch', state.visualCustomConfig.cursorTorch, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-iris-sparkle', 'val-vc-iris-sparkle', state.visualCustomConfig.irisSparkle, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-halation', 'val-vc-halation', state.visualCustomConfig.halation, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-skin-lumen', 'val-vc-skin-lumen', state.visualCustomConfig.skinLumen, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-soft-focus', 'val-vc-soft-focus', state.visualCustomConfig.softFocus, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-depth-blur', 'val-vc-depth-blur', state.visualCustomConfig.depthBlur, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-chromatic', 'val-vc-chromatic', state.visualCustomConfig.chromatic, v => `${Math.round(v * 100)}%`);
@@ -2637,6 +2719,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyVisualConfigAndSyncUI({ [key]: v }, false);
     });
   };
+  bindVcSlider('vc-cursor-torch', 'val-vc-cursor-torch', 'cursorTorch', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-iris-sparkle', 'val-vc-iris-sparkle', 'irisSparkle', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-halation', 'val-vc-halation', 'halation', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-skin-lumen', 'val-vc-skin-lumen', 'skinLumen', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-soft-focus', 'val-vc-soft-focus', 'softFocus', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-depth-blur', 'val-vc-depth-blur', 'depthBlur', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-chromatic', 'val-vc-chromatic', 'chromatic', v => `${Math.round(v * 100)}%`);
@@ -2655,6 +2741,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-contrast', 'val-vc-contrast', 'contrast', v => v.toFixed(2));
   bindVcSlider('vc-warmth', 'val-vc-warmth', 'warmth', v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`);
   bindVcSlider('vc-bloom', 'val-vc-bloom', 'bloomStrength', v => `${Math.round(v * 100)}%`);
+
+  // Interactive Mouse Cursor Beauty Torch Tracking
+  window.addEventListener('pointermove', (e) => {
+    const ndcX = (e.clientX / Math.max(1, window.innerWidth)) * 2 - 1;
+    const ndcY = -((e.clientY / Math.max(1, window.innerHeight)) * 2 - 1);
+    updateInteractiveCursorLight(ndcX, ndcY);
+    if (Number(state.visualCustomConfig.cursorTorch) > 0.01) {
+      desktopEngine?.wakeRender?.(0.35, false);
+      studioEngine?.wakeRender?.(0.35, false);
+    }
+  }, { passive: true });
 
   // Stage 28: High-Clarity Multi-Layer Stereo Rainy Study Audio Controls
   const btnQuickRain = document.getElementById('btn-quick-rain-study');
@@ -2806,6 +2903,51 @@ window.addEventListener('DOMContentLoaded', async () => {
       desktopEngine.wakeRender(1.5, true);
     });
   });
+
+  // Reset Multi-Head Blend to 0% Pure Single Head buttons
+  const resetZeroBlend = () => {
+    const zeroBlend = {
+      blend_asian_youth: 0.0,
+      blend_cn_scholar: 0.0,
+      blend_cn_baby: 0.0,
+      blend_kr_vline: 0.0,
+      blend_cn_melon: 0.0,
+      blend_cn_royal: 0.0,
+      blend_eurasian: 0.0,
+    };
+    syncStudioHeadBlendSliders(zeroBlend);
+    document.querySelectorAll('[data-head-blend]').forEach(inp => {
+      const k = inp.dataset.headBlend;
+      inp.value = '0';
+      const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
+      if (valSpan) valSpan.textContent = '0%';
+    });
+    if (studioEngine?.headNode) {
+      studioEngine.headNode.userData.morphs = {
+        ...(studioEngine.headNode.userData.morphs || {}),
+        ...state.studioDraft.morphs,
+        ...zeroBlend,
+      };
+      applyHeadMorphsToGroup(studioEngine.headNode, studioEngine.headNode.userData.morphs);
+      studioEngine.wakeRender(1.5, true);
+    }
+    const pet = getTargetDesktopPet();
+    const headGroup = pet?.node || pet?.headNode;
+    if (headGroup) {
+      headGroup.userData.morphs = {
+        ...(headGroup.userData.morphs || {}),
+        ...(pet.collectible?.morphs || {}),
+        ...zeroBlend,
+      };
+      applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
+      if (pet.collectible) pet.collectible.morphs = { ...headGroup.userData.morphs };
+      desktopEngine.wakeRender(1.5, true);
+    }
+    showToast('✨ 已归零全部多头模混合权重，恢复纯净无违和单脸骨相！');
+  };
+  document.getElementById('btn-vcd-reset-blend')?.addEventListener('click', resetZeroBlend);
+  document.getElementById('btn-studio-reset-blend')?.addEventListener('click', resetZeroBlend);
+
   document.getElementById('vcd-sel-eyebrow-style')?.addEventListener('change', (e) => {
     const browId = e.target.value;
     const pet = getTargetDesktopPet();
@@ -2826,6 +2968,218 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine.emitPetsChange();
     const bw = EYEBROW_STYLE_CATALOG.find(x => x.id === browId);
     showToast(`✒️ 已将「${pet.collectible.name.split('·')[0].trim()}」3D 眉毛切换为：${bw ? bw.label : browId}`);
+  });
+
+  // ==========================================================================
+  // STAGE 35: MODULAR CUSTOM HAIR DESIGNER CONTROLS (Studio + Quick Drawer)
+  // ==========================================================================
+  const syncHairDesignControlsUI = (patch = {}) => {
+    if (patch.frontBangs !== undefined) {
+      const s1 = document.getElementById('sel-hair-bangs');
+      const s2 = document.getElementById('vcd-sel-hair-bangs');
+      if (s1) s1.value = patch.frontBangs;
+      if (s2) s2.value = patch.frontBangs;
+    }
+    if (patch.sideLocks !== undefined) {
+      const s1 = document.getElementById('sel-hair-sidelocks');
+      const s2 = document.getElementById('vcd-sel-hair-sidelocks');
+      if (s1) s1.value = patch.sideLocks;
+      if (s2) s2.value = patch.sideLocks;
+    }
+    if (patch.backAttachment !== undefined) {
+      const s1 = document.getElementById('sel-hair-back');
+      const s2 = document.getElementById('vcd-sel-hair-back');
+      if (s1) s1.value = patch.backAttachment;
+      if (s2) s2.value = patch.backAttachment;
+    }
+    if (patch.hairDyePreset !== undefined) {
+      const s1 = document.getElementById('sel-hair-dye');
+      const s2 = document.getElementById('vcd-sel-hair-dye');
+      if (s1) s1.value = patch.hairDyePreset;
+      if (s2) s2.value = patch.hairDyePreset;
+    }
+    if (patch.hairWispyFeather !== undefined) {
+      const f1 = document.getElementById('slider-hair-feather');
+      const fv1 = document.getElementById('val-hair-feather');
+      const f2 = document.getElementById('vcd-hair-feather');
+      const fv2 = document.getElementById('val-vcd-hair-feather');
+      const pct = `${Math.round(Number(patch.hairWispyFeather) * 100)}%`;
+      if (f1) f1.value = String(patch.hairWispyFeather);
+      if (fv1) fv1.textContent = pct;
+      if (f2) f2.value = String(patch.hairWispyFeather);
+      if (fv2) fv2.textContent = pct;
+    }
+    if (patch.hairOmbreMix !== undefined) {
+      const o1 = document.getElementById('slider-hair-ombre');
+      const ov1 = document.getElementById('val-hair-ombre');
+      const o2 = document.getElementById('vcd-hair-ombre');
+      const ov2 = document.getElementById('val-vcd-hair-ombre');
+      const pct = `${Math.round(Number(patch.hairOmbreMix) * 100)}%`;
+      if (o1) o1.value = String(patch.hairOmbreMix);
+      if (ov1) ov1.textContent = pct;
+      if (o2) o2.value = String(patch.hairOmbreMix);
+      if (ov2) ov2.textContent = pct;
+    }
+    if (patch.hairTipColor !== undefined) {
+      const c1 = document.getElementById('col-hair-tip');
+      if (c1) c1.value = patch.hairTipColor;
+    }
+    if (patch.hairColor !== undefined) {
+      const c2 = document.getElementById('col-hair');
+      if (c2) c2.value = patch.hairColor;
+    }
+  };
+
+  const applyModularHairDesignPatch = (patch = {}, toastMsg = '') => {
+    Object.assign(state.studioDraft, patch);
+    Object.assign(state.studioDraft.morphs, patch);
+    syncHairDesignControlsUI(patch);
+
+    if (studioEngine?.headNode) {
+      updateHairDesignOnGroup(studioEngine.headNode, patch);
+      studioEngine.wakeRender(1.5, true);
+    }
+
+    const pet = getTargetDesktopPet();
+    const headGroup = pet?.node || pet?.headNode;
+    if (headGroup) {
+      updateHairDesignOnGroup(headGroup, patch);
+      if (pet.collectible) {
+        Object.assign(pet.collectible, patch);
+        pet.collectible.morphs = { ...(pet.collectible.morphs || {}), ...patch };
+        const col = state.collectibles.find(c => c.id === pet.id);
+        if (col) {
+          Object.assign(col, patch);
+          col.morphs = { ...(col.morphs || {}), ...patch };
+          persistCollectibles();
+        }
+      }
+      desktopEngine.wakeRender(1.5, true);
+      desktopEngine.emitPetsChange();
+    }
+
+    if (toastMsg) showToast(toastMsg);
+  };
+
+  for (const selId of ['sel-hair-bangs', 'vcd-sel-hair-bangs']) {
+    document.getElementById(selId)?.addEventListener('change', (e) => {
+      const bangsId = e.target.value;
+      const bg = HAIR_FRONT_BANGS_CATALOG.find(x => x.id === bangsId);
+      applyModularHairDesignPatch({ frontBangs: bangsId }, `✂️ 已拼装前额刘海模块：${bg ? bg.label : bangsId}`);
+    });
+  }
+  for (const selId of ['sel-hair-sidelocks', 'vcd-sel-hair-sidelocks']) {
+    document.getElementById(selId)?.addEventListener('change', (e) => {
+      const sideId = e.target.value;
+      const sl = HAIR_SIDE_LOCKS_CATALOG.find(x => x.id === sideId);
+      applyModularHairDesignPatch({ sideLocks: sideId }, `🎀 已拼装两侧鬓角模块：${sl ? sl.label : sideId}`);
+    });
+  }
+  for (const selId of ['sel-hair-back', 'vcd-sel-hair-back']) {
+    document.getElementById(selId)?.addEventListener('change', (e) => {
+      const backId = e.target.value;
+      const bk = HAIR_BACK_ATTACHMENT_CATALOG.find(x => x.id === backId);
+      applyModularHairDesignPatch({ backAttachment: backId }, `🍡 已拼装后脑发饰组件：${bk ? bk.label : backId}`);
+    });
+  }
+  for (const selId of ['sel-hair-dye', 'vcd-sel-hair-dye']) {
+    document.getElementById(selId)?.addEventListener('change', (e) => {
+      const dyeId = e.target.value;
+      const dy = HAIR_DYE_PRESET_CATALOG.find(x => x.id === dyeId);
+      if (!dy) return;
+      applyModularHairDesignPatch({
+        hairDyePreset: dyeId,
+        hairColor: dy.rootColor,
+        hairTipColor: dy.tipColor,
+        hairOmbreMix: dy.ombreMix,
+      }, `🎨 已套用双色渐变挑染配方：${dy.label}`);
+    });
+  }
+  document.getElementById('col-hair-tip')?.addEventListener('input', (e) => {
+    const tipHex = e.target.value;
+    const curOmbre = Math.max(0.45, Number(state.studioDraft.hairOmbreMix ?? 0.45));
+    applyModularHairDesignPatch({ hairTipColor: tipHex, hairOmbreMix: curOmbre });
+  });
+  for (const [sId] of [['slider-hair-feather'], ['vcd-hair-feather']]) {
+    document.getElementById(sId)?.addEventListener('input', (e) => {
+      applyModularHairDesignPatch({ hairWispyFeather: parseFloat(e.target.value) });
+    });
+  }
+  for (const [sId] of [['slider-hair-ombre'], ['vcd-hair-ombre']]) {
+    document.getElementById(sId)?.addEventListener('input', (e) => {
+      applyModularHairDesignPatch({ hairOmbreMix: parseFloat(e.target.value) });
+    });
+  }
+
+  // One-click Hair Design Combination Presets
+  const HAIR_COMBO_PRESETS = {
+    photo_scholar: {
+      label: '📸 照片同款轻盈空气碎刘海 + 耳畔碎发 + 青春高束发',
+      frontBangs: 'wispy_air',
+      sideLocks: 'photo_wisp',
+      backAttachment: 'high_ponytail',
+      hairDyePreset: 'natural_ebony',
+      hairColor: '#121216',
+      hairTipColor: '#242028',
+      hairOmbreMix: 0.0,
+      hairWispyFeather: 0.58,
+    },
+    hime_twinbuns: {
+      label: '🎀 日系漫画齐刘海 + 公主切双鬓 + 元气双丸子发髻',
+      frontBangs: 'hime_blunt',
+      sideLocks: 'hime_cheek',
+      backAttachment: 'twin_buns',
+      hairDyePreset: 'sakura_rose_ombre',
+      hairColor: '#16131a',
+      hairTipColor: '#a84a6c',
+      hairOmbreMix: 0.52,
+      hairWispyFeather: 0.35,
+    },
+    curtain_ombre: {
+      label: '✨ 韩系八字修颜长刘海 + 法式龙须卷 + 冷茶青棕渐变挑染',
+      frontBangs: 'curtain_part',
+      sideLocks: 'wavy_tendril',
+      backAttachment: 'none',
+      hairDyePreset: 'cold_tea_ash',
+      hairColor: '#181514',
+      hairTipColor: '#4a3a2e',
+      hairOmbreMix: 0.65,
+      hairWispyFeather: 0.52,
+    },
+    classical_chignon: {
+      label: '🎻 温柔斜分刘海 + 耳畔垂缕 + 古典温婉低盘发髻',
+      frontBangs: 'side_swept',
+      sideLocks: 'photo_wisp',
+      backAttachment: 'low_chignon',
+      hairDyePreset: 'natural_ebony',
+      hairColor: '#111115',
+      hairTipColor: '#221d24',
+      hairOmbreMix: 0.0,
+      hairWispyFeather: 0.48,
+    },
+    bare_ponytail: {
+      label: '🌊 露额清爽无刘海 + 挽耳后 + 青春高扎马尾',
+      frontBangs: 'forehead_bare',
+      sideLocks: 'tucked_ear',
+      backAttachment: 'high_ponytail',
+      hairDyePreset: 'caramel_mocha',
+      hairColor: '#1b1512',
+      hairTipColor: '#66432c',
+      hairOmbreMix: 0.58,
+      hairWispyFeather: 0.42,
+    },
+  };
+  document.querySelectorAll('[data-hair-combo]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const comboId = btn.dataset.hairCombo;
+      const combo = HAIR_COMBO_PRESETS[comboId];
+      if (!combo) return;
+      document.querySelectorAll('[data-hair-combo]').forEach(b => {
+        b.classList.toggle('active', b.dataset.hairCombo === comboId);
+      });
+      const { label, ...patch } = combo;
+      applyModularHairDesignPatch(patch, `💇‍♀️ 已套用自由组合发型方案：${label}`);
+    });
   });
 
   // Floor Style, Shelf Layout & Screen-Space Formation Switcher
@@ -2971,8 +3325,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }, 1000);
 
-  // Apply default Rainy Study Window Gobo + Rembrandt Chiaroscuro lighting on boot
-  applyVisualConfigAndSyncUI({ presetId: 'rainy_study' }, true);
+  // Stage 35: Boot into clean 85mm Studio Dual-Softbox HDR Portrait lighting (no dark muddy shadows on face!)
+  applyVisualConfigAndSyncUI({ presetId: 'cinema_85mm_portrait' }, true);
   renderPlacedStructuresList(desktopEngine.getPlacedStructuresList());
 
   // Arrange initial pets into the Study Companion shelf formation after initial load

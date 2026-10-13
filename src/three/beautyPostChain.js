@@ -20,21 +20,24 @@ export const BeautyGradeShader = {
     tDiffuse: { value: null },
     tSourceAlpha: { value: null },
     uResolution: { value: new THREE.Vector2(1280, 720) },
-    uVignette: { value: 0.26 },
-    uSaturation: { value: 0.98 },
-    uContrast: { value: 1.07 },
+    uVignette: { value: 0.22 },
+    uSaturation: { value: 1.02 },
+    uContrast: { value: 1.05 },
     uWarmth: { value: 0.02 },
-    uSharpen: { value: 0.28 },
-    uSoftFocus: { value: 0.06 },
-    uDepthBlur: { value: 0.0 },
+    uSharpen: { value: 0.30 },
+    uSoftFocus: { value: 0.14 },
+    uDepthBlur: { value: 0.12 },
     uChromatic: { value: 0.08 },
-    uFilmGrain: { value: 0.06 },
-    uTyndall: { value: 0.32 },
-    uVintagePhoto: { value: 0.08 },
+    uFilmGrain: { value: 0.04 },
+    uTyndall: { value: 0.36 },
+    uVintagePhoto: { value: 0.06 },
+    uIrisSparkle: { value: 0.82 },
+    uHalation: { value: 0.48 },
+    uSkinLumen: { value: 0.58 },
     uTyndallAngle: { value: -0.58 },
-    uTyndallColor: { value: new THREE.Vector3(1.0, 0.92, 0.82) },
-    uTint: { value: new THREE.Vector3(1.00, 1.00, 1.00) },
-    uShadowTint: { value: new THREE.Vector3(0.02, 0.02, 0.03) },
+    uTyndallColor: { value: new THREE.Vector3(1.0, 0.94, 0.86) },
+    uTint: { value: new THREE.Vector3(1.01, 1.00, 1.01) },
+    uShadowTint: { value: new THREE.Vector3(0.03, 0.02, 0.03) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -58,6 +61,9 @@ export const BeautyGradeShader = {
     uniform float uFilmGrain;
     uniform float uTyndall;
     uniform float uVintagePhoto;
+    uniform float uIrisSparkle;
+    uniform float uHalation;
+    uniform float uSkinLumen;
     uniform float uTyndallAngle;
     uniform vec3 uTyndallColor;
     uniform vec3 uTint;
@@ -84,15 +90,15 @@ export const BeautyGradeShader = {
       // 0. Subtle Optical Lens Chromatic Dispersion (85mm f/1.4 optical realism)
       vec2 centerVec = vUv - vec2(0.5);
       float radialDist = length(centerVec);
-      vec2 caOffset = centerVec * radialDist * (uChromatic * 0.0042) * smoothstep(0.05, 0.5, srcAlpha);
+      vec2 caOffset = centerVec * radialDist * (uChromatic * 0.0038) * smoothstep(0.05, 0.5, srcAlpha);
       vec3 col;
       col.r = texture2D(tDiffuse, clamp(vUv + caOffset, 0.001, 0.999)).r;
       col.g = texture2D(tDiffuse, vUv).g;
       col.b = texture2D(tDiffuse, clamp(vUv - caOffset, 0.001, 0.999)).b;
       if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
-      col = clamp(col, 0.0, 2.0);
+      col = clamp(col, 0.0, 12.0);
 
-      // 1. 5-Tap Micro-Detail Unsharp Mask (kept gentle so it never creates 3D game aliasing)
+      // 1. 5-Tap Micro-Detail Unsharp Mask (pores, iris fibers, eyelashes, hair strands)
       vec3 n = texture2D(tDiffuse, vUv + vec2(0.0, texel.y)).rgb;
       vec3 s = texture2D(tDiffuse, vUv - vec2(0.0, texel.y)).rgb;
       vec3 e = texture2D(tDiffuse, vUv + vec2(texel.x, 0.0)).rgb;
@@ -100,35 +106,58 @@ export const BeautyGradeShader = {
       vec3 blur1 = 0.25 * (n + s + e + w);
 
       if (uSharpen > 0.001) {
-        vec3 detail = clamp(col - blur1, -0.14, 0.14);
-        col = clamp(col + detail * (uSharpen * 1.15), 0.0, 2.0);
+        vec3 detail = clamp(col - blur1, -0.16, 0.16);
+        col = clamp(col + detail * (uSharpen * 1.22), 0.0, 12.0);
       }
 
-      // 2. Optical Pro-Mist / Subsurface Portrait Soft-Focus Diffusion (melts 3D polygon harshness)
-      if (uSoftFocus > 0.001 && srcAlpha > 0.01) {
+      // 2. Next-Gen Dewy Porcelain Skin Luminance Lift (uSkinLumen)
+      if (uSkinLumen > 0.001 && srcAlpha > 0.05) {
+        float warmHue = clamp((col.r - col.b) * 3.2, 0.0, 1.0) * clamp((col.r - col.g) * 4.5, 0.0, 1.0);
+        float midMask = smoothstep(0.06, 0.22, col.r) * (1.0 - smoothstep(0.85, 1.45, col.r));
+        float skinMask = warmHue * midMask;
+        vec3 porcelainLift = vec3(col.r * 1.10, col.g * 1.12, col.b * 1.14) + vec3(0.022, 0.018, 0.020);
+        col = mix(col, porcelainLift, skinMask * clamp(uSkinLumen * 0.65, 0.0, 0.75));
+      }
+
+      // 3. Optical Pro-Mist / Subsurface Portrait Soft-Focus Diffusion & Rim Halation (uSoftFocus + uHalation)
+      if ((uSoftFocus > 0.001 || uHalation > 0.001) && srcAlpha > 0.01) {
         vec3 mistNear = sampleRingBlur(vUv, texel * 2.4);
-        vec3 mistWide = sampleRingBlur(vUv, texel * 5.8);
-        vec3 mistBlend = mix(mistNear, mistWide, 0.52);
-        // Preserve dark eye lashes/pupils while diffusing skin midtones and highlights like a Tiffen Black Pro-Mist 1/4 filter
+        vec3 mistWide = sampleRingBlur(vUv, texel * 6.2);
+        vec3 mistBlend = mix(mistNear, mistWide, 0.54);
         float lumaOrig = dot(col, vec3(0.299, 0.587, 0.114));
         float skinAndHighMask = smoothstep(0.08, 0.32, lumaOrig);
-        vec3 softCol = mix(col, mistBlend, clamp(uSoftFocus * 0.58, 0.0, 0.78) * skinAndHighMask);
-        // Add subtle pearlescent Pro-Mist highlight halation
-        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.48)) * (uSoftFocus * 0.26);
+        vec3 softCol = mix(col, mistBlend, clamp(uSoftFocus * 0.52, 0.0, 0.72) * skinAndHighMask);
+        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.42)) * (uSoftFocus * 0.28 + uHalation * 0.36) * vec3(1.06, 0.94, 0.92);
         col = softCol + hiGlow * srcAlpha;
       }
 
-      // 3. 85mm Portrait Lens Depth-of-Field / Peripheral Bokeh Blur
+      // 4. HDR Star-Cross Corneal Catchlight & Dewy Glint Sparkle (uIrisSparkle)
+      if (uIrisSparkle > 0.001 && srcAlpha > 0.05) {
+        float starH = 0.0;
+        float starV = 0.0;
+        for (int k = -3; k <= 3; k++) {
+          float fk = float(k);
+          float wStar = exp(-abs(fk) * 0.58);
+          vec3 sh = texture2D(tDiffuse, clamp(vUv + vec2(fk * texel.x * 2.2, 0.0), 0.002, 0.998)).rgb;
+          vec3 sv = texture2D(tDiffuse, clamp(vUv + vec2(0.0, fk * texel.y * 2.2), 0.002, 0.998)).rgb;
+          starH += smoothstep(0.92, 2.2, dot(sh, vec3(0.299, 0.587, 0.114))) * wStar;
+          starV += smoothstep(0.92, 2.2, dot(sv, vec3(0.299, 0.587, 0.114))) * wStar;
+        }
+        float starGlint = (starH + starV) * 0.14 * uIrisSparkle;
+        col += vec3(1.02, 0.99, 0.96) * starGlint * srcAlpha;
+      }
+
+      // 5. 85mm Portrait Lens Depth-of-Field / Peripheral Bokeh Blur
       if (uDepthBlur > 0.001 && srcAlpha > 0.01) {
-        float bokehMask = smoothstep(0.18, 0.68, length((vUv - vec2(0.5, 0.48)) * vec2(1.12, 0.95)));
+        float bokehMask = smoothstep(0.22, 0.72, length((vUv - vec2(0.5, 0.48)) * vec2(1.12, 0.95)));
         float blurAmt = clamp(bokehMask * uDepthBlur, 0.0, 1.0);
         if (blurAmt > 0.01) {
           vec3 dofSample = sampleRingBlur(vUv, texel * (2.5 + blurAmt * 7.5));
-          col = mix(col, dofSample, blurAmt * 0.82);
+          col = mix(col, dofSample, blurAmt * 0.78);
         }
       }
 
-      // 4. True Screen-Space Radial Crepuscular God-Ray Scatter
+      // 6. True Screen-Space Radial Crepuscular God-Ray Scatter
       if (uTyndall > 0.001 && srcAlpha > 0.005) {
         vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.82, 0.94) : vec2(0.18, 0.94);
         vec2 delta = (lightOrigin - vUv) * 0.28;
@@ -144,38 +173,36 @@ export const BeautyGradeShader = {
           scatter += smoothstep(0.38, 0.95, lumS) * sa * weight;
           weight *= 0.84;
         }
-        vec3 tyndallGlow = uTyndallColor * (scatter * 0.18 * srcAlpha);
+        vec3 tyndallGlow = uTyndallColor * (scatter * 0.20 * srcAlpha);
         col += tyndallGlow * uTyndall;
       }
 
-      // 5. Color Temperature Warmth Shift
-      col.r += uWarmth * 0.055;
-      col.g += uWarmth * 0.016;
-      col.b -= uWarmth * 0.052;
+      // 7. Color Temperature Warmth Shift
+      col.r += uWarmth * 0.048;
+      col.g += uWarmth * 0.014;
+      col.b -= uWarmth * 0.045;
       col = max(col, vec3(0.0));
 
-      // 6. Highlight / Midtone Art-Style Tint
+      // 8. Highlight / Midtone Art-Style Tint
       col *= uTint;
 
-      // 7. Toe-Preserving Filmic S-Curve Contrast & Soft Highlight Shoulder Roll-Off
-      // (Never subtracts a flat constant that clips dark hair strands to 0.0)
+      // 9. Toe-Preserving Filmic S-Curve Contrast (preserves full HDR highlight headroom > 1.0 for ACES OutputPass!)
       float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float contrastPower = mix(1.0, clamp(uContrast, 0.75, 1.45), smoothstep(0.02, 0.22, lumaPre));
-      vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.26, 1.0 - contrastPower);
-      col = mix(col, filmicS, 0.78);
+      float contrastPower = mix(1.0, clamp(uContrast, 0.80, 1.35), smoothstep(0.02, 0.22, lumaPre));
+      vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.28, 1.0 - contrastPower);
+      col = mix(col, filmicS, 0.65);
       col = max(col, vec3(0.0));
-      col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(0.75)) * 0.42);
 
-      // Creamy Shadow Split-Toning applied to mid-shadows only (masked out on deep black hair so black hair stays genuinely black)
+      // Creamy Shadow Split-Toning applied to mid-shadows only (masked out on deep black hair)
       float lumaPostC = dot(col, vec3(0.2126, 0.7152, 0.0722));
       float shadowMask = clamp(1.0 - smoothstep(0.06, 0.42, lumaPostC), 0.0, 1.0) * smoothstep(0.022, 0.075, lumaPostC);
       col += uShadowTint * shadowMask * 0.28;
 
-      // 8. Saturation
+      // 10. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
       col = mix(vec3(luma), col, uSaturation);
 
-      // 9. Analog Film Emulsion & Rim Halation
+      // 11. Analog Film Emulsion & Rim Halation
       if (uVintagePhoto > 0.001) {
         float lumV = dot(col, vec3(0.299, 0.587, 0.114));
         vec3 warmSilver = vec3(lumV * 1.05, lumV * 0.98, lumV * 0.89);
@@ -189,18 +216,18 @@ export const BeautyGradeShader = {
         col = mix(col, poeticFilm, clamp(uVintagePhoto, 0.0, 1.0));
       }
 
-      // 10. Fine Silver-Halide Film Grain
+      // 12. Fine Silver-Halide Film Grain
       if (uFilmGrain > 0.001 && srcAlpha > 0.01) {
         float noise = fract(sin(dot(vUv * uResolution, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-        col += noise * uFilmGrain * 0.075 * srcAlpha;
+        col += noise * uFilmGrain * 0.065 * srcAlpha;
       }
 
-      // 11. Subtle Studio Vignette
+      // 13. Subtle Studio Vignette
       vec2 d = (vUv - vec2(0.5)) * vec2(1.08, 0.96);
-      float v = 1.0 - uVignette * smoothstep(0.22, 0.85, length(d) * 1.32);
+      float v = 1.0 - uVignette * smoothstep(0.25, 0.88, length(d) * 1.28);
       col *= v;
 
-      gl_FragColor = vec4(clamp(col, 0.0, 1.0), clamp(srcAlpha, 0.0, 1.0));
+      gl_FragColor = vec4(clamp(col, 0.0, 12.0), clamp(srcAlpha, 0.0, 1.0));
     }
   `,
 };
@@ -212,8 +239,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const samplingScale = 1;
   const pixelRatio = (options.pixelRatio || renderer.getPixelRatio()) * samplingScale;
 
+  // Stage 35 · True 16-Bit HalfFloat HDR RenderTarget!
+  // Prevents clamping linear HDR highlights (> 1.0) before UnrealBloomPass and ACESFilmic OutputPass!
   const hdrTarget = new THREE.WebGLRenderTarget(width, height, {
-    type: THREE.UnsignedByteType,
+    type: THREE.HalfFloatType,
     samples: software ? 0 : Math.min(4, renderer.capabilities.maxSamples || 0),
   });
   const composer = new EffectComposer(renderer, hdrTarget);
@@ -252,25 +281,28 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
 
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    options.bloomStrength ?? 0.08,
-    options.bloomRadius ?? 0.36,
-    options.bloomThreshold ?? 0.88
+    options.bloomStrength ?? 0.12,
+    options.bloomRadius ?? 0.42,
+    options.bloomThreshold ?? 0.85
   );
 
   const gradePass = new ShaderPass(BeautyGradeShader);
   gradePass.uniforms.tSourceAlpha.value = alphaTarget.texture;
   gradePass.uniforms.uResolution.value.set(width * pixelRatio, height * pixelRatio);
-  gradePass.uniforms.uVignette.value = options.vignette ?? 0.42;
-  gradePass.uniforms.uSaturation.value = options.saturation ?? 0.88;
-  gradePass.uniforms.uContrast.value = options.contrast ?? 1.16;
-  gradePass.uniforms.uWarmth.value = options.warmth ?? 0.14;
-  gradePass.uniforms.uSharpen.value = options.sharpen ?? 0.24;
-  gradePass.uniforms.uSoftFocus.value = options.softFocus ?? 0.42;
-  gradePass.uniforms.uDepthBlur.value = options.depthBlur ?? 0.28;
-  gradePass.uniforms.uChromatic.value = options.chromatic ?? 0.18;
-  gradePass.uniforms.uFilmGrain.value = options.filmGrain ?? 0.10;
-  gradePass.uniforms.uTyndall.value = options.tyndall ?? 0.82;
-  gradePass.uniforms.uVintagePhoto.value = options.vintagePhoto ?? 0.76;
+  gradePass.uniforms.uVignette.value = options.vignette ?? 0.22;
+  gradePass.uniforms.uSaturation.value = options.saturation ?? 1.02;
+  gradePass.uniforms.uContrast.value = options.contrast ?? 1.05;
+  gradePass.uniforms.uWarmth.value = options.warmth ?? 0.02;
+  gradePass.uniforms.uSharpen.value = options.sharpen ?? 0.30;
+  gradePass.uniforms.uSoftFocus.value = options.softFocus ?? 0.14;
+  gradePass.uniforms.uDepthBlur.value = options.depthBlur ?? 0.12;
+  gradePass.uniforms.uChromatic.value = options.chromatic ?? 0.08;
+  gradePass.uniforms.uFilmGrain.value = options.filmGrain ?? 0.04;
+  gradePass.uniforms.uTyndall.value = options.tyndall ?? 0.36;
+  gradePass.uniforms.uVintagePhoto.value = options.vintagePhoto ?? 0.06;
+  gradePass.uniforms.uIrisSparkle.value = options.irisSparkle ?? 0.82;
+  gradePass.uniforms.uHalation.value = options.halation ?? 0.48;
+  gradePass.uniforms.uSkinLumen.value = options.skinLumen ?? 0.58;
 
   const resizeAlpha = () => {
     const rw = Math.max(2, Math.floor(sizeW * sizeRatio));
@@ -329,6 +361,9 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       if (params.filmGrain !== undefined) u.uFilmGrain.value = Number(params.filmGrain);
       if (params.tyndall !== undefined) u.uTyndall.value = Number(params.tyndall);
       if (params.vintagePhoto !== undefined) u.uVintagePhoto.value = Number(params.vintagePhoto);
+      if (params.irisSparkle !== undefined) u.uIrisSparkle.value = Number(params.irisSparkle);
+      if (params.halation !== undefined) u.uHalation.value = Number(params.halation);
+      if (params.skinLumen !== undefined) u.uSkinLumen.value = Number(params.skinLumen);
       if (params.tyndallAngle !== undefined) u.uTyndallAngle.value = Number(params.tyndallAngle);
       if (params.tyndallColor) {
         const tc = new THREE.Color(params.tyndallColor);

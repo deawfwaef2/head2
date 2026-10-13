@@ -241,78 +241,60 @@ function fitImportedHead(scene) {
 }
 
 const PRESET_MORPH_BIASES = {
-  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: 0.04, chinLength: -0.02, cheekSoftness: 0.06, noseBridge: 0.02, eyeAlmond: 0.06, eyeTilt: -0.02, lipFullness: 0.02 },
-  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.04, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.02, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.05 },
-  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.04, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.02, eyeAlmond: 0.10, eyeTilt: -0.03, lipFullness: 0.05 },
-  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.10, chinLength: -0.02, cheekSoftness: 0.08, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.06, lipFullness: 0.05 },
-  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.10, chinLength: -0.02, cheekSoftness: 0.08, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.06, lipFullness: 0.05 },
-  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.08, chinLength: 0.02, cheekSoftness: 0.04, noseBridge: 0.05, eyeAlmond: 0.05, eyeTilt: 0.04, lipFullness: 0.04 },
-  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.08, chinLength: 0.02, cheekSoftness: 0.04, noseBridge: 0.05, eyeAlmond: 0.05, eyeTilt: 0.04, lipFullness: 0.04 },
-  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.10, chinLength: -0.05, cheekSoftness: 0.12, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.06 },
-  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.10, chinLength: -0.05, cheekSoftness: 0.12, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.06 },
-  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.08, chinLength: 0.04, cheekSoftness: -0.04, noseBridge: 0.08, eyeAlmond: 0.04, eyeTilt: 0.06, lipFullness: 0.02 },
-  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.08, chinLength: 0.04, cheekSoftness: -0.04, noseBridge: 0.08, eyeAlmond: 0.04, eyeTilt: 0.06, lipFullness: 0.02 },
+  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
 };
 
 /**
- * Stage 30 · Maps UI Eyebrow Style IDs to Official MakeHuman 3D Eyebrow Assets (`eyebrow001..012` .obj + .png)
+ * Stage 35 · Maps UI Eyebrow Style IDs to Official MakeHuman 3D Eyebrow Assets (`eyebrow001..012` .obj + .png)
+ * Zero `browDown` so eyebrows never scowl or press down into the upper eyelids!
  */
 const EYEBROW_STYLE_TO_MH_ASSET = {
-  cn_scholar_natural:  { assetId: 'eyebrow012', browDown: 0.05, browUp: 0.0  },
-  kr_straight_mist:    { assetId: 'eyebrow001', browDown: 0.28, browUp: 0.0  },
-  kr_idol_arch:        { assetId: 'eyebrow010', browDown: 0.0,  browUp: 0.26 },
-  cn_willow_classical: { assetId: 'eyebrow002', browDown: 0.0,  browUp: 0.22 },
-  kr_sweet_droop:      { assetId: 'eyebrow004', browDown: 0.45, browUp: 0.0  },
-  cn_cold_sword:       { assetId: 'eyebrow003', browDown: 0.0,  browUp: 0.42 },
-  kr_wild_feathered:   { assetId: 'eyebrow005', browDown: 0.0,  browUp: 0.16 },
-  cn_tang_moth:        { assetId: 'eyebrow008', browDown: 0.22, browUp: 0.0  },
+  cn_scholar_natural:  { assetId: 'eyebrow012', browDown: 0.0, browUp: 0.12 },
+  kr_straight_mist:    { assetId: 'eyebrow001', browDown: 0.0, browUp: 0.15 },
+  kr_idol_arch:        { assetId: 'eyebrow010', browDown: 0.0, browUp: 0.22 },
+  cn_willow_classical: { assetId: 'eyebrow002', browDown: 0.0, browUp: 0.18 },
+  kr_sweet_droop:      { assetId: 'eyebrow004', browDown: 0.0, browUp: 0.10 },
+  cn_cold_sword:       { assetId: 'eyebrow003', browDown: 0.0, browUp: 0.28 },
+  kr_wild_feathered:   { assetId: 'eyebrow005', browDown: 0.0, browUp: 0.16 },
+  cn_tang_moth:        { assetId: 'eyebrow008', browDown: 0.0, browUp: 0.12 },
 };
 
 /**
- * Stage 30 · Maps 10 Face Archetype Presets to Multi-Head Morph Blend Recipes (`blend_*`)
- * + Wrinkle-Free Young Asian/Chinese/Korean/Eurasian Skin Variants.
+ * Stage 35 · Pure Single-Head Default Archetypes (`默认不要混合`)
+ * All `headBlend` channels default to `0.0` so presets use the clean, un-distorted base head model out of the box.
+ * Multi-head mixing only activates when the player manually adjusts the Multi-Head Mixer sliders!
  */
+const PURE_ZERO_BLEND = {
+  blend_asian_youth: 0.0,
+  blend_cn_scholar:  0.0,
+  blend_cn_baby:     0.0,
+  blend_kr_vline:    0.0,
+  blend_cn_melon:    0.0,
+  blend_cn_royal:    0.0,
+  blend_eurasian:    0.0,
+};
+
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
-  cn_oval_scholar: {
-    skinVariant: 'cn_scholar_natural',
-    headBlend: { blend_asian_youth: 0.55, blend_cn_scholar: 0.75, blend_cn_baby: 0.15, blend_kr_vline: 0.0, blend_cn_melon: 0.10, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  cn_round_babyface: {
-    skinVariant: 'kr_dewy_peach',
-    headBlend: { blend_asian_youth: 0.65, blend_cn_scholar: 0.15, blend_cn_baby: 0.85, blend_kr_vline: 0.20, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  kr_idol_vline: {
-    skinVariant: 'kr_chaebol_cool',
-    headBlend: { blend_asian_youth: 0.40, blend_cn_scholar: 0.10, blend_cn_baby: 0.0, blend_kr_vline: 0.85, blend_cn_melon: 0.25, blend_cn_royal: 0.15, blend_eurasian: 0.0 },
-  },
-  cn_classical_melon: {
-    skinVariant: 'cn_jiangnan_jade',
-    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.45, blend_cn_baby: 0.0, blend_kr_vline: 0.15, blend_cn_melon: 0.85, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  kr_sweet_heart: {
-    skinVariant: 'kr_firstlove_camellia',
-    headBlend: { blend_asian_youth: 0.60, blend_cn_scholar: 0.20, blend_cn_baby: 0.45, blend_kr_vline: 0.55, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  cn_cold_royal: {
-    skinVariant: 'cn_intellectual_olive',
-    headBlend: { blend_asian_youth: 0.25, blend_cn_scholar: 0.20, blend_cn_baby: 0.0, blend_kr_vline: 0.25, blend_cn_melon: 0.35, blend_cn_royal: 0.85, blend_eurasian: 0.0 },
-  },
-  cn_pure_campus_bell: {
-    skinVariant: 'cn_porcelain_ivory',
-    headBlend: { blend_asian_youth: 0.85, blend_cn_scholar: 0.50, blend_cn_baby: 0.25, blend_kr_vline: 0.35, blend_cn_melon: 0.15, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  kr_waterglow_idol: {
-    skinVariant: 'kr_dewy_peach',
-    headBlend: { blend_asian_youth: 0.50, blend_cn_scholar: 0.0, blend_cn_baby: 0.60, blend_kr_vline: 0.75, blend_cn_melon: 0.20, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  cn_tang_peony: {
-    skinVariant: 'cn_jiangnan_jade',
-    headBlend: { blend_asian_youth: 0.45, blend_cn_scholar: 0.70, blend_cn_baby: 0.70, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
-  },
-  eurasian_sculpted_mix: {
-    skinVariant: 'eurasian_velvet_rose',
-    headBlend: { blend_asian_youth: 0.15, blend_cn_scholar: 0.35, blend_cn_baby: 0.0, blend_kr_vline: 0.45, blend_cn_melon: 0.15, blend_cn_royal: 0.25, blend_eurasian: 0.65 },
-  },
+  cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND } },
+  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND } },
+  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND } },
+  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND } },
+  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND } },
+  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND } },
+  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND } },
+  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND } },
+  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND } },
+  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND } },
 };
 
 let realWebAssetsPromise = null;
@@ -542,6 +524,12 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const offZ = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetZ ?? 0)));
   const uScale = Math.max(0.82, Math.min(1.22, Number(morphs.hairScale ?? 1.0)));
   const neckClear = Math.max(0.0, Math.min(1.0, Number(rootGroup.userData.neckClearance ?? 0.45)));
+  const frontBangsStyle = morphs.frontBangsStyle || rootGroup.userData.frontBangsStyle || 'default';
+  const sideLocksStyle = morphs.sideLocksStyle || rootGroup.userData.sideLocksStyle || 'default';
+  const wispyFeather = Math.max(0.0, Math.min(1.0, Number(morphs.hairWispyFeather ?? rootGroup.userData.hairWispyFeather ?? 0.45)));
+  const ombreMix = Math.max(0.0, Math.min(1.0, Number(morphs.hairOmbreMix ?? rootGroup.userData.hairOmbreMix ?? 0.0)));
+  const tipColorHex = morphs.hairTipColor || rootGroup.userData.hairTipColor || '#4a3528';
+  const tipCol = new THREE.Color(tipColorHex);
 
   hairGroup.position.set(offX * 0.035, offY * 0.035, offZ * 0.035);
   hairGroup.scale.setScalar(uScale);
@@ -550,6 +538,12 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const visitedGeos = new Set();
 
   hairGroup.traverse((child) => {
+    if (child.isMesh && child.material?.userData?.hairShaderUniforms) {
+      const u = child.material.userData.hairShaderUniforms;
+      u.uHairWispyFeather.value = wispyFeather;
+      u.uHairOmbreMix.value = ombreMix;
+      u.uHairTipColor.value.copy(tipCol);
+    }
     if (!child.isMesh || !child.geometry?.attributes?.position) return;
     if (child.name === 'ScalpRootFeatherCap') return;
     const geo = child.geometry;
@@ -563,12 +557,30 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     const base = geo.userData.basePositions;
     const out = posAttr.array;
     const count = posAttr.count;
+    const isModularDonor = Boolean(child.userData?.isModularPart);
 
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
       let x = base[i3];
       let y = base[i3 + 1];
       let z = base[i3 + 2];
+
+      // Modular Bare Forehead mode: smoothly sweep front bangs up & to the sides
+      if (!isModularDonor && frontBangsStyle === 'forehead_bare' && z > 0.048 && y > 0.012 && y < 0.082 && Math.abs(x) < 0.056) {
+        const wFore = Math.min(1.0, (z - 0.048) / 0.036) * Math.min(1.0, (0.082 - y) / 0.042) * Math.min(1.0, (0.056 - Math.abs(x)) / 0.028);
+        const signX = x >= 0 ? 1.0 : -1.0;
+        x += signX * 0.038 * wFore;
+        y += 0.026 * wFore;
+        z -= 0.012 * wFore;
+      }
+
+      // Modular Tucked-Behind-Ears mode: smoothly tuck side locks behind the ear line
+      if (!isModularDonor && sideLocksStyle === 'tucked_ear' && z > 0.004 && z < 0.062 && y < 0.032 && y > -0.045 && Math.abs(x) > 0.046) {
+        const wEar = Math.min(1.0, (0.032 - y) / 0.035) * Math.min(1.0, (Math.abs(x) - 0.046) / 0.025) * Math.min(1.0, (0.062 - z) / 0.032);
+        const signX = x >= 0 ? 1.0 : -1.0;
+        z -= 0.024 * wEar;
+        x += signX * 0.006 * wEar;
+      }
 
       if (Math.abs(hairVol) > 1e-4 && y > -0.02) {
         const wCrown = Math.min(1.0, Math.max(0.0, (y + 0.02) / 0.09));
@@ -610,6 +622,17 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
         z += hairFlare * 0.014 * (wTip * wTip);
       }
 
+      if (neckClear > 0.05 && y < -0.042 && z < 0.025) {
+        const wBelow = Math.min(1.0, Math.max(0.0, (-0.042 - y) / 0.055));
+        const rNeck = Math.hypot(x, z + 0.014);
+        if (rNeck < 0.050) {
+          const push = (0.050 - rNeck) * neckClear * 0.72 * wBelow;
+          const signX = x >= 0 ? 1.0 : -1.0;
+          x += signX * push * 0.88;
+          z -= push * 0.32;
+        }
+      }
+
       out[i3] = x;
       out[i3 + 1] = y;
       out[i3 + 2] = z;
@@ -645,7 +668,7 @@ export function setHeadFaceArchetype(rootGroup, faceArchetype = 'cn_oval_scholar
     faceArchetype,
     ...blendRecipe,
   };
-  if (options.syncSkinVariant && archSpec.skinVariant) {
+  if (options.syncSkinVariant !== false && archSpec.skinVariant) {
     rootGroup.userData.skinVariant = archSpec.skinVariant;
     nextMorphs.skinVariant = archSpec.skinVariant;
     applyRealSkinVariantToGroup(rootGroup, archSpec.skinVariant);
@@ -660,8 +683,8 @@ export function getHeadBlendStateFromGroup(rootGroup) {
   const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
   const def = archSpec.headBlend || {};
   return {
-    blend_asian_youth: Number(m.blend_asian_youth ?? def.blend_asian_youth ?? 0.55),
-    blend_cn_scholar:  Number(m.blend_cn_scholar  ?? def.blend_cn_scholar  ?? 0.45),
+    blend_asian_youth: Number(m.blend_asian_youth ?? def.blend_asian_youth ?? 0.0),
+    blend_cn_scholar:  Number(m.blend_cn_scholar  ?? def.blend_cn_scholar  ?? 0.0),
     blend_cn_baby:     Number(m.blend_cn_baby     ?? def.blend_cn_baby     ?? 0.0),
     blend_kr_vline:    Number(m.blend_kr_vline    ?? def.blend_kr_vline    ?? 0.0),
     blend_cn_melon:    Number(m.blend_cn_melon    ?? def.blend_cn_melon    ?? 0.0),
@@ -687,7 +710,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const browSpec = EYEBROW_STYLE_TO_MH_ASSET[eyebrowStyle] || EYEBROW_STYLE_TO_MH_ASSET.cn_scholar_natural;
 
   const clampBlend = (val) => Math.max(0.0, Math.min(1.4, Number(val) || 0.0));
-  const wAsianYouth = clampBlend(m.blend_asian_youth ?? defBlend.blend_asian_youth ?? 0.50);
+  const wAsianYouth = clampBlend(m.blend_asian_youth ?? defBlend.blend_asian_youth ?? 0.0);
   const wCnScholar  = clampBlend(m.blend_cn_scholar  ?? defBlend.blend_cn_scholar  ?? 0.0);
   const wCnBaby     = clampBlend(m.blend_cn_baby     ?? defBlend.blend_cn_baby     ?? 0.0);
   const wKrVline    = clampBlend(m.blend_kr_vline    ?? defBlend.blend_kr_vline    ?? 0.0);
@@ -824,11 +847,11 @@ export function triggerCollectibleBlink() {
 
 function computeSkinTintColor(skinToneHex = '#ffe8df') {
   const c = new THREE.Color(skinToneHex || '#ffe8df');
-  // Balanced linear albedo multiplier (0.74..0.84) so the 24-bit photographic skin texture
-  // retains rich 3D chiaroscuro shadow depth, nostrils, eyelids, and lips without overexposed white-out!
-  const r = Math.min(0.84, Math.max(0.74, 0.64 + c.r * 0.19));
-  const g = Math.min(0.82, Math.max(0.72, 0.62 + c.g * 0.19));
-  const b = Math.min(0.81, Math.max(0.71, 0.61 + c.b * 0.19));
+  // Subtle neutral tint (0.93..1.02) so the real downloaded photographic female skin texture
+  // retains 100% of its natural dermal pores, eyelids, lips, and subsurface complexion without plastic wash!
+  const r = Math.min(1.02, Math.max(0.93, 0.80 + c.r * 0.21));
+  const g = Math.min(1.02, Math.max(0.92, 0.80 + c.g * 0.21));
+  const b = Math.min(1.02, Math.max(0.91, 0.80 + c.b * 0.21));
   return new THREE.Color(r, g, b);
 }
 
@@ -988,9 +1011,20 @@ function fitImportedHairScene(scene) {
  *    and darkens semi-transparent strand edges (`edgeSoftness`) so alpha cutouts never produce silver fringes.
  * 3. Uses smooth 3D cranial-blended normals for a cohesive, silky Kajiya-Kay / Marschner "Angel Ring" crown sheen.
  */
-function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer = false) {
-  material.customProgramCacheKey = () => `marschner_hair_v33_${sheenIntensity.toFixed(2)}_${isWispLayer ? 'wisp' : 'core'}`;
+function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer = false, hairShaderParams = {}) {
+  const sharedUniforms = {
+    uHairWispyFeather: { value: Number(hairShaderParams.hairWispyFeather ?? 0.45) },
+    uHairOmbreMix: { value: Number(hairShaderParams.hairOmbreMix ?? 0.0) },
+    uHairTipColor: { value: new THREE.Color(hairShaderParams.hairTipColor || '#4a3528') },
+  };
+  material.userData = material.userData || {};
+  material.userData.hairShaderUniforms = sharedUniforms;
+  material.customProgramCacheKey = () => `marschner_hair_v35_${sheenIntensity.toFixed(2)}_${isWispLayer ? 'wisp' : 'core'}`;
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uHairWispyFeather = sharedUniforms.uHairWispyFeather;
+    shader.uniforms.uHairOmbreMix = sharedUniforms.uHairOmbreMix;
+    shader.uniforms.uHairTipColor = sharedUniforms.uHairTipColor;
+
     shader.vertexShader = `
       varying vec3 vHairLocalPos;
       varying vec3 vHairSmoothNormal;
@@ -1021,6 +1055,9 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
     );
 
     shader.fragmentShader = `
+      uniform float uHairWispyFeather;
+      uniform float uHairOmbreMix;
+      uniform vec3 uHairTipColor;
       varying vec3 vHairLocalPos;
       varying vec3 vHairSmoothNormal;
       float vStrandReliefField;
@@ -1041,23 +1078,44 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
         #endif
         float rawLinearLuma = clamp(dot(sampledDiffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
         float texSrgbLuma = sqrt(rawLinearLuma);
-        float artistLockShade = smoothstep(0.18, 0.88, texSrgbLuma);
+        float artistLockShade = smoothstep(0.22, 0.86, texSrgbLuma);
 
         float texAlpha = sampledDiffuseColor.a;
+
+        // Stage 35 · Wispy See-Through Air Bangs & Soft Tip Feathering (matches user_photo_ref.jpg!)
+        float inForeheadBangs = smoothstep(0.056, 0.072, vHairLocalPos.z)
+          * smoothstep(0.012, 0.026, vHairLocalPos.y)
+          * (1.0 - smoothstep(0.058, 0.082, vHairLocalPos.y))
+          * (1.0 - smoothstep(0.036, 0.058, abs(vHairLocalPos.x)));
+        if (inForeheadBangs > 0.01 && uHairWispyFeather > 0.01) {
+          // Multi-scale non-periodic organic strand locks along forehead X + UV
+          float strandCoord = vHairLocalPos.x * 420.0 + vMapUv.x * 18.0;
+          float wispA = fract(sin(floor(strandCoord) * 127.1) * 43758.5453);
+          float wispB = fract(sin(floor(strandCoord * 0.43 + 7.3) * 269.5) * 18345.23);
+          float tipTaper = smoothstep(0.022, 0.056, vHairLocalPos.y);
+          float wispMask = mix(0.32 + 0.68 * tipTaper, 1.0, smoothstep(0.25, 0.78, wispA * 0.6 + wispB * 0.4 + artistLockShade * 0.35));
+          texAlpha *= mix(1.0, wispMask, inForeheadBangs * clamp(uHairWispyFeather, 0.0, 0.92));
+        }
+
         float edgeSoftness = smoothstep(0.14, 0.68, texAlpha);
         vHairEdgeSoftness = edgeSoftness;
         vStrandReliefField = artistLockShade;
         vArtistLockRidge = artistLockShade;
 
+        // Dual-Tone Ombre Hair Dye (Root-to-Tip Gradient)
+        float tipFactor = clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0);
+        float ombreWeight = smoothstep(0.12, 0.88, tipFactor) * clamp(uHairOmbreMix, 0.0, 1.0);
+        vec3 baseHairCol = mix(diffuse, uHairTipColor, ombreWeight);
+
         // Subtle root-parting & inner-neck depth AO
         float rFromCore = length(vHairLocalPos - vec3(0.0, 0.020, -0.008));
-        float innerDepthAO = smoothstep(0.058, 0.092, rFromCore);
-        float crownPartAO = 1.0 - 0.22 * exp(-pow(vHairLocalPos.x / 0.016, 2.0)) * smoothstep(0.050, 0.095, vHairLocalPos.y);
-        float hairVolAO = (0.74 + 0.26 * innerDepthAO) * crownPartAO;
+        float innerDepthAO = smoothstep(0.060, 0.092, rFromCore);
+        float crownPartAO = 1.0 - 0.18 * exp(-pow(vHairLocalPos.x / 0.016, 2.0)) * smoothstep(0.050, 0.095, vHairLocalPos.y);
+        float hairVolAO = (0.78 + 0.22 * innerDepthAO) * crownPartAO;
 
-        // Keratin fiber depth: deep jet-black crevices + clearly visible dark espresso/charcoal strand relief
-        vec3 deepSilk = diffuse * 0.42;
-        vec3 litSilk = diffuse * 2.35 + vec3(0.022, 0.020, 0.024) * pow(artistLockShade, 1.25);
+        // Soft, velvety silk lock shading (NO harsh 13:1 wire stripes or grey-brown wash)
+        vec3 deepSilk = baseHairCol * 0.62;
+        vec3 litSilk = baseHairCol * 1.28;
         diffuseColor.rgb = mix(deepSilk, litSilk, artistLockShade) * hairVolAO * (0.45 + 0.55 * edgeSoftness);
 
         ${isWispLayer ? `
@@ -1085,45 +1143,47 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
         vec3 tMeridian = normalize(cross(bAzim, nCran));
         if (tMeridian.y > 0.0) tMeridian = -tMeridian;
 
-        float lockTilt = (vArtistLockRidge - 0.5) * 0.07;
-        vec3 keyLightDir = normalize(vec3(0.28, 0.66, 0.70));
+        float lockTilt = (vArtistLockRidge - 0.5) * 0.06;
+        vec3 keyLightDir = normalize(vec3(0.26, 0.68, 0.68));
         vec3 HKey = normalize(keyLightDir + viewDir);
 
         // Primary R cuticle silk band (smooth halo across crown & mid-locks)
         vec3 T1 = normalize(tMeridian + (-0.08 + lockTilt) * surfNorm);
         float tdoth1 = clamp(dot(T1, HKey), -1.0, 1.0);
         float sinTH1 = sqrt(max(0.0, 1.0 - tdoth1 * tdoth1));
-        float specR = pow(max(0.0, sinTH1), 36.0) * (0.35 + 0.65 * vArtistLockRidge);
+        float specR = pow(max(0.0, sinTH1), 42.0) * (0.55 + 0.45 * vArtistLockRidge);
 
         // Secondary TRT soft cortex sheen
         vec3 T2 = normalize(tMeridian + (0.12 - lockTilt) * surfNorm);
         float tdoth2 = clamp(dot(T2, HKey), -1.0, 1.0);
         float sinTH2 = sqrt(max(0.0, 1.0 - tdoth2 * tdoth2));
-        float specTRT = pow(max(0.0, sinTH2), 16.0) * (0.30 + 0.70 * vArtistLockRidge);
+        float specTRT = pow(max(0.0, sinTH2), 18.0) * (0.45 + 0.55 * vArtistLockRidge);
 
-        // Subtle grazing-angle rim separation
+        // Subtle grazing-angle rim separation (faded to zero on semi-transparent edges)
         float ndotv = clamp(abs(dot(surfNorm, viewDir)), 0.0, 1.0);
-        float fresnelRim = pow(1.0 - ndotv, 3.2) * (0.30 + 0.45 * vArtistLockRidge);
+        float fresnelRim = pow(1.0 - ndotv, 3.2) * 0.42;
 
-        float ndotlKey = smoothstep(-0.20, 0.65, dot(surfNorm, keyLightDir));
+        float ndotlKey = smoothstep(-0.15, 0.68, dot(surfNorm, keyLightDir));
         float edgeMask = vHairEdgeSoftness * vHairEdgeSoftness;
 
-        vec3 rTint = mix(vec3(0.068, 0.068, 0.078), diffuse * 3.0 + vec3(0.045, 0.042, 0.050), 0.50);
-        vec3 trtTint = diffuse * 3.2 + vec3(0.036, 0.032, 0.038);
-        vec3 rimTint = diffuse * 2.2 + vec3(0.028, 0.026, 0.032);
+        float tipFactorSpec = clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0);
+        vec3 specBaseCol = mix(diffuse, uHairTipColor, smoothstep(0.12, 0.88, tipFactorSpec) * clamp(uHairOmbreMix, 0.0, 1.0));
+        vec3 rTint = mix(vec3(0.065, 0.068, 0.082), specBaseCol * 2.5 + vec3(0.045, 0.045, 0.055), 0.52);
+        vec3 trtTint = specBaseCol * 2.8 + vec3(0.032, 0.028, 0.036);
+        vec3 rimTint = specBaseCol * 2.1 + vec3(0.028, 0.028, 0.036);
 
         vec3 anisoGlint = (
-          specR * rTint * 0.62 +
-          specTRT * trtTint * 0.48
-        ) * ndotlKey * edgeMask * ${(0.65 + sheenIntensity * 0.45).toFixed(3)};
+          specR * rTint * 0.68 +
+          specTRT * trtTint * 0.52
+        ) * ndotlKey * edgeMask * ${(0.68 + sheenIntensity * 0.46).toFixed(3)};
 
         vec3 rimStrand = fresnelRim * rimTint * edgeMask * 0.45;
 
-        float wrapLight = 0.42 + 0.58 * smoothstep(-0.45, 0.75, dot(surfNorm, keyLightDir));
-        reflectedLight.directDiffuse = max(reflectedLight.directDiffuse, diffuseColor.rgb * wrapLight * 0.92);
+        float wrapLight = 0.36 + 0.64 * smoothstep(-0.40, 0.75, dot(surfNorm, keyLightDir));
+        reflectedLight.directDiffuse = max(reflectedLight.directDiffuse, diffuseColor.rgb * wrapLight * 0.76);
 
-        reflectedLight.directSpecular *= 0.16 * edgeMask;
-        reflectedLight.indirectSpecular *= 0.20 * edgeMask;
+        reflectedLight.directSpecular *= 0.22 * edgeMask;
+        reflectedLight.indirectSpecular *= 0.26 * edgeMask;
         reflectedLight.indirectSpecular += (anisoGlint + rimStrand) * smoothstep(0.18, 0.68, diffuseColor.a);
       #endif
       `
@@ -1147,8 +1207,8 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const a = idx[i], b = idx[i + 1], c = idx[i + 2];
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Strictly keep cap on the upper/back cranial crown (NEVER on the forehead or temples!)
-    if (ym > 0.056 && zm < 0.024) {
+    // Strictly keep cap behind upper hairline (never cover the forehead or brow area!)
+    if (ym > 0.030 && zm < 0.048 && (zm < 0.032 || ym > 0.066)) {
       capIndices.push(a, b, c);
     }
   }
@@ -1170,9 +1230,11 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     newPos[i * 3 + 1] = y + (dy / len) * 0.00035;
     newPos[i * 3 + 2] = z + (dz / len) * 0.00035;
 
-    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.056) / 0.020));
-    const fadeFront = Math.min(1.0, Math.max(0.0, (0.024 - z) / 0.022));
-    const alpha = fadeY * fadeFront * 0.62;
+    // Smoothly feather vertex alpha to 0.0 near the front forehead hairline & side temples
+    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.034) / 0.026));
+    const fadeFront = Math.min(1.0, Math.max(0.0, (0.045 - z) / 0.028));
+    const fadeTemple = Math.min(1.0, Math.max(0.0, (0.068 - Math.abs(x)) / 0.018));
+    const alpha = fadeY * fadeFront * (z > 0.005 ? fadeTemple : 1.0) * 0.82;
 
     colors[i * 4] = baseR;
     colors[i * 4 + 1] = baseG;
@@ -1205,16 +1267,100 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
   return capMesh;
 }
 
+const MODULAR_BANGS_DONORS = {
+  wispy_air:    { style: 'hair_user_photo',       filter: (x, y, z) => z > 0.044 && y > 0.012 && y < 0.092 && Math.abs(x) < 0.062 },
+  curtain_part: { style: 'daz_hair_curtain_wave', filter: (x, y, z) => z > 0.036 && y > 0.002 && y < 0.095 && Math.abs(x) < 0.068 },
+  hime_blunt:   { style: 'daz_hair_hime',         filter: (x, y, z) => z > 0.048 && y > 0.015 && y < 0.092 && Math.abs(x) < 0.056 },
+  side_swept:   { style: 'daz_hair_side_long',    filter: (x, y, z) => z > 0.038 && y > 0.008 && y < 0.095 && Math.abs(x) < 0.066 },
+};
+
+const MODULAR_SIDELOCKS_DONORS = {
+  photo_wisp:   { style: 'hair_user_photo',           filter: (x, y, z) => Math.abs(x) > 0.046 && z > 0.002 && z < 0.068 && y > -0.048 && y < 0.045 },
+  hime_cheek:   { style: 'daz_hair_hime',             filter: (x, y, z) => Math.abs(x) > 0.044 && z > 0.005 && z < 0.066 && y > -0.068 && y < 0.042 },
+  wavy_tendril: { style: 'daz_hair_french_lazy_roll', filter: (x, y, z) => Math.abs(x) > 0.045 && z > -0.005 && z < 0.068 && y > -0.065 && y < 0.045 },
+};
+
+const MODULAR_BACK_DONORS = {
+  high_ponytail: { style: 'daz_hair_sport_ponytail', filter: (x, y, z) => z < -0.032 || (z < -0.012 && y > 0.055) },
+  low_chignon:   { style: 'daz_hair_low_chignon',    filter: (x, y, z) => z < -0.035 && y < 0.048 },
+  twin_buns:     { style: 'daz_hair_twin_buns',      filter: (x, y, z) => y > 0.068 && Math.abs(x) > 0.042 && z < 0.035 },
+  twin_braids:   { style: 'daz_hair_twin_braids',    filter: (x, y, z) => y < 0.018 && Math.abs(x) > 0.048 && z < 0.028 },
+};
+
+function filterGeometryByCentroid(geometry, predicate, invert = false) {
+  if (!geometry?.attributes?.position) return null;
+  const pos = geometry.attributes.position;
+  const idx = geometry.index ? geometry.index.array : null;
+  const kept = [];
+  if (idx) {
+    for (let i = 0; i < idx.length; i += 3) {
+      const a = idx[i], b = idx[i + 1], c = idx[i + 2];
+      const xm = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3.0;
+      const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
+      const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
+      const match = Boolean(predicate(xm, ym, zm));
+      if (invert ? !match : match) {
+        kept.push(a, b, c);
+      }
+    }
+    if (kept.length === 0) return null;
+    const cloned = geometry.clone();
+    cloned.setIndex(kept);
+    return cloned;
+  }
+  return geometry.clone();
+}
+
+async function loadModularDonorMeshes(donorSpec) {
+  if (!donorSpec) return [];
+  try {
+    const buf = await fetchGlbArrayBuffer(`/models/${donorSpec.style}.glb`);
+    const gltf = await parseGlbBuffer(buf);
+    const meshes = [];
+    gltf.scene.traverse((child) => {
+      if (!child.isMesh || !child.geometry?.attributes?.position) return;
+      const subGeo = filterGeometryByCentroid(child.geometry, donorSpec.filter, false);
+      if (subGeo) {
+        const m = new THREE.Mesh(subGeo, child.material);
+        m.name = `Modular_${donorSpec.style}`;
+        m.userData.isModularPart = true;
+        meshes.push(m);
+      }
+    });
+    return meshes;
+  } catch (e) {
+    console.warn('Modular hair donor load skipped:', donorSpec.style, e);
+    return [];
+  }
+}
+
 export async function attachRealHairModel(rootGroup, config = {}) {
   const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
   if (!modelContainer) return null;
 
   rootGroup.userData.neckClearance = Number(config.neckClearance ?? rootGroup.userData.neckClearance ?? 0.45);
+  const frontBangsStyle = config.frontBangs || config.frontBangsStyle || config.morphs?.frontBangs || config.morphs?.frontBangsStyle || rootGroup.userData.frontBangsStyle || 'default';
+  const sideLocksStyle = config.sideLocks || config.sideLocksStyle || config.morphs?.sideLocks || config.morphs?.sideLocksStyle || rootGroup.userData.sideLocksStyle || 'default';
+  const backAttachmentStyle = config.backAttachment || config.backAttachmentStyle || config.morphs?.backAttachment || config.morphs?.backAttachmentStyle || rootGroup.userData.backAttachmentStyle || 'none';
+  const hairTipColor = config.hairTipColor || config.morphs?.hairTipColor || rootGroup.userData.hairTipColor || '#4a3528';
+  const hairOmbreMix = Number(config.hairOmbreMix ?? config.morphs?.hairOmbreMix ?? rootGroup.userData.hairOmbreMix ?? 0.0);
+  const hairWispyFeather = Number(
+    config.hairWispyFeather ?? config.morphs?.hairWispyFeather ?? rootGroup.userData.hairWispyFeather ??
+    (frontBangsStyle === 'wispy_air' ? 0.62 : 0.42)
+  );
+
+  rootGroup.userData.frontBangsStyle = frontBangsStyle;
+  rootGroup.userData.sideLocksStyle = sideLocksStyle;
+  rootGroup.userData.backAttachmentStyle = backAttachmentStyle;
+  rootGroup.userData.hairTipColor = hairTipColor;
+  rootGroup.userData.hairOmbreMix = hairOmbreMix;
+  rootGroup.userData.hairWispyFeather = hairWispyFeather;
+
   const request = (rootGroup.userData.hairRequestSerial || 0) + 1;
   rootGroup.userData.hairRequestSerial = request;
   const oldHair = modelContainer.getObjectByName('HairGroup');
 
-  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_bob01';
+  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_user_photo';
   const resolvedStyle = resolveRealHairStyle(rawStyle);
   if (resolvedStyle === 'none' && !config.customHairUrl) {
     disposeHeadNode(oldHair);
@@ -1240,6 +1386,39 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (config.customHairUrl) fitImportedHairScene(loadedScene);
     }
 
+    // Load optional modular custom hair parts (Front Bangs + Side Locks + Back Ponytail/Bun)
+    const bangsDonor = (frontBangsStyle !== 'default' && frontBangsStyle !== 'forehead_bare' && MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle)
+      ? MODULAR_BANGS_DONORS[frontBangsStyle]
+      : null;
+    const sideDonor = (sideLocksStyle !== 'default' && sideLocksStyle !== 'tucked_ear' && MODULAR_SIDELOCKS_DONORS[sideLocksStyle]?.style !== resolvedStyle)
+      ? MODULAR_SIDELOCKS_DONORS[sideLocksStyle]
+      : null;
+    const backDonor = (backAttachmentStyle !== 'none' && MODULAR_BACK_DONORS[backAttachmentStyle]?.style !== resolvedStyle)
+      ? MODULAR_BACK_DONORS[backAttachmentStyle]
+      : null;
+
+    // If replacing front bangs with a modular donor, trim the base hair's conflicting front forehead bangs
+    if (bangsDonor) {
+      loadedScene.traverse((child) => {
+        if (!child.isMesh || !child.geometry?.attributes?.position) return;
+        const trimmed = filterGeometryByCentroid(
+          child.geometry,
+          (x, y, z) => z > 0.056 && y > 0.015 && y < 0.078 && Math.abs(x) < 0.048,
+          true
+        );
+        if (trimmed) child.geometry = trimmed;
+      });
+    }
+
+    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
+      loadModularDonorMeshes(bangsDonor),
+      loadModularDonorMeshes(sideDonor),
+      loadModularDonorMeshes(backDonor),
+    ]);
+    for (const m of [...bangsMeshes, ...sideMeshes, ...backMeshes]) {
+      loadedScene.add(m);
+    }
+
     if (rootGroup.userData.hairRequestSerial !== request) {
       disposeHeadNode(loadedScene);
       return null;
@@ -1248,9 +1427,11 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     const hairGroup = new THREE.Group();
     hairGroup.name = 'HairGroup';
 
-    const hairColorHex = config.hairColor || config.materials?.hairColorHex || '#121216';
+    const hairColorHex = config.hairColor || config.materials?.hairColorHex || rootGroup.userData.hairColor || '#121216';
+    rootGroup.userData.hairColor = hairColorHex;
     const displayColor = computeTrueHairDisplayColor(hairColorHex);
-    const sheenIntensity = Number(config.hairSheen ?? 0.88);
+    const sheenIntensity = Number(config.hairSheen ?? rootGroup.userData.hairSheen ?? 0.88);
+    rootGroup.userData.hairSheen = sheenIntensity;
     const hairLum = 0.299 * displayColor.r + 0.587 * displayColor.g + 0.114 * displayColor.b;
     const isJetBlack = hairLum < 0.16;
     const sheenCol = isJetBlack
@@ -1261,6 +1442,12 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     if (scalpCap) {
       hairGroup.add(scalpCap);
     }
+
+    const hairShaderParams = {
+      hairWispyFeather,
+      hairOmbreMix,
+      hairTipColor,
+    };
 
     let totalVerts = 0;
     let totalTris = 0;
@@ -1311,7 +1498,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         side: THREE.DoubleSide,
       });
       coreMat.userData.builtInHair = true;
-      injectMarschnerHairShader(coreMat, sheenIntensity, false);
+      injectMarschnerHairShader(coreMat, sheenIntensity, false, hairShaderParams);
 
       child.material = coreMat;
       child.castShadow = false;
@@ -1342,10 +1529,11 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           side: THREE.DoubleSide,
         });
         wispMat.userData.builtInHair = true;
-        injectMarschnerHairShader(wispMat, sheenIntensity, true);
+        injectMarschnerHairShader(wispMat, sheenIntensity, true, hairShaderParams);
 
         const wispMesh = new THREE.Mesh(child.geometry, wispMat);
         wispMesh.name = `${child.name || 'Hair'}_SilkyWisps`;
+        wispMesh.userData.isModularPart = Boolean(child.userData?.isModularPart);
         wispMesh.position.copy(child.position);
         wispMesh.rotation.copy(child.rotation);
         wispMesh.scale.copy(child.scale);
@@ -1366,12 +1554,154 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     rootGroup.userData.currentHairStyle = resolvedStyle;
     rootGroup.userData.hairStats = { vertices: totalVerts, triangles: totalTris, style: resolvedStyle };
 
-    applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs || {});
+    const mergedMorphs = {
+      ...(rootGroup.userData.currentMorphs || {}),
+      frontBangsStyle,
+      sideLocksStyle,
+      backAttachmentStyle,
+      hairTipColor,
+      hairOmbreMix,
+      hairWispyFeather,
+    };
+    applyHeadMorphsToGroup(rootGroup, mergedMorphs);
     return hairGroup;
   } catch (err) {
     console.warn('Failed to load 3D artist hair model:', hairUrl, err);
     return null;
   }
+}
+
+export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
+  if (!rootGroup) return;
+  const prevFront = rootGroup.userData.frontBangsStyle || 'default';
+  const prevSide = rootGroup.userData.sideLocksStyle || 'default';
+  const prevBack = rootGroup.userData.backAttachmentStyle || 'none';
+  const prevStyle = rootGroup.userData.currentHairStyle || 'hair_user_photo';
+
+  const nextStyle = patch.hairStyle ? resolveRealHairStyle(patch.hairStyle) : prevStyle;
+  const nextFront = patch.frontBangs ?? patch.frontBangsStyle ?? prevFront;
+  const nextSide = patch.sideLocks ?? patch.sideLocksStyle ?? prevSide;
+  const nextBack = patch.backAttachment ?? patch.backAttachmentStyle ?? prevBack;
+
+  if (patch.hairColor) rootGroup.userData.hairColor = patch.hairColor;
+  if (patch.hairTipColor) rootGroup.userData.hairTipColor = patch.hairTipColor;
+  if (patch.hairOmbreMix !== undefined) rootGroup.userData.hairOmbreMix = Number(patch.hairOmbreMix);
+  if (patch.hairWispyFeather !== undefined) rootGroup.userData.hairWispyFeather = Number(patch.hairWispyFeather);
+  if (patch.hairSheen !== undefined) rootGroup.userData.hairSheen = Number(patch.hairSheen);
+
+  rootGroup.userData.currentMorphs = {
+    ...(rootGroup.userData.currentMorphs || {}),
+    ...patch,
+    frontBangs: nextFront,
+    frontBangsStyle: nextFront,
+    sideLocks: nextSide,
+    sideLocksStyle: nextSide,
+    backAttachment: nextBack,
+    backAttachmentStyle: nextBack,
+  };
+
+  const needsGeometryRebuild =
+    nextStyle !== prevStyle ||
+    nextFront !== prevFront ||
+    nextSide !== prevSide ||
+    nextBack !== prevBack;
+
+  if (needsGeometryRebuild) {
+    await attachRealHairModel(rootGroup, {
+      hairStyle: nextStyle,
+      frontBangs: nextFront,
+      frontBangsStyle: nextFront,
+      sideLocks: nextSide,
+      sideLocksStyle: nextSide,
+      backAttachment: nextBack,
+      backAttachmentStyle: nextBack,
+      hairColor: rootGroup.userData.hairColor,
+      hairTipColor: rootGroup.userData.hairTipColor,
+      hairOmbreMix: rootGroup.userData.hairOmbreMix,
+      hairWispyFeather: rootGroup.userData.hairWispyFeather,
+      hairSheen: rootGroup.userData.hairSheen,
+      neckClearance: rootGroup.userData.neckClearance,
+      morphs: rootGroup.userData.currentMorphs,
+    });
+    return;
+  }
+
+  // Fast live shader + morph update (zero reload latency)
+  const hairGroup = rootGroup.getObjectByName('HairGroup');
+  if (hairGroup && patch.hairColor) {
+    const dispCol = computeTrueHairDisplayColor(patch.hairColor);
+    hairGroup.traverse((child) => {
+      if (child.isMesh && child.material && child.name !== 'ScalpRootFeatherCap') {
+        child.material.color.copy(dispCol);
+      }
+    });
+  }
+  applyArtistHairFineTuning(rootGroup, rootGroup.userData.currentMorphs);
+}
+
+/**
+ * Stage 35 · Refractive Wet Cornea & Dual Studio Catchlight Eye Shader
+ * Adds gleaming HDR primary octabox + secondary pinpoint catchlights + lower iris amber caustic glow
+ * so character eyes look bright, moist, and alive like the reference photo!
+ */
+function injectLifelikeEyeShader(material) {
+  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v35';
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = `
+      varying vec3 vEyeLocalPos;
+      varying vec3 vEyeNormal;
+    ` + shader.vertexShader;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <begin_vertex>',
+      `
+      #include <begin_vertex>
+      vEyeLocalPos = position;
+      vEyeNormal = normalize(normal);
+      `
+    );
+    shader.fragmentShader = `
+      varying vec3 vEyeLocalPos;
+      varying vec3 vEyeNormal;
+    ` + shader.fragmentShader;
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <lights_fragment_end>',
+      `
+      #include <lights_fragment_end>
+      vec3 viewDir = normalize(vViewPosition);
+      vec3 nEye = normalize(normal);
+
+      // Compute local eye center in 3D head space (left/right eye at x = +-0.0285, y = 0.0179, z = 0.0851)
+      float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
+      vec2 relXY = (vEyeLocalPos.xy - vec2(eyeSide * 0.0285, 0.0179)) / 0.0061;
+      float rIris = length(relXY);
+      float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
+
+      // Upper eyelid soft ambient occlusion & wet tear meniscus along eyelid rims
+      float upperLidAO = smoothstep(0.0242, 0.0195, vEyeLocalPos.y);
+      reflectedLight.directDiffuse *= (0.72 + 0.28 * upperLidAO);
+      reflectedLight.indirectDiffuse *= (0.76 + 0.24 * upperLidAO);
+
+      // Lower iris warm amber caustic crescent (opposite top-right key light)
+      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.26, 2.0));
+      reflectedLight.directDiffuse += vec3(0.42, 0.22, 0.11) * causticZone * inIris * 0.95;
+
+      // Dual Crisp HDR Corneal Catchlights (Primary Top-Right Studio Softbox + Secondary Bottom-Left Fill)
+      vec3 catchDir1 = normalize(vec3(0.28, 0.36, 0.89));
+      vec3 catchDir2 = normalize(vec3(-0.34, -0.22, 0.91));
+      vec3 H1 = normalize(catchDir1 + viewDir);
+      vec3 H2 = normalize(catchDir2 + viewDir);
+      float catch1 = smoothstep(0.991, 0.9985, max(0.0, dot(nEye, H1)));
+      float catch2 = smoothstep(0.994, 0.9992, max(0.0, dot(nEye, H2)));
+      // Also crisp UV-space corneal window catchlight right on the iris upper-left quadrant
+      float uvCatch1 = exp(-(pow((relXY.x + 0.28) / 0.15, 2.0) + pow((relXY.y - 0.30) / 0.13, 2.0)));
+      float uvCatch2 = exp(-(pow((relXY.x - 0.30) / 0.08, 2.0) + pow((relXY.y + 0.26) / 0.08, 2.0)));
+
+      vec3 wetCatchlight = vec3(2.45, 2.42, 2.38) * max(catch1, uvCatch1 * 0.92 * inIris)
+                         + vec3(1.45, 1.48, 1.55) * max(catch2, uvCatch2 * 0.85 * inIris);
+      reflectedLight.directSpecular += wetCatchlight * upperLidAO;
+      `
+    );
+  };
 }
 
 function buildGimbalOverlayGroup() {
@@ -1496,20 +1826,20 @@ export async function buildCollectibleHeadNode(config = {}) {
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.82, 0.82),
+        normalScale: new THREE.Vector2(0.54, 0.54),
         roughnessMap: skinMicro.roughnessMap,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Math.max(0.50, Number(materials.skinRoughness ?? 0.56)),
+        roughness: Math.max(0.38, Number(materials.skinRoughness ?? 0.44)),
         metalness: 0.0,
-        sheen: 0.16,
-        sheenRoughness: 0.78,
-        sheenColor: new THREE.Color('#ebd2ca'),
-        clearcoat: 0.06,
-        clearcoatRoughness: 0.44,
-        specularIntensity: 0.36,
-        specularColor: new THREE.Color('#fff8f4'),
-        ior: 1.38,
-        envMapIntensity: 0.68,
+        sheen: 0.28,
+        sheenRoughness: 0.68,
+        sheenColor: new THREE.Color('#ffddd4'),
+        clearcoat: 0.16,
+        clearcoatRoughness: 0.28,
+        specularIntensity: 0.56,
+        specularColor: new THREE.Color('#fff9f6'),
+        ior: 1.40,
+        envMapIntensity: 0.92,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -1526,7 +1856,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.24,
+        emissiveIntensity: 0.32,
         bumpMap: bumpTex,
         bumpScale: 0.005,
         roughness: Math.max(0.34, 0.72 - wetness * 0.40),
@@ -1534,7 +1864,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         clearcoat: 0.25,
         clearcoatRoughness: 0.35,
         specularIntensity: 0.40,
-        envMapIntensity: 0.28,
+        envMapIntensity: 0.32,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -1543,28 +1873,30 @@ export async function buildCollectibleHeadNode(config = {}) {
         eyeMap.colorSpace = THREE.SRGBColorSpace;
         eyeMap.anisotropy = 8;
       }
-      child.material = new THREE.MeshPhysicalMaterial({
+      const eyeMat = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.36,
+        roughness: 0.04,
         metalness: 0.0,
-        clearcoat: 0.16,
-        clearcoatRoughness: 0.06,
-        specularIntensity: 0.24,
-        ior: 1.38,
-        envMapIntensity: 0.14,
+        clearcoat: 0.98,
+        clearcoatRoughness: 0.015,
+        specularIntensity: 1.0,
+        ior: 1.40,
+        envMapIntensity: 1.35,
       });
+      injectLifelikeEyeShader(eyeMat);
+      child.material = eyeMat;
     } else if (matName === 'Cornea') {
       child.material = new THREE.MeshPhysicalMaterial({
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.02,
-        roughness: 0.03,
+        opacity: 0.14,
+        roughness: 0.015,
         metalness: 0.0,
-        clearcoat: 0.35,
-        clearcoatRoughness: 0.02,
-        specularIntensity: 0.38,
-        ior: 1.38,
-        envMapIntensity: 0.18,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.01,
+        specularIntensity: 1.0,
+        ior: 1.40,
+        envMapIntensity: 1.45,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
@@ -1575,15 +1907,15 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
-        color: new THREE.Color('#221c1d'),
+        color: new THREE.Color('#ffffff'),
         transparent: true,
-        alphaTest: 0.015,
+        alphaTest: 0.02,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.78,
-        envMapIntensity: 0.06,
+        roughness: 0.56,
+        envMapIntensity: 0.35,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {
@@ -1591,14 +1923,14 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (lashMap) lashMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshStandardMaterial({
         map: lashMap,
-        color: new THREE.Color('#141114'),
+        color: new THREE.Color('#ffffff'),
         transparent: true,
-        alphaTest: 0.04,
+        alphaTest: 0.06,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.48,
-        envMapIntensity: 0.06,
+        roughness: 0.36,
+        envMapIntensity: 0.45,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
@@ -1606,13 +1938,13 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (teethMap) teethMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshPhysicalMaterial({
         map: teethMap,
-        color: new THREE.Color('#ffffff'),
-        roughness: 0.22,
+        color: new THREE.Color('#f4ede2'),
+        roughness: 0.18,
         metalness: 0.0,
-        clearcoat: 0.65,
-        clearcoatRoughness: 0.12,
+        clearcoat: 0.75,
+        clearcoatRoughness: 0.10,
         ior: 1.52,
-        envMapIntensity: 0.42,
+        envMapIntensity: 0.65,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Tongue' || child.name === 'Tongue') {
@@ -1620,7 +1952,7 @@ export async function buildCollectibleHeadNode(config = {}) {
       if (tongueMap) tongueMap.colorSpace = THREE.SRGBColorSpace;
       child.material = new THREE.MeshPhysicalMaterial({
         map: tongueMap,
-        color: new THREE.Color('#e0888e'),
+        color: new THREE.Color('#d6747a'),
         roughness: 0.28,
         metalness: 0.0,
         clearcoat: 0.65,
