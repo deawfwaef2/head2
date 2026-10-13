@@ -179,3 +179,27 @@
     - ⑦ `dead_flaccid`：**面瘫弛缓 · 大小眼歪嘴吐舌**
   - 同时提供「下颌张口露齿度 (`jawOpen`)」、「眼球上翻翻白度 (`eyeRollUp`)」、「舌头吐出度 (`tongueOut`)」、「下颌脱臼偏歪度 (`jawSide`)」实时叠加滑杆。
 
+
+### [2026-10-13 Stage 9] 针对“渲染低级/粗糙”做画质审计、保留自有 DAZ PBR 贴图并修正过度宣传
+- **用户本轮反馈**：当前模型“很低级、粗糙、劣质”，希望达到 DAZ 级甚至更真实；同时要照片参考 + 半自动建模、档案收藏、可召唤的真实屏幕桌宠。下一轮先以用户亲自拥有/有权使用的高分辨率头模资产为前提，不能用灯光参数冒充新增几何细节。
+- **实机视觉/资产 QA 的根因**：浏览器预览实际测得内置头部 GLB 为约 **10,254 顶点 / 18,142 三角面，最高源贴图 1024px**；面部纹理源为 1K。它是项目示例，不是 DAZ Genesis HD 或照片扫描。真实截图仍显明显合成/塑料感，因此不能声称该样例已达“照片级”或 Iray 质量；实时 WebGL 也不等于 DAZ Iray 光追。
+- **核心改动（`src/three/collectibleHeadAssembler.js`）**：
+  1. 外部用户 `.glb` 不再误用内置 Skin/眼睛/切面材质覆盖；保留原 glTF PBR 材质与已有 base-color / emissive / normal / roughness / metalness / AO / displacement 等图，只校准颜色/数据贴图色彩空间与各向异性采样。
+  2. 外部头模建立 `ImportedHeadFit` 等比适配组，按头部外包框统一到 `0.58` 模型单位并居中，保持宽高比；模型尺寸无效时给明确错误，`height/max(width,depth) > 3.2` 时提醒用户这可能是全身模型，须先在 DAZ/Blender 裁头与封口。不会自动布尔切颈，也不宣称照片自动重建。
+  3. 新增运行时资产统计：mesh / vertices / triangles / 材质数 / 贴图最大边 / 法线图 / 粗糙度图 / 置换图。工坊显示当前示例或上传资产的统计与贴图缺失提示。
+- **实时材质与相机微调**：
+  - `src/three/photorealLighting.js` 收窄工坊主光/补光比，避免面部阴影全被填平；高画质 IBL 由 `0.85/0.65/0.35` 调整为 `0.70/0.50/0.28`。
+  - 内置示例头降低皮肤 emissive / clearcoat，略增表面法线与微粗糙；头发减少灰色染亮、sheen 和清漆高光；解剖切面由 `emissiveIntensity 0.74` 降到 `0.08`、粗糙度从极湿塑料值提高，避免发光红盘。**此处是小幅材质校准，并没有把示例网格变成 DAZ 扫描模型**。
+  - `src/three/studioPreviewEngine.js` 正面预设距离改为 `z=58`，45°/侧面/环视机位一起拉远，避免演示头顶部和颈切面被默认镜头过度裁切。
+- **照片/文案诚实化**：删除实际没有接线到 UV 的「照片 UV 贴图投射融合」滑杆（原滑杆移动只触发重建，根本没有把照片投到 3D 皮肤上）；明确现有照片功能只有前视叠图、粗略肤色采样与手动滑杆，不是单张照片 3D 重建。画质档文案现在说明它不能补面数/低分辨率贴图，也不是 Iray。内置资产状态展示三角面与贴图尺寸，不再把示例写成 DAZ 高精扫描。
+- **依赖安全**：`vite` 从 `^5.4.11` 升至 `^6.4.4`（Node 要求仍兼容 Node 18/20）；`npm audit --audit-level=low` 为 0 vulnerabilities。
+- **保存/提交/测试**：
+  - 主代码、UI、README、打包单文件及 Pages 文件已提交并推至 `main`：`8b62c5a529a682efb331973b62e66709e240d011`（`Stage 9: preserve DAZ PBR imports and improve head preview`）。
+  - `npm run build`（Vite 6.4.4）、各改动 JS `node --check`、`npm audit` 均通过；根目录 `点击开始游戏_CERVIX3D.html` **11.18 MB**，含 9 个 GLB 可离线加载，且 `docs/index.html` 与它 byte-for-byte 相同。
+  - Playwright 浏览器交互验证：启动屏按钮可进入工坊、Studio tab 可切换；同一内置 GLB 作为用户上传样例能走通私有 IndexedDB 与等比适配，状态显示 PBR 保留/贴图统计；没有 page/console errors。最终 Vite 6.4.4 离线 `file://` HTML 再验证启动/切工坊成功、9 个 GLB 已内嵌、无浏览器 console/page errors。
+  - 没有真实 Windows/macOS 桌面 GUI；Electron 的跨应用透明层、鼠标穿透、托盘仍需用户机器实测。
+- **未解决 / 后续优先级**：
+  1. 真实照片级效果主要受资产限制：内置样例只有 1K 贴图与约 18K 三角面。若要接近 DAZ HD/更真实，用户需在本机准备自己合法拥有的亚洲头模、8K/高分 PBR 贴图、真实 3D 发型，并导出一个只含头部、已封颈口的 `.glb` 上传测试；商业 DAZ 原件不能私自打进公开 GitHub/离线 HTML。
+  2. 单张照片不足以恢复侧面深度、耳后和头发；需正面+侧面参考、手工 sculpt/DAZ morph/Blender 拟合，或另接有许可的专用重建服务。不要承诺“自动一键照片变高精 3D”。
+  3. 浏览器实时 raster PBR 不能保证超过 DAZ Iray；要光追静帧需另接 Blender/Cycles 或用户本地 Daz 渲染流程。
+  4. 用户本轮提供的 GitHub token 仅用于本次推送、没有存进文件；完成后请立即撤销/轮换。
