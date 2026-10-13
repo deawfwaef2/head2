@@ -420,11 +420,14 @@
 
             <!-- B. High-Poly MhcloFit Hair & Anatomical Neck Cross-Section -->
             <div class="card-block">
-              <h3>💇‍♀️ 步骤 3：内置发型样例与颈部断面</h3>
+              <h3>💇‍♀️ 步骤 3：曲线 Groom 发型与颈部断面</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>8 款内置 GLB 发型演示样例（质量取决于各自网格与贴图）</label>
+                  <label>新曲线 Groom（非旧发片） / 旧版兼容发型</label>
                   <select id="sel-hair-style">
+                    <option value="groom_photo_tied">新 Groom · 照片碎刘海露耳束发 · 12,000 曲线</option>
+                    <option value="groom_center_long">新 Groom · 中式中分柔顺长发 · 12,000 曲线</option>
+                    <option value="groom_low_chignon">新 Groom · 中式低盘发露耳碎鬓 · 12,000 曲线</option>
                     <option value="hair_user_photo">照片同款 · 空气碎刘海露耳束发 (hair_user_photo.glb · 5,029顶点)</option>
                     <option value="hair_short02">O4saken · 中式空气刘海多层微卷波波 (hair_short02.glb · 12,547顶点)</option>
                     <option value="hair_long01">Elvs Lara · 中分长发样例 (hair_long01.glb · 17,360顶点)</option>
@@ -437,7 +440,12 @@
                   </select>
                 </div>
 
-                <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">发型修复：保持原始透明遮罩与 UV 对位，默认发型已恢复颅顶高度。细纹增强不是新增扫描细节。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>
+                <p class="help-text" style="font-size:12px;line-height:1.7;color:#94a3b8">新 Groom 来自可编辑 Blender Hair Curves：真实引导曲线、立体渐细发丝、独立碎鬓与飞发，无旧 Alpha 发片。桌宠使用 3,000 根 LOD；工坊可显示全部 12,000 根。Cycles 源工程与浏览器实时材质不同，质量以实际效果验收。若要高保真头发，请将有权使用的头部与发型一起在 Blender 对齐、烘焙 PBR 并导出 GLB，再通过步骤 2 导入；原材质会完整保留。</p>
+                <div class="field-row">
+                  <label>新 Groom 工坊密度（只影响预览；桌宠自动 LOD）</label>
+                  <select id="sel-groom-density"><option value="3000">流畅 · 3,000 根</option><option value="6000">细致 · 6,000 根</option><option value="12000" selected>完整 · 12,000 根</option></select>
+                  <p id="groom-quality-status" class="hint-text">正在准备新 Groom…</p>
+                </div>
                 <div class="slider-row">
                   <span>前额刘海长度微调 (3D Morph)</span>
                   <input type="range" id="morph-bangs-len" min="-0.35" max="0.80" step="0.05" value="0.00" />
@@ -734,10 +742,10 @@
   <div id="boot-status" role="status" aria-live="polite" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:20000;padding:10px 20px;border-radius:12px;background:#102037;color:#c2def1;font-size:13px;pointer-events:none;max-width:90vw">正在准备本地 3D 模型，首次加载可能需要几秒…</div>
   <div id="start-game-overlay">
     <div class="start-game-card">
-      <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v2.8 · 发片对位修复版 (离线直玩版)</div>
+      <div class="start-badge">CERVIX-3D · 颅相典藏馆 PRO v3.0 · 曲线 Groom 版 (离线直玩版)</div>
       <h1>3D 解剖断面头部收藏品 · 桌宠生成与盒型透视空间系统</h1>
       <p>
-        内置头部与 8 款 GLB 发型是本项目的可离线使用示例，<strong>并非 DAZ Genesis 原版，也不能仅凭一张照片自动还原人物</strong>。想制作接近参考照片的收藏品，请在工坊导入您有权使用、已在 Blender 裁切封口并烘焙贴图的头部 GLB；切面为艺术解剖示意。
+        内置示例头、3 款新曲线 Groom 与旧版 GLB 发型是本项目的可离线使用示例，<strong>并非 DAZ Genesis 原版，也不能仅凭一张照片自动还原人物</strong>。想制作接近参考照片的收藏品，请在工坊导入您有权使用、已在 Blender 裁切封口并烘焙贴图的头部 GLB；切面为艺术解剖示意。
       </p>
       <div class="start-feature-pills">
         <span>✦ 屏幕中心透视消失点</span>

@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
+import { buildCurveGroom, groomStyleFor, applyCurveGroomShape } from './curveGroom.js';
 import { repairHairNormals } from './hairGeometry.js';
 import { getHairStrandTextures } from '../textures/hairStrandTexture.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
@@ -363,6 +364,8 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     }
   });
 
+  applyCurveGroomShape(rootGroup, m);
+
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
     const cutOffsetCm = Number(m.cutHeightOffset ?? 0);
@@ -398,7 +401,8 @@ function computeSkinTintColor(skinToneHex = '#ffe8df') {
   return new THREE.Color(r, g, b);
 }
 
-export function resolveRealHairStyle(styleName = 'hair_user_photo') {
+export function resolveRealHairStyle(styleName = 'groom_photo_tied') {
+  if (['groom_photo_tied','groom_center_long','groom_low_chignon'].includes(styleName)) return styleName;
   if (styleName === 'none') return 'none';
   const legacyMap = {
     user_bangs: 'hair_user_photo',
@@ -451,6 +455,11 @@ export function updateHairSheen(node, value) {
   const sheen = Math.max(.2, Math.min(1, Number(value) || .88));
   node?.getObjectByName('HairGroup')?.traverse(child => {
     if (!child.isMesh || !child.material?.userData?.builtInHair) return;
+    if (child.material.userData.curveGroom) {
+      child.material.roughness = .60 - sheen * .18;
+      child.material.specularIntensity = .30 + sheen * .20;
+      return;
+    }
     child.material.sheen = Math.min(.24, sheen * .25);
     child.material.roughness = child.material.roughnessMap ? 1 : .65 - sheen * .12;
     child.material.anisotropy = .35 + sheen * .35;
@@ -476,10 +485,28 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   const resolvedStyle = resolveRealHairStyle(rawStyle);
   if (resolvedStyle === 'none' && !config.customHairUrl) {
     disposeHeadNode(oldHair);
+    delete rootGroup.userData.groomStats;
     rootGroup.userData.currentHairStyle = 'none';
     return null;
   }
 
+  const groomId = !config.customHairUrl ? groomStyleFor(resolvedStyle) : null;
+  if (groomId) {
+    try {
+      const groom = await buildCurveGroom(groomId, rootGroup.getObjectByName('HeadSkinMesh'), config);
+      if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(groom); return null; }
+      disposeHeadNode(oldHair);
+      modelContainer.add(groom);
+      rootGroup.userData.currentHairStyle = groomId;
+      rootGroup.userData.groomStats = groom.userData.groom;
+      if (rootGroup.userData.currentMorphs) applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
+      return groom;
+    } catch (error) {
+      console.error('Groom 曲线构建失败', error);
+      throw error; // Do not silently claim a failed new groom is the old hair.
+    }
+  }
+  delete rootGroup.userData.groomStats;
   const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
 
   try {

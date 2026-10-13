@@ -262,3 +262,18 @@
 - ⚠️ 第一轮连续渲染8发型出现过VALIDATE_STATUS false空日志；加shader诊断重复同一流程后0错误，后续交互和导入无页面异常。原因未完全确定，不可直接归因环境并跳过真机排查。QA用低频rAF减轻SwiftShader负担，不改发布HTML。
 - 写实质量仍受示例资产限制，近景发片结构可见；严禁宣称大师级/照片级完成。下一轮优先用户真机新版截图与合法高品质头+发GLB，或明确目标系统后做桌面安装包。Windows/macOS系统层未验收。
 - 最终提供根目录离线HTML及完整源码ZIP，工作区清理临时依赖软链/缓存，保持<128MB；后续改代码仍先读全部handoff、npm ci、阶段性打包、提交/普通推送，不force-push。没有实时多Agent通信工具，本轮只通过仓库HANDOFF协作。
+
+### [2026-10-13 Stage 12 / 用户选定新路线，进行中] 定制 Blender Groom，而非旧发片参数补丁
+- 用户明确再次否定上一版质量，并通过澄清选择“定制 Blender 毛发”；参考可用项目人物照片，中式各种发型。新要求允许真正的曲线Groom路线，不再以旧低分发片调参充当升级。
+- 已检查远端main=add0617，读取协作记录；开发环境Blender4.3.2，安装在系统路径，工作区不存浏览器/依赖二进制。
+- 新scripts/build_blender_grooms.py：基于真实头部三角网格BVH采样和碰撞约束，原创引导场曲线；照片碎刘海露耳束发、中分长发、低盘发，每款12,000根、每根36点。原生Blender Hair Curves分层保存，使用Cycles Principled Hair BSDF（melanin）。不是从照片自动重建，也不能预先宣称最高级/大师认可。
+- 已生成public/grooms/Chinese_Grooms_Source.blend及3款.groom/.json，正在接入实时圆截面渐细发丝与真实头皮根层，保留旧发型作为明确标注的legacy选项。实时LOD和Cycles源项目效果分开验收。
+- 源文件包含仓库参考头，其上游许可仍需单独核验；新原创groom曲线CC0不等于参考头也CC0。不得把这当成已解决原资产授权。
+- Blender Debian构建无OpenImageDenoise，已关闭源场景denoise避免渲染失败；先有可玩HTML checkpoint再进一步看实际效果。
+
+### [2026-10-13 Stage 12a / playable checkpoint] 3款新原生曲线Groom已接入离线版
+- 新增curveGroom.js，使用圆截面渐细发丝（闭合三边管＋径向平滑法线、沿真实发丝的切线），不加载旧Alpha发片、不加固定方向发光；根密度层严格取自头皮网格、.14mm法线偏移与软发际线，不生成球壳。
+- 3款每款12,000根×36采样点；源数据16位量化、逐曲线Delta与字节分离，无损恢复量化曲线后由浏览器生成几何；嵌入gzip-base64，无CDN。工坊3k/6k/12k，默认完整12k；桌宠3k LOD（为亚像素覆盖略增直径），不能把LOD说成满12k实时渲染。
+- 旧保存中的photo/long/short/ponytail/braid映射到相应新Groom。默认库与工坊改为新发型，其他旧GLB作为兼容选项；私人GLB保持既有PBR链路。Groom长度/体积/刘海滑杆有真实几何调整，非空控制。
+- 根目录HTML/docs已经优先重建为17.74MB，JS语法与Vite构建通过；实际效果和GPU负载尚待后续验收，不先宣称大师级。密钥不保存文件。
+- .blend约20MB，工作区可直接下载；因128MB约束避免在本地Git中重复存其大二进制，.gitignore排除.blend，GitHub保存生成脚本与全部.groom/.json，可通过Blender4.3重建同一原生曲线源工程。不要删除生成脚本或换成仅文字教程。

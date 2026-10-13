@@ -214,7 +214,7 @@ export class DesktopBoxSpaceEngine {
       this.recallCollectible(collectible.id, false);
     }
 
-    const headNode = await buildCollectibleHeadNode(collectible);
+    const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop' });
     const b = this.getBoxBounds();
 
     const startX = Math.max(b.minX + 10, Math.min(b.maxX - 10, collectible.boxPosition?.x ?? 0));

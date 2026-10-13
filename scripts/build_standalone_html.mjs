@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { gzipSync } from 'zlib';
 import path from 'path';
 import { execSync } from 'child_process';
 
@@ -46,7 +47,13 @@ if (fs.existsSync(refPhotoPath)) {
   console.warn(`⚠️ Reference photo not found (dev-server fallback will be used): ${refPhotoPath}`);
 }
 
-const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)};</script>`;
+const embeddedGrooms = {};
+for (const id of ['photo_tied', 'center_long', 'low_chignon']) {
+  const file = path.join(projectDir, 'public/grooms', `${id}.groom`);
+  if (!fs.existsSync(file)) throw new Error(`Missing required groom source: ${file}`);
+  embeddedGrooms[`/grooms/${id}.groom`] = { encoding: 'gzip-base64', data: gzipSync(fs.readFileSync(file), { level: 9 }).toString('base64') };
+}
+const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_GROOMS__ = ${JSON.stringify(embeddedGrooms)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw
   .replace(/<link rel="stylesheet"[^>]*>/g, `<style>\n${cssContent}\n</style>`)

@@ -48,7 +48,8 @@ const state = {
     blushIntensity: 0.25,
     lipColor: '#bf6872',
     irisColor: '#3b2014',
-    hairStyle: 'hair_user_photo',
+    hairStyle: 'groom_photo_tied',
+    groomDensity: 12000,
     hairColor: '#191518',
     hairSheen: 0.88,
     neckClearance: 0.55,
@@ -540,7 +541,10 @@ async function refreshStudio3DModel() {
   await studioEngine.loadOrRebuild(state.studioDraft);
   const status = document.getElementById('custom-model-status');
   if (status) {
-    status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats);
+    const groom = studioEngine.headNode?.userData?.groomStats;
+    status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (groom ? ` · 新Groom：源 ${groom.sourceCurves.toLocaleString()} 曲线 / 实时 ${groom.renderedStrands.toLocaleString()} 发丝` : '');
+    const groomStatus = document.getElementById('groom-quality-status');
+    if (groomStatus) groomStatus.textContent = groom ? `曲线 Groom · ${groom.sourceCurves.toLocaleString()} 根源曲线 · 本预览 ${groom.renderedStrands.toLocaleString()} 根立体渐细发丝 · ${groom.triangles.toLocaleString()} 三角面` : '当前为旧版发型或外部资产，不适用新 Groom 密度控制。';
     status.title = '实时 PBR 的最终细节受原始网格密度、贴图分辨率和材质图完整度限制。';
   }
   update2DAnatomyInspector();
@@ -565,7 +569,8 @@ function loadCollectibleIntoStudio(col) {
     blushIntensity: col.blushIntensity ?? 0.25,
     lipColor: col.lipColor || '#bf6872',
     irisColor: col.irisColor || '#3b2014',
-    hairStyle: col.hairStyle || 'hair_user_photo',
+    hairStyle: col.hairStyle || 'groom_photo_tied',
+    groomDensity: col.groomDensity || 12000,
     hairColor: col.hairColor || '#191518',
     hairSheen: col.hairSheen ?? 0.90,
     neckClearance: col.neckClearance ?? 0.38,
@@ -1064,6 +1069,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   const REAL_HAIRS = [
+    { id: 'groom_photo_tied', name: '新曲线 Groom · 碎刘海露耳束发' },
+    { id: 'groom_center_long', name: '新曲线 Groom · 中式中分长发' },
+    { id: 'groom_low_chignon', name: '新曲线 Groom · 中式低盘发' },
     { id: 'hair_user_photo', name: '照片同款 · 空气碎刘海露耳束发 (5,029v)' },
     { id: 'hair_short02', name: 'O4saken · 中式空气刘海微卷波波 (12,547v)' },
     { id: 'hair_long01', name: 'Elvs Lara · 中分长发样例 (17,360v)' },
@@ -1192,6 +1200,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  document.getElementById('sel-groom-density').addEventListener('change', async e => {
+    state.studioDraft.groomDensity = Number(e.target.value);
+    await refreshStudio3DModel();
+  });
   document.getElementById('sel-hair-style').addEventListener('change', async (e) => {
     state.studioDraft.hairStyle = e.target.value;
     await refreshStudio3DModel();
@@ -1243,6 +1255,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       lipColor: state.studioDraft.lipColor,
       irisColor: state.studioDraft.irisColor,
       hairStyle: state.studioDraft.hairStyle,
+      groomDensity: state.studioDraft.groomDensity || 12000,
       hairColor: state.studioDraft.hairColor,
       hairSheen: state.studioDraft.hairSheen,
       neckClearance: state.studioDraft.neckClearance,

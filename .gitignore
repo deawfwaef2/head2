@@ -6,3 +6,8 @@ dist/
 .local/
 uploads/
 *.log
+
+# Native source is regenerable from scripts/build_blender_grooms.py.
+# Provided separately in the workspace; avoid double-storing large .blend in local Git.
+public/grooms/*.blend
+public/grooms/*.blend1

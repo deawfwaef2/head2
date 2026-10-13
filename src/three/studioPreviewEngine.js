@@ -113,7 +113,7 @@ export class StudioPreviewEngine {
       this.currentConfig.photoElement = config.photoElement;
     }
 
-    const newNode = await buildCollectibleHeadNode(this.currentConfig);
+    const newNode = await buildCollectibleHeadNode({ ...this.currentConfig, groomLod: 'studio' });
     if (request !== this.loadRequest) { disposeHeadNode(newNode); return this.headNode; }
     disposeHeadNode(this.headNode);
     this.headNode = newNode;

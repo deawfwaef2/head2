@@ -1,0 +1,27 @@
+{
+  "id": "photo_tied",
+  "curves": 12000,
+  "pointsPerCurve": 36,
+  "groups": {
+    "Scalp_Flow": 7213,
+    "Feathered_Fringe": 3968,
+    "Temple_Wisps": 413,
+    "Fine_Flyaways": 406
+  },
+  "bounds": [
+    [
+      -0.07854834944009781,
+      -0.05924880877137184,
+      -0.12099858373403549
+    ],
+    [
+      0.07847072184085846,
+      0.124030202627182,
+      0.10157781094312668
+    ]
+  ],
+  "coordinateSystem": "Y-up meters",
+  "origin": "Original authored guide fields fitted to repository head; photographic style reference only.",
+  "sourceImage": "public/models/user_photo_ref.jpg",
+  "license": "New groom curves CC0; bundled reference head has separate, unresolved upstream license."
+}

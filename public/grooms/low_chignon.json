@@ -1,0 +1,27 @@
+{
+  "id": "low_chignon",
+  "curves": 12000,
+  "pointsPerCurve": 36,
+  "groups": {
+    "Scalp_Flow": 11345,
+    "Feathered_Fringe": 0,
+    "Temple_Wisps": 209,
+    "Fine_Flyaways": 446
+  },
+  "bounds": [
+    [
+      -0.07806074619293213,
+      -0.053853925317525864,
+      -0.1319981962442398
+    ],
+    [
+      0.07825598120689392,
+      0.12366263568401337,
+      0.08703481405973434
+    ]
+  ],
+  "coordinateSystem": "Y-up meters",
+  "origin": "Original authored guide fields fitted to repository head; photographic style reference only.",
+  "sourceImage": "public/models/user_photo_ref.jpg",
+  "license": "New groom curves CC0; bundled reference head has separate, unresolved upstream license."
+}
