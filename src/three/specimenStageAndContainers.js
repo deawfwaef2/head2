@@ -1,15 +1,15 @@
 import * as THREE from 'three';
+import { injectStageWindowGoboShader } from './photorealLighting.js';
 
 /**
- * Stage 23 · 屏幕空间 3D 实体地板/层架 + 标本容器放置器 + 伴学装饰品系统
- * (Screen-Space 3D Floor/Shelves, Specimen Containers & Study Companion Decor Props)
- * - 彻底解决“头悬空感觉不好、地板不清晰、想要容器放置器与装饰品”的诉求
- * - 所有贴图均为程序化 Canvas 生成，100% 离线 `file://` 兼容，零外部网络请求
+ * Stage 23–27 · 屏幕空间 3D 实体地板/层架 + 独立可放置头颅收纳建筑 + 雨夜伴学书房窗景系统
+ * - 头颅收纳装置不再与角色绑定，而是独立可放置、可拖拽、可吸附收纳任意断头的 3D 建筑 (`placedStructures`)
+ * - 书房雨夜木格窗 + 窗外飘雨粒子 + 绿罩黄铜伴学台灯 + 窗户透光 Gobo 阴影投射
  */
 
 export const FLOOR_STYLE_CATALOG = [
-  { id: 'dark_obsidian', label: '🏛️ 黑曜石镜面展台 · 镶金刻度线 (默认清晰地板)' },
-  { id: 'walnut_desk', label: '🪵 胡桃木书房伴学案台 · 真皮桌垫与黄铜包边' },
+  { id: 'walnut_desk', label: '🪵 雨夜胡桃木伴学书桌 · 真皮桌垫与黄铜包边 (默认伴学推荐)' },
+  { id: 'dark_obsidian', label: '🏛️ 黑曜石镜面展台 · 镶金刻度线' },
   { id: 'marble_museum', label: '🤍 帕特农汉白玉展台 · 灰金云纹高反差' },
   { id: 'surgical_steel', label: '🔬 法医不锈钢解剖托台 · 导流槽与厘米标尺' },
   { id: 'none', label: '🌌 隐藏实体地板 (仅保留盒型透视网格)' },
@@ -23,12 +23,12 @@ export const SHELF_LAYOUT_CATALOG = [
 ];
 
 export const CONTAINER_STYLE_CATALOG = [
-  { id: 'glass_bell_jar', shortLabel: '玻璃钟罩', label: '🧪 维多利亚玻璃钟罩 + 黑金黄铜底座 (默认推荐)' },
-  { id: 'velvet_chalice', shortLabel: '丝绒圣杯', label: '👑 黑金丝绒高脚圣杯托座 (无罩露天鉴赏)' },
-  { id: 'formalin_cylinder', shortLabel: '福尔马林缸', label: '🧫 福尔马林圆柱标本缸 + 琥珀防腐液刻度' },
-  { id: 'acrylic_cube', shortLabel: '水晶方盒', label: '💎 博物馆亚克力水晶方盒 + 底射灯底座' },
-  { id: 'surgical_tray', shortLabel: '解剖浅盘', label: '🩸 法医不锈钢解剖浅盘 + 凝血标本垫' },
-  { id: 'none', shortLabel: '无外置容器', label: '🚫 无外置容器 (仅C4/C5解剖断面直接放置)' },
+  { id: 'glass_bell_jar', shortLabel: '玻璃钟罩座', label: '🧪 维多利亚玻璃钟罩座 · 黑金黄铜底座 (可放置收纳建筑)', headMountY: 13.5, snapRadius: 14.5 },
+  { id: 'velvet_chalice', shortLabel: '丝绒圣杯座', label: '👑 黑金丝绒高脚圣杯座 · 露天颈口托盘 (可放置收纳建筑)', headMountY: 14.6, snapRadius: 14.0 },
+  { id: 'formalin_cylinder', shortLabel: '福尔马林缸', label: '🧫 福尔马林圆柱防腐缸 · 琥珀刻度液 (可放置收纳建筑)', headMountY: 13.6, snapRadius: 14.5 },
+  { id: 'acrylic_cube', shortLabel: '水晶方盒座', label: '💎 博物馆亚克力水晶方盒 · 底射灯座 (可放置收纳建筑)', headMountY: 13.5, snapRadius: 15.0 },
+  { id: 'surgical_tray', shortLabel: '解剖浅盘座', label: '🩸 法医不锈钢解剖浅盘 · 凝血标本垫 (可放置收纳建筑)', headMountY: 12.1, snapRadius: 14.0 },
+  { id: 'guillotine_plinth', shortLabel: '断头木托座', label: '🪓 黑胡桃断头台木托座 · 处决铜铭牌 (可放置收纳建筑)', headMountY: 13.0, snapRadius: 14.0 },
 ];
 
 export const DECOR_STYLE_CATALOG = [
@@ -266,12 +266,13 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
 
   const floorMat = new THREE.MeshPhysicalMaterial({
     map: floorTex,
-    roughness: floorStyle === 'walnut_desk' ? 0.38 : isLightMarble ? 0.24 : 0.20,
+    roughness: floorStyle === 'walnut_desk' ? 0.36 : isLightMarble ? 0.24 : 0.20,
     metalness: floorStyle === 'surgical_steel' ? 0.65 : 0.08,
-    clearcoat: 0.55,
-    clearcoatRoughness: 0.22,
-    envMapIntensity: 0.75,
+    clearcoat: 0.42,
+    clearcoatRoughness: 0.24,
+    envMapIntensity: 0.45,
   });
+  injectStageWindowGoboShader(floorMat);
 
   const trimMat = new THREE.MeshStandardMaterial({
     color: floorStyle === 'surgical_steel' ? '#94a3b8' : '#d4af37',
@@ -432,7 +433,234 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
     group.add(stageDecorRoot);
   }
 
+  // Stage 27: Rainy-Night Study Window + Falling Rain Streaks + Banker's Study Lamp (雨夜书房伴学环境)
+  if (options.rainyWindowEnabled !== false) {
+    const rainyBackdrop = buildRainyStudyWindowGroup(bounds, floorSurfaceY);
+    group.add(rainyBackdrop);
+  }
+
   return { stageGroup: group, group, shelves: platforms, platforms };
+}
+
+let rainyWindowPaneTex = null;
+function getRainyWindowPaneTexture() {
+  if (rainyWindowPaneTex) return rainyWindowPaneTex;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  // Deep rainy midnight sky gradient outside the study window
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, '#070d19');
+  g.addColorStop(0.55, '#0f1c32');
+  g.addColorStop(1, '#192a46');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 512);
+
+  // Soft distant streetlamp / campus library warm bokeh through the rain
+  const bokehs = [
+    [130, 340, 62, 'rgba(251, 191, 36, 0.20)'],
+    [370, 310, 75, 'rgba(147, 197, 253, 0.22)'],
+    [250, 390, 54, 'rgba(253, 224, 71, 0.16)'],
+    [95, 210, 48, 'rgba(96, 165, 250, 0.16)'],
+  ];
+  for (const [bx, by, br, col] of bokehs) {
+    const bg = ctx.createRadialGradient(bx, by, 2, bx, by, br);
+    bg.addColorStop(0, col);
+    bg.addColorStop(1, 'rgba(15, 23, 42, 0)');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(bx, by, br, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Raindrop trails and condensation droplets on the window glass
+  ctx.strokeStyle = 'rgba(191, 219, 254, 0.26)';
+  for (let i = 0; i < 95; i++) {
+    const rx = Math.random() * 512;
+    const ry = Math.random() * 440;
+    const rlen = 25 + Math.random() * 85;
+    ctx.lineWidth = 0.8 + Math.random() * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry);
+    ctx.bezierCurveTo(rx + 2, ry + rlen * 0.35, rx - 2, ry + rlen * 0.7, rx + 0.5, ry + rlen);
+    ctx.stroke();
+
+    // Terminal water droplet bead
+    ctx.fillStyle = 'rgba(224, 242, 254, 0.48)';
+    ctx.beginPath();
+    ctx.arc(rx + 0.5, ry + rlen, 1.4 + Math.random() * 1.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  rainyWindowPaneTex = tex;
+  return tex;
+}
+
+export function buildRainyStudyWindowGroup(bounds, floorSurfaceY) {
+  const root = new THREE.Group();
+  root.name = 'RainyStudyBackdropGroup';
+
+  const boxW = bounds.maxX - bounds.minX;
+  const boxH = bounds.maxY - bounds.minY;
+  const backZ = bounds.minZ + 0.8;
+
+  // 1. Tall Study Room Mullioned Window on the right-back wall (casting the window gobo light)
+  const winW = Math.min(48, boxW * 0.42);
+  const winH = Math.min(46, boxH * 0.74);
+  const winX = boxW * 0.16;
+  const winY = floorSurfaceY + winH * 0.52 + 4.0;
+
+  const woodFrameMat = new THREE.MeshStandardMaterial({
+    color: '#23140d',
+    roughness: 0.45,
+    metalness: 0.12,
+  });
+  const brassLatchMat = new THREE.MeshStandardMaterial({
+    color: '#d4af37',
+    roughness: 0.28,
+    metalness: 0.85,
+  });
+
+  // Window Glass Pane with Rain Streaks & Night Sky Bokeh
+  const paneMat = new THREE.MeshBasicMaterial({
+    map: getRainyWindowPaneTexture(),
+    transparent: true,
+    opacity: 0.88,
+  });
+  const paneMesh = new THREE.Mesh(new THREE.PlaneGeometry(winW, winH), paneMat);
+  paneMesh.position.set(winX, winY, backZ);
+  root.add(paneMesh);
+
+  // Outer Window Frame + Sill
+  const frameThick = 1.5;
+  const topBar = new THREE.Mesh(new THREE.BoxGeometry(winW + frameThick * 2, frameThick, 1.4), woodFrameMat);
+  topBar.position.set(winX, winY + winH * 0.5, backZ + 0.4);
+  const botSill = new THREE.Mesh(new THREE.BoxGeometry(winW + frameThick * 3.2, frameThick * 1.3, 2.8), woodFrameMat);
+  botSill.position.set(winX, winY - winH * 0.5, backZ + 0.8);
+  const leftStile = new THREE.Mesh(new THREE.BoxGeometry(frameThick, winH, 1.4), woodFrameMat);
+  leftStile.position.set(winX - winW * 0.5, winY, backZ + 0.4);
+  const rightStile = new THREE.Mesh(new THREE.BoxGeometry(frameThick, winH, 1.4), woodFrameMat);
+  rightStile.position.set(winX + winW * 0.5, winY, backZ + 0.4);
+  root.add(topBar, botSill, leftStile, rightStile);
+
+  // Mullion Crossbars (3x3 Classic Study Window Grid)
+  for (const fx of [-0.17, 0.17]) {
+    const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.75, winH, 0.9), woodFrameMat);
+    vBar.position.set(winX + winW * fx, winY, backZ + 0.35);
+    root.add(vBar);
+  }
+  for (const fy of [-0.18, 0.18]) {
+    const hBar = new THREE.Mesh(new THREE.BoxGeometry(winW, 0.75, 0.9), woodFrameMat);
+    hBar.position.set(winX, winY + winH * fy, backZ + 0.35);
+    root.add(hBar);
+  }
+  // Brass Casement Handle
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.45, 2.4, 1.1), brassLatchMat);
+  handle.position.set(winX - winW * 0.17, winY - 2.0, backZ + 0.9);
+  root.add(handle);
+
+  // 2. Animated 3D Falling Rain Streaks outside the study window
+  const rainCount = 140;
+  const rainGeo = new THREE.BufferGeometry();
+  const rainPos = new Float32Array(rainCount * 6); // 2 vertices per rain streak line
+  const rainMeta = new Float32Array(rainCount * 4); // x, y, z, speed
+  for (let i = 0; i < rainCount; i++) {
+    const rx = winX + (Math.random() - 0.5) * (winW * 1.05);
+    const ry = winY + (Math.random() - 0.5) * (winH * 0.92);
+    const rz = backZ + 0.18 + Math.random() * 4.5;
+    const spd = 28 + Math.random() * 22;
+    rainMeta[i * 4] = rx;
+    rainMeta[i * 4 + 1] = ry;
+    rainMeta[i * 4 + 2] = rz;
+    rainMeta[i * 4 + 3] = spd;
+
+    const i6 = i * 6;
+    rainPos[i6] = rx;
+    rainPos[i6 + 1] = ry;
+    rainPos[i6 + 2] = rz;
+    rainPos[i6 + 3] = rx - 0.45;
+    rainPos[i6 + 4] = ry - 2.8;
+    rainPos[i6 + 5] = rz;
+  }
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+  const rainMat = new THREE.LineBasicMaterial({
+    color: '#bae6fd',
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false,
+  });
+  const rainLines = new THREE.LineSegments(rainGeo, rainMat);
+  rainLines.name = 'RainyWindowStreaks';
+  rainLines.userData = {
+    rainMeta,
+    minY: winY - winH * 0.48,
+    maxY: winY + winH * 0.48,
+  };
+  root.add(rainLines);
+
+  // 3. Cozy Green-Shaded Brass Banker's Study Lamp + Open Study Notebook on the Left Desk Corner
+  const lampGroup = new THREE.Group();
+  lampGroup.name = 'BankersStudyLamp';
+  lampGroup.position.set(-boxW * 0.33, floorSurfaceY, -21);
+  lampGroup.rotation.y = 0.38;
+
+  const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.8, 0.9, 28), brassLatchMat);
+  lampBase.position.y = 0.45;
+  const lampStem = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.52, 11.5, 16), brassLatchMat);
+  lampStem.position.y = 6.2;
+  const shadeMat = new THREE.MeshPhysicalMaterial({
+    color: '#065f46',
+    emissive: new THREE.Color('#047857'),
+    emissiveIntensity: 0.35,
+    roughness: 0.18,
+    clearcoat: 0.85,
+  });
+  const lampShade = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 3.6, 2.8, 24, 1, false, 0, Math.PI), shadeMat);
+  lampShade.rotation.z = Math.PI * 0.5;
+  lampShade.rotation.y = Math.PI * 0.5;
+  lampShade.position.set(1.2, 11.8, 0.8);
+  const bulbGlow = new THREE.Mesh(
+    new THREE.SphereGeometry(1.1, 16, 12),
+    new THREE.MeshBasicMaterial({ color: '#fde68a' })
+  );
+  bulbGlow.position.set(1.2, 11.0, 0.9);
+  lampGroup.add(lampBase, lampStem, lampShade, bulbGlow);
+  root.add(lampGroup);
+
+  return root;
+}
+
+export function updateRainyStudyBackdrop(stageGroup, dt = 0.016) {
+  if (!stageGroup) return;
+  const rainLines = stageGroup.getObjectByName('RainyWindowStreaks');
+  if (!rainLines || !rainLines.geometry?.attributes?.position) return;
+  const posAttr = rainLines.geometry.attributes.position;
+  const arr = posAttr.array;
+  const { rainMeta, minY, maxY } = rainLines.userData;
+  const spanY = maxY - minY;
+  const count = rainMeta.length / 4;
+
+  for (let i = 0; i < count; i++) {
+    const m4 = i * 4;
+    let ry = rainMeta[m4 + 1] - rainMeta[m4 + 3] * dt;
+    if (ry < minY) ry += spanY;
+    rainMeta[m4 + 1] = ry;
+    const rx = rainMeta[m4];
+    const rz = rainMeta[m4 + 2];
+
+    const i6 = i * 6;
+    arr[i6] = rx;
+    arr[i6 + 1] = ry;
+    arr[i6 + 2] = rz;
+    arr[i6 + 3] = rx - 0.42;
+    arr[i6 + 4] = ry - 2.7;
+    arr[i6 + 5] = rz;
+  }
+  posAttr.needsUpdate = true;
 }
 
 /**
@@ -671,11 +899,128 @@ export function buildSpecimenContainerGroup(containerStyle = 'glass_bell_jar') {
     group.add(bloodPool);
 
     group.userData.baseBottomOffset = -14.1;
+  } else if (containerStyle === 'guillotine_plinth') {
+    // Dark Walnut Executioner's Plinth + Brass Trophy Plaque + Velvet Neck Depression
+    const walnutMat = new THREE.MeshPhysicalMaterial({
+      color: '#2b150d',
+      roughness: 0.34,
+      clearcoat: 0.35,
+    });
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(19.2, 2.6, 19.2), walnutMat);
+    plinth.position.set(0, -14.1, -0.5);
+    plinth.castShadow = true;
+    plinth.receiveShadow = true;
+    group.add(plinth);
+
+    const brassTrim = new THREE.Mesh(new THREE.BoxGeometry(19.8, 0.5, 19.8), brassMat);
+    brassTrim.position.set(0, -15.2, -0.5);
+    group.add(brassTrim);
+
+    const neckPad = new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.2, 0.65, 36), velvetMat);
+    neckPad.position.set(0, -12.55, -0.5);
+    group.add(neckPad);
+
+    const plaque = new THREE.Mesh(new THREE.BoxGeometry(7.4, 1.3, 0.45), brassMat);
+    plaque.position.set(0, -14.0, 9.2);
+    group.add(plaque);
+
+    group.userData.baseBottomOffset = -15.45;
   } else {
     group.userData.baseBottomOffset = -12.6;
   }
 
   return group;
+}
+
+/**
+ * Stage 27 · Builds an Independent, Placeable, Draggable 3D Specimen Container Structure (`可放置的头颅收纳建筑`).
+ * Unlike old containers that were bound to character heads, these are standalone architectural objects
+ * placed on the desk/shelves. Any severed head dropped near a structure magnetically snaps onto its neck socket,
+ * and can be lifted right back out at any time!
+ */
+export function buildPlaceableContainerStructure(containerStyle = 'glass_bell_jar', structureId = '') {
+  const root = new THREE.Group();
+  root.name = `PlacedContainerStructure_${structureId}`;
+  const catItem = CONTAINER_STYLE_CATALOG.find((c) => c.id === containerStyle) || CONTAINER_STYLE_CATALOG[0];
+
+  const inner = buildSpecimenContainerGroup(containerStyle);
+  const bottomOffset = inner.userData.baseBottomOffset ?? -15.4;
+  // Shift inner group so the bottom of the container rests flush at local Y = 0!
+  const shiftY = -bottomOffset;
+  inner.position.y = shiftY;
+  root.add(inner);
+
+  // Separate glass/cover meshes so they can lift slightly when empty and seal shut when a head is placed inside
+  const coverMeshes = [];
+  inner.traverse((obj) => {
+    if (!obj.isMesh) return;
+    obj.userData.parentStructureId = structureId;
+    obj.userData.isContainerStructureMesh = true;
+    // Any mesh centered above local y = -8 in `inner` (the glass dome, tank wall, lid, finial) is part of the cover
+    if (obj.position.y > -9.5) {
+      obj.userData.baseLocalY = obj.position.y;
+      if (obj.material && obj.material.transparent) {
+        obj.userData.baseOpacity = obj.material.opacity;
+      }
+      coverMeshes.push(obj);
+    }
+  });
+
+  // Add a subtle glowing Neck Socket Target Ring on the cushion when empty
+  const socketRingGeo = new THREE.RingGeometry(5.2, 6.1, 48);
+  socketRingGeo.rotateX(-Math.PI / 2);
+  const socketRingMat = new THREE.MeshBasicMaterial({
+    color: '#fbbf24',
+    transparent: true,
+    opacity: 0.55,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+  const socketRing = new THREE.Mesh(socketRingGeo, socketRingMat);
+  // Cushion top in world-relative structure coords is around shiftY - 12.2
+  const cushionSurfaceY = Math.max(1.4, shiftY - 12.1);
+  socketRing.position.set(0, cushionSurfaceY + 0.08, -0.5);
+  socketRing.userData.parentStructureId = structureId;
+  root.add(socketRing);
+
+  // Where a snapped severed head's rootGroup origin should sit relative to the structure's Y=0 base:
+  // A severed head's C4/C5 neck cut sits at `head.y - 10.8`. To rest on `cushionSurfaceY`, `head.y = cushionSurfaceY + 10.8`.
+  const headSocketLocalY = cushionSurfaceY + 10.75;
+
+  root.userData = {
+    structureId,
+    containerStyle,
+    label: catItem.shortLabel || '收纳座',
+    fullLabel: catItem.label,
+    isContainerStructure: true,
+    baseBottomOffset: 0,
+    cushionSurfaceY,
+    headSocketLocalY,
+    snapRadius: catItem.snapRadius || 14.5,
+    coverMeshes,
+    socketRing,
+    occupiedByPetId: null,
+  };
+
+  updateContainerStructureState(root, false);
+  return root;
+}
+
+export function updateContainerStructureState(structureRoot, isOccupied = false) {
+  if (!structureRoot || !structureRoot.userData) return;
+  const { coverMeshes = [], socketRing } = structureRoot.userData;
+  if (socketRing) {
+    socketRing.visible = !isOccupied;
+  }
+  for (const m of coverMeshes) {
+    if (typeof m.userData.baseLocalY === 'number') {
+      // When empty, glass cover sits slightly raised (+1.6 cm) & airy; when occupied, seals tightly over the severed head
+      m.position.y = m.userData.baseLocalY + (isOccupied ? 0.0 : 1.6);
+    }
+    if (m.material && typeof m.userData.baseOpacity === 'number') {
+      m.material.opacity = isOccupied ? m.userData.baseOpacity : m.userData.baseOpacity * 0.72;
+    }
+  }
 }
 
 /**

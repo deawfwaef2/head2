@@ -87,24 +87,24 @@
       <span>景深 Z: <strong id="hud-pos-z">-120</strong>mm</span>
     </div>
     <div class="dossier-section" id="hud-fate-section">
-      <div class="dossier-label">⚡ 生前巅峰状态 & 意外终结伴学档案</div>
-      <div class="dossier-text" id="hud-fate-vitality" style="color:#fcd34d;font-weight:600;">19岁 · 巅峰健康态</div>
+      <div class="dossier-label">💀 生前骄矜身份 & 断头结局恶趣味反差</div>
+      <div class="dossier-text" id="hud-fate-vitality" style="color:#fcd34d;font-weight:600;">享年19岁 · 广东怀集高考女状元</div>
       <div class="dossier-subtext" id="hud-fate-cause" style="color:#fda4af;margin-top:2px;"></div>
       <div class="dossier-subtext" id="hud-fate-triumph" style="color:#a7f3d0;margin-top:4px;font-style:italic;"></div>
     </div>
     <div class="dossier-section">
-      <div class="dossier-label">🔬 颈部解剖断面规格 & 容器陈列</div>
-      <div class="dossier-text" id="hud-anatomy-level">C4 颈椎标准横断面</div>
+      <div class="dossier-label">🩸 颈部切口状态 & 把玩镇纸记录</div>
+      <div class="dossier-text" id="hud-anatomy-level">第四颈椎 (C4–C5) 齐根断离面</div>
       <div class="dossier-subtext" id="hud-anatomy-notes"></div>
     </div>
     <div class="dossier-section">
-      <div class="dossier-label">📋 角色与骨相档案</div>
+      <div class="dossier-label">📋 生前私密习惯与癖好档案</div>
       <div class="dossier-subtext" id="hud-origin-notes"></div>
     </div>
     <div class="dossier-tags" id="hud-tags"></div>
     <div class="dossier-footer-hint">
-      <span>🖱️ 单击桌宠：<strong>切换360°旋转模式</strong></span>
-      <span>滚轮：<strong>推拉远近3D深度</strong></span>
+      <span>🖱️ 拖拽人头：<strong>可放入/拎出收纳建筑或当镇纸</strong></span>
+      <span>滚轮：<strong>推拉贴脸特写</strong></span>
     </div>
   </div>
 
@@ -114,12 +114,18 @@
   <div id="desktop-overlay-bar">
     <div class="overlay-brand">
       <span class="pulse-dot"></span>
-      <strong>CERVIX-3D 屏幕桌宠层</strong>
+      <strong>CERVIX-3D 雨夜书房层</strong>
       <span class="badge-count" id="active-pet-count-badge">3 在屏</span>
     </div>
     <div class="overlay-actions">
-      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开画质光影调色、容器放置器、重力地板与伴学能量定制器">
-        🎨 画质·容器·伴学定制器
+      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开窗户透光光影、明暗差分、独立收纳建筑建造与小雨伴学环境定制器">
+        🎨 窗影·收纳建筑·雨夜定制
+      </button>
+      <button id="btn-quick-rain-study" class="overlay-btn active-top" title="一键开关雨夜书房窗外小雨白噪音(ASMR)与3D雨窗伴学环境">
+        🌧️ 小雨伴学: 开启
+      </button>
+      <button id="btn-quick-place-container" class="overlay-btn" title="在书桌/展架上放置一座独立的3D头颅收纳建筑（不与角色绑定，可拖入或拎出任意断头）">
+        🏗️ +放置收纳建筑
       </button>
       <button id="btn-quick-gravity" class="overlay-btn active-top" title="切换物理重力落地系统：开启后头模稳固落在3D地板/层架上绝不浮空">
         ⚓ 重力落地: 开启
@@ -191,92 +197,138 @@
   <div id="visual-customizer-drawer" class="hidden">
     <div class="vcd-header">
       <div>
-        <div class="vcd-title">🎨 画质光影 · 容器放置器 · 重力地板 · 伴学定制器</div>
-        <div class="vcd-sub">实时调整画风色调、主光角度、标本容器、3D清晰地板层架与伴学能量选项</div>
+        <div class="vcd-title">🎨 窗户透光光影 · 伦勃朗明暗差分 · 独立收纳建筑 · 雨夜伴学定制器</div>
+        <div class="vcd-sub">彻底告别硅胶感与平涂光，自由切换窗户透光格栅、光源颜色/角度、建造独立头颅收纳建筑与小雨伴学环境</div>
       </div>
       <button id="btn-close-customizer" class="win-ctrl-btn" title="关闭定制器面板">✕ 关闭</button>
     </div>
 
     <div class="vcd-body">
-      <!-- 1. Art Style & Lighting Customizer -->
+      <!-- 1. Art Style, Window Gobo Projection & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🎬 1. 画风色调预设 & 光影锐度定制 (Visual & Lighting)</div>
+        <div class="vcd-sec-title">🎬 1. 窗户透光光影 (Window Gobo) · 光影明暗差分 & 自定义光源</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
-          <button class="vcd-preset-btn active" data-style-preset="warm_gallery">🏛️ 暖金私人藏馆</button>
+          <button class="vcd-preset-btn active" data-style-preset="rainy_study">🌧️ 雨夜书房窗格透光</button>
+          <button class="vcd-preset-btn" data-style-preset="warm_gallery">🏛️ 暖金私人藏馆</button>
           <button class="vcd-preset-btn" data-style-preset="cold_forensic">❄️ 冷冽法医标本室</button>
-          <button class="vcd-preset-btn" data-style-preset="gothic_velvet">🕯️ 暗夜哥特烛光</button>
-          <button class="vcd-preset-btn" data-style-preset="luxury_porcelain">🌸 唯美凝脂画报</button>
-          <button class="vcd-preset-btn" data-style-preset="cyber_vitrine">🔮 赛博霓虹展柜</button>
+          <button class="vcd-preset-btn" data-style-preset="gothic_velvet">🕯️ 暗夜哥特极暗烛光</button>
+          <button class="vcd-preset-btn" data-style-preset="luxury_porcelain">🌸 庭院树影柔光对比</button>
+          <button class="vcd-preset-btn" data-style-preset="cyber_vitrine">🔮 雨夜霓虹百叶窗</button>
           <button class="vcd-preset-btn" data-style-preset="vintage_film">🎞️ 复古胶片标本志</button>
+        </div>
+
+        <div class="field-row" style="margin-top:8px;">
+          <label>🪟 窗户透光光影格栅样式 (投射在断头面部与书桌上)</label>
+          <select id="sel-window-gobo">
+            <option value="rain_mullion" selected>🌧️ 雨夜十字窗格 + 窗玻璃流雨痕透光 (伴学推荐)</option>
+            <option value="venetian_blinds">🪟 书房百叶窗斜射格栅条纹透光 (极强明暗切割)</option>
+            <option value="gothic_lattice">🏰 哥特菱格花窗铅条透光 (古典标本馆)</option>
+            <option value="tree_dappled">🌿 窗外夜雨梧桐树影斑驳透光 (静谧庭院)</option>
+            <option value="none">🔦 纯粹伦勃朗单束聚光 (无窗框投影)</option>
+          </select>
+        </div>
+
+        <div class="field-row" style="margin-top:6px;display:flex;gap:12px;align-items:center;">
+          <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
+            ☀️ 主光源(窗光/台灯)色温:
+            <input type="color" id="vc-key-color" value="#ffeed6" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
+            🌙 背部雨夜轮廓光色:
+            <input type="color" id="vc-rim-color" value="#93c5fd" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+          </label>
         </div>
 
         <div class="vcd-sliders">
           <div class="slider-row">
-            <span>☀️ 主光水平方位角 (光影立体感)</span>
-            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="32" />
-            <span id="val-vc-key-azimuth">+32°</span>
+            <span>🌓 光影明暗差分强度 (Chiaroscuro 暗部深邃感)</span>
+            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.6" step="0.05" value="1.25" />
+            <span id="val-vc-chiaroscuro">125%</span>
           </div>
           <div class="slider-row">
-            <span>📐 主光高度仰角</span>
-            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="28" />
-            <span id="val-vc-key-elevation">28°</span>
+            <span>🪟 窗户透光格栅阴影浓度 (Window Gobo)</span>
+            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.74" />
+            <span id="val-vc-window-gobo-strength">74%</span>
           </div>
           <div class="slider-row">
-            <span>💡 主光雕塑强度</span>
-            <input type="range" id="vc-key-intensity" min="0.4" max="2.8" step="0.05" value="1.55" />
-            <span id="val-vc-key-intensity">1.55</span>
+            <span>☀️ 窗光/主光水平入射角 (Azimuth)</span>
+            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="38" />
+            <span id="val-vc-key-azimuth">+38°</span>
           </div>
           <div class="slider-row">
-            <span>🌙 背部发丝轮廓光 (Rim)</span>
-            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.18" />
-            <span id="val-vc-rim-intensity">1.18</span>
+            <span>📐 窗光/主光高度俯角 (Elevation)</span>
+            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="32" />
+            <span id="val-vc-key-elevation">32°</span>
           </div>
           <div class="slider-row">
-            <span>🩸 真皮次表面散射血色感 (SSS)</span>
-            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.05" />
-            <span id="val-vc-sss">105%</span>
+            <span>💡 主光雕刻强度</span>
+            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="2.15" />
+            <span id="val-vc-key-intensity">2.15</span>
           </div>
           <div class="slider-row">
-            <span>💧 肌肤水光清漆油润度</span>
-            <input type="range" id="vc-wet-gloss" min="0.0" max="1.2" step="0.05" value="0.45" />
-            <span id="val-vc-wet-gloss">45%</span>
+            <span>🌙 背部发丝冷雨轮廓光 (Rim)</span>
+            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.52" />
+            <span id="val-vc-rim-intensity">1.52</span>
           </div>
           <div class="slider-row">
-            <span>🔪 微距毛孔/发丝锐化 (Sharpen)</span>
-            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.05" value="0.38" />
-            <span id="val-vc-sharpen">38%</span>
+            <span>🩸 真皮明暗交界线次表面血色感 (SSS)</span>
+            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.28" />
+            <span id="val-vc-sss">128%</span>
           </div>
           <div class="slider-row">
-            <span>🎞️ 画面对比度 (Contrast)</span>
-            <input type="range" id="vc-contrast" min="0.80" max="1.40" step="0.02" value="1.08" />
-            <span id="val-vc-contrast">1.08</span>
+            <span>🧴 尸皮哑光真皮感 ↔ 湿润防腐液感 (默认哑光零硅胶)</span>
+            <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.18" />
+            <span id="val-vc-wet-gloss">18%</span>
+          </div>
+          <div class="slider-row">
+            <span>🔪 微距毛孔/皮沟/发丝锐化 (Sharpen)</span>
+            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.05" value="0.56" />
+            <span id="val-vc-sharpen">56%</span>
+          </div>
+          <div class="slider-row">
+            <span>🎞️ 画面电影级对比度 (Contrast)</span>
+            <input type="range" id="vc-contrast" min="0.80" max="1.45" step="0.02" value="1.24" />
+            <span id="val-vc-contrast">1.24</span>
           </div>
           <div class="slider-row">
             <span>🌡️ 色温冷暖偏移 (Warmth)</span>
-            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.08" />
-            <span id="val-vc-warmth">+0.08</span>
+            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.02" />
+            <span id="val-vc-warmth">+0.02</span>
           </div>
           <div class="slider-row">
-            <span>✨ 柔光辉光强度 (Bloom)</span>
-            <input type="range" id="vc-bloom" min="0.0" max="0.90" step="0.02" value="0.28" />
-            <span id="val-vc-bloom">28%</span>
+            <span>✨ 暗房柔光辉光强度 (Bloom)</span>
+            <input type="range" id="vc-bloom" min="0.0" max="0.90" step="0.02" value="0.04" />
+            <span id="val-vc-bloom">4%</span>
           </div>
         </div>
       </div>
 
-      <!-- 2. Gravity System, Clear 3D Floor, Screen-Space Shelves & Formation Switcher -->
+      <!-- 2. Rainy Study Atmosphere, Gravity System, Clear 3D Floor & Shelves -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">⚓ 2. 重力落地系统 · 清晰地板 · 屏幕空间层架与换位</div>
+        <div class="vcd-sec-title">🌧️ 2. 雨夜书房小雨伴学环境 · 重力落地 · 书桌与层架</div>
         <label class="checkbox-row vcd-highlight-check">
+          <input type="checkbox" id="chk-rain-study-audio" checked />
+          <span>🌧️ <strong>开启窗外淅沥小雨伴学白噪音 (ASMR)</strong>（真实合成窗玻璃细雨声与屋檐水滴声，沉浸静心刷题）</span>
+        </label>
+        <div class="slider-row" style="margin:6px 0 8px 0;">
+          <span>🔊 窗外小雨伴学音量</span>
+          <input type="range" id="vc-rain-volume" min="0.05" max="1.0" step="0.05" value="0.45" />
+          <span id="val-vc-rain-volume">45%</span>
+        </div>
+        <label class="checkbox-row" style="margin-bottom:8px;">
+          <input type="checkbox" id="chk-rain-window-3d" checked />
+          <span>🪟 <strong>显示 3D 雨夜书房木格窗、窗外飘雨粒子与绿罩伴学台灯</strong></span>
+        </label>
+        <label class="checkbox-row">
           <input type="checkbox" id="chk-enable-gravity" checked />
-          <span>⚓ <strong>开启物理重力落地系统</strong>（头模受重力下落并稳固放置在地板/层架容器上，绝不尴尬浮空）</span>
+          <span>⚓ <strong>开启物理重力落地系统</strong>（纯人头受强重力下落并稳固压在书桌/试卷或收纳建筑内）</span>
         </label>
 
         <div class="field-row" style="margin-top:8px;">
-          <label>🏛️ 3D 清晰实体地板材质</label>
+          <label>🏛️ 3D 清晰实体书桌/地板材质</label>
           <select id="sel-floor-style">
+            <option value="walnut_desk" selected>🪵 雨夜胡桃木伴学书桌 · 真皮桌垫与黄铜包边 (默认推荐)</option>
             <option value="dark_obsidian">🏛️ 黑曜石镜面展台 · 镶金刻度线与聚光环</option>
-            <option value="walnut_desk">🪵 胡桃木书房伴学案台 · 真皮桌垫与黄铜包边</option>
             <option value="marble_museum">🤍 帕特农汉白玉展台 · 灰金云纹高反差清晰地板</option>
             <option value="surgical_steel">🔬 法医不锈钢解剖托台 · 导流槽与厘米标尺</option>
             <option value="none">🌌 隐藏实体地板 (仅保留网格线)</option>
@@ -303,26 +355,45 @@
         </div>
       </div>
 
-      <!-- 3. Specimen Containers & Decorative Props -->
+      <!-- 3. Independent Placeable 3D Specimen Container Structures & Scene Props -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🧪 3. 标本容器放置器 & 案头伴学装饰品</div>
-        <div class="field-row">
-          <label>🧪 标本容器放置器 (一键切换在屏全部头模容器)</label>
+        <div class="vcd-sec-title">🏗️ 3. 独立可放置头颅收纳建筑 (不与角色绑定 · 自由建造/拖入/拎出)</div>
+        <div style="font-size:11.5px;color:#94a3b8;line-height:1.45;margin-bottom:8px;">
+          💡 <strong>玩法说明</strong>：所有头颅默认均为<strong>纯粹断头（只有头）</strong>，可直接摆在书桌上当镇纸；点击下方按钮可在场景中建造<strong>独立的3D收纳建筑</strong>（可自由拖动底座位置）。将任意断头拖到空建筑上方松手即可<strong>自动磁吸封存</strong>；直接拖拽建筑里的人头即可<strong>把纯头颅重新拎出来</strong>！
+        </div>
+
+        <div class="vcd-preset-grid" id="vcd-build-structures-grid" style="margin-bottom:8px;">
+          <button class="chip-btn" data-place-structure="glass_bell_jar">➕🧪 建造玻璃钟罩座</button>
+          <button class="chip-btn" data-place-structure="velvet_chalice">➕👑 建造丝绒圣杯座</button>
+          <button class="chip-btn" data-place-structure="formalin_cylinder">➕🧫 建造福尔马林缸</button>
+          <button class="chip-btn" data-place-structure="acrylic_cube">➕💎 建造水晶方盒座</button>
+          <button class="chip-btn" data-place-structure="surgical_tray">➕🩸 建造解剖浅盘座</button>
+          <button class="chip-btn" data-place-structure="guillotine_plinth">➕🪓 建造断头木托座</button>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:11.5px;color:#cbd5e1;font-weight:600;">🏛️ 场景已放置的收纳建筑列表：</span>
+          <button id="btn-clear-all-structures" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#fda4af;">🗑️ 清空全部收纳建筑</button>
+        </div>
+        <div id="placed-structures-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;min-height:24px;"></div>
+
+        <div class="field-row" style="display:none;">
           <select id="sel-container-style">
-            <option value="glass_bell_jar">🧪 维多利亚玻璃钟罩 + 黑金黄铜密封底座</option>
-            <option value="velvet_chalice">👑 黑金丝绒高脚圣杯托座 (无罩露天展示)</option>
-            <option value="formalin_cylinder">🧫 福尔马林圆柱标本缸 + 琥珀防腐液刻度</option>
-            <option value="acrylic_cube">💎 博物馆亚克力水晶方盒 + 四角底射灯</option>
-            <option value="surgical_tray">🩸 法医不锈钢解剖浅盘 + 凝血硅胶垫</option>
-            <option value="none">🚫 无外置容器 (仅颈部解剖断面直接落地)</option>
+            <option value="none" selected>🚫 默认不绑定容器 (使用上方独立可放置收纳建筑)</option>
+            <option value="glass_bell_jar">🧪 维多利亚玻璃钟罩座</option>
+            <option value="velvet_chalice">👑 黑金丝绒高脚圣杯座</option>
+            <option value="formalin_cylinder">🧫 福尔马林圆柱标本缸</option>
+            <option value="acrylic_cube">💎 博物馆亚克力水晶方盒</option>
+            <option value="surgical_tray">🩸 法医不锈钢解剖浅盘</option>
+            <option value="guillotine_plinth">🪓 黑胡桃断头木托座</option>
           </select>
         </div>
 
         <div class="field-row" style="margin-top:8px;">
           <label>🕯️ 3D书桌场景独立伴学摆件 (置于桌面/层架，不绑定人头)</label>
           <select id="sel-decor-style">
+            <option value="study_tomes" selected>📚 桌面伴学烫金古籍书堆 + 黄铜怀表 (默认推荐)</option>
             <option value="trophy_candles">🕯️ 桌面哥特白烛 + 暗红凋零玫瑰花瓣</option>
-            <option value="study_tomes">📚 桌面伴学烫金古籍书堆 + 黄铜怀表</option>
             <option value="soul_siphon">⚡ 桌面生机汲取金环 + 悬浮灵子微光</option>
             <option value="forensic_evidence">🏷️ 桌面法医物证黄牌 (#01) + 标本封条</option>
             <option value="none">🚫 无额外桌面摆件</option>
@@ -331,7 +402,7 @@
 
         <label class="checkbox-row" style="margin-top:10px;">
           <input type="checkbox" id="chk-study-triumph-mode" checked />
-          <span>👑 <strong>开启「伴学能量汲取与生者胜出加冕」面板及意外终结档案</strong>（可随时关闭切换为纯静态美学模式）</span>
+          <span>👑 <strong>开启「伴学能量汲取与幸存者恶趣味档案」面板</strong>（可随时关闭切换为纯静态美学模式）</span>
         </label>
       </div>
     </div>

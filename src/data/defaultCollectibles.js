@@ -281,48 +281,48 @@ export const REAL_HAIR_CATALOG = [
 export const STUDY_ROLE_CATALOG = [
   {
     id: 'gaokao_pomodoro',
-    shortLabel: '🎓 状元番茄钟督学',
-    label: '🎓 状元气运 · 25分钟番茄钟督学官 (考神脑力虹吸 x1.6)',
+    shortLabel: '🎓 状元首级伴读',
+    label: '🎓 状元首级 · 25分钟夺魁番茄钟督学 (状元考运掠夺 x1.6)',
     buffMultiplier: 1.6,
     energyBurst: 320,
-    desc: '开启25分钟高强度高考状元专注冲刺倒计时，汲取19岁女状元方尧平的考神气运与巅峰脑力',
-    triggerMsg: '🎓【状元督学职能激发】广东怀集19岁高考女状元方尧平已停笔定格在你的玻璃钟罩中，而握笔备战的你正吸纳她的状元考运——25分钟番茄冲刺已重置启动，金榜题名必属于活着的你！'
+    desc: '把19岁高考女状元方尧平的头颅摆在试卷旁，开启25分钟高强度冲刺，掠夺她来不及享用的状元气运',
+    triggerMsg: '🎓【状元首级督学已启动】生前甩开全县几十分的19岁女状元方尧平，如今脖子以下空空如也，只能乖乖立在你的草稿纸旁替你镇纸——她没命去读的顶尖名校，现在轮到活着的你提笔接管！'
   },
   {
     id: 'survivor_motivator',
-    shortLabel: '👑 生者胜出破倦怠',
-    label: '👑 胜者加冕 · 倦怠击碎与多巴胺脉冲官 (困意清零 +280 PTS)',
+    shortLabel: '👑 幸存者恶趣味',
+    label: '👑 幸存者加冕 · 把玩天骄首级破除倦怠 (困意清零 +280 PTS)',
     buffMultiplier: 1.35,
     energyBurst: 280,
-    desc: '学习疲惫或焦虑时一键触发强烈的生者胜出优越感，瞬间击碎困意与倦怠',
-    triggerMsg: '👑【生者胜出脉冲激发】她19岁最娇嫩鲜活的青春已在意外中彻底出局，而你还拥有温热的呼吸与无限翻盘的明天——困意与焦虑瞬间清零，享受生者的绝对胜利！'
+    desc: '刷题犯困时低头看看桌角那颗死在19岁最美年华的头颅，用极致反差的幸存快感瞬间清醒',
+    triggerMsg: '👑【幸存者愉悦脉冲】她生前连琴弦蹭破指尖都要娇气半天，如今整颗脑袋从第四颈椎齐根断下，端端正正摆在你书桌上当摆件——她永远停在19岁了，而你还活着，困意清零，继续屠榜！'
   },
   {
     id: 'sprint_invigilator',
-    shortLabel: '⏱️ 死线连击监考官',
-    label: '⏱️ 夺命死线 · 严苛效率连击监考官 (专注连击倍率 x2.0)',
+    shortLabel: '⏱️ 冷艳死人监考',
+    label: '⏱️ 死眼盯梢 · 高傲学姐的凝固视线监考 (专注连击倍率 x2.0)',
     buffMultiplier: 2.0,
     energyBurst: 260,
-    desc: '以昔日天骄的冷冽目光监督你绝不走神，使专注能量获取速度翻倍 (x2.0)',
-    triggerMsg: '⏱️【严苛监考职能激发】21岁顶尖投行海归精英已在雪山意外中出局，此刻她在丝绒圣杯上冷眼监考——严禁走神，双倍连击已激活，把昔日天骄远远甩在身后！'
+    desc: '让生前目中无人的常春藤天骄用那双再也不会眨动的死鱼眼盯着你刷题，连击收益翻倍 (x2.0)',
+    triggerMsg: '⏱️【死眼监考已锁定】生前面试刷掉无数人的高傲学姐林汐，现在连眼皮都没法合上，只能用冰冷凝固的瞳孔直勾勾盯着你的笔尖——敢在她死不瞑目的注视下走神？双倍连击已开启！'
   },
   {
     id: 'memory_anchor',
-    shortLabel: '📖 考点封印伴读官',
-    label: '📖 记忆封印 · 今日核心考点誓言伴读官 (绑定攻克目标)',
+    shortLabel: '📖 断颈镇纸伴读',
+    label: '📖 断颈镇纸 · 将难背考点压在她颈口断面下 (绑定攻克目标)',
     buffMultiplier: 1.4,
     energyBurst: 240,
-    desc: '将你今日必须攻克的科目/章节封印在她的标本铭牌与悬停档案上，不破考点誓不罢休',
-    triggerMsg: '📖【考点封印职能激发】你的今日伴学誓言已烙印于标本档案之上——昔日才女已成静默展品，而你定将在今日彻底攻克此核心考点！'
+    desc: '把今天最难啃的知识点压在名门千金冰凉的C4颈部切口下面，背不完绝不把她挪开',
+    triggerMsg: '📖【断颈镇纸已生效】古籍世家千金苏晚微张着失神的双唇被你压在复习资料正上方，切口暗红的凝血刚好贴着你的重点划线——今天不把这章啃下来，她就一直这么看着你！'
   },
   {
     id: 'brain_siphon',
-    shortLabel: '⚡ 学霸脑力虹吸官',
-    label: '⚡ 逆袭掠夺 · 全自动学霸脑力与生机虹吸官 (后台被动加速)',
+    shortLabel: '⚡ 首席脑髓虹吸',
+    label: '⚡ 脑髓虹吸 · 榨取法学院首席学姐的残留才思 (被动加速 x1.75)',
     buffMultiplier: 1.75,
     energyBurst: 350,
-    desc: '全自动高倍率虹吸在屏所有年轻健康亡者标本的未竟才华与青春生机',
-    triggerMsg: '⚡【学霸脑力虹吸激发】在屏标本的未竟智慧与青春气运正全速汇入你的脑海——思路彻底打通，今日学习动力拉满！'
+    desc: '一边听窗外夜雨，一边将几颗天之骄女头颅生前攒下的记忆与逻辑尽数吸进自己脑海',
+    triggerMsg: '⚡【首席脑髓虹吸全开】她苦读二十三年修成法学院第一名，最后却连脖子都没保住，便宜了书桌前活生生的你——满桌首级的未竟才华正源源不断涌入你的思绪！'
   }
 ];
 
@@ -330,16 +330,16 @@ export const DEFAULT_COLLECTIBLES = [
   {
     id: 'SPEC-2026-FYP',
     folderName: 'SPEC-2026-FYP_FangYaoping',
-    name: '方尧平 · 广东怀集19岁高考女状元标本',
-    subtitle: '状元空气齐刘海披肩中长发 · 十九岁校园巅峰状元骨相 · 生前鲜活校服影像附档',
-    grade: 'UR · 高考状元孤品',
+    name: '方尧平 · 19岁怀集高考女状元首级',
+    subtitle: '广东怀集十九岁理科女状元 · 校服领口上的断头学神 · 考前押题镇纸首选',
+    grade: 'UR · 状元首级孤品',
     basePreset: 'fangyaoping',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/fang_yaoping_ref.jpg',
-    lifePhotoCaption: '📸 生前巅峰影像：19岁广东怀集高考女状元方尧平（校园紫荆树下青春笑靥，生前健康阳光、独占鳌头）',
+    lifePhotoCaption: '📸 生前最后留影：19岁广东怀集高考女状元方尧平（放榜那天在母校紫荆树下抿嘴浅笑，当时她还以为自己有大把光阴可以挥霍）',
     studyRole: 'gaokao_pomodoro',
-    studyGoalNote: '今日状元督学目标：吸纳19岁女状元方尧平的巅峰考运，高效拿下一套核心真题/章节！',
+    studyGoalNote: '方尧平正安静立在你的练习册旁：她考了全县第一都没命去读，你还不好好刷完这套题？',
     skinTone: '#ffece2',
     blushIntensity: 0.28,
     lipColor: '#c66872',
@@ -348,14 +348,14 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#121216',
     hairSheen: 0.90,
     neckClearance: 0.55,
-    containerStyle: 'glass_bell_jar',
+    containerStyle: 'none',
     decorStyle: 'study_tomes',
     summoned: true,
     boxPosition: { x: -34, y: 2, z: -175 },
     fateRecord: {
-      vitalityStatus: '19岁 · 巅峰健康态 · 广东怀集高考女状元',
-      causeOfDeath: '十九岁金榜题名、荣登广东怀集高考状元之巅后，于最意气风发的青春全盛期遭遇突发意外骤然离世',
-      survivorTriumphNote: '生前她是万众仰望的19岁广东怀集高考女状元，考场上一骑绝尘；然而命运无常，如今她只能静默封存于你的维多利亚玻璃钟罩中伴你夜读——状元已逝，而活着的你正将她的考神气运与学霸脑力尽数吸纳，握笔向前的你才是最终赢家！',
+      vitalityStatus: '享年19岁 · 广东怀集高考女状元 · 躯干已遗失，仅存头颅',
+      causeOfDeath: '刚拿到顶尖名校录取通知书的那个暑假，在庆功夜归途中发生惨烈车祸，纤细的脖颈被护栏齐根切断，十九岁状元人生当场交卷',
+      survivorTriumphNote: '高三三年她永远是贴在年级光荣榜最顶端的名字，连走路都带着学神的骄矜；谁能想到录取通知书还没捂热，她那颗装满满分答题套路的聪明脑袋，就已经端端正正摆在你的雨夜书桌上了。现在你可以随时拎起她的空气刘海，把她压在你的错题本上当镇纸——毕竟状元已经死透了，而活着的你每多做对一道题，都是在替她享用原本属于她的人生。',
       energyYieldPerMin: 200
     },
     morphs: {
@@ -386,31 +386,31 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎状元标本横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: '第四颈椎 (C4–C5) 齐根断离面 · 切口皮缘暗红凝血痂与雪白气管环外露',
       vascularContrast: 1.28,
       dermisRimScale: 1.0,
       wetness: 0.92,
       showLabels: false
     },
     dossier: {
-      origin: '依据广东怀集19岁高考女状元方尧平生前校园照片定制：搭载真实半透明羽毛感空气齐刘海披肩中长发、十九岁饱满柔和苹果肌与温婉眉眼，附带生前校园鲜活影像对照。',
-      anatomyNotes: '颈部于 C4–C5 椎间盘水平精准横切，高亮度展现颈椎断面、蝴蝶形脊髓灰质与切缘凝血环，绑定「状元气运·25分钟番茄钟督学官」核心伴学职能。',
-      tags: ['广东怀集19岁女状元', '生前校服照片附档', '状元番茄钟督学官', '28款真发丝发型可换']
+      origin: '【生前私密档案】方尧平，19岁，广东怀集高考女状元。生前是个作息精确到分钟的狠人，晚自习永远最后一个关灯，校服口袋里常年揣着薄荷糖和单词卡。她生前最讨厌别人碰她的刘海和笔记本，被采访时还腼腆地说“想去大学看更大的世界”。可惜那场雨夜事故之后，她不仅没能走进大学校门，连脖子以下的身体都没能留住。',
+      anatomyNotes: '【把玩与断口记录】切口紧贴着她生前常穿的蓝白校服领口上方（C4椎体下缘），断面极为平整。十九岁少女的皮肤褪去血色后呈现出一种冷腻的哑光白瓷感，唯有切口一圈还凝着暗红血痂。夜深刷题困倦时，把她从玻璃钟罩里拎出来直接搁在试卷一角，窗外小雨映着她再也不会眨一下的温和眉眼，伴学效果拔群。',
+      tags: ['19岁怀集高考状元', '生前校服照对照', '错题本专属人头镇纸', '死不瞑目伴读']
     }
   },
   {
     id: 'SPEC-2026-000',
     folderName: 'SPEC-2026-000_UserPhoto',
-    name: '初夏 · 幼态甜妹鹅蛋脸标本',
-    subtitle: '大师级空气刘海内扣短波波 · 协调柔和鹅蛋脸 · 右颊三颗特征痣',
-    grade: 'UR · 照片真容孤品',
+    name: '初夏 · 19岁音乐系竖琴校花首级',
+    subtitle: '音乐学院十九岁首席甜妹 · 右颊三颗小痣 · 最适合捧在掌心把玩的娇气包',
+    grade: 'UR · 甜妹首级孤品',
     basePreset: 'user_photo',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/user_photo_ref.jpg',
-    lifePhotoCaption: '📸 生前巅峰影像：19岁音乐学院竖琴首席校花初夏（右颊三颗特征小痣，生前娇嫩明媚）',
+    lifePhotoCaption: '📸 生前最后留影：19岁音乐学院竖琴首席初夏（演出后台被偷拍的回眸，右脸颊三颗小痣清晰可见，半小时后她就彻底失去了身体）',
     studyRole: 'survivor_motivator',
-    studyGoalNote: '疲惫时凝视初夏：她已定格在19岁夏夜，而我还活着握笔进取！',
+    studyGoalNote: '初夏就搁在你手边：生前追她的人排到校门口，现在整颗脑袋只属于你的书桌。',
     skinTone: '#ffe9df',
     blushIntensity: 0.25,
     lipColor: '#c46470',
@@ -419,14 +419,14 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#121216',
     hairSheen: 0.90,
     neckClearance: 0.55,
-    containerStyle: 'velvet_chalice',
+    containerStyle: 'none',
     decorStyle: 'trophy_candles',
     summoned: true,
     boxPosition: { x: 0, y: -10, z: -155 },
     fateRecord: {
-      vitalityStatus: '19岁 · 巅峰健康态 · 音乐学院竖琴首席校花',
-      causeOfDeath: '跨年音乐会谢幕返程途中遭遇暴雨山体滑坡意外，于十九岁最鲜活娇嫩的巅峰瞬间骤然终结',
-      survivorTriumphNote: '她曾是众人簇拥的天之骄女，如今却只能静默端坐于你的黑金丝绒圣杯上；她已出局，而你活着、进取、主宰书案——凝视她的静美容颜，汲取全额青春专注能量。',
+      vitalityStatus: '享年19岁 · 音乐学院竖琴系首席校花 · 颈部C4完全离断',
+      causeOfDeath: '跨年独奏会谢幕当晚，搭载她的保姆车在盘山公路坠崖，车窗钢化玻璃如断头台般瞬间削过她纤细的脖颈',
+      survivorTriumphNote: '生前她是整个音乐学院最娇生惯养的小公主，练琴手指磨出一点水泡都要发朋友圈抱怨半天，追求者送的鲜花堆满琴房；可现在呢？她连一根手指头都不剩了，只剩这颗带着右颊三颗小痣的漂亮脑袋，任由你在书桌上推来滚去、或是塞进容器里封存。每当你背书背到烦躁，捏一捏她冰凉柔軟的脸蛋，想想她已经永远停在19岁那个雨夜，还有什么比“活着”更爽的事？',
       energyYieldPerMin: 150
     },
     morphs: {
@@ -457,31 +457,31 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: 'C4–C5 纤细天鹅颈横切面 · 粉白气管软骨环与双侧颈动脉断口',
       vascularContrast: 1.25,
       dermisRimScale: 1.0,
       wetness: 0.90,
       showLabels: false
     },
     dossier: {
-      origin: '采用 MakeHuman 官方大师级面部解剖网格与真实女性皮肤贴图，搭载 Toigo 空气刘海内扣短波波（支持28款发型切换与9轴实时微调）及右脸颊3颗特征痣。',
-      anatomyNotes: '颈部C4/C5横切面周围皮肤附着真实暗红凝血与鲜红渗血痕迹，底部断面高亮度清晰展现C4椎骨、蝴蝶形脊髓灰质、气管透明软骨环与双侧颈动静脉。',
-      tags: ['协调柔和鹅蛋脸', '大师级空气刘海波波', '纯正乌黑真发色', '支持玩家自由微调发型']
+      origin: '【生前私密档案】初夏，19岁，音乐学院竖琴系公认的头号校花。生前极度爱美，每天早上要花四十分钟用卷发棒打理她的内扣波波头，右脸颊那三颗连成小弧线的小痣是她最得意的标志。她生前总嫌弃图书馆太闷、嫌弃做题的人无趣，结果现在每天夜里都要乖乖立在你的书桌上，陪你熬过一个又一个刷题的雨夜。',
+      anatomyNotes: '【把玩与断口记录】因为生前骨架娇小，她的脖子切面比其他藏品更细一圈，C4颈椎骨断面雪白精致，周围一圈暗红凝血像一条天然的红丝绒choker。把她的表情调成“半睁迷离”或者“死前惊恐”放在键盘左手边，写代码或做题累了转过来端详两眼，解压效果胜过一切咖啡因。',
+      tags: ['19岁音乐系甜妹校花', '右颊三颗特征小痣', '娇生惯养沦为案头摆件', '极细天鹅颈切口']
     }
   },
   {
     id: 'SPEC-2026-001',
     folderName: 'SPEC-2026-001_LinXi',
-    name: '林汐 · 清冷超模方圆脸标本',
-    subtitle: '大师级中分八字柔顺黑长直 · 协调高级骨相 · 左眼尾泪痣',
-    grade: 'SSR · 原初典藏',
+    name: '林汐 · 21岁高傲常春藤女投行家首级',
+    subtitle: '华尔街最年轻常春藤女分析师 · 左眼尾冷艳泪痣 · 昔日高岭之花如今任人摆布',
+    grade: 'SSR · 高岭之花首级',
     basePreset: 'linxi',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'linxi',
-    lifePhotoCaption: '📸 生前巅峰影像：21岁顶尖投行清冷海归天骄林汐（左眼尾泪痣，生前高傲冷艳）',
+    lifePhotoCaption: '📸 生前最后留影：21岁华尔街投行天才分析师林汐（生前在苏黎世私人停机坪前的冷傲抓拍，左眼尾泪痣带着惯有的轻蔑）',
     studyRole: 'sprint_invigilator',
-    studyGoalNote: '林汐严苛监考中：严禁分心走神，保持双倍专注连击 (x2.0)！',
+    studyGoalNote: '林汐那双生前瞧不起平庸者的冷眼正盯着你：用实力证明活人永远比死人强！',
     skinTone: '#ffe8df',
     blushIntensity: 0.22,
     lipColor: '#b85c68',
@@ -490,14 +490,14 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#111216',
     hairSheen: 0.92,
     neckClearance: 0.45,
-    containerStyle: 'obsidian_plinth',
+    containerStyle: 'none',
     decorStyle: 'none',
     summoned: true,
     boxPosition: { x: 34, y: -14, z: -175 },
     fateRecord: {
-      vitalityStatus: '21岁 · 巅峰健康态 · 华尔街投行最年轻常春藤女分析师',
-      causeOfDeath: '瑞士雪山私人直升机滑雪度假途中遭遇突发涡流坠机，于二十一岁高傲冷艳的黄金年华瞬间陨落',
-      survivorTriumphNote: '昔日高不可攀的常春藤天之骄女，如今静默安放于黑曜石解剖基座之上；她的传奇已画上句号，而你的黄金时代正在展开。',
+      vitalityStatus: '享年21岁 · 常春藤盟校满分毕业生 · 旋翼齐颈斩断',
+      causeOfDeath: '瑞士阿尔卑斯山私人直升机滑雪途中遭遇狂风迫降，失控断裂的碳纤维旋翼残片直接掠过机舱，将她高昂的头颅瞬间斩落雪地',
+      survivorTriumphNote: '生前她拿着百万年薪，习惯了用带泪痣的左眼居高临下地审视每一份不够完美的简历，连说话都不屑于多给旁人一个眼神。可惜旋翼掠过脖子的那一秒，她所有的傲慢都被永远焊死在了脸上。现在她连下巴都抬不起来，只能靠颈部血淋淋的切面立在你的胡桃木桌垫上，被你随意塞进福尔马林缸或解剖浅盘里——去享受这种把昔日天骄踩在脚下读书的快感吧。',
       energyYieldPerMin: 165
     },
     morphs: {
@@ -528,31 +528,31 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: 'C4 高速利器斜切面 · 颈总动脉断口与蝴蝶形脊髓灰质清晰可辨',
       vascularContrast: 1.25,
       dermisRimScale: 1.0,
       wetness: 0.88,
       showLabels: false
     },
     dossier: {
-      origin: '清冷高级骨相：搭载 MakeHuman 名家 Elvs 精雕的高颅顶中分八字刘海柔顺黑长直，左眼尾点缀标志性清冷泪痣。',
-      anatomyNotes: '颈部于 C4–C5 椎间盘水平横切，切缘带自然暗红凝血过渡，高对比呈现颈总动脉、颈内静脉与颈椎横突孔。',
-      tags: ['清冷高级骨相', 'Elvs中分八字黑长直', '左眼尾泪痣', 'C4/C5带血横切面']
+      origin: '【生前私密档案】林汐，21岁，18岁跳级进入常春藤名校、21岁成为顶级投行最年轻的华人女分析师。生前有极其严重的洁癖与精英傲慢，只喝特定庄园的手冲黑咖啡，对效率低下的人零容忍。她大概做梦也没想到，自己引以为傲的头脑最终会脱离那具穿高定西装的身体，成为别人书房里一件不会开口骂人的伴学藏品。',
+      anatomyNotes: '【把玩与断口记录】冰雪低温让她面部的失血苍白感保存得极为完美，左眼尾那颗冷艳泪痣在百叶窗透光的明暗切割下格外扎眼。如果觉得她生前太傲慢，不妨在工坊里把她的下颌拉到歪斜吐舌，或者直接把她放进不锈钢解剖浅盘里，看这位昔日投行女王如何安静地替你盯梢晚自习。',
+      tags: ['21岁常春藤投行女王', '左眼尾傲慢泪痣', '直升机旋翼齐颈斩断', '精英洁癖沦为标本']
     }
   },
   {
     id: 'SPEC-2026-002',
     folderName: 'SPEC-2026-002_SuWan',
-    name: '苏晚 · 温婉千金鹅蛋脸标本',
-    subtitle: '大师级新中式侧分高定盘发 · 协调温婉鹅蛋脸 · 右眼下卧蚕痣',
-    grade: 'SSR · 原初典藏',
+    name: '苏晚 · 20岁江南古籍世家千金首级',
+    subtitle: '书香门第独女 · 右眼下温柔卧蚕痣 · 半睁失神微启朱唇的古典尤物',
+    grade: 'SSR · 世家千金首级',
     basePreset: 'suwan',
     deadExpression: 'dead_half_open',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'suwan',
-    lifePhotoCaption: '📸 生前巅峰影像：20岁江南古籍修复世家千金苏晚（右眼下卧蚕痣，生前温婉书香）',
+    lifePhotoCaption: '📸 生前最后留影：20岁江南藏书楼千金苏晚（生前在私家园林修复宋版孤本时的温婉留影，右眼下卧蚕痣楚楚动人）',
     studyRole: 'memory_anchor',
-    studyGoalNote: '苏晚考点封印：今日核心章节必在今夜彻底攻克！',
+    studyGoalNote: '把苏晚压在难背的书页上：连藏书世家的千金都在替你镇纸，还有什么背不下来？',
     skinTone: '#fff0e8',
     blushIntensity: 0.30,
     lipColor: '#c96b76',
@@ -561,14 +561,14 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#141318',
     hairSheen: 0.88,
     neckClearance: 0.82,
-    containerStyle: 'surgical_tray',
+    containerStyle: 'none',
     decorStyle: 'medical_tools',
     summoned: false,
     boxPosition: { x: -24, y: -14, z: -155 },
     fateRecord: {
-      vitalityStatus: '20岁 · 巅峰健康态 · 江南古籍修复世家独女',
-      causeOfDeath: '海外私人拍卖会归国游轮夜航途中遭遇突发海难，于二十岁温婉如玉的芳华瞬间定格',
-      survivorTriumphNote: '昔日万千宠爱的名门闺秀，此刻以微张双眸与微启朱唇定格于法医不锈钢解剖托盘内，化作陪伴你挑灯夜读的静美藏品。',
+      vitalityStatus: '享年20岁 · 江南百年藏书世家独女 · 盘发完好、颈项离断',
+      causeOfDeath: '海外古籍拍卖会返航私人游艇遭遇夜间撞击事故，船舱水晶隔断崩裂，将她挽着高定发髻的头颅齐着旗袍领口切下',
+      survivorTriumphNote: '生前她住在江南三进三出的私家藏书楼里，十指不沾阳春水，连翻阅古籍都要戴上白丝绸手套；如今她自己却成了别人书房里最耐人寻味的一件“孤本”。高高挽起的古典盘发把她修长的脖颈与整圈血淋淋的C4切口暴露得一干二净，半睁的失神双眸和微张的嘴唇仿佛还在轻轻喘息——把她扣进玻璃钟罩里慢慢欣赏吧。',
       energyYieldPerMin: 160
     },
     morphs: {
@@ -599,31 +599,31 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: '旗袍立领下缘 C4–C5 横断面 · 盘发零遮挡展露整圈鲜红凝血颈口',
       vascularContrast: 1.22,
       dermisRimScale: 1.0,
       wetness: 0.86,
       showLabels: false
     },
     dossier: {
-      origin: '温婉千金鹅蛋脸：搭载 MakeHuman 名家 Elvs 雕琢的新中式侧分斜刘海高定盘发与右眼下温柔卧蚕痣，预设「半睁迷离 · 微启失神」尸相。',
-      anatomyNotes: '高颅顶盘发设计 360° 完整展露修长天鹅颈、切缘凝血环及底部 C4–C5 解剖切面。',
-      tags: ['温婉千金鹅蛋脸', 'Elvs新中式盘发', '半睁迷离微启唇', '右眼下卧蚕痣']
+      origin: '【生前私密档案】苏晚，20岁，江南古籍修复世家唯一的继承人。生前说话永远轻声细语，身上常年带着冷梅香与古墨味，被家族保护得像易碎的汝窑瓷器。她生前最爱把头发高高盘起露出引以为傲的修长天鹅颈，却没想到这恰恰方便了死神——如今那截天鹅颈只剩下一半，切口平整得可以直接立在你的硬皮笔记本上。',
+      anatomyNotes: '【把玩与断口记录】因为梳着高定古典盘发，没有任何发丝遮挡她的后颈与耳廓，360度转着圈都能看清她切口边缘凝固的暗红血迹。她默认保持着断头瞬间的“半睁迷离·微启失神”状态，隐约能看见微张唇缝里的洁白贝齿，放在丝绒高脚圣杯底座上简直像一件为你私人定制的晚宴甜点。',
+      tags: ['20岁藏书世家独女', '高定盘发零遮挡断颈', '半睁迷离微启朱唇', '人形古籍镇纸']
     }
   },
   {
     id: 'SPEC-2026-003',
     folderName: 'SPEC-2026-003_QianXue',
-    name: '千雪 · 国风清冷古典脸标本',
-    subtitle: '大师级国风齐刘海姬发式公主切 · 协调古典骨相 · 鼻梁美人痣',
-    grade: 'UR · 传世典藏',
+    name: '千雪 · 18岁古典舞首席领舞首级',
+    subtitle: '国家级舞剧团最年轻女一号 · 鼻梁朱砂美人痣 · 定格于谢幕断头瞬间的惊恐绝色',
+    grade: 'UR · 绝代舞姬首级',
     basePreset: 'qianxue',
     deadExpression: 'dead_shock',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'qianxue',
-    lifePhotoCaption: '📸 生前巅峰影像：18岁国家级古典舞最年轻金奖得主千雪（鼻梁朱砂美人痣，生前惊鸿绝艳）',
+    lifePhotoCaption: '📸 生前最后留影：18岁古典舞首席领舞千雪（首演谢幕前最后一支独舞定妆照，三分钟后舞台钢索就削断了她的脖子）',
     studyRole: 'survivor_motivator',
-    studyGoalNote: '千雪生者胜出激励：18岁天骄已成展品，握笔的你才是人生赢家！',
+    studyGoalNote: '千雪那双死前惊恐圆睁的眼睛正望着你：她连谢幕掌声都没听完就成了标本，你还有什么理由懈怠？',
     skinTone: '#fff3ed',
     blushIntensity: 0.34,
     lipColor: '#bf5462',
@@ -632,14 +632,14 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#0f1015',
     hairSheen: 0.94,
     neckClearance: 0.50,
-    containerStyle: 'cryo_cylinder',
+    containerStyle: 'none',
     decorStyle: 'floral_wreath',
     summoned: false,
     boxPosition: { x: 24, y: -14, z: -155 },
     fateRecord: {
-      vitalityStatus: '18岁 · 巅峰健康态 · 国家级古典舞剧团最年轻领舞',
-      causeOfDeath: '首演大幕落下之际遭遇舞台重型吊灯钢索断裂意外，于十八岁惊鸿一瞥的巅峰时刻骤然定格',
-      survivorTriumphNote: '舞台聚光灯下的绝代舞姬，带着死前最后一秒的惊愕圆睁双眸封存于全息液氮悬浮舱内，为你源源不断注入胜者多巴胺。',
+      vitalityStatus: '享年18岁 · 国家级古典舞剧团首席领舞 · 舞台钢索瞬间斩首',
+      causeOfDeath: '大剧院首演谢幕定格瞬间，舞台上方崩断的高张力威亚钢索如闪电般掠过舞台中央，当着全场两千名观众的面将她仰起的头颅凌空削落',
+      survivorTriumphNote: '生前她为了保持九头身的舞者比例，十年如一日地严苛控糖、练功到脚尖渗血，终于在18岁站上舞台正中央；结果钢索一闪，那具千锤百炼的柔韧身躯当场倒在舞台血泊里，只剩这颗带着鼻梁美人痣和姬发式公主切的头颅滚落台前，脸上还挂着没来得及收回的极致惊恐。现在她就在你的书桌上瞪大双眼张着嘴——连脖子都没了的她再也不用控糖练功了，而你可以一边吃着夜宵一边惬意刷题。',
       energyYieldPerMin: 180
     },
     morphs: {
@@ -670,31 +670,31 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: 'C4 高张力钢索瞬间齐切面 · 动脉喷溅残血与湿润筋膜高度保鲜',
       vascularContrast: 1.30,
       dermisRimScale: 1.0,
       wetness: 0.92,
       showLabels: false
     },
     dossier: {
-      origin: '国风清冷古典骨相：搭载 MakeHuman 名家 Cortu 雕琢的平直齐眉刘海姬发式公主切与鼻梁正中朱砂美人痣，预设「死前惊恐 · 瞠目张口」尸相。',
-      anatomyNotes: '颈部横切面呈现高饱和度动脉凝血与湿润筋膜反光，可自由切换全部 7 种死人尸相表情与 28 款大师级真发丝 3D 发型。',
-      tags: ['国风清冷骨相', 'Cortu姬发式公主切', '死前惊恐瞠目', '鼻梁美人痣']
+      origin: '【生前私密档案】千雪，刚满18岁，古典舞界百年难遇的天才少女，鼻梁正中有一颗天然朱砂小痣，留着极具古典冷艳感的齐刘海姬发式公主切。生前无论走到哪里都是聚光灯的绝对焦点，连谢幕仰头时的颈部线条都被舞评家誉为“神作”。讽刺的是，那根崩断的舞台钢索同样对她的颈部线条情有独钟。',
+      anatomyNotes: '【把玩与断口记录】因为是在谢幕最兴奋的瞬间被钢索瞬间削首，她的面部肌肉完全定格在“死前惊恐·瞠目张口”的瞬间——双目惊骇微翻、朱唇大张露出舌尖与贝齿，与她清冷古典的姬发式形成令人头皮发麻的恶趣味反差。把她放进黑胡桃断头木托座或水晶方盒里打上底射灯，切口鲜红得就像刚刚从舞台上捡回来一样。',
+      tags: ['18岁古典舞首席', '舞台钢索当众斩首', '死前惊恐瞠目张口', '鼻梁朱砂美人痣']
     }
   },
   {
     id: 'SPEC-2026-004',
     folderName: 'SPEC-2026-004_ShenZhiwei',
-    name: '沈知微 · 知性御姐鹅蛋脸标本',
-    subtitle: '大师级港风八字刘海蓬松大波浪 · 协调知性骨相 · 左颊美人痣',
-    grade: 'SSR · 特级典藏',
+    name: '沈知微 · 23岁法学院首席御姐首级',
+    subtitle: '顶尖法学院全额奖学金首席学姐 · 港风大波浪 · 挂着诡异浅笑的律政美人头',
+    grade: 'SSR · 首席学姐首级',
     basePreset: 'shenzhiwei',
     deadExpression: 'dead_smile',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'shenzhiwei',
-    lifePhotoCaption: '📸 生前巅峰影像：23岁法学院全额奖学金首席学姐沈知微（知性大波浪，生前考场常胜）',
+    lifePhotoCaption: '📸 生前最后留影：23岁法学院首席毕业代表沈知微（模拟法庭夺冠夜举杯微笑，两小时后她的头颅就落在了敞篷跑车后座）',
     studyRole: 'brain_siphon',
-    studyGoalNote: '沈知微学霸脑力虹吸：汲取法学院首席学姐的逻辑思维，难题迎刃而解！',
+    studyGoalNote: '沈知微嘴角还挂着生前胜券在握的浅笑：把这位法学首席的脑力榨干，替她去赢下考场！',
     skinTone: '#ffede6',
     blushIntensity: 0.26,
     lipColor: '#c06975',
@@ -703,14 +703,14 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#141318',
     hairSheen: 0.88,
     neckClearance: 0.40,
-    containerStyle: 'velvet_chalice',
+    containerStyle: 'none',
     decorStyle: 'study_tomes',
     summoned: false,
     boxPosition: { x: 0, y: 12, z: -195 },
     fateRecord: {
-      vitalityStatus: '23岁 · 巅峰健康态 · 顶尖法学院全额奖学金首席毕业代表',
-      causeOfDeath: '跨国模拟法庭夺冠庆功宴归途遭遇连环追尾意外，于二十三岁气场全开的黄金前夜骤然定格',
-      survivorTriumphNote: '昔日辩才无碍的法学院首席学姐，如今安详端坐于你的丝绒高脚圣杯之上，化作你攻克难关时的静默战利品。',
+      vitalityStatus: '享年23岁 · 顶尖法学院全额奖学金首席代表 · 嘴角定格诡异微笑',
+      causeOfDeath: '跨国模拟法庭夺冠庆功宴后乘坐敞篷跑车夜游滨海高速，追尾重型半挂车尾部钢板，整颗头颅在高速冲击下齐颈削断并留在真皮后座上',
+      survivorTriumphNote: '生前她是法学院所有人仰望的知性御姐，辩论席上唇枪舌剑、从无败绩，连毕业致辞都已经写好了稿子；谁知庆功宴的香槟还没醒酒，她那颗妆容精致、留着蓬松大波浪的脑袋就已经成了你的私人案头藏品。最绝的是她死时面部神经抽搐，嘴角竟还保留着一抹若有若无的微笑——就像在无声地恭迎活着的你踩着她的尸骨往上爬。',
       energyYieldPerMin: 175
     },
     morphs: {
@@ -741,16 +741,16 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      cutLevel: 'C4–C5 颈椎利落离断面 · 切口皮瓣微卷伴浓稠暗红静脉凝血',
       vascularContrast: 1.25,
       dermisRimScale: 1.0,
       wetness: 0.90,
       showLabels: false
     },
     dossier: {
-      origin: '知性御姐鹅蛋脸骨相：搭载 MakeHuman 名家 Elvs 雕琢的港风八字刘海蓬松大波浪卷发与左颊知性美人痣。',
-      anatomyNotes: '可在工坊、藏品库或桌宠面板一键切换 28 款大师级真发丝 3D 发型并实时微调刘海、蓬松度、鬓角与发尾。',
-      tags: ['知性御姐骨相', 'Elvs八字大波浪', '左颊知性美人痣', 'C4/C5带血横切面']
+      origin: '【生前私密档案】沈知微，23岁，法学院连续四年全额奖学金得主、国际模拟法庭最佳辩手。生前最爱穿修身西装裙配港风蓬松大波浪，左脸颊有一颗知性美人痣，平日里对学弟学妹总是带着既温柔又高高在上的微笑指点江山。如今那张曾经在法庭上雄辩滔滔的嘴再也吐不出一个法条，只能安静地贴在你的桌面上。',
+      anatomyNotes: '【把玩与断口记录】23岁成熟女性的面部骨相比十几岁的少女更加深邃立体，在雨夜窗格透光下，她高挺的鼻梁与微勾的死后笑唇会在脸颊上投出极深的明暗阴影。把她从福尔马林缸里捞出来摆在台灯旁，看她微闭着眼对你似笑非笑，仿佛连死人都在赞叹你今天的学习效率。',
+      tags: ['23岁法学院首席御姐', '敞篷跑车齐颈削首', '死后嘴角诡异浅笑', '左颊知性美人痣']
     }
   }
 ];

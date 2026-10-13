@@ -474,3 +474,22 @@
   - 6 位旗舰角色默认搭载各自代表性真发丝发型：`方尧平 (SPEC-2026-FYP) -> daz_hair_air_bangs_long (状元空气齐刘海披肩中长发)`、`初夏 -> hair_bob01`、`林汐 -> hair_long01`、`苏晚 -> hair_braid01`、`千雪 -> daz_hair_hime`、`沈知微 -> daz_hair_curtain_wave`。
   - 在 **桌面左下角在屏藏品条 (`#screen-pets-pills`)**、**典藏库卡片 (`#vault-grid`)** 与 **高定工坊 (`步骤 3`)** 全面新增 **28 款发型直接下拉切换器**，并保留工坊 **9 轴实时发型微调滑杆** 与外部 `.GLB/.OBJ` 发型导入。
 
+### [2026-10-13 Stage 27] 恶趣味沉浸角色档案重构（彻底剔除技术垃圾信息）+ 独立可放置头颅收纳建筑系统 (`placedStructures`) + 去硅胶真人哑光尸皮 + 窗户透光光影格栅 (`Window Gobo`) 与伦勃朗明暗差分 + 雨夜书房小雨伴学环境（建立在 `3ae319d` 之上）
+- **1. 角色档案全面重构：彻底清除引擎/模型参数垃圾信息，重写为高代入感、强角色反差与恶趣味把玩档案（回应“你个人信息写的垃圾信息太多了，要更有代入感，和角色有关，而且文本你更恶趣味一点”）**：
+  - 在 `src/data/defaultCollectibles.js`、`index.html` (`#pet-hover-dossier`) 与 `src/main.js` 中，将过去掺杂在角色简介里的“MakeHuman、Elvs、9轴微调、顶点面数”等无聊技术字眼 **100% 清除**。
+  - 为全部 6 位角色（19岁怀集高考女状元方尧平、19岁竖琴校花初夏、21岁常春藤投行女王林汐、20岁古籍世家千金苏晚、18岁古典舞首席千雪、23岁法学院首席学姐沈知微）重写 **【生前骄矜身份 & 断头结局恶趣味反差】**、**【生前私密习惯与癖好档案】** 与 **【颈部切口状态 & 把玩镇纸记录】**，突出她们生前的骄傲习惯与如今只剩一颗断头摆在玩家雨夜书桌上当错题本镇纸/把玩件的强烈反差。
+- **2. 头颅收纳装置与角色彻底解耦，重构为独立可放置、可拖拽、可磁吸存取的 3D 收纳建筑（回应“而且那种头的收纳装置要不要和角色绑定！而是一种可放置的建筑”）**：
+  - 在 `collectibleHeadAssembler.js` (`attachSpecimenContainerAndDecor`) 中，桌面上的所有角色默认均为 **100% 纯粹断头 (`只有头`, `baseBottomOffset = -10.8`)**，绝不绑定任何容器网格。
+  - 在 `specimenStageAndContainers.js` (`buildPlaceableContainerStructure` / `updateContainerStructureState`) 与 `desktopBoxSpaceEngine.js` (`this.structures` / `placeContainerStructure` / `snapHeadIntoStructure` / `unsnapHeadFromStructure`) 中实现 **6 款独立可放置 3D 头颅收纳建筑**（`🧪 维多利亚玻璃钟罩座`、`👑 黑金丝绒高脚圣杯座`、`🧫 福尔马林圆柱防腐缸`、`💎 博物馆亚克力水晶方盒座`、`🩸 法医不锈钢解剖浅盘座`、`🪓 黑胡桃断头台木托座`）：
+    - 玩家可点击顶部栏 `🏗️ +放置收纳建筑` 或定制抽屉建造按钮在书桌/层架上放置独立收纳建筑，并可随时拖动建筑底座移动位置。
+    - 将任意断头拖拽到空置收纳建筑上方松手，即刻触发磁吸封存（玻璃罩自动闭合、播放清脆玻璃金属落锁音效 `playContainerSnap`）；直接拖拽建筑内的人头，即可把纯头颅从建筑里拎出来直接搁在桌面上当镇纸！
+- **3. 彻底消除硅胶娃娃/模拟人生廉价感：升级真人哑光微孔尸皮 + 伦勃朗高反差光影明暗差分 (`Chiaroscuro`) + 可改光源的窗户透光投影 (`Window Gobo`)（回应“现在材质像硅胶娃娃，然后反正现在画质也非常弱，就是看上去和模拟人生一样太低级了，我要更真实更高级。比如说加强光影明暗差分那种感觉。窗户透光感（而且光源可以改）”）**：
+  - **去硅胶感真人尸皮 (`skinTextureGenerator.js` & `collectibleHeadAssembler.js`)**：将皮肤默认 `clearcoat` 设为 `0.0`（彻底消灭塑料清漆反光），`roughness` 提升至 `0.68` 哑光丝绒真皮区间，`specularIntensity` 降至 `0.20`，法线强度提升至 `0.62`，并重构 `createSkinMicroMaps` 生成高对比度真皮菱形皮沟 (`Langer's lines`) 与毛孔微凹凸贴图 (`bumpScale: 0.016`)，同时在面部叠加死后眼窝微青与鼻翼唇下解剖立体阴影。
+  - **窗户透光格栅投影 (`WINDOW_GOBO_CATALOG`) + 伦勃朗明暗差分着色器 (`photorealLighting.js`)**：在 `injectAestheticSubsurfaceScattering` 与 `injectStageWindowGoboShader` 中注入世界空间窗户透光投影与陡峭明暗交界线抑制：
+    - 内置 **5 种窗户透光样式 (`#sel-window-gobo`)**：`🌧️ 雨夜十字窗格 + 窗玻璃流雨痕透光 (默认推荐)`、`🪟 书房百叶窗斜射格栅条纹透光`、`🏰 哥特菱格花窗铅条透光`、`🌿 窗外夜雨梧桐树影斑驳透光`、`🔦 纯粹伦勃朗单束聚光`。
+    - 大幅压低背光面环境泛光 (`hemi: 0.08, fill: 0.05, env: 0.18`) 并强化主光雕刻 (`key: 2.15`) 与明暗交界线真皮次表面散射血色带；支持玩家实时修改 **主光源色温 (`#vc-key-color`)**、**雨夜轮廓光颜色 (`#vc-rim-color`)**、**窗光入射角度**、**光影明暗差分强度 (`#vc-chiaroscuro`)** 与 **窗户透光阴影浓度 (`#vc-window-gobo-strength`)**。
+- **4. 雨夜书房小雨伴学环境（回应“而且氛围环境你设计的更适合学习，比如说小雨的感觉？”）**：
+  - **视觉环境 (`specimenStageAndContainers.js` · `buildRainyStudyWindowGroup`)**：在胡桃木伴学书桌后方构建 **3D 雨夜书房木格窗**（含窗玻璃凝结水珠与流淌雨痕贴图、窗外夜色霓虹散景、实时飘落的 3D 雨丝粒子 `RainyWindowStreaks`）以及书桌左角的 **绿罩黄铜伴学台灯 (`BankersStudyLamp`)**。
+  - **听觉环境 (`tactileSoundEngine.js` · `startRainAmbience`)**：纯 WebAudio 实时程序化合成柔和护耳的 **窗外淅沥小雨白噪音 + 屋檐水滴轻敲声 ASMR**，顶部栏提供一键开关 (`🌧️ 小雨伴学: 开启`) 与音量滑杆。
+
+

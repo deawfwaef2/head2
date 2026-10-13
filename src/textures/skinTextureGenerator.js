@@ -458,67 +458,106 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
  * 注意：数据贴图必须保持线性色彩空间（不设 SRGB），否则粗糙度会偏亮失真。
  */
 let _skinMicroCache = null;
-export function createSkinMicroMaps(size = 2048) {
+export function createSkinMicroMaps(size = 1024) {
   if (_skinMicroCache) return _skinMicroCache;
-  // 斑点/皮纹数量按面积缩放、尺寸按边长缩放，保证 1024 与 512 观感密度一致
   const unit = size / 512;
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
+  const roughCanvas = document.createElement('canvas');
+  roughCanvas.width = size;
+  roughCanvas.height = size;
+  const rctx = roughCanvas.getContext('2d');
 
-  // 基底：中高灰（×材质 roughness 0.62 ≈ 0.40 有效粗糙度，接近真实皮肤）
-  ctx.fillStyle = '#b0b0b0';
-  ctx.fillRect(0, 0, size, size);
+  const bumpCanvas = document.createElement('canvas');
+  bumpCanvas.width = size;
+  bumpCanvas.height = size;
+  const bctx = bumpCanvas.getContext('2d');
 
-  // 大尺度柔和油脂/干燥区分区（T区偏光滑=偏暗，两颊偏干=偏亮）
+  // 1. Matte-velvet human dermal baseline (#dcdcdc ≈ 0.86 multiplier so skin never looks like shiny silicone/plastic!)
+  rctx.fillStyle = '#dcdcdc';
+  rctx.fillRect(0, 0, size, size);
+  bctx.fillStyle = '#808080';
+  bctx.fillRect(0, 0, size, size);
+
+  // Subtle anatomical T-zone vs cheek matte zones
   const zones = [
-    [0.50, 0.44, 0.34, 'rgba(70,70,70,0.10)'],   // 中央T区：略光滑
-    [0.20, 0.55, 0.26, 'rgba(235,235,235,0.10)'], // 左颊：略干
-    [0.80, 0.55, 0.26, 'rgba(235,235,235,0.10)'], // 右颊：略干
+    [0.50, 0.44, 0.24, 'rgba(165,165,165,0.22)'], // Nasal bridge / forehead T-zone: natural lipid sheen
+    [0.24, 0.55, 0.28, 'rgba(248,248,248,0.24)'], // Left cheek: velvety matte dermis
+    [0.76, 0.55, 0.28, 'rgba(248,248,248,0.24)'], // Right cheek: velvety matte dermis
   ];
   for (const [zx, zy, zr, col] of zones) {
-    const g = ctx.createRadialGradient(size * zx, size * zy, 4, size * zx, size * zy, size * zr);
+    const g = rctx.createRadialGradient(size * zx, size * zy, 4, size * zx, size * zy, size * zr);
     g.addColorStop(0, col);
-    g.addColorStop(1, 'rgba(128,128,128,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, size, size);
+    g.addColorStop(1, 'rgba(220,220,220,0)');
+    rctx.fillStyle = g;
+    rctx.fillRect(0, 0, size, size);
   }
 
-  // 毛孔与微观噪点：随机深浅斑点
-  for (let i = 0; i < Math.round(9000 * unit * unit); i++) {
+  // 2. Crisscross Langer's dermal tension micro-grooves (真实人类皮沟/皮嵴菱形微网格，彻底击碎硅胶假皮高光)
+  bctx.lineWidth = 0.65 * unit;
+  rctx.lineWidth = 0.65 * unit;
+  for (let i = 0; i < Math.round(3200 * unit * unit); i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const r = (Math.random() < 0.12 ? 1.6 + Math.random() * 1.4 : 0.5 + Math.random() * 1.0) * unit;
-    const dark = Math.random() < 0.55;
-    const v = dark ? 60 + Math.random() * 60 : 190 + Math.random() * 55;
-    ctx.fillStyle = `rgba(${v | 0},${v | 0},${v | 0},${0.05 + Math.random() * 0.09})`;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    const a = (Math.random() < 0.5 ? 0.62 : -0.62) + (Math.random() - 0.5) * 0.45;
+    const len = (2.5 + Math.random() * 5.5) * unit;
+    bctx.strokeStyle = 'rgba(38,38,38,0.22)';
+    bctx.beginPath();
+    bctx.moveTo(x, y);
+    bctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+    bctx.stroke();
+
+    rctx.strokeStyle = 'rgba(250,250,250,0.20)';
+    rctx.beginPath();
+    rctx.moveTo(x, y);
+    rctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+    rctx.stroke();
   }
 
-  // 细小皮纹短线（增强近看真实感）
-  ctx.lineWidth = 0.7 * unit;
-  for (let i = 0; i < Math.round(900 * unit * unit); i++) {
+  // 3. High-definition follicular pores & epidermal micro-relief
+  for (let i = 0; i < Math.round(16000 * unit * unit); i++) {
     const x = Math.random() * size;
     const y = Math.random() * size;
-    const a = Math.random() * Math.PI;
-    const len = (2 + Math.random() * 5) * unit;
-    const v = 95 + Math.random() * 90;
-    ctx.strokeStyle = `rgba(${v | 0},${v | 0},${v | 0},0.10)`;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
-    ctx.stroke();
+    const isPore = Math.random() < 0.42;
+    const r = (isPore ? 0.65 + Math.random() * 0.95 : 1.1 + Math.random() * 1.4) * unit;
+    if (isPore) {
+      // Pore crater: dark in bumpMap (indented), high roughness in roughnessMap (no specular inside pore)
+      bctx.fillStyle = `rgba(22,22,22,${0.25 + Math.random() * 0.24})`;
+      bctx.beginPath();
+      bctx.arc(x, y, r, 0, Math.PI * 2);
+      bctx.fill();
+
+      rctx.fillStyle = `rgba(252,252,252,${0.24 + Math.random() * 0.20})`;
+      rctx.beginPath();
+      rctx.arc(x, y, r, 0, Math.PI * 2);
+      rctx.fill();
+    } else {
+      // Micro-ridge peak between pores
+      bctx.fillStyle = `rgba(218,218,218,${0.14 + Math.random() * 0.14})`;
+      bctx.beginPath();
+      bctx.arc(x, y, r, 0, Math.PI * 2);
+      bctx.fill();
+
+      rctx.fillStyle = `rgba(175,175,175,${0.12 + Math.random() * 0.12})`;
+      rctx.beginPath();
+      rctx.arc(x, y, r, 0, Math.PI * 2);
+      rctx.fill();
+    }
   }
 
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 16; // Stage 18：2048 毛孔 + 16x 过滤，近看不糊
-  tex.needsUpdate = true;
-  _skinMicroCache = { roughnessMap: tex, bumpMap: tex };
+  const roughTex = new THREE.CanvasTexture(roughCanvas);
+  roughTex.wrapS = THREE.RepeatWrapping;
+  roughTex.wrapT = THREE.RepeatWrapping;
+  roughTex.repeat.set(3.5, 3.5);
+  roughTex.anisotropy = 16;
+  roughTex.needsUpdate = true;
+
+  const bumpTex = new THREE.CanvasTexture(bumpCanvas);
+  bumpTex.wrapS = THREE.RepeatWrapping;
+  bumpTex.wrapT = THREE.RepeatWrapping;
+  bumpTex.repeat.set(3.5, 3.5);
+  bumpTex.anisotropy = 16;
+  bumpTex.needsUpdate = true;
+
+  _skinMicroCache = { roughnessMap: roughTex, bumpMap: bumpTex };
   return _skinMicroCache;
 }
 

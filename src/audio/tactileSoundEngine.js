@@ -25,6 +25,13 @@ class TactileSoundEngine {
     this.dragPanner = null;
     this.lastDepthTickTime = 0;
     this.lastCollisionTime = 0;
+
+    // Rainy Study Room ASMR Soundscape state
+    this.rainEnabled = true;
+    this.rainVolume = 0.42;
+    this.rainSource = null;
+    this.rainGain = null;
+    this.rainDropTimer = null;
   }
 
   ensureContext() {
@@ -331,6 +338,153 @@ class TactileSoundEngine {
       osc.start(t0);
       osc.stop(t0 + 0.30);
     });
+  }
+  /**
+   * 8. Container Snap / Specimen Placement Chime (将断头放入收纳装置建筑的清脆玻璃/黄铜落座音)
+   */
+  playContainerSnap(panX = 0) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const out = this.createPanner(ctx, panX);
+    const vol = this.masterVolume * 0.85;
+
+    // Deep brass pedestal thud + crystal glass bell-jar harmonic ring
+    const freqs = [142, 528, 1056];
+    const gains = [0.28, 0.14, 0.08];
+    const durs = [0.16, 0.34, 0.46];
+    freqs.forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = i === 0 ? 'triangle' : 'sine';
+      osc.frequency.setValueAtTime(f, now);
+      gain.gain.setValueAtTime(gains[i] * vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0008, now + durs[i]);
+      osc.connect(gain);
+      gain.connect(out);
+      osc.start(now);
+      osc.stop(now + durs[i] + 0.02);
+    });
+  }
+
+  /**
+   * 9. Cozy Rainy-Night Study Ambience ASMR (窗外淅沥小雨声 + 窗台水滴轻叩 + 远雷伴学白噪音)
+   */
+  startRainAmbience() {
+    if (!this.rainEnabled) return;
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    if (this.rainSource) {
+      if (this.rainGain) {
+        this.rainGain.gain.setTargetAtTime(this.rainVolume * this.masterVolume * 0.35, ctx.currentTime, 0.25);
+      }
+      return;
+    }
+
+    // Create 4-second looping pink/brown rain noise buffer
+    const sr = ctx.sampleRate;
+    const len = sr * 4;
+    const buffer = ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      for (let i = 0; i < len; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99886 * b0 + white * 0.0555179;
+        b1 = 0.99332 * b1 + white * 0.0750759;
+        b2 = 0.96900 * b2 + white * 0.1538520;
+        b3 = 0.86650 * b3 + white * 0.3104856;
+        b4 = 0.55000 * b4 + white * 0.5329522;
+        b5 = -0.7616 * b5 - white * 0.0168980;
+        data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.035;
+        b6 = white * 0.115926;
+      }
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.loop = true;
+
+    // Bandpass + Lowpass to shape warm windowpane rain patter
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 1350;
+
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 240;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(this.rainVolume * this.masterVolume * 0.35, ctx.currentTime + 1.2);
+
+    src.connect(hp);
+    hp.connect(lp);
+    lp.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+
+    this.rainSource = src;
+    this.rainGain = gain;
+
+    // Stochastic soft windowpane raindrops & occasional distant muffled thunder
+    if (this.rainDropTimer) clearInterval(this.rainDropTimer);
+    this.rainDropTimer = setInterval(() => {
+      if (!this.rainEnabled || !this.enabled || !this.ctx || this.ctx.state !== 'running') return;
+      const now = this.ctx.currentTime;
+      const v = this.rainVolume * this.masterVolume;
+      if (v <= 0.01) return;
+
+      // Soft raindrop tap on glass windowpane
+      if (Math.random() < 0.72) {
+        const dropOsc = this.ctx.createOscillator();
+        const dropGain = this.ctx.createGain();
+        const pan = this.createPanner(this.ctx, (Math.random() - 0.5) * 1.4);
+        const baseFreq = 920 + Math.random() * 880;
+        dropOsc.type = 'sine';
+        dropOsc.frequency.setValueAtTime(baseFreq, now);
+        dropOsc.frequency.exponentialRampToValueAtTime(baseFreq * 1.32, now + 0.028);
+        dropGain.gain.setValueAtTime(0.018 * v, now);
+        dropGain.gain.exponentialRampToValueAtTime(0.0005, now + 0.035);
+        dropOsc.connect(dropGain);
+        dropGain.connect(pan);
+        dropOsc.start(now);
+        dropOsc.stop(now + 0.04);
+      }
+    }, 280);
+  }
+
+  stopRainAmbience() {
+    if (this.rainDropTimer) {
+      clearInterval(this.rainDropTimer);
+      this.rainDropTimer = null;
+    }
+    if (this.rainSource) {
+      try { this.rainSource.stop(); } catch (_) {}
+      try { this.rainSource.disconnect(); } catch (_) {}
+      this.rainSource = null;
+    }
+    if (this.rainGain) {
+      try { this.rainGain.disconnect(); } catch (_) {}
+      this.rainGain = null;
+    }
+  }
+
+  setRainAmbienceEnabled(enabled) {
+    this.rainEnabled = Boolean(enabled);
+    if (this.rainEnabled) {
+      this.startRainAmbience();
+    } else {
+      this.stopRainAmbience();
+    }
+  }
+
+  setRainVolume(vol) {
+    this.rainVolume = Math.max(0, Math.min(1, Number(vol) || 0));
+    if (this.rainGain && this.ctx) {
+      this.rainGain.gain.setTargetAtTime(this.rainVolume * this.masterVolume * 0.35, this.ctx.currentTime, 0.12);
+    }
   }
 }
 

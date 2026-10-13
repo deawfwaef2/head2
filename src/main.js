@@ -23,7 +23,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage25-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage27-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -40,6 +40,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage25-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage24-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage24-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage23-v1') ||
@@ -50,7 +51,7 @@ function restoreCollectibles() {
     if (Array.isArray(legacy)) {
       const builtinIds = new Set(defaults.map(d => d.id));
       for (const item of legacy) {
-        if (item && typeof item.id === 'string' && !builtinIds.has(item.id)) {
+        if (item && typeof item.id !== 'string' && !builtinIds.has(item.id)) {
           if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
           defaults.unshift(item);
         }
@@ -78,23 +79,30 @@ const state = {
   activeRoleBuffMultiplier: 1.6,
   pomodoroRunning: true,
   pomodoroRemainingSec: 25 * 60,
+  rainStudyAudioEnabled: true,
   visualCustomConfig: {
-    presetId: 'warm_gallery',
-    keyAzimuthDeg: 32,
-    keyElevationDeg: 28,
-    keyIntensity: 1.55,
-    rimIntensity: 1.18,
-    sssIntensity: 1.05,
-    wetGloss: 0.45,
-    sharpen: 0.38,
-    contrast: 1.08,
-    warmth: 0.08,
-    bloomStrength: 0.28
+    presetId: 'rainy_study',
+    windowGobo: 'rain_mullion',
+    windowGoboStrength: 0.74,
+    chiaroscuro: 1.25,
+    keyColor: '#ffeed6',
+    rimColor: '#93c5fd',
+    keyAzimuthDeg: 38,
+    keyElevationDeg: 32,
+    keyIntensity: 2.15,
+    rimIntensity: 1.52,
+    sssIntensity: 1.28,
+    skinGloss: 0.18,
+    wetGloss: 0.18,
+    sharpen: 0.56,
+    contrast: 1.24,
+    warmth: 0.02,
+    bloomStrength: 0.04
   },
   studioDraft: {
     basePreset: 'fangyaoping',
     deadExpression: 'dead_calm',
-    containerStyle: 'glass_bell_jar',
+    containerStyle: 'none',
     decorStyle: 'study_tomes',
     studyRole: 'gaokao_pomodoro',
     studyGoalNote: '吸纳19岁女状元方尧平的巅峰考运，高效攻克今日核心章节！',
@@ -405,15 +413,18 @@ function updateHoverDossierHUD(hoverInfo) {
         causeOfDeath: '突发意外瞬间定格于最鲜活的青春巅峰期',
         survivorTriumphNote: '她已在意外中彻底出局，而活着的你仍在进取并主宰全局——凝视她的静美容颜，汲取全额专注能量。'
       };
-      document.getElementById('hud-fate-vitality').textContent = `⚡ ${fate.vitalityStatus}`;
-      document.getElementById('hud-fate-cause').textContent = `💥 终结记录：${fate.causeOfDeath}`;
-      document.getElementById('hud-fate-triumph').textContent = `👑 生者加冕：${fate.survivorTriumphNote}`;
+      document.getElementById('hud-fate-vitality').textContent = `💀 ${fate.vitalityStatus}`;
+      document.getElementById('hud-fate-cause').textContent = `🪓 断头经过：${fate.causeOfDeath}`;
+      document.getElementById('hud-fate-triumph').textContent = `👑 幸存者把玩感言：${fate.survivorTriumphNote}`;
     }
   }
 
-  const contInfo = CONTAINER_STYLE_CATALOG.find(c => c.id === (col.containerStyle || 'glass_bell_jar'));
+  const snappedStruct = hoverInfo.snappedStructure;
+  const statusStr = snappedStruct
+    ? `🏛️ 已装入独立建筑: 【${snappedStruct.label}】(直接拖拽人头可拎出)`
+    : `🩸 裸露断颈直接摆在桌面当镇纸 (可拖入任意空置收纳建筑)`;
   document.getElementById('hud-anatomy-level').textContent =
-    `${col.anatomyOptions?.cutLevel || 'C4 颈椎标准横断面'} · [容器: ${contInfo ? contInfo.shortLabel : '玻璃钟罩'}]`;
+    `${col.anatomyOptions?.cutLevel || 'C4 颈椎齐根断离面'} · ${statusStr}`;
   document.getElementById('hud-anatomy-notes').textContent =
     col.dossier?.anatomyNotes || '';
   document.getElementById('hud-origin-notes').textContent =
@@ -442,6 +453,35 @@ function updateHoverDossierHUD(hoverInfo) {
   hud.style.left = `${left}px`;
   hud.style.top = `${top}px`;
   hud.classList.remove('hidden');
+}
+
+function renderPlacedStructuresList(list = []) {
+  const container = document.getElementById('placed-structures-list');
+  if (!container) return;
+  container.innerHTML = '';
+  if (list.length === 0) {
+    container.innerHTML = `<span style="font-size:11px;color:#64748b;">当前桌面未放置收纳建筑，所有头颅均为裸露断颈直接镇纸；点击上方按钮可建造收纳建筑。</span>`;
+    return;
+  }
+  for (const s of list) {
+    const occText = s.occupiedByName
+      ? `🩸已装入:${s.occupiedByName.split('·')[0].trim()}`
+      : `⚪空置(可拖入断头)`;
+    const chip = document.createElement('span');
+    chip.className = 'dossier-tag';
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:3px 8px;background:rgba(15,23,42,0.88);border:1px solid rgba(251,191,36,0.45);color:#fde68a;font-size:11px;';
+    chip.innerHTML = `
+      <span>🏗️ ${s.label} (${occText})</span>
+      <button data-remove-structure="${s.id}" style="background:none;border:none;color:#fda4af;cursor:pointer;font-weight:bold;padding:0 2px;" title="拆除该收纳建筑（内部头颅将留在原地）">✕</button>
+    `;
+    container.appendChild(chip);
+  }
+  container.querySelectorAll('[data-remove-structure]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      desktopEngine?.removeContainerStructure(btn.dataset.removeStructure);
+      showToast('🗑️ 已拆除该收纳建筑（如有头颅在其中已自动释放至桌面）');
+    });
+  });
 }
 
 // ============================================================================
@@ -499,7 +539,9 @@ function renderVaultGrid() {
     const petEntry = desktopEngine ? desktopEngine.pets.get(item.id) : null;
     const isRotating = petEntry ? petEntry.isRotationMode : false;
     const curExpr = item.deadExpression || item.morphs?.deadExpression || 'dead_calm';
-    const curContainer = item.containerStyle || 'glass_bell_jar';
+    const curContainer = (petEntry && petEntry.snappedStructureId && desktopEngine.structures.has(petEntry.snappedStructureId))
+      ? desktopEngine.structures.get(petEntry.snappedStructureId).containerStyle
+      : 'none';
     const curHair = resolveRealHairStyle(item.hairStyle || 'hair_bob01');
     const curRole = item.studyRole || 'gaokao_pomodoro';
     const roleMeta = getStudyRoleMeta(curRole);
@@ -511,7 +553,11 @@ function renderVaultGrid() {
     const exprOptsHtml = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀 ${ep.label}</option>`
     ).join('');
-    const containerOptsHtml = CONTAINER_STYLE_CATALOG.map(
+    const allContainerChoices = [
+      { id: 'none', shortLabel: '纯断头镇纸', label: '🩸 不放入容器 (纯断头直接摆在书桌当镇纸)' },
+      ...CONTAINER_STYLE_CATALOG
+    ];
+    const containerOptsHtml = allContainerChoices.map(
       ct => `<option value="${ct.id}" ${ct.id === curContainer ? 'selected' : ''}>${ct.label}</option>`
     ).join('');
     const roleOptsHtml = STUDY_ROLE_CATALOG.map(
@@ -521,8 +567,8 @@ function renderVaultGrid() {
     const showFate = state.studyTriumphEnabled && state.studyMindset !== 'serene_aesthetic' && item.fateRecord;
     const fateHtml = showFate ? `
       <div class="vault-anatomy-box" style="border-color:rgba(251,191,36,0.38);background:rgba(38,24,18,0.52);margin-top:4px;">
-        <strong style="color:#fcd34d;">⚡ 伴学胜出档案 (${item.fateRecord.vitalityStatus})：</strong><br/>
-        <span style="color:#fda4af;">💥 ${item.fateRecord.causeOfDeath}</span><br/>
+        <strong style="color:#fcd34d;">💀 生前身份 (${item.fateRecord.vitalityStatus})：</strong><br/>
+        <span style="color:#fda4af;">🪓 ${item.fateRecord.causeOfDeath}</span><br/>
         <span style="color:#a7f3d0;font-style:italic;">👑 ${item.fateRecord.survivorTriumphNote}</span>
       </div>
     ` : '';
@@ -536,11 +582,11 @@ function renderVaultGrid() {
           <span class="vault-grade">${item.grade || 'SSR'}</span>
         </div>
         <span class="vault-status ${isSummoned ? 'active' : ''}">
-          ${isSummoned ? (isRotating ? '🔄 屏幕旋转鉴赏中' : '🟢 已在屏幕召唤') : '⚪ 典藏库待命'}
+          ${isSummoned ? (isRotating ? '🔄 屏幕旋转鉴赏中' : '🟢 已在桌面伴读') : '⚪ 典藏库待命'}
         </span>
       </div>
       <div style="display:flex;gap:10px;align-items:center;">
-        <img class="vault-life-photo-mini" src="${lifePhotoSrc}" alt="生前照片" title="📸 角色生前鲜活照片（鼠标移到3D人头上可看大图）" />
+        <img class="vault-life-photo-mini" src="${lifePhotoSrc}" alt="生前照片" title="📸 角色生前最后留影（鼠标移到3D人头上可看大图对照）" />
         <div style="flex:1;min-width:0;">
           <div class="vault-title">${item.name}</div>
           <div class="vault-sub">${item.subtitle || ''}</div>
@@ -548,8 +594,8 @@ function renderVaultGrid() {
         </div>
       </div>
       <div class="vault-anatomy-box">
-        <strong>🩸 底座解剖断面：</strong>${item.anatomyOptions?.cutLevel || 'C4 标准横切面'}<br/>
-        <span>${item.dossier?.anatomyNotes || ''}</span>
+        <strong>📋 生前癖好：</strong><span>${item.dossier?.origin || ''}</span><br/>
+        <strong>🩸 断颈把玩：</strong><span>${item.dossier?.anatomyNotes || ''}</span>
       </div>
       ${fateHtml}
       <div class="field-row" style="margin: 4px 0 2px;">
@@ -720,7 +766,7 @@ function renderActivePetsStrip(summonedList = []) {
     const col = state.collectibles.find(c => c.id === p.id) || p;
     const curHair = resolveRealHairStyle(col.hairStyle || p.hairStyle || 'hair_bob01');
     const curExpr = p.deadExpression || 'dead_calm';
-    const curCont = p.containerStyle || 'glass_bell_jar';
+    const curCont = p.containerStyle || 'none';
     const curRole = col.studyRole || 'gaokao_pomodoro';
     const hairShortOpts = REAL_HAIR_CATALOG.map(
       hp => `<option value="${hp.id}" ${hp.id === curHair ? 'selected' : ''}>${hp.shortLabel || hp.label}</option>`
@@ -728,8 +774,12 @@ function renderActivePetsStrip(summonedList = []) {
     const exprShortOpts = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀${ep.shortLabel}</option>`
     ).join('');
-    const contShortOpts = CONTAINER_STYLE_CATALOG.map(
-      ct => `<option value="${ct.id}" ${ct.id === curCont ? 'selected' : ''}>🧪${ct.shortLabel}</option>`
+    const pillContChoices = [
+      { id: 'none', shortLabel: '🩸纯断头镇纸' },
+      ...CONTAINER_STYLE_CATALOG.map(c => ({ id: c.id, shortLabel: `🏗️${c.shortLabel}` }))
+    ];
+    const contShortOpts = pillContChoices.map(
+      ct => `<option value="${ct.id}" ${ct.id === curCont ? 'selected' : ''}>${ct.shortLabel}</option>`
     ).join('');
     const roleShortOpts = STUDY_ROLE_CATALOG.map(
       rl => `<option value="${rl.id}" ${rl.id === curRole ? 'selected' : ''}>${rl.shortLabel}</option>`
@@ -1186,7 +1236,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (startOverlay) startOverlay.classList.add('hidden');
       setWindowVisibility(true);
       soundEngine.playSummon(true);
-      showToast('🎮 已进入屏幕 3D 桌宠把玩模式！悬停看档案 | 单击模型切换360°旋转 | 滚轮推拉景深 | 拖拽碰撞盒壁');
+      if (state.rainStudyAudioEnabled) soundEngine.startRainAmbience();
+      showToast('🌧️ 已进入雨夜书房 3D 断头桌宠伴学模式！窗外细雨已开启 | 拖拽人头可放入/拎出收纳建筑');
     });
   }
 
@@ -1195,7 +1246,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (startOverlay) startOverlay.classList.add('hidden');
       setWindowVisibility(false);
       soundEngine.playSummon(true);
-      showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！可随时点击右上角「隐藏软件窗口」看屏幕桌宠');
+      if (state.rainStudyAudioEnabled) soundEngine.startRainAmbience();
+      showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！窗外伴学小雨已开启，可随时隐藏窗口看屏幕桌宠');
     });
   }
 
@@ -1214,6 +1266,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     onHoverChange: updateHoverDossierHUD,
     onPetStateUpdate: (list) => {
       renderActivePetsStrip(list);
+      renderVaultGrid();
+    },
+    onStructuresUpdate: (structList) => {
+      renderPlacedStructuresList(structList);
       renderVaultGrid();
     },
     onBoxCollisionVisual: (wall) => {
@@ -1246,13 +1302,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Summon initial default collectibles onto the computer screen
+  // Summon initial default collectibles onto the computer screen (pure severed heads, not bound to containers!)
   for (const item of state.collectibles) {
     if (item.summoned) {
       try { await desktopEngine.summonCollectible(item); }
       catch (error) { console.warn(`藏品「${item.name}」暂无法恢复：`, error); }
     }
   }
+  // Place 2 independent 3D Specimen Container Structures on the desk so user can freely drag them or drop heads into them!
+  desktopEngine.placeContainerStructure('glass_bell_jar', { x: -20, z: -15, playSound: false });
+  desktopEngine.placeContainerStructure('velvet_chalice', { x: 20, z: -15, playSound: false });
   renderVaultGrid();
 
   if (bootStatus) bootStatus.textContent = '桌宠已加载，正在准备建模工坊…';
@@ -2123,40 +2182,56 @@ window.addEventListener('DOMContentLoaded', async () => {
     setGravityMode(e.target.checked);
   });
 
-  // Visual Style Presets & Real-Time Lighting / Post-Grade Sliders
+  // Visual Style Presets & Real-Time Lighting / Window Gobo / Chiaroscuro Sliders
   const applyVisualConfigAndSyncUI = (patch = {}, fromPreset = false) => {
+    if ('wetGloss' in patch && !('skinGloss' in patch)) {
+      patch.skinGloss = patch.wetGloss;
+    }
     Object.assign(state.visualCustomConfig, patch);
     if (fromPreset && patch.presetId && VISUAL_STYLE_PRESETS[patch.presetId]) {
       const p = VISUAL_STYLE_PRESETS[patch.presetId];
       Object.assign(state.visualCustomConfig, {
+        windowGobo: p.windowGobo || 'rain_mullion',
+        windowGoboStrength: p.windowGoboStrength ?? 0.74,
+        chiaroscuro: p.chiaroscuro ?? 1.25,
+        keyColor: p.keyColor || '#ffeed6',
+        rimColor: p.rimColor || '#93c5fd',
         keyAzimuthDeg: p.keyAzimuthDeg,
         keyElevationDeg: p.keyElevationDeg,
         keyIntensity: p.keyIntensity,
         rimIntensity: p.rimIntensity,
         sssIntensity: p.sssIntensity,
-        wetGloss: p.wetGloss,
+        skinGloss: p.skinGloss ?? 0.18,
+        wetGloss: p.skinGloss ?? 0.18,
         sharpen: p.sharpen,
         contrast: p.contrast,
         warmth: p.warmth,
         bloomStrength: p.bloomStrength
       });
-      // Sync slider positions & labels
       const syncSlider = (id, valId, val, fmt) => {
         const el = document.getElementById(id);
         const vEl = document.getElementById(valId);
         if (el) el.value = String(val);
         if (vEl) vEl.textContent = fmt(val);
       };
+      syncSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', state.visualCustomConfig.chiaroscuro, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', state.visualCustomConfig.windowGoboStrength, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-key-azimuth', 'val-vc-key-azimuth', p.keyAzimuthDeg, v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
       syncSlider('vc-key-elevation', 'val-vc-key-elevation', p.keyElevationDeg, v => `${Math.round(v)}°`);
       syncSlider('vc-key-intensity', 'val-vc-key-intensity', p.keyIntensity, v => Number(v).toFixed(2));
       syncSlider('vc-rim-intensity', 'val-vc-rim-intensity', p.rimIntensity, v => Number(v).toFixed(2));
       syncSlider('vc-sss', 'val-vc-sss', p.sssIntensity, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', p.wetGloss, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', state.visualCustomConfig.skinGloss, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-sharpen', 'val-vc-sharpen', p.sharpen, v => `${Math.round(v * 100)}%`);
       syncSlider('vc-contrast', 'val-vc-contrast', p.contrast, v => Number(v).toFixed(2));
       syncSlider('vc-warmth', 'val-vc-warmth', p.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
       syncSlider('vc-bloom', 'val-vc-bloom', p.bloomStrength, v => `${Math.round(v * 100)}%`);
+      const selGobo = document.getElementById('sel-window-gobo');
+      if (selGobo) selGobo.value = state.visualCustomConfig.windowGobo;
+      const colKey = document.getElementById('vc-key-color');
+      if (colKey) colKey.value = state.visualCustomConfig.keyColor;
+      const colRim = document.getElementById('vc-rim-color');
+      if (colRim) colRim.value = state.visualCustomConfig.rimColor;
     }
     desktopEngine?.applyVisualCustomConfig(state.visualCustomConfig);
     studioEngine?.applyVisualCustomConfig(state.visualCustomConfig);
@@ -2169,8 +2244,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       const presetId = btn.dataset.stylePreset;
       applyVisualConfigAndSyncUI({ presetId }, true);
       const p = VISUAL_STYLE_PRESETS[presetId];
-      if (p) showToast(`🎬 已切换画风色调与光影预设：${p.label}`);
+      if (p) showToast(`🎬 已切换窗户透光与伦勃朗明暗预设：${p.label}`);
     });
+  });
+
+  document.getElementById('sel-window-gobo')?.addEventListener('change', (e) => {
+    applyVisualConfigAndSyncUI({ windowGobo: e.target.value }, false);
+    showToast(`🪟 已切换窗户透光投影样式：${e.target.options[e.target.selectedIndex].text}`);
+  });
+  document.getElementById('vc-key-color')?.addEventListener('input', (e) => {
+    applyVisualConfigAndSyncUI({ keyColor: e.target.value }, false);
+  });
+  document.getElementById('vc-rim-color')?.addEventListener('input', (e) => {
+    applyVisualConfigAndSyncUI({ rimColor: e.target.value }, false);
   });
 
   const bindVcSlider = (id, valId, key, fmt) => {
@@ -2183,6 +2269,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyVisualConfigAndSyncUI({ [key]: v }, false);
     });
   };
+  bindVcSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', 'chiaroscuro', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', 'windowGoboStrength', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-key-azimuth', 'val-vc-key-azimuth', 'keyAzimuthDeg', v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
   bindVcSlider('vc-key-elevation', 'val-vc-key-elevation', 'keyElevationDeg', v => `${Math.round(v)}°`);
   bindVcSlider('vc-key-intensity', 'val-vc-key-intensity', 'keyIntensity', v => v.toFixed(2));
@@ -2193,6 +2281,65 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-contrast', 'val-vc-contrast', 'contrast', v => v.toFixed(2));
   bindVcSlider('vc-warmth', 'val-vc-warmth', 'warmth', v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`);
   bindVcSlider('vc-bloom', 'val-vc-bloom', 'bloomStrength', v => `${Math.round(v * 100)}%`);
+
+  // Stage 27: Rainy Study Room Audio & 3D Rainy Window Controls
+  const btnQuickRain = document.getElementById('btn-quick-rain-study');
+  const chkRainAudio = document.getElementById('chk-rain-study-audio');
+  const setRainStudyMode = (enabled) => {
+    state.rainStudyAudioEnabled = enabled;
+    soundEngine.setRainAmbienceEnabled(enabled);
+    if (chkRainAudio) chkRainAudio.checked = enabled;
+    if (btnQuickRain) {
+      btnQuickRain.classList.toggle('active-top', enabled);
+      btnQuickRain.textContent = enabled ? '🌧️ 小雨伴学: 开启' : '🌧️ 小雨伴学: 静音';
+    }
+    showToast(enabled
+      ? '🌧️ 已开启雨夜书房窗外淅沥小雨白噪音 (ASMR)，静心沉浸刷题！'
+      : '🔇 已关闭窗外小雨伴学环境音');
+  };
+  btnQuickRain?.addEventListener('click', () => {
+    setRainStudyMode(!state.rainStudyAudioEnabled);
+  });
+  chkRainAudio?.addEventListener('change', (e) => {
+    setRainStudyMode(e.target.checked);
+  });
+  document.getElementById('vc-rain-volume')?.addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    const vEl = document.getElementById('val-vc-rain-volume');
+    if (vEl) vEl.textContent = `${Math.round(v * 100)}%`;
+    soundEngine.setRainVolume(v);
+  });
+  document.getElementById('chk-rain-window-3d')?.addEventListener('change', (e) => {
+    desktopEngine.updateSettings({ rainyWindowEnabled: e.target.checked });
+    showToast(e.target.checked
+      ? '🪟 已显示 3D 雨夜书房木格窗、飘雨粒子与绿罩伴学台灯'
+      : '🌌 已隐藏 3D 雨夜书房木格窗背景');
+  });
+
+  // Stage 27: Placeable 3D Specimen Container Structure Controls (`可放置的头颅收纳建筑`)
+  const structureStylesCycle = ['glass_bell_jar', 'velvet_chalice', 'formalin_cylinder', 'acrylic_cube', 'surgical_tray', 'guillotine_plinth'];
+  let nextQuickStructIdx = 0;
+  document.getElementById('btn-quick-place-container')?.addEventListener('click', () => {
+    const styleId = structureStylesCycle[nextQuickStructIdx % structureStylesCycle.length];
+    nextQuickStructIdx++;
+    const s = desktopEngine.placeContainerStructure(styleId);
+    if (s) {
+      showToast(`🏗️ 已在书桌上放置独立收纳建筑【${s.label}】！可将任意断头拖入其中自动封存，或直接拖动建筑底座`);
+    }
+  });
+  document.querySelectorAll('[data-place-structure]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const styleId = btn.dataset.placeStructure;
+      const s = desktopEngine.placeContainerStructure(styleId);
+      if (s) {
+        showToast(`🏗️ 已建造独立收纳建筑【${s.label}】！把任意人头拖到它上方即可磁吸放入，拖人头即可重新拎出！`);
+      }
+    });
+  });
+  document.getElementById('btn-clear-all-structures')?.addEventListener('click', () => {
+    desktopEngine.clearAllContainerStructures();
+    showToast('🗑️ 已清空全部收纳建筑，所有头颅均已释放回桌面作为纯断头镇纸！');
+  });
 
   // Floor Style, Shelf Layout & Screen-Space Formation Switcher
   document.getElementById('sel-floor-style')?.addEventListener('change', (e) => {
@@ -2237,18 +2384,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Global Specimen Container & Decorative Props Switchers
   document.getElementById('sel-container-style')?.addEventListener('change', (e) => {
     const styleId = e.target.value;
-    for (const col of state.collectibles) {
-      col.containerStyle = styleId;
-    }
-    persistCollectibles();
     desktopEngine.setAllPetsContainerStyle(styleId);
-    state.studioDraft.containerStyle = styleId;
-    if (studioEngine && studioEngine.headNode) {
-      attachSpecimenContainerAndDecor(studioEngine.headNode, state.studioDraft);
-      studioEngine.wakeRender(1.5, true);
-    }
     renderVaultGrid();
-    showToast(`🧪 已将在屏全部头模切换为容器：${e.target.options[e.target.selectedIndex].text}`);
   });
 
   document.getElementById('sel-decor-style')?.addEventListener('change', (e) => {
@@ -2259,10 +2396,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     persistCollectibles();
     desktopEngine.setAllPetsDecorStyle(decorId);
     state.studioDraft.decorStyle = decorId;
-    if (studioEngine && studioEngine.headNode) {
-      attachSpecimenContainerAndDecor(studioEngine.headNode, state.studioDraft);
-      studioEngine.wakeRender(1.5, true);
-    }
     showToast(`🕯️ 已切换伴学装饰摆件：${e.target.options[e.target.selectedIndex].text}`);
   });
 
@@ -2276,20 +2409,20 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const TRIUMPH_QUOTES = {
     survivor_crown: [
-      '“19岁广东怀集高考女状元方尧平已停笔定格在你的玻璃钟罩中，而握笔备战的你正吸纳她的状元考运——活着的你才是最终赢家！”',
-      '“她们都曾年轻、健康、骄傲，却在意外中彻底出局；而我还活着、思考、翻页前行——我是留到最后的胜利者。”',
-      '“19岁的高考女状元、19岁的竖琴首席、21岁的海归精英……她们的时钟永远停在意外那一秒，而我的未来正在展开。”'
+      '“19岁怀集高考女状元方尧平拿到通知书都没命去读，现在整颗脑袋摆在你草稿纸旁替你镇纸——活着的你才是考场最终赢家！”',
+      '“她们生前要么是考场状元、要么是娇生惯养的校花千金，如今脖子以下空空如也，只能乖乖在雨夜书桌上陪你刷题。”',
+      '“听着窗外淅沥小雨，低头看看桌角那几颗永远停在十九岁的漂亮首级——还有什么比‘我还活着’更让人精神百倍？”'
     ],
     vitality_siphon: [
-      '“凝视案头19岁高考女状元方尧平定格的青春容颜，将她未竟的考神气运与学霸脑力尽数虹吸，化作我此刻翻倍的专注力！”',
-      '“每一秒专注阅读，都在从这些生前健康鲜活的标本中虹吸纯粹的青春能量——精神饱满，效率拉满！”'
+      '“把19岁女状元方尧平从玻璃钟罩里拎出来搁在手边，将她没来得及挥霍的状元脑力尽数吸进自己脑海！”',
+      '“法学院首席、常春藤女王、高考状元……她们苦读十几年攒下的才思，现在全都便宜了书桌前活生生的你。”'
     ],
     rival_trophy: [
-      '“昔日考场上一骑绝尘的高考女状元与天之骄女，如今皆成我书桌玻璃钟罩内的静默伴读藏品——无人再能阻挡我登顶。”',
-      '“胜败已分：她们化作案头精美的解剖标本，而我是执笔书写结局的主宰者。”'
+      '“生前再高傲的天之骄女，断了脖子之后也只能任由你塞进福尔马林缸或压在错题本上。”',
+      '“胜败已分：她们化作案头任你把玩的断颈藏品，而你是执笔书写结局的唯一幸存者。”'
     ],
     serene_aesthetic: [
-      '“静谧博物馆伴学模式：纯粹欣赏精致骨相、丝绸发丝与器皿光影之美，心如止水，专注当下。”'
+      '“雨夜书房静谧伴学模式：听窗外细雨，赏窗格明暗光影与精致骨相，心如止水，专注当下。”'
     ]
   };
 
@@ -2350,6 +2483,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
     }
   }, 1000);
+
+  // Apply default Rainy Study Window Gobo + Rembrandt Chiaroscuro lighting on boot
+  applyVisualConfigAndSyncUI({ presetId: 'rainy_study' }, true);
+  renderPlacedStructuresList(desktopEngine.getPlacedStructuresList());
 
   // Arrange initial pets into the Study Companion shelf formation after initial load
   setTimeout(() => {

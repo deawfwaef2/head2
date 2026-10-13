@@ -272,6 +272,33 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0, w, h);
 
+  // Subtle post-mortem anatomical depth & dermal micro-variation (告别模拟人生平涂感与硅胶娃娃塑料感)
+  const paintSoftZone = (u, v, rx, ry, colInner, colOuter = 'rgba(0,0,0,0)') => {
+    ctx.save();
+    ctx.translate(u * w, v * h);
+    ctx.scale(1, ry / Math.max(rx, 1e-4));
+    const g = ctx.createRadialGradient(0, 0, rx * w * 0.05, 0, 0, rx * w);
+    g.addColorStop(0, colInner);
+    g.addColorStop(1, colOuter);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, rx * w, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  // Cool post-mortem infraorbital / tear-trough depth under lower eyelids & eye sockets
+  paintSoftZone(0.415, 0.432, 0.048, 0.024, 'rgba(68, 42, 58, 0.14)');
+  paintSoftZone(0.585, 0.432, 0.048, 0.024, 'rgba(68, 42, 58, 0.14)');
+  // Alar nasal wing & sub-nasal philtrum shadow
+  paintSoftZone(0.468, 0.496, 0.024, 0.020, 'rgba(72, 36, 34, 0.16)');
+  paintSoftZone(0.532, 0.496, 0.024, 0.020, 'rgba(72, 36, 34, 0.16)');
+  paintSoftZone(0.500, 0.512, 0.018, 0.022, 'rgba(78, 40, 38, 0.13)');
+  // Sub-labial chin hollow & temple cool pallor
+  paintSoftZone(0.500, 0.592, 0.036, 0.018, 'rgba(64, 36, 38, 0.14)');
+  paintSoftZone(0.320, 0.390, 0.065, 0.075, 'rgba(145, 162, 188, 0.08)');
+  paintSoftZone(0.680, 0.390, 0.065, 0.075, 'rgba(145, 162, 188, 0.08)');
+
   const paintMole = (u, v, radPx = 2.4, alpha = 0.72) => {
     const cx = u * w;
     const cy = v * h;
@@ -1038,21 +1065,22 @@ export async function buildCollectibleHeadNode(config = {}) {
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: skinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.35, 0.35),
+        normalScale: new THREE.Vector2(0.62, 0.62),
         roughnessMap: skinMicro.roughnessMap,
         bumpMap: skinMicro.bumpMap,
-        bumpScale: 0.008,
+        bumpScale: 0.016,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.54),
+        roughness: Math.max(0.58, Number(materials.skinRoughness ?? 0.68)),
         metalness: 0.0,
-        sheen: 0.24,
-        sheenRoughness: 0.52,
-        sheenColor: new THREE.Color('#f2afa6'),
-        clearcoat: 0.08,
-        clearcoatRoughness: 0.44,
-        specularIntensity: 0.42,
-        ior: 1.41,
-        envMapIntensity: 0.42,
+        sheen: 0.36,
+        sheenRoughness: 0.84,
+        sheenColor: new THREE.Color('#e8b4ae'),
+        clearcoat: 0.0,
+        clearcoatRoughness: 0.58,
+        specularIntensity: 0.20,
+        specularColor: new THREE.Color('#dce6f2'),
+        ior: 1.39,
+        envMapIntensity: 0.16,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -1204,14 +1232,14 @@ export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {
   const oldDecor = rootGroup.getObjectByName('SpecimenDecorGroup');
   if (oldDecor) rootGroup.remove(oldDecor);
 
-  const defaultContainer = config.groomLod === 'studio' ? (config.studioContainerStyle || 'none') : 'glass_bell_jar';
-  const containerStyle = config.containerStyle || defaultContainer;
+  // Stage 27: Specimen containers (头颅收纳装置) are NEVER bound to character heads on the desktop!
+  // They are independent placeable 3D architectural structures (可放置的收纳建筑) on the desk/shelves.
+  const containerStyle = config.forcePreviewContainer ? (config.studioContainerStyle || 'none') : 'none';
 
   const containerGroup = buildSpecimenContainerGroup(containerStyle);
   rootGroup.add(containerGroup);
 
-  // Decorative props live on the 3D Desk/Shelves (StageSceneDecorGroup), not bound to the head
-  const baseBottomOffset = containerGroup.userData.baseBottomOffset ?? -12.6;
+  const baseBottomOffset = containerGroup.userData.baseBottomOffset ?? -10.8;
   rootGroup.userData.containerGroup = containerGroup;
   rootGroup.userData.containerStyle = containerStyle;
   rootGroup.userData.baseBottomOffset = baseBottomOffset;
