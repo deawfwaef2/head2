@@ -497,6 +497,13 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (rootGroup.userData.hairRequestSerial !== request) { disposeHeadNode(groom); return null; }
       disposeHeadNode(oldHair);
       modelContainer.add(groom);
+      try {
+        const underlayer = await buildHairVolumeUnderlayer(resolvedStyle, config);
+        if (underlayer) {
+          if (rootGroup.userData.hairRequestSerial !== request) disposeHeadNode(underlayer);
+          else groom.add(underlayer);
+        }
+      } catch (_) { /* 发量层失败则纯发丝呈现 */ }
       rootGroup.userData.currentHairStyle = groomId;
       rootGroup.userData.groomStats = groom.userData.groom;
       if (rootGroup.userData.currentMorphs) applyHeadMorphsToGroup(rootGroup, rootGroup.userData.currentMorphs);
@@ -722,16 +729,16 @@ export async function buildCollectibleHeadNode(config = {}) {
         bumpMap: skinMicro.bumpMap,
         bumpScale: 0.028,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Number(materials.skinRoughness ?? 0.68),
+        roughness: Number(materials.skinRoughness ?? 0.55),
         metalness: 0.0,
-        sheen: 0.12,
-        sheenRoughness: 0.72,
-        sheenColor: new THREE.Color('#e0a198'),
-        clearcoat: 0.03,
-        clearcoatRoughness: 0.65,
-        specularIntensity: 0.27,
+        sheen: 0.16,
+        sheenRoughness: 0.62,
+        sheenColor: new THREE.Color('#e8a49b'),
+        clearcoat: 0.20,
+        clearcoatRoughness: 0.38,
+        specularIntensity: 0.46,
         ior: 1.42,
-        envMapIntensity: 0.30,
+        envMapIntensity: 0.38,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });

@@ -338,3 +338,10 @@
 - 根因3中分白条：`groom_center_long` 发缝把根层alpha压到0露白头皮。已改窄缝(.0011→.00055)且只压到18%深色层。
 - 旋转环：不透明度 .65/.52→.30/.22（仍可辨识旋转模式，不再压脸）。
 - 下一步：用户复拍同角度截图；若仍白，先查其设置页是否开了旧存档 ultra/辉光，再按截图继续收曝光；若发丝仍稀，优先加 family2/3 子发丝或提桌面根数到6000（2070S可承受，需真机帧率反馈）。
+
+### [2026-10-13 Stage 17] 对标实体硅胶头参考：混合发量层 + 湿润发丝 + 硅胶润泽皮肤
+- 用户新参考(图3-5)：实体硅胶/假发头模——浓密发mass、黑亮湿润发丝、皮肤油润光泽。明确 GitHub 打开正常、现版主要问题=头发太弱+画质感不对。Stage 16 的 cfe37ee 上轮因 origin 远端丢失未推送（本轮已恢复干净 origin 地址，将连同本阶段一并推送；token 绝不写入 remote）。
+- 头发混合架构（`collectibleHeadAssembler.js` 新增 `buildHairVolumeUnderlayer`）：groom 曲线发丝之下再挂一层 legacy 发模实体（groom_photo_tied→hair_user_photo / center_long→hair_long01 / low_chignon→hair_ponytail01），压暗(×0.62)+alphaTest.30+各向异性，作为浓密发量承托；发丝在其上覆面。发量层加载失败自动退回纯发丝，不黑屏。
+- 发丝（`curveGroom.js`）：桌面根数 4600→6500、steps 20→18 抵消成本、子发丝散布 .00015→.00048 成面覆盖；材质 roughness .46→.36、anisotropy .92、spec .72、env .52、加微 clearcoat，呈参考图的黑亮湿发光泽。
+- 皮肤硅胶感：roughness .68→.55、clearcoat .03→.20(ccRough .38)、spec .27→.46、env .30→.38、sheen 粉调略增。仍保留毛孔 bump .028 防塑料过滑。
+- 风险待真机验证：ponytail 发量层与 low_chignon 盘发外形可能不完全贴合；若某发型发量层穿出/错位，回传截图后按发型单独映射或禁用该发型 underlayer。沙箱无浏览器，不宣称视觉达标。

@@ -104,7 +104,7 @@ function buildStrands(source, indices, steps, sides, desktop) {
       normal.normalize(); binormal.crossVectors(tangent, normal).normalize();
       if (child) {
         const phase = strand * 2.39996 + child * Math.PI;
-        const spread = .00015 * (.65 + .35 * Math.sin(t * Math.PI));
+        const spread = .00048 * (.65 + .35 * Math.sin(t * Math.PI));
         p.addScaledVector(normal, Math.cos(phase) * spread).addScaledVector(binormal, Math.sin(phase) * spread);
       }
       // Real tapered cylindrical strands. Desktop LOD slightly widens subpixel
@@ -181,7 +181,7 @@ export async function buildCurveGroom(style, head, config = {}) {
   if (!id) throw new Error('未知 Groom 发型');
   const source = await decodeSource(id);
   const desktop = config.groomLod !== 'studio';
-  const budget = desktop ? 4600 : Math.min(source.count, Number(config.groomDensity || 9000));
+  const budget = desktop ? 6500 : Math.min(source.count, Number(config.groomDensity || 9000));
   const count = Math.max(600, Math.min(source.count, budget));
   const families = [[], [], [], []];
   for (let i = 0; i < count; i++) {
@@ -203,12 +203,12 @@ export async function buildCurveGroom(style, head, config = {}) {
   let triangles = 0;
   for (let f = 0; f < families.length; f++) {
     if (!families[f].length) continue;
-    const g = buildStrands(source, families[f], desktop ? 20 : 32, 3, desktop);
+    const g = buildStrands(source, families[f], desktop ? 18 : 32, 3, desktop);
     const material = new THREE.MeshPhysicalMaterial({
-      color: base, vertexColors: true, roughness: .46, metalness: 0,
-      anisotropy: .86, anisotropyRotation: 0, specularIntensity: .48,
-      specularColor: new THREE.Color('#f5e4d3'), envMapIntensity: .36,
-      sheen: .12, sheenRoughness: .55, sheenColor: base, clearcoat: 0,
+      color: base, vertexColors: true, roughness: .36, metalness: 0,
+      anisotropy: .92, anisotropyRotation: 0, specularIntensity: .72,
+      specularColor: new THREE.Color('#f5e4d3'), envMapIntensity: .52,
+      sheen: .16, sheenRoughness: .48, sheenColor: base, clearcoat: .06, clearcoatRoughness: .5,
       emissive: 0, side: THREE.FrontSide,
     });
     material.userData.builtInHair = true; material.userData.curveGroom = true;
