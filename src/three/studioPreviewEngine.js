@@ -44,6 +44,8 @@ export class StudioPreviewEngine {
       canvas: this.canvas,
       alpha: true,
       antialias: true,
+      powerPreference: 'high-performance',
+      stencil: false,
       preserveDrawingBuffer: true
     });
     this.renderer.setSize(w, h, false);

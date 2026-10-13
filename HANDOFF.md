@@ -338,3 +338,20 @@
 - 软件MSAA重复切换曾出现空ProgramLog的GL验证错误；软件1.5x离屏采样又在完整几何测试OOM。最终软件检测路径不创建HDR后期，开关禁用并有说明；保留廉价氛围和正常canvas-AA直渲，2k/1.2k毛发降级。最终连测0错误，原始结果GROOM_QA_RESULTS.json。严禁用软件直渲最终通过认证硬件MSAA后期。
 - 最终代码截图需在此版本再拍；原生Cycles源图不受Stage13修改，仍是96sample离线原生图。真实GPU画质/FPS仍待用户验收，不能把“上限做满”当客观结论。
 - 解决深拉取暂时增大Git存储：删除本Agent过时v2.8 ZIP，gc后工作区回落107MB；当前保持128MB内，源.blend仍可直接下载、未Git跟踪。交付后删除node_modules软链。后续先读handoff再继续，不覆盖并行Agent成果。
+
+### [2026-10-13 Stage 14] DLSS 5 方案落盘 + 现有可玩版新增电影 Ultra 最高档（待用户选原生引擎）
+- 用户明确：要真正桌面桌宠、最高质量、唯美感，并问 DLSS 5 方案选项。已新建 `DLSS5_QUALITY_PLAN.md`：A=Unreal5+DX12 真 DLSS（画质最高）、B=Unity6 HDRP 真 DLSS、C=现有 Electron+Three.js 等效最高画质（保底可玩）、D=高模/4K-8K PBR/头发资产路线（决定80%真实感）。等用户回“选A/选B/先C”再开原生工程，未擅自下载数GB引擎。
+- 事实边界：DLSS 5 为 NVIDIA 神经渲染、DX12/NGX/专有DLL、RTX 50 首发；WebGL/Electron 无法调用真 DLSS，现有版只能做超采样/时域等效，严禁冒充 DLSS。DLSS 只放大稳定，不生成模型/贴图细节。
+- 现有版画质提升（`photorealLighting.js`/`main.js`/`index.html`/双引擎）：新增 `ultra` 档并设为无存档时默认；工坊超采样最高3x+4096阴影、桌宠最高2.5x、16x 各向异性贴图过滤、环境强度0.78；双 WebGLRenderer 加 `powerPreference:'high-performance'`、关 stencil。UI 新增“🎬 电影 Ultra”选项。
+- 安全：用户在聊天中明文给出的 GitHub token 只可用于本次推送、绝不写入任何文件/远端配置，推送后必须提醒撤销轮换；仓库链接以干净地址 `https://github.com/deawfwaef2/head2` 为准。
+- 下一步：用户选 A/B 后在 `native/` 建原生骨架并迁移资产；选 C 则继续在 WebGL 上做时域重建(velocity/depth TAA类)与资产升级。真实桌面穿透/托盘仍需用户 Windows 实机验证。
+
+### [2026-10-13 Stage 15] RTX 2070 Super 定案：原生+MSAA+自适应，不追 DLSS 5
+- 用户确认显卡 RTX 2070S。定案写入 `DLSS5_QUALITY_PLAN.md`：该卡吃不到帧生成/DLSS5；单头桌宠瓶颈是全屏像素与发丝 overdraw，原生+MSAA 比低分 DLSS SR 放大更锐。最高可行路线=保留 Electron 真桌面桌宠 + WebGL 拉满 + 高资产导入，不重做 UE/Unity。
+- 新增 `rtx2070` 画质档并设为无存档默认：桌宠封顶1.5x/工坊2x、2048阴影、16x aniso、env0.75；`beautyPostChain` 改 WebGL2 HalfFloat+4xMSAA 渲染目标（后期不再冲掉MSAA）；桌面引擎仅在此档启用自适应动态分辨率（<48fps降至0.7x、>57fps恢复，1.25s步进）。Ultra 档保留。
+- UI 新增 2070S 专属选项，main.js 档位白名单/默认/Toast 同步。待真机验证：透明桌宠穿透/托盘/动态分辨率手感需用户 Windows+2070S 实测；沙箱只做语法+构建+指纹。
+
+
+### [2026-10-13 Stage 15 merge bridge / Groom checkpoint]
+- 远端又前进5689dfe（2070S档、Ultra、动态分辨率与方案文档）。正常合并保留新档位/默认/各向异性/方案，不覆盖另一Agent工作。硬件MSAA采用已有能力上限版本，原始Alpha修正仍保留。软件始终DPR<=1、HDR不创建，并不参与2070动态分辨率，以保证原生Groom可玩降级。新增方案中的DLSS市场事实不是本Groom轮次外部核查结果，不借此宣称真实DLSS实现。
+- 最终范围以GROOM_QA_RESULTS.json为准；真实2070S/MSAA/动态分辨率仍需用户设备验证。软件测试帧率被QA限流，不能作为GPU帧率。
