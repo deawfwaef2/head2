@@ -298,3 +298,10 @@
 - 双引擎接入（studioPreviewEngine + desktopBoxSpaceEngine）：init 末尾 try/catch 创建（异常回退直渲永不黑屏）、resize 同步 composer 尺寸/像素比、animate 按 `beautyPost.enabled` 分流；流畅档(low)强制关闭后期省显存，中/高档默认开启；新增 `setBeautyPostEnabled(v)` 供下段设置页开关接线。
 - 验证：3 文件 node --check 通过；`node scripts/build_standalone_html.mjs` 一次跑通（Vite 2s），根目录 HTML 17.76MB 且与 docs/index.html byte-for-byte 一致；包内指纹 renderTarget1/_outputColorSpace/separableBlurMaterials/uVignette/uSaturation/setBeautyPostEnabled 全命中；无外部脚本引用。
 - 工作区 hygiene：node_modules 移至 /tmp/head2-node_modules 并软链（仿 11c），dist/ 构建后删除，工作区回落 70MB；token 只走内存 header 推送，不进任何文件；本轮未 force-push。
+
+### [2026-10-13 Stage 13b / playable checkpoint] 唯美氛围：呼吸尘埃 + 工坊背幕光晕 + 设置页双开关
+- 新增 `src/three/atmosphere.js`：`createBokehDust`（3 层共 ~236 点加色混合呼吸尘埃，确定性伪随机分布 + 顶点色冷暖点缀，CPU 每帧仅更新 Y/X 正弦漂移）与 `createStudioBackdrop`（头模身后冷调径向辉光盘，Basic 材质效果确定）；全部 Canvas 程序化纹理，depthWrite=false + renderOrder 控制，永不遮挡头模与断面。
+- 桌面引擎接入盒空间大范围尘埃（x±58/y±30/z-112..-4，animate 内随 elapsed 更新）；工坊引擎接入背幕（0,-2,-34）+ 小范围尘埃；双引擎新增 `setAtmosphereEnabled(v)`。
+- 设置页渲染卡新增 `chk-beauty-post`（辉光后期）与 `chk-atmosphere`（氛围）两个 checkbox（`index.html`），`main.js` 接线双引擎同步 + localStorage 持久化（cervix3d-beauty-post / cervix3d-atmosphere）+ Toast 反馈。
+- ⚠️ 环境教训：node_modules 外移到 /tmp 时叶目录名必须仍叫 `node_modules`（如 /tmp/head2-project/node_modules），否则 Node ESM 按字面名向上查找依赖失败（本次曾误命名导致 vite 报 picomatch 缺失，已修复并复现构建成功）。
+- 验证：4 文件 node --check 通过；重建 HTML 17.76MB，双包 byte 一致；指纹 BokehDustAtmosphere/chk-beauty-post/chk-atmosphere/setAtmosphereEnabled/StudioBackdropGlow/uVignette 全命中；无外部脚本；dist 已删。

@@ -1417,6 +1417,46 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Stage 13a/13b: 辉光后期 + 氛围开关（双引擎同步，持久化）
+  const POST_KEY = 'cervix3d-beauty-post';
+  const ATM_KEY = 'cervix3d-atmosphere';
+  const postChk = document.getElementById('chk-beauty-post');
+  const atmChk = document.getElementById('chk-atmosphere');
+  const applyPostToggle = (on) => {
+    try {
+      if (desktopEngine) desktopEngine.setBeautyPostEnabled(on);
+      if (studioEngine) studioEngine.setBeautyPostEnabled(on);
+    } catch (err) { console.warn('应用辉光后期开关失败:', err); }
+  };
+  const applyAtmToggle = (on) => {
+    try {
+      if (desktopEngine) desktopEngine.setAtmosphereEnabled(on);
+      if (studioEngine) studioEngine.setAtmosphereEnabled(on);
+    } catch (err) { console.warn('应用氛围开关失败:', err); }
+  };
+  if (postChk) {
+    let savedPost = true;
+    try { savedPost = localStorage.getItem(POST_KEY) !== 'off'; } catch (_) {}
+    postChk.checked = savedPost;
+    applyPostToggle(savedPost);
+    postChk.addEventListener('change', (e) => {
+      applyPostToggle(e.target.checked);
+      try { localStorage.setItem(POST_KEY, e.target.checked ? 'on' : 'off'); } catch (_) {}
+      showToast(e.target.checked ? '✨ 辉光后期已开启' : '🌙 辉光后期已关闭（直渲模式）');
+    });
+  }
+  if (atmChk) {
+    let savedAtm = true;
+    try { savedAtm = localStorage.getItem(ATM_KEY) !== 'off'; } catch (_) {}
+    atmChk.checked = savedAtm;
+    applyAtmToggle(savedAtm);
+    atmChk.addEventListener('change', (e) => {
+      applyAtmToggle(e.target.checked);
+      try { localStorage.setItem(ATM_KEY, e.target.checked ? 'on' : 'off'); } catch (_) {}
+      showToast(e.target.checked ? '🌫️ 氛围尘埃已开启' : '🌫️ 氛围尘埃已关闭');
+    });
+  }
+
   // Sound Sliders & Test Buttons
   for (const [id, valId, prop] of [
     ['snd-master', 'val-snd-master', 'masterVolume'],

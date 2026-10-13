@@ -15,6 +15,7 @@ import {
   applyRenderQualityToEngine
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
+import { createBokehDust } from './atmosphere.js';
 
 /**
  * Full-Screen 3D Perspective Box Space & Desktop Pet Physics/Interaction Engine
@@ -105,6 +106,18 @@ export class DesktopBoxSpaceEngine {
     } catch (err) {
       console.warn('后期链初始化失败，已回退直渲:', err);
       this.beautyPost = null;
+    }
+
+    // Stage 13b 唯美氛围：盒型空间内的呼吸尘埃（加色混合，永不遮挡头模）
+    this.atmosphere = null;
+    try {
+      this.atmosphere = createBokehDust({
+        bounds: { x: [-58, 58], y: [-30, 30], z: [-112, -4] },
+      });
+      this.scene.add(this.atmosphere.group);
+    } catch (err) {
+      console.warn('氛围尘埃初始化失败，已跳过:', err);
+      this.atmosphere = null;
     }
 
     this.updateCameraProjection();
@@ -599,6 +612,11 @@ export class DesktopBoxSpaceEngine {
     }
   }
 
+  /** Stage 13b：用户可随时开关氛围尘埃（设置页持久化） */
+  setAtmosphereEnabled(v) {
+    if (this.atmosphere) this.atmosphere.group.visible = v !== false;
+  }
+
   animate() {
     this.animFrameId = requestAnimationFrame(this.animate);
     const dt = Math.min(0.05, this.clock.getDelta());
@@ -743,6 +761,10 @@ export class DesktopBoxSpaceEngine {
         pet.node.rotation.y += (targetYaw - pet.node.rotation.y) * 0.14;
         pet.node.rotation.z += (velocityRoll - pet.node.rotation.z) * 0.14;
       }
+    }
+
+    if (this.atmosphere && this.atmosphere.group.visible) {
+      this.atmosphere.update(dt, elapsed);
     }
 
     if (this.beautyPost && this.beautyPost.enabled) {
