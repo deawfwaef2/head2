@@ -155,12 +155,16 @@ export function getHairStrandTextures(styleId, glbImage) {
 
   const map = new THREE.CanvasTexture(c);
   map.colorSpace = THREE.SRGBColorSpace;
+  // glTF UVs use top-left image coordinates. CanvasTexture defaults to flipY=true.
+  // Keeping that default inverts the alpha atlas on every hair card.
+  map.flipY = false;
   map.wrapS = THREE.ClampToEdgeWrapping;
   map.wrapT = THREE.ClampToEdgeWrapping;
   map.anisotropy = 8;
   map.needsUpdate = true;
 
   const roughnessMap = new THREE.CanvasTexture(rc);
+  roughnessMap.flipY = false;
   roughnessMap.wrapS = THREE.ClampToEdgeWrapping;
   roughnessMap.wrapT = THREE.ClampToEdgeWrapping;
   roughnessMap.anisotropy = 4;

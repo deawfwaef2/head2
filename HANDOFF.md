@@ -228,3 +228,11 @@
 - **装配器改动**：发片改不透明 + alphaTest 0.28 + alphaToCoverage（告别 transparent 排序团块），roughness 标量置 1（由纹理携带），新增 `addScalpCap`（按发片包围盒自动贴合深色穹顶，只盖头顶不碰脸，Multiplicative 0.30×displayColor）。
 - **验证**：无头启动 0 错误（GLSL 编译通过）；探针 `transparent:false/alphaTest:0.28/hasRough/hasKK/mapW:1024` 全绿；截图见 KK 光带已作用、头皮衬底盖住头顶秃皮且未遮脸（无头下 canvas 贴图全黑属已知环境问题，真机看束感）。
 - 已重建双击 HTML（11.19MB）并同步 docs。待用户真机截图确认束感/光带强度（KK 光方向为固定值，与主光略有偏差，v1 可接受）。
+
+### [2026-10-13 Stage 11a / hair repair checkpoint] 修复发片 Alpha UV 倒置与错误黑色球壳
+- 从公开远端 c568428 获取仓库；完整读取已有 handoff，不覆盖历史，不强推。
+- Stage 10 的 CanvasTexture 默认 flipY=true，而 GLTFLoader 贴图 flipY=false；新 RGB/alpha/roughness 图因此与原 GLB UV 上下颠倒。先将两张替代图 flipY=false，恢复透明区域对位。
+- 移除按整个发型（含长发/发髻）包围盒生成的 ScalpCap 球壳：它不贴合头皮，用户截图出现黑色头盔/缺口。切换无发也清除旧壳。禁止再次用发型全局包围盒生成头皮。
+- 关闭旧 KK 固定方向发光 hook：世界/视图法线混用，且以 emissive 添加不受灯光/阴影影响的白高光，容易洗白成银色三角。暂用真实灯阵物理材质。
+- 优先重建单文件 HTML / docs 再继续；下一阶段核对纹理缓存、实际 atlas 走向与材质，保留外部私人 GLB PBR。
+- GitHub connector 不支持此环境，若直接 git 推送失败，不得宣称已同步；用户已获密钥撤销提醒，不保存 token 到仓库。
