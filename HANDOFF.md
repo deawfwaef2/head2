@@ -463,8 +463,14 @@
   - `SPEC-2026-FYP · 方尧平` 采用 `2f77c19` 的 MakeHuman 协调柔和鹅蛋脸权重 (`|w| <= 0.14`) 与 `hair_ponytail01.glb`（Elvs 17,360 顶点高颅顶露耳束发，纯正乌黑 `#121216`），附带用户上传的方尧平生前校服照片 (`fang_yaoping_ref.jpg`) 与 `🎓 状元气运·25分钟番茄钟督学官` 绑定职能。
   - 鼠标移到任何 3D 头模上时，悬浮窗 (`#pet-hover-dossier`) 均直观展示 **📸 角色生前鲜活照片** 与 **🎓 绑定伴学职能**，支持在左下角在屏藏品条与典藏库随时分配职能并点击 **「⚡督学 / ⚡激发伴学职能」** 触发学习动力加成。
 
-
-
-
-
+### [2026-10-13 Stage 26] 28 款大师级精雕真发丝 3D 发型库 + 双通道真 Alpha 羽毛碎发与 Marschner 双峰各向异性丝绸着色器 + 保形细分无裂缝几何 + 全场景一键换发（回应用户对 `uploads/image-1.png` 的反馈：“你这个头发种类太少，而且看起来就像粗糙纸片一样效果太差了！我要完全真实感的效果！”）
+- **1. 根因诊断与彻底解决 `uploads/image-1.png` 粗糙纸片感 (`粗糙纸片一样效果太差了`) 的四大底层问题**：
+  - **问题 A（WebGL 二进制 `alphaTest: 0.15, transparent: false` 硬切纸片边缘）**：此前 `collectibleHeadAssembler.js` 将所有发型设为 `transparent: false, alphaTest: 0.15`，导致艺术家贴图中 `14%~44.5%` 的半透明羽毛碎发与空气刘海尖端在 WebGL 中被强制按 `opacity = 1.0` 渲染成实心黑纸片。**修复**：重构为 **「双通道深度预写 (`Pass 1: alphaTest: 0.82, depthWrite: true, polygonOffsetFactor: 1`) + 真 Alpha 半透明羽毛碎发通道 (`Pass 2: transparent: true, depthWrite: false, alphaTest: 0.015`) + 头皮发根阴影底衬 (`ScalpRootFeatherCap`)」**，并在导出 `.glb` 时将三角面索引按由内向外径向深度预排序，使发片层叠 100% 乌黑顺滑无肉色夹缝，而刘海与鬓角发梢呈现真实半透明丝缕感。
+  - **问题 B（原始低分贴图自带白底光晕、棋盘横纹与无透明通道黑块）**：MakeHuman 原始贴图如 `BlondHair.png` 含横向亮白条纹、`hairtex1.png` 含纯白背景与粉花海绵杂物（半透明边缘渗出灰白边）、`braid01_diffuse_grapewash.png` 无 Alpha 通道。**修复**：在 `scripts/build_master_assets.py` (`synthesize_photoreal_hair_png`) 中自动检测纵/横发丝流向，合成为纯净高密度纵向微纤维 RGB 反照率贴图 + 去白边精细发梢 Alpha 通道，彻底杜绝白边光晕与棋盘格条纹。
+  - **问题 C（反向内翻法线与低多边形折角）**：如 `bob_curled_under_bangs.obj` 存在 1,001 个法线朝内的反向三角面及 UV 接缝断阶。**修复**：统一外向法线绕序 (`dot(fn, fc - hc) > 0`)、3D 顶点焊接拉普拉斯法线平滑并与颅顶球面法线融合 (`72%`)，同时实现 **100% 保形无裂缝红绿边细分 (`subdivide_conforming_watertight`)** 与细分后稠密颅面防穿模抬升，消除一切多边形折角与 T 型针孔裂缝。
+  - **问题 D（缺乏真实发丝各向异性高光）**：在 `collectibleHeadAssembler.js` 中注入自定义 **`injectMarschnerHairShader`** 着色器钩子，实现 Marschner / Kajiya-Kay 双峰偏移各向异性高光（主表皮鳞片冷银亮带 `R` + 次级内部透射暖光带 `TRT`）与亚像素微纤维法线扰动。
+- **2. 发型库从 16 款大幅扩充至 28 款大师级 3D 发型 (`REAL_HAIR_CATALOG`) 并支持全场景一键换发**：
+  - 从官方 MakeHuman `hair01`、`hair02`、`hair03` 资产包中精选并精修 **28 款 3D 发型 `.glb`**（涵盖 **短发波波系 6 款、直发长发系 6 款、卷发波浪系 6 款、古典盘发系 5 款、马尾编发系 5 款** + 无发解剖态），总模型体积控制在 `14 MB`。
+  - 6 位旗舰角色默认搭载各自代表性真发丝发型：`方尧平 (SPEC-2026-FYP) -> daz_hair_air_bangs_long (状元空气齐刘海披肩中长发)`、`初夏 -> hair_bob01`、`林汐 -> hair_long01`、`苏晚 -> hair_braid01`、`千雪 -> daz_hair_hime`、`沈知微 -> daz_hair_curtain_wave`。
+  - 在 **桌面左下角在屏藏品条 (`#screen-pets-pills`)**、**典藏库卡片 (`#vault-grid`)** 与 **高定工坊 (`步骤 3`)** 全面新增 **28 款发型直接下拉切换器**，并保留工坊 **9 轴实时发型微调滑杆** 与外部 `.GLB/.OBJ` 发型导入。
 

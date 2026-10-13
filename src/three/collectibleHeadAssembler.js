@@ -5,6 +5,7 @@ import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering } from './photorealLighting.js';
+import { REAL_HAIR_CATALOG } from '../data/defaultCollectibles.js';
 import {
   buildSpecimenContainerGroup,
   buildSpecimenDecorGroup,
@@ -30,6 +31,13 @@ export const FORENSIC_EXPRESSION_PRESETS = [
     shortLabel: '失活标本',
     desc: '瞳孔失焦、眼睑半阖、双唇松弛平直闭合（默认失活态）',
     weights: {},
+  },
+  {
+    id: 'dead_half_open',
+    label: '半睁迷离 · 微启失神',
+    shortLabel: '半睁微启',
+    desc: '眼睑半垂、瞳仁微向上翻、双唇微启露出洁白门齿的断气瞬间',
+    weights: { expr_serene: 0.35, expr_hollow: 0.42 },
   },
   {
     id: 'dead_serene',
@@ -75,25 +83,13 @@ export const FORENSIC_EXPRESSION_PRESETS = [
   },
 ];
 
-export const HIGH_POLY_HAIR_CATALOG = [
-  { id: 'hair_bob01', label: '大师精雕 · 空气刘海内扣短波波 (Toigo · 2,806v)' },
-  { id: 'hair_long01', label: '大师精雕 · 东方中分八字柔顺黑长直 (Elvs · 7,234v)' },
-  { id: 'hair_braid01', label: '大师精雕 · 新中式侧分斜刘海法式盘发 (Elvs · 6,174v)' },
-  { id: 'daz_hair_hime', label: '大师精雕 · 国风齐刘海姬发式公主切 (Cortu · 848v)' },
-  { id: 'daz_hair_curtain_wave', label: '大师精雕 · 港风八字刘海蓬松大波浪 (Elvs · 5,968v)' },
-  { id: 'hair_user_photo', label: '大师精雕 · 日系清透碎刘海波波头 (LittleRight · 1,919v)' },
-  { id: 'hair_ponytail01', label: '大师精雕 · 飒爽千金露耳高扎长辫 (Elvs · 17,360v)' },
-  { id: 'hair_short04', label: '大师精雕 · 都市轻熟齐眉锁骨中长发 (Elvs · 5,050v)' },
-  { id: 'hair_bob02', label: '大师精雕 · 干练中分内扣A字短波波 (Toigo · 1,836v)' },
-  { id: 'hair_short02', label: '大师精雕 · 中式清纯多层次学生短发 (O4saken · 12,547v)' },
-  { id: 'daz_hair_wavy_bob', label: '大师精雕 · 复古名伶偏分大波浪短发 (Elvs · 4,914v)' },
-  { id: 'daz_hair_side_long', label: '大师精雕 · 知性御姐大偏分柔顺长直发 (Elvs · 4,418v)' },
-  { id: 'daz_hair_hazel_wave', label: '大师精雕 · 温柔千金中分披肩浪漫卷发 (Elvs · 4,891v)' },
-  { id: 'daz_hair_twin_buns', label: '大师精雕 · 甜酷少女高颅顶双丸子头 (Elvs · 1,864v)' },
-  { id: 'daz_hair_glam_wave', label: '大师精雕 · 冷艳超模大背头蓬松女神卷 (CL · 8,985v)' },
-  { id: 'daz_hair_asym_short', label: '大师精雕 · 法式复古齐眉齐颌短波波 (Elvs · 1,679v)' },
-  { id: 'none', label: '无头发 · 纯解剖头骨/光头标本' },
-];
+export const HIGH_POLY_HAIR_CATALOG = REAL_HAIR_CATALOG.map((item) => ({
+  id: item.id,
+  label: item.label,
+  shortLabel: item.shortLabel || item.label,
+  category: item.category || '精选发型',
+  desc: item.desc || '',
+}));
 
 function base64ToArrayBuffer(b64) {
   const binaryString = window.atob(b64);
@@ -245,17 +241,17 @@ function fitImportedHead(scene) {
 }
 
 const PRESET_MORPH_BIASES = {
-  fangyaoping: { jawVLine: 0.10, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.06, eyeAlmond: 0.12, eyeTilt: -0.02, lipFullness: 0.0 },
-  user_photo: { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
-  chuxia:     { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
+  fangyaoping:      { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.14, noseBridge: 0.06, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.04 },
+  user_photo:       { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
+  chuxia:           { jawVLine: 0.08, chinLength: -0.08, cheekSoftness: 0.12, noseBridge: 0.05, eyeAlmond: 0.10, eyeTilt: -0.02, lipFullness: 0.0 },
   female_realistic: { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
   linxi:            { jawVLine: -0.10, chinLength: 0.04, cheekSoftness: -0.06, noseBridge: 0.14, eyeAlmond: 0.05, eyeTilt: 0.10, lipFullness: 0.0 },
-  female_2: { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-  suwan:    { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
-  female_3: { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-  qianxue:  { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
-  female_gentle: { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
-  shenzhiwei:    { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
+  female_2:         { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
+  suwan:            { jawVLine: 0.16, chinLength: 0.06, cheekSoftness: 0.06, noseBridge: 0.10, eyeAlmond: 0.08, eyeTilt: 0.05, lipFullness: 0.0 },
+  female_3:         { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
+  qianxue:          { jawVLine: 0.14, chinLength: -0.10, cheekSoftness: 0.10, noseBridge: 0.08, eyeAlmond: 0.12, eyeTilt: 0.12, lipFullness: 0.0 },
+  female_gentle:    { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
+  shenzhiwei:       { jawVLine: 0.10, chinLength: 0.10, cheekSoftness: -0.05, noseBridge: 0.12, eyeAlmond: 0.06, eyeTilt: 0.08, lipFullness: 0.0 },
 };
 
 const characterSkinOverlayCache = new Map();
@@ -263,12 +259,11 @@ const characterSkinOverlayCache = new Map();
 function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
   if (!baseSkinMap?.image || typeof document === 'undefined') return baseSkinMap;
   const img = baseSkinMap.image;
-  const w = img.width || img.naturalWidth || 0;
-  const h = img.height || img.naturalHeight || 0;
-  if (!w || !h) return baseSkinMap;
-
-  if (characterSkinOverlayCache.has(presetKey)) {
-    return characterSkinOverlayCache.get(presetKey);
+  const w = img.width || 1536;
+  const h = img.height || 1536;
+  const cacheKey = `${presetKey}_${w}x${h}`;
+  if (characterSkinOverlayCache.has(cacheKey)) {
+    return characterSkinOverlayCache.get(cacheKey);
   }
 
   const canvas = document.createElement('canvas');
@@ -281,9 +276,9 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
     const cx = u * w;
     const cy = v * h;
     const grad = ctx.createRadialGradient(cx, cy, 0.2, cx, cy, radPx);
-    grad.addColorStop(0, `rgba(56, 34, 30, ${alpha})`);
-    grad.addColorStop(0.55, `rgba(88, 56, 48, ${alpha * 0.65})`);
-    grad.addColorStop(1, 'rgba(88, 56, 48, 0)');
+    grad.addColorStop(0.0, `rgba(42, 24, 20, ${alpha})`);
+    grad.addColorStop(0.55, `rgba(62, 38, 30, ${alpha * 0.65})`);
+    grad.addColorStop(1.0, 'rgba(62, 38, 30, 0.0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(cx, cy, radPx, 0, Math.PI * 2);
@@ -294,6 +289,8 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
     paintMole(0.8847, 0.5543, w * 0.0014, 0.72);
     paintMole(0.8895, 0.5640, w * 0.0015, 0.75);
     paintMole(0.9042, 0.5718, w * 0.0014, 0.72);
+  } else if (presetKey === 'fangyaoping') {
+    paintMole(0.8510, 0.4510, w * 0.0012, 0.62);
   } else if (presetKey === 'female_realistic' || presetKey === 'linxi') {
     paintMole(0.8475, 0.4685, w * 0.0014, 0.76);
   } else if (presetKey === 'female_2' || presetKey === 'suwan') {
@@ -306,18 +303,20 @@ function buildCharacterSkinOverlayMap(baseSkinMap, presetKey = 'user_photo') {
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
   tex.flipY = baseSkinMap.flipY;
   tex.wrapS = baseSkinMap.wrapS;
   tex.wrapT = baseSkinMap.wrapT;
-  tex.userData.sharedSkinMicro = true;
+  tex.anisotropy = 8;
   tex.needsUpdate = true;
-  characterSkinOverlayCache.set(presetKey, tex);
+  characterSkinOverlayCache.set(cacheKey, tex);
   return tex;
 }
 
 /**
- * Real-Time Interactive Player Hair Editing & Fine-Tuning ("允许玩家编辑微调")
+ * 9-Axis Real-Time Interactive Player Hair Editing & Fine-Tuning ("允许玩家编辑微调")
+ * Works identically on both built-in 28 artist hairstyles and external player-imported .glb/.obj hairstyles.
+ * Because Pass 1 (Core) and Pass 2 (Silky Wisps) share the same BufferGeometry, updating `geo.attributes.position`
+ * once updates both passes in lockstep.
  */
 export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const hairGroup = rootGroup?.getObjectByName('HairGroup');
@@ -339,10 +338,15 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   hairGroup.scale.setScalar(uScale);
 
   const hcX = 0.0, hcY = 0.025, hcZ = 0.0;
+  const visitedGeos = new Set();
 
   hairGroup.traverse((child) => {
     if (!child.isMesh || !child.geometry?.attributes?.position) return;
+    if (child.name === 'ScalpRootFeatherCap') return;
     const geo = child.geometry;
+    if (visitedGeos.has(geo)) return;
+    visitedGeos.add(geo);
+
     const posAttr = geo.attributes.position;
     if (!geo.userData.basePositions) {
       geo.userData.basePositions = Float32Array.from(posAttr.array);
@@ -367,45 +371,40 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
         z += rz * (hairVol * 0.12 * wCrown);
       }
 
-      if ((Math.abs(bangsLen) > 1e-4 || Math.abs(bangsPart) > 1e-4) && z > 0.042 && y > -0.025 && y < 0.092 && Math.abs(x) < 0.074) {
-        const wZ = Math.min(1.0, (z - 0.042) / 0.035);
-        const wX = Math.max(0.0, 1.0 - Math.pow(Math.abs(x) / 0.072, 2.0));
-        const wTip = Math.min(1.0, Math.max(0.0, (0.088 - y) / 0.055));
-        const wBangs = wZ * wX * wTip;
-        if (Math.abs(bangsLen) > 1e-4) {
-          y -= bangsLen * 0.026 * wBangs;
-          z += Math.max(0, bangsLen) * 0.003 * wBangs;
-        }
+      if ((Math.abs(bangsLen) > 1e-4 || Math.abs(bangsPart) > 1e-4) && z > 0.042 && y > -0.035 && Math.abs(x) < 0.068) {
+        const wFront = Math.min(1.0, Math.max(0.0, (z - 0.042) / 0.045));
+        const wCenter = Math.min(1.0, Math.max(0.0, 1.0 - Math.abs(x) / 0.068));
+        const wLowerBangs = Math.min(1.0, Math.max(0.0, (0.065 - y) / 0.065));
+        const wBangs = wFront * wCenter * wLowerBangs;
+        y -= bangsLen * 0.028 * wBangs;
+        z += Math.max(0.0, bangsLen) * 0.005 * wBangs;
         if (Math.abs(bangsPart) > 1e-4) {
           const signX = x >= 0 ? 1.0 : -1.0;
-          const centerFalloff = Math.exp(-Math.pow(x / 0.038, 2.0));
-          x += signX * bangsPart * 0.024 * wTip * wZ * (0.35 + 0.65 * centerFalloff);
-          y += Math.max(0, bangsPart) * 0.008 * wTip * wZ * centerFalloff;
+          const partStrength = Math.exp(-Math.pow(Math.abs(x) / 0.032, 2.0));
+          x += signX * bangsPart * 0.022 * wFront * wLowerBangs * partStrength;
+          y += Math.max(0.0, bangsPart) * 0.010 * wFront * wLowerBangs * partStrength;
         }
       }
 
-      if (Math.abs(sideburn) > 1e-4 && y < 0.045 && y > -0.095 && z > -0.02 && Math.abs(x) > 0.035) {
-        const wY = Math.exp(-Math.pow((y + 0.025) / 0.048, 2.0));
-        const wFront = Math.min(1.0, Math.max(0.0, (z + 0.02) / 0.05));
+      if (Math.abs(sideburn) > 1e-4 && z > -0.015 && y < 0.025 && Math.abs(x) > 0.032) {
+        const wSide = Math.min(1.0, Math.max(0.0, (0.025 - y) / 0.10));
         const signX = x >= 0 ? 1.0 : -1.0;
-        x -= signX * sideburn * 0.020 * wY * wFront;
-        z += sideburn * 0.008 * wY * wFront;
+        x -= signX * sideburn * 0.020 * wSide;
+        z += sideburn * 0.010 * wSide;
       }
 
-      if (y < 0.015) {
-        const depthBelow = 0.015 - y;
-        const wLow = Math.min(1.0, depthBelow / 0.065);
-        if (Math.abs(hairLen) > 1e-4) {
-          y -= depthBelow * (hairLen * 0.48);
-        }
-        if (Math.abs(hairFlare) > 1e-4) {
-          const radXZ = Math.hypot(x, z) || 1e-5;
-          const flareDisp = hairFlare * 0.028 * wLow * wLow;
-          x += (x / radXZ) * flareDisp;
-          z += (z / radXZ) * flareDisp * 0.65;
-        }
-        if (neckClear > 0.55 && y < -0.065) {
-          const lift = (neckClear - 0.55) * 0.045 * Math.min(1.0, (-0.065 - y) / 0.05);
+      if ((Math.abs(hairLen) > 1e-4 || Math.abs(hairFlare) > 1e-4) && y < -0.015) {
+        const wTip = Math.min(1.0, Math.max(0.0, (-0.015 - y) / 0.11));
+        y -= hairLen * 0.055 * wTip;
+        const signX = x >= 0 ? 1.0 : -1.0;
+        x += signX * hairFlare * 0.028 * (wTip * wTip);
+        z += hairFlare * 0.014 * (wTip * wTip);
+      }
+
+      if (neckClear > 0.05 && y < -0.072 && z < 0.04) {
+        const below = -0.072 - y;
+        if (below > 0) {
+          const lift = Math.min(below, below * neckClear * 0.65);
           y += lift;
         }
       }
@@ -416,7 +415,6 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     }
 
     posAttr.needsUpdate = true;
-    geo.computeBoundingSphere();
   });
 }
 
@@ -536,18 +534,49 @@ function computeSkinTintColor(skinToneHex = '#ffe8df') {
   return new THREE.Color(r, g, b);
 }
 
+const ALL_28_VALID_HAIRS = new Set([
+  'hair_bob01',
+  'hair_user_photo',
+  'hair_bob02',
+  'hair_short02',
+  'daz_hair_asym_short',
+  'daz_hair_pixie_chic',
+  'daz_hair_air_bangs_long',
+  'hair_long01',
+  'daz_hair_hime',
+  'hair_short04',
+  'daz_hair_side_long',
+  'daz_hair_wolf_clavicle',
+  'daz_hair_curtain_wave',
+  'daz_hair_hazel_wave',
+  'daz_hair_wavy_bob',
+  'daz_hair_glam_wave',
+  'daz_hair_mermaid_curl',
+  'daz_hair_french_lazy_roll',
+  'hair_braid01',
+  'daz_hair_adrienne_updo',
+  'daz_hair_low_chignon',
+  'daz_hair_crown_braid',
+  'daz_hair_ballerina_bun',
+  'hair_ponytail01',
+  'daz_hair_twin_buns',
+  'daz_hair_halfup_princess',
+  'daz_hair_twin_braids',
+  'daz_hair_sport_ponytail',
+]);
+
 export function resolveRealHairStyle(styleName = 'hair_bob01') {
   if (styleName === 'none') return 'none';
   const stripped = String(styleName).replace(/^real_/, '');
   const legacyMap = {
-    groom_photo_tied: 'hair_bob01',
+    groom_photo_tied: 'daz_hair_air_bangs_long',
     groom_center_long: 'hair_long01',
     groom_low_chignon: 'hair_braid01',
     groom_hime_cut: 'daz_hair_hime',
     groom_clavicle_bob: 'daz_hair_curtain_wave',
     groom_air_bob: 'hair_bob01',
     groom_high_ponytail: 'hair_ponytail01',
-    groom_pixie_short: 'hair_user_photo',
+    groom_pixie_short: 'daz_hair_pixie_chic',
     user_bangs: 'hair_bob01',
     photo_tied_wisps: 'hair_user_photo',
     long_straight: 'hair_long01',
@@ -556,34 +585,16 @@ export function resolveRealHairStyle(styleName = 'hair_bob01') {
     hair_hime_cut: 'daz_hair_hime',
     clavicle_layer: 'hair_short04',
     hair_clavicle_layer: 'hair_short04',
-    butterfly_halfup: 'hair_long01',
-    hair_butterfly_halfup: 'hair_long01',
+    butterfly_halfup: 'daz_hair_halfup_princess',
+    hair_butterfly_halfup: 'daz_hair_halfup_princess',
     sleek_bob: 'hair_bob02',
     short_bob: 'hair_bob01',
-    low_chignon: 'hair_braid01',
+    low_chignon: 'daz_hair_low_chignon',
     high_ponytail: 'hair_ponytail01',
     soft_waves: 'daz_hair_hazel_wave',
   };
   const mapped = legacyMap[stripped] || legacyMap[styleName] || stripped;
-  const valid = new Set([
-    'hair_user_photo',
-    'hair_bob01',
-    'hair_bob02',
-    'hair_short02',
-    'hair_long01',
-    'hair_ponytail01',
-    'hair_braid01',
-    'hair_short04',
-    'daz_hair_hime',
-    'daz_hair_curtain_wave',
-    'daz_hair_wavy_bob',
-    'daz_hair_side_long',
-    'daz_hair_hazel_wave',
-    'daz_hair_twin_buns',
-    'daz_hair_glam_wave',
-    'daz_hair_asym_short',
-  ]);
-  return valid.has(mapped) ? mapped : 'hair_bob01';
+  return ALL_28_VALID_HAIRS.has(mapped) ? mapped : 'hair_bob01';
 }
 
 export function disposeHeadNode(node) {
@@ -610,20 +621,21 @@ export function updateHairSheen(node, value) {
   const sheen = Math.max(0.2, Math.min(1.0, Number(value) || 0.88));
   node?.getObjectByName('HairGroup')?.traverse(child => {
     if (!child.isMesh || !child.material?.userData?.builtInHair) return;
-    child.material.sheen = Math.min(0.32, sheen * 0.32);
-    child.material.roughness = Math.max(0.28, 0.56 - sheen * 0.22);
-    child.material.anisotropy = 0.42 + sheen * 0.38;
-    child.material.clearcoat = 0.06 + sheen * 0.10;
+    if (child.name === 'ScalpRootFeatherCap') return;
+    child.material.sheen = Math.min(0.36, sheen * 0.34);
+    child.material.roughness = Math.max(0.26, 0.48 - sheen * 0.18);
+    child.material.anisotropy = 0.55 + sheen * 0.35;
+    child.material.clearcoat = 0.10 + sheen * 0.08;
   });
 }
 
 function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
-  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16']);
+  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417']);
   const baseColor = new THREE.Color(legacyDarkSet.has(normalizedHex) ? '#121216' : normalizedHex);
   const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
   if (lum < 0.08) {
-    return new THREE.Color('#1a1b20');
+    return new THREE.Color('#191a20');
   }
   return baseColor;
 }
@@ -638,6 +650,122 @@ function fitImportedHairScene(scene) {
     scene.scale.multiplyScalar(scale);
     scene.position.set(-center.x * scale, 0.035 - center.y * scale, -center.z * scale);
   }
+}
+
+/**
+ * Injects Dual-Lobe Marschner / Kajiya-Kay Anisotropic Micro-Fiber Cuticle Glints
+ * and Premultiplied Edge De-Fringing into a MeshPhysicalMaterial.
+ */
+function injectMarschnerHairShader(material, sheenIntensity = 0.90) {
+  material.customProgramCacheKey = () => `marschner_hair_v25_${sheenIntensity.toFixed(2)}_${material.transparent ? 'alpha' : 'core'}`;
+  material.onBeforeCompile = (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `
+      #include <map_fragment>
+      #ifdef USE_MAP
+        float uCoord = vMapUv.x;
+        float vCoord = vMapUv.y;
+        float microStrand = 0.5 + 0.5 * (
+          0.55 * sin(uCoord * 380.0 + sin(vCoord * 18.0) * 0.35) +
+          0.45 * cos(uCoord * 790.0 + 1.4)
+        );
+        float edgeRichness = smoothstep(0.01, 0.42, diffuseColor.a);
+        diffuseColor.rgb *= (0.74 + 0.26 * edgeRichness) * (0.86 + 0.26 * microStrand);
+      #endif
+      `
+    );
+
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <lights_fragment_end>',
+      `
+      #include <lights_fragment_end>
+      #ifdef USE_MAP
+        vec3 viewDir = normalize(vViewPosition);
+        vec3 surfNorm = normalize(normal);
+        vec3 hairDir = normalize(vec3(-surfNorm.x * 0.28, 0.92, -surfNorm.z * 0.28));
+        float fiberJitter = sin(vMapUv.x * 460.0) * 0.055 + cos(vMapUv.x * 920.0) * 0.035;
+        vec3 lightDir = normalize(vec3(0.28, 0.52, 0.80));
+        vec3 H = normalize(lightDir + viewDir);
+
+        vec3 T1 = normalize(hairDir - (0.14 + fiberJitter) * surfNorm);
+        float tdoth1 = clamp(dot(T1, H), -1.0, 1.0);
+        float sinTH1 = sqrt(max(0.0, 1.0 - tdoth1 * tdoth1));
+        float specR = pow(sinTH1, 56.0) * smoothstep(-0.2, 0.35, dot(surfNorm, lightDir));
+
+        vec3 T2 = normalize(hairDir + (0.20 - fiberJitter * 1.3) * surfNorm);
+        float tdoth2 = clamp(dot(T2, H), -1.0, 1.0);
+        float sinTH2 = sqrt(max(0.0, 1.0 - tdoth2 * tdoth2));
+        float specTRT = pow(sinTH2, 20.0) * smoothstep(-0.15, 0.45, dot(surfNorm, lightDir));
+
+        float strandMask = 0.45 + 0.55 * (0.5 + 0.5 * sin(vMapUv.x * 520.0 + vMapUv.y * 12.0));
+        vec3 anisoGlint = (
+          specR * vec3(0.11, 0.12, 0.15) * strandMask +
+          specTRT * (diffuseColor.rgb * 1.45 + vec3(0.04, 0.045, 0.06)) * (0.65 + 0.35 * strandMask)
+        ) * ${(0.65 + sheenIntensity * 0.55).toFixed(3)};
+
+        reflectedLight.indirectSpecular += anisoGlint;
+      #endif
+      `
+    );
+  };
+}
+
+function buildScalpRootShadowCap(modelContainer, displayColor) {
+  let headGeo = null;
+  modelContainer.traverse((child) => {
+    if (!headGeo && child.isMesh && child.geometry?.attributes?.position && (child.name === 'HeadSkinMesh' || child.material?.name === 'Skin')) {
+      headGeo = child.geometry;
+    }
+  });
+  if (!headGeo || !headGeo.index) return null;
+
+  const pos = headGeo.attributes.position;
+  const idx = headGeo.index.array;
+  const capIndices = [];
+  for (let i = 0; i < idx.length; i += 3) {
+    const a = idx[i], b = idx[i + 1], c = idx[i + 2];
+    const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
+    const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
+    if (ym > 0.024 && (zm < 0.054 || (ym > 0.056 && zm < 0.066))) {
+      capIndices.push(a, b, c);
+    }
+  }
+  if (capIndices.length === 0) return null;
+
+  const capGeo = new THREE.BufferGeometry();
+  const newPos = new Float32Array(pos.array.length);
+  const hcX = 0.0, hcY = 0.02, hcZ = -0.01;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const dx = x - hcX, dy = y - hcY, dz = z - hcZ;
+    const len = Math.hypot(dx, dy, dz) || 1.0;
+    newPos[i * 3] = x + (dx / len) * 0.0005;
+    newPos[i * 3 + 1] = y + (dy / len) * 0.0005;
+    newPos[i * 3 + 2] = z + (dz / len) * 0.0005;
+  }
+  capGeo.setAttribute('position', new THREE.BufferAttribute(newPos, 3));
+  if (headGeo.attributes.normal) {
+    capGeo.setAttribute('normal', headGeo.attributes.normal);
+  }
+  capGeo.setIndex(capIndices);
+
+  const capMat = new THREE.MeshStandardMaterial({
+    color: displayColor.clone().multiplyScalar(0.55),
+    roughness: 0.85,
+    metalness: 0.0,
+    transparent: true,
+    opacity: 0.65,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
+  capMat.userData.builtInHair = true;
+  const capMesh = new THREE.Mesh(capGeo, capMat);
+  capMesh.name = 'ScalpRootFeatherCap';
+  capMesh.renderOrder = 0;
+  return capMesh;
 }
 
 export async function attachRealHairModel(rootGroup, config = {}) {
@@ -690,10 +818,16 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     const isJetBlack = hairLum < 0.08;
     const sheenCol = isJetBlack
       ? new THREE.Color('#303440')
-      : displayColor.clone().multiplyScalar(1.22);
+      : displayColor.clone().multiplyScalar(1.25);
+
+    const scalpCap = buildScalpRootShadowCap(modelContainer, displayColor);
+    if (scalpCap) {
+      hairGroup.add(scalpCap);
+    }
 
     let totalVerts = 0;
     let totalTris = 0;
+    const wispClones = [];
 
     loadedScene.traverse((child) => {
       if (!child.isMesh) return;
@@ -706,35 +840,86 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       const mapTex = origMat?.map || null;
       if (mapTex) {
         mapTex.colorSpace = THREE.SRGBColorSpace;
-        mapTex.anisotropy = 8;
+        mapTex.anisotropy = 16;
+        mapTex.generateMipmaps = true;
+        mapTex.minFilter = THREE.LinearMipmapLinearFilter;
+        mapTex.magFilter = THREE.LinearFilter;
         mapTex.needsUpdate = true;
       }
 
-      child.material = new THREE.MeshPhysicalMaterial({
+      // Pass 1: Dense Core Depth Pre-Pass (writes depth buffer for solid interior hair locks)
+      const coreMat = new THREE.MeshPhysicalMaterial({
         map: mapTex,
         color: displayColor,
-        roughness: Math.max(0.30, 0.54 - sheenIntensity * 0.20),
+        roughness: Math.max(0.28, 0.48 - sheenIntensity * 0.18),
         metalness: 0.02,
-        sheen: Math.min(0.32, sheenIntensity * 0.30),
-        sheenRoughness: 0.42,
+        sheen: Math.min(0.36, sheenIntensity * 0.34),
+        sheenRoughness: 0.38,
         sheenColor: sheenCol,
-        anisotropy: 0.45 + sheenIntensity * 0.35,
+        anisotropy: 0.55 + sheenIntensity * 0.35,
         anisotropyRotation: Math.PI / 2,
-        clearcoat: 0.08 + sheenIntensity * 0.08,
-        clearcoatRoughness: 0.34,
-        specularIntensity: 0.68,
+        clearcoat: 0.10 + sheenIntensity * 0.08,
+        clearcoatRoughness: 0.30,
+        specularIntensity: 0.72,
         specularColor: isJetBlack ? new THREE.Color('#cfd6e6') : new THREE.Color('#ffffff'),
-        envMapIntensity: isJetBlack ? 0.38 : 0.48,
+        envMapIntensity: isJetBlack ? 0.40 : 0.52,
         transparent: false,
-        alphaTest: mapTex ? 0.15 : 0.0,
-        alphaToCoverage: Boolean(mapTex),
+        alphaTest: mapTex ? 0.82 : 0.0,
         depthWrite: true,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 2,
         side: THREE.DoubleSide,
       });
-      child.material.userData.builtInHair = true;
+      coreMat.userData.builtInHair = true;
+      injectMarschnerHairShader(coreMat, sheenIntensity);
+
+      child.material = coreMat;
       child.castShadow = true;
       child.receiveShadow = true;
+      child.renderOrder = 1;
+
+      if (mapTex) {
+        // Pass 2: True Alpha-Blended Gossamer Strand & Feathered Bangs Pass
+        const wispMat = new THREE.MeshPhysicalMaterial({
+          map: mapTex,
+          color: displayColor,
+          roughness: Math.max(0.26, 0.46 - sheenIntensity * 0.18),
+          metalness: 0.02,
+          sheen: Math.min(0.38, sheenIntensity * 0.36),
+          sheenRoughness: 0.36,
+          sheenColor: sheenCol,
+          anisotropy: 0.58 + sheenIntensity * 0.35,
+          anisotropyRotation: Math.PI / 2,
+          clearcoat: 0.12 + sheenIntensity * 0.08,
+          clearcoatRoughness: 0.28,
+          specularIntensity: 0.76,
+          specularColor: isJetBlack ? new THREE.Color('#d8e0ef') : new THREE.Color('#ffffff'),
+          envMapIntensity: isJetBlack ? 0.42 : 0.54,
+          transparent: true,
+          opacity: 1.0,
+          alphaTest: 0.015,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        wispMat.userData.builtInHair = true;
+        injectMarschnerHairShader(wispMat, sheenIntensity);
+
+        const wispMesh = new THREE.Mesh(child.geometry, wispMat);
+        wispMesh.name = `${child.name || 'Hair'}_SilkyWisps`;
+        wispMesh.position.copy(child.position);
+        wispMesh.rotation.copy(child.rotation);
+        wispMesh.scale.copy(child.scale);
+        wispMesh.castShadow = false;
+        wispMesh.receiveShadow = true;
+        wispMesh.renderOrder = 2;
+        wispClones.push({ parent: child.parent || loadedScene, wispMesh });
+      }
     });
+
+    for (const { parent, wispMesh } of wispClones) {
+      parent.add(wispMesh);
+    }
 
     hairGroup.add(loadedScene);
     disposeHeadNode(oldHair);
@@ -1025,9 +1210,9 @@ export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {
   const containerGroup = buildSpecimenContainerGroup(containerStyle);
   rootGroup.add(containerGroup);
 
-  // Decorative props are independent 3D stage/desk items rather than bound to individual character heads
+  // Decorative props live on the 3D Desk/Shelves (StageSceneDecorGroup), not bound to the head
   const baseBottomOffset = containerGroup.userData.baseBottomOffset ?? -12.6;
-
+  rootGroup.userData.containerGroup = containerGroup;
   rootGroup.userData.containerStyle = containerStyle;
   rootGroup.userData.baseBottomOffset = baseBottomOffset;
 }

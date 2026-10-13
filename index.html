@@ -66,7 +66,7 @@
       <span class="dossier-mode-badge" id="hud-mode-badge">🪦 静止标本态</span>
     </div>
     <div class="dossier-title" id="hud-name">方尧平 · 广东怀集19岁高考女状元标本</div>
-    <div class="dossier-subtitle" id="hud-subtitle">大师级露耳高扎束发 · 十九岁校园巅峰状元骨相</div>
+    <div class="dossier-subtitle" id="hud-subtitle">齐刘海清爽学霸束发 · 十九岁校园巅峰状元骨相</div>
 
     <!-- Stage 24: In-Life Photo ("生前照片") & Character-Bound Study Role ("角色绑定伴学职能") -->
     <div class="dossier-life-photo-box" id="hud-life-photo-box">
@@ -548,7 +548,7 @@
                 <div class="field-row">
                   <label>亚洲女性六款骨相基底模型 (含19岁高考女状元方尧平)</label>
                   <select id="sel-base-preset">
-                    <option value="fangyaoping">★ 方尧平 · 广东怀集19岁高考女状元 (Elvs高扎束发 + 青春鹅蛋脸 + 生前校服照)</option>
+                    <option value="fangyaoping">★ 方尧平 · 广东怀集19岁高考女状元 (齐刘海学霸束发 + 青春鹅蛋脸 + 生前校服照)</option>
                     <option value="user_photo">① 初夏 · 幼态甜妹鹅蛋脸 (饱满苹果肌 + 短圆下巴 + 右颊三颗特征痣)</option>
                     <option value="linxi">② 林汐 · 清冷超模折角方圆脸 (清晰下颌折角 + 高颧弓盒型鼻 + 左眼尾泪痣)</option>
                     <option value="suwan">③ 苏晚 · 江南古典尖俏瓜子V脸 (流畅V型下颌 + 精致尖翘下巴 + 右眼下美人痣)</option>
@@ -637,47 +637,43 @@
               </div>
             </div>
 
-            <!-- B. High-Poly MhcloFit Artist Hair & Interactive Player Fine-Tuning -->
+            <!-- B. 28 Master Artist 3D Hairstyles & 9-Axis Interactive Player Fine-Tuning -->
             <div class="card-block">
-              <h3>💇‍♀️ 步骤 3：大师级 3D 发型库与玩家实时微调系统</h3>
+              <h3>💇‍♀️ 步骤 3：28款真发丝大师 3D 发型库与 9 轴实时微调系统</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>16 款 MakeHuman 社区大师精雕 3D 发型库（19,158 顶点头骨精确拟合 + 乌黑真发色）</label>
+                  <label>28 款 MakeHuman 社区大师精雕 3D 发型库（双通道真Alpha羽毛碎发 + Marschner各向异性光泽 + 乌黑真发色）</label>
                   <select id="sel-hair-style">
-                    <option value="hair_bob01">✨ 大师精雕 · 空气刘海内扣短波波 (Toigo Curled Bob · 2,806顶点)</option>
-                    <option value="hair_long01">✨ 大师精雕 · 东方中分八字柔顺黑长直 (Elvs Princess Long · 7,234顶点)</option>
-                    <option value="hair_braid01">✨ 大师精雕 · 新中式侧分斜刘海法式盘发 (Elvs French Updo · 6,174顶点)</option>
-                    <option value="daz_hair_hime">✨ 大师精雕 · 国风齐刘海姬发式公主切 (Cortu Straight Hime · 848顶点)</option>
-                    <option value="daz_hair_curtain_wave">✨ 大师精雕 · 港风八字刘海蓬松大波浪 (Elvs Curtain Wave · 5,968顶点)</option>
-                    <option value="hair_user_photo">✨ 大师精雕 · 日系清透碎刘海波波头 (LittleRight Wispy Bob · 1,919顶点)</option>
-                    <option value="hair_ponytail01">✨ 大师精雕 · 飒爽千金露耳高扎长辫 (Elvs Lara Braid Tail · 17,360顶点)</option>
-                    <option value="hair_short04">✨ 大师精雕 · 都市轻熟齐眉锁骨中长发 (Elvs Katherine Lob · 5,050顶点)</option>
-                    <option value="hair_bob02">✨ 大师精雕 · 干练中分内扣A字短波波 (Toigo Sleek Bob · 1,836顶点)</option>
-                    <option value="hair_short02">✨ 大师精雕 · 中式清纯多层次学生短发 (O4saken Chinese Bob · 12,547顶点)</option>
-                    <option value="daz_hair_wavy_bob">✨ 大师精雕 · 复古名伶偏分大波浪短发 (Elvs Glam Wavy Bob · 4,914顶点)</option>
-                    <option value="daz_hair_side_long">✨ 大师精雕 · 知性御姐大偏分柔顺长直发 (Elvs Side-Swept Long · 4,418顶点)</option>
-                    <option value="daz_hair_hazel_wave">✨ 大师精雕 · 温柔千金中分披肩浪漫卷发 (Elvs Hazel Wave · 4,891顶点)</option>
-                    <option value="daz_hair_twin_buns">✨ 大师精雕 · 甜酷少女高颅顶双丸子头 (Elvs Twin Space Buns · 1,864顶点)</option>
-                    <option value="daz_hair_glam_wave">✨ 大师精雕 · 冷艳超模大背头蓬松女神卷 (CL Voluminous Wave · 8,985顶点)</option>
-                    <option value="daz_hair_asym_short">✨ 大师精雕 · 法式复古齐眉齐颌短波波 (Elvs Witchy French Bob · 1,679顶点)</option>
-                    <option value="none">无发模式 (纯医学头颈骨相标本展示)</option>
+                    <option value="daz_hair_air_bangs_long">【直发长发】状元同款 · 空气齐刘海披肩中长发 (Toigo Extended Lob)</option>
+                    <option value="hair_bob01">【短发波波】空气刘海内扣短波波 (Toigo Feathered Bob)</option>
+                    <option value="hair_long01">【直发长发】东方高颅顶八字刘海柔顺黑长直 (Elvs Daisy Long)</option>
+                    <option value="hair_braid01">【古典盘发】新中式温婉侧分斜刘海高定盘发 (Elvs 50s Classical Updo)</option>
+                    <option value="daz_hair_hime">【直发长发】国风清冷齐刘海姬发式公主切 (Cortu Straight Hime)</option>
+                    <option value="daz_hair_curtain_wave">【卷发波浪】港风高颅顶八字刘海蓬松大波浪 (Elvs 80s Curtain Wave)</option>
+                    <option value="none">【解剖模式】无发态 · 完整展露头颅与颈部横切面</option>
                   </select>
                 </div>
 
                 <div class="preset-photo-row" id="hair-style-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-                  <span>大师发型速选:</span>
-                  <button type="button" class="chip-btn active" data-hair-preset="hair_bob01">空气刘海波波</button>
-                  <button type="button" class="chip-btn" data-hair-preset="hair_long01">中分黑长直</button>
-                  <button type="button" class="chip-btn" data-hair-preset="hair_braid01">新中式法式盘发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_hime">国风姬发式</button>
+                  <span>28款真发丝速选:</span>
+                  <button type="button" class="chip-btn active" data-hair-preset="daz_hair_air_bangs_long">状元齐刘海中长发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_bob01">空气刘海波波</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_long01">八字中分黑长直</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_braid01">新中式高定盘发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_hime">国风姬发公主切</button>
                   <button type="button" class="chip-btn" data-hair-preset="daz_hair_curtain_wave">港风八字大波浪</button>
-                  <button type="button" class="chip-btn" data-hair-preset="hair_user_photo">清透碎刘海短发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="hair_ponytail01">露耳高扎长辫</button>
-                  <button type="button" class="chip-btn" data-hair-preset="hair_short04">齐眉锁骨发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="hair_short02">中式清纯短发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_wavy_bob">复古波浪短发</button>
-                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_side_long">御姐偏分长直</button>
-                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_twin_buns">甜酷双丸子头</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_user_photo">日系斜碎短波波</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_ponytail01">飒爽高扎长辫</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_short04">齐眉柔顺锁骨发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="hair_short02">中式多层次短发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_wavy_bob">复古名伶波浪短发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_side_long">御姐大偏分长直</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_glam_wave">超模大背头女神卷</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_mermaid_curl">法式人鱼羊毛卷</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_crown_braid">古典皇冠编发盘发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_twin_buns">甜酷高颅顶双丸子</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_halfup_princess">仙气半扎公主长发</button>
+                  <button type="button" class="chip-btn" data-hair-preset="daz_hair_twin_braids">学院风双麻花辫</button>
                 </div>
 
                 <div class="field-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
@@ -687,7 +683,7 @@
                   </label>
                   <button type="button" id="btn-reset-hair-morphs" class="btn ghost small" title="恢复当前发型默认出厂形态">↺ 重置发型微调</button>
                 </div>
-                <p id="groom-quality-status" class="hint-text">已加载 MakeHuman 艺术家精雕 3D 发型网格（支持下方 9 项实时微调）</p>
+                <p id="groom-quality-status" class="hint-text">已加载 28 款 MakeHuman 艺术家精雕真发丝 3D 发型（支持下方 9 轴实时微调）</p>
 
                 <div class="slider-row">
                   <span>✂️ 前额刘海长度微调</span>

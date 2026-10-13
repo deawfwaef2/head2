@@ -1,129 +1,282 @@
-// Pre-registered high-precision Asian female collectible heads, 16 Master Artist 3D Hairstyles & 7 post-mortem expressions
+// Pre-registered high-precision Asian female collectible heads, 28 Master Artist Photorealistic 3D Hairstyles & 7 post-mortem expressions
 
 export const REAL_HAIR_CATALOG = [
+  // ================= I. 清纯短发与波波头系 (Short & Bob Series · 6款) =================
   {
     id: 'hair_bob01',
-    label: '大师精雕 · 空气刘海内扣短波波 (Toigo Curled Bob · 2,806顶点)',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 空气刘海内扣波波',
+    label: '【短发波波】空气刘海内扣短波波 (Toigo Feathered Bob · 5,116面)',
     url: '/models/hair_bob01.glb',
-    verts: 2806,
-    desc: 'MakeHuman 社区名家 Toigo 雕琢：饱满齐眉空气刘海配下颌内扣波波发尾，自然包裹幼态鹅蛋脸骨相'
-  },
-  {
-    id: 'hair_long01',
-    label: '大师精雕 · 东方中分八字柔顺黑长直 (Elvs Princess Long · 7,234顶点)',
-    url: '/models/hair_long01.glb',
-    verts: 7234,
-    desc: 'MakeHuman 名家 Elvs 雕琢：柔顺中分八字刘海配自然垂落长发，发丝层次饱满立体'
-  },
-  {
-    id: 'hair_braid01',
-    label: '大师精雕 · 新中式侧分斜刘海法式盘发 (Elvs French Updo · 6,174顶点)',
-    url: '/models/hair_braid01.glb',
-    verts: 6174,
-    desc: 'MakeHuman 名家 Elvs 雕琢：温婉三七分斜掠刘海配脑后饱满法式编发低盘发髻，360° 展露颈部切口环'
-  },
-  {
-    id: 'daz_hair_hime',
-    label: '大师精雕 · 国风齐刘海姬发式公主切 (Cortu Straight Hime · 848顶点)',
-    url: '/models/daz_hair_hime.glb',
-    verts: 848,
-    desc: 'MakeHuman 名家 Cortu 雕琢：经典平直齐眉刘海配垂顺双颊公主切长发，极具东方清冷古典感'
-  },
-  {
-    id: 'daz_hair_curtain_wave',
-    label: '大师精雕 · 港风八字刘海蓬松大波浪 (Elvs Curtain Wave · 5,968顶点)',
-    url: '/models/daz_hair_curtain_wave.glb',
-    verts: 5968,
-    desc: 'MakeHuman 名家 Elvs 雕琢：高颅顶中分八字刘海配多层次披肩大波浪卷发，修饰颧弓与下颌角'
+    verts: 2878,
+    desc: 'MakeHuman 名家 Toigo 精雕：真实半透明空气碎刘海配下颌内扣波波发尾，柔和包裹幼态鹅蛋脸'
   },
   {
     id: 'hair_user_photo',
-    label: '大师精雕 · 日系清透碎刘海波波头 (LittleRight Wispy Bob · 1,919顶点)',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 清透斜碎刘海短波波',
+    label: '【短发波波】日系清透斜碎刘海波波 (LittleRight Wispy Bob · 6,306面)',
     url: '/models/hair_user_photo.glb',
-    verts: 1919,
-    desc: 'MakeHuman 名家 LittleRight 雕琢：轻盈斜分碎刘海配蓬松包耳短波波，清爽显脸小'
-  },
-  {
-    id: 'hair_ponytail01',
-    label: '大师精雕 · 飒爽千金露耳高扎长辫 (Elvs Lara Braid Tail · 17,360顶点)',
-    url: '/models/hair_ponytail01.glb',
-    verts: 17360,
-    desc: 'MakeHuman 名家 Elvs 雕琢：1.73万顶点高颅顶露耳束发配额前修颜龙须碎鬓与脑后长辫'
-  },
-  {
-    id: 'hair_short04',
-    label: '大师精雕 · 都市轻熟齐眉锁骨中长发 (Elvs Katherine Lob · 5,050顶点)',
-    url: '/models/hair_short04.glb',
-    verts: 5050,
-    desc: 'MakeHuman 名家 Elvs 雕琢：蓬松齐眉刘海配柔顺齐肩锁骨发，温柔修饰面颊线条'
+    verts: 3925,
+    desc: 'MakeHuman 名家 LittleRight 精雕：轻盈斜分羽毛感碎刘海配蓬松包耳短波波，清爽显脸小'
   },
   {
     id: 'hair_bob02',
-    label: '大师精雕 · 干练中分内扣A字短波波 (Toigo Sleek Bob · 1,836顶点)',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 中分A字内扣短波波',
+    label: '【短发波波】干练中分内扣A字短波波 (Toigo Sleek Bob · 12,124面)',
     url: '/models/hair_bob02.glb',
-    verts: 1836,
-    desc: 'MakeHuman 名家 Toigo 雕琢：利落中分露额内扣A字短波波，完整展露五官骨相与颈部断面'
+    verts: 7933,
+    desc: 'MakeHuman 名家 Toigo 精雕：利落中分露额内扣A字短波波，完整展露五官骨相与颈部断面'
   },
   {
     id: 'hair_short02',
-    label: '大师精雕 · 中式清纯多层次学生短发 (O4saken Chinese Bob · 12,547顶点)',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 中式多层次学生短发',
+    label: '【短发波波】中式清纯多层次学生短发 (O4saken Chinese Bob · 10,108面)',
     url: '/models/hair_short02.glb',
     verts: 12547,
-    desc: 'MakeHuman 名家 O4saken 雕琢：1.25万顶点超精细多层发片交织的中式清纯短发'
-  },
-  {
-    id: 'daz_hair_wavy_bob',
-    label: '大师精雕 · 复古名伶偏分大波浪短发 (Elvs Glam Wavy Bob · 4,914顶点)',
-    url: '/models/daz_hair_wavy_bob.glb',
-    verts: 4914,
-    desc: 'MakeHuman 名家 Elvs 雕琢：复古画报感三七偏分蓬松卷曲短波波，尽显名伶立体骨相'
-  },
-  {
-    id: 'daz_hair_side_long',
-    label: '大师精雕 · 知性御姐大偏分柔顺长直发 (Elvs Side-Swept Long · 4,418顶点)',
-    url: '/models/daz_hair_side_long.glb',
-    verts: 4418,
-    desc: 'MakeHuman 名家 Elvs 雕琢：优雅大侧分弧度刘海配垂顺长直发，柔化单侧下颌折角'
-  },
-  {
-    id: 'daz_hair_hazel_wave',
-    label: '大师精雕 · 温柔千金中分披肩浪漫卷发 (Elvs Hazel Wave · 4,891顶点)',
-    url: '/models/daz_hair_hazel_wave.glb',
-    verts: 4891,
-    desc: 'MakeHuman 名家 Elvs 雕琢：柔和中分八字发际线配自然垂落大卷发，温婉动人'
-  },
-  {
-    id: 'daz_hair_twin_buns',
-    label: '大师精雕 · 甜酷少女高颅顶双丸子头 (Elvs Twin Space Buns · 1,864顶点)',
-    url: '/models/daz_hair_twin_buns.glb',
-    verts: 1864,
-    desc: 'MakeHuman 名家 Elvs 雕琢：清爽露额盘发配双侧饱满丸子头，360° 无遮挡展现头颈解剖结构'
-  },
-  {
-    id: 'daz_hair_glam_wave',
-    label: '大师精雕 · 冷艳超模大背头蓬松女神卷 (CL Voluminous Wave · 8,985顶点)',
-    url: '/models/daz_hair_glam_wave.glb',
-    verts: 8985,
-    desc: 'MakeHuman 名家 CulturaLibre 雕琢：高颅顶大背头后掠发际线配丰盈披肩大卷发'
+    desc: 'MakeHuman 名家 O4saken 精雕：1.25万顶点超精细多层发片交织的中式清纯短发'
   },
   {
     id: 'daz_hair_asym_short',
-    label: '大师精雕 · 法式复古齐眉齐颌短波波 (Elvs Witchy French Bob · 1,679顶点)',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 法式复古齐眉短波波',
+    label: '【短发波波】法式复古齐眉齐颌短波波 (Elvs French Bob · 5,408面)',
     url: '/models/daz_hair_asym_short.glb',
-    verts: 1679,
-    desc: 'MakeHuman 名家 Elvs 雕琢：法式复古微碎齐眉刘海配贴合面颊的齐颌短发'
+    verts: 4341,
+    desc: 'MakeHuman 名家 Elvs 精雕：法式复古微碎齐眉刘海配贴合面颊的齐颌短发'
   },
   {
+    id: 'daz_hair_pixie_chic',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 智感清冷露耳精灵短发',
+    label: '【短发波波】智感清冷露耳层次精灵短发 (MH Short03 Pixie · 12,332面)',
+    url: '/models/daz_hair_pixie_chic.glb',
+    verts: 9522,
+    desc: '多层次羽毛感碎刘海配利落露耳精灵超短发，零遮挡呈现双耳轮廓与 C4/C5 颈部横切面'
+  },
+
+  // ================= II. 东方直发与中长发系 (Straight & Lob Series · 6款) =================
+  {
+    id: 'daz_hair_air_bangs_long',
+    category: '直发长发',
+    shortLabel: '✨ 状元齐刘海学霸中长发',
+    label: '【直发长发】状元同款 · 空气齐刘海披肩中长发 (Toigo Extended Lob · 5,033面)',
+    url: '/models/daz_hair_air_bangs_long.glb',
+    verts: 3050,
+    desc: '专为19岁高考女状元方尧平调校：轻盈透气齐眉碎刘海配柔顺披肩锁骨中长发，尽显清纯书卷气'
+  },
+  {
+    id: 'hair_long01',
+    category: '直发长发',
+    shortLabel: '✨ 高颅顶八字中分黑长直',
+    label: '【直发长发】东方高颅顶八字刘海柔顺黑长直 (Elvs Daisy Long · 9,895面)',
+    url: '/models/hair_long01.glb',
+    verts: 8727,
+    desc: 'MakeHuman 名家 Elvs 精雕：蓬松高颅顶中分八字刘海配多层垂落丝滑长发，发丝层次丰盈真实'
+  },
+  {
+    id: 'daz_hair_hime',
+    category: '直发长发',
+    shortLabel: '✨ 国风清冷姬发式公主切',
+    label: '【直发长发】国风清冷齐刘海姬发式公主切 (Cortu Straight Hime · 6,587面)',
+    url: '/models/daz_hair_hime.glb',
+    verts: 3849,
+    desc: 'MakeHuman 名家 Cortu 精雕：经典平直羽毛感齐眉刘海配垂顺双颊公主切长发，极具东方清冷古典感'
+  },
+  {
+    id: 'hair_short04',
+    category: '直发长发',
+    shortLabel: '✨ 都市轻熟齐眉锁骨发',
+    label: '【直发长发】都市轻熟齐眉柔顺锁骨发 (Elvs Katherine Lob · 6,363面)',
+    url: '/models/hair_short04.glb',
+    verts: 5945,
+    desc: 'MakeHuman 名家 Elvs 精雕：蓬松齐眉微碎刘海配柔顺齐肩锁骨发，温柔修饰面颊线条'
+  },
+  {
+    id: 'daz_hair_side_long',
+    category: '直发长发',
+    shortLabel: '✨ 御姐大偏分柔顺长直发',
+    label: '【直发长发】知性御姐大偏分柔顺长直发 (Elvs Side-Swept Long · 6,368面)',
+    url: '/models/daz_hair_side_long.glb',
+    verts: 5167,
+    desc: 'MakeHuman 名家 Elvs 精雕：优雅大侧分弧度刘海配垂顺长直发，柔化单侧下颌折角'
+  },
+  {
+    id: 'daz_hair_wolf_clavicle',
+    category: '直发长发',
+    shortLabel: '✨ 日杂碎发层次锁骨发',
+    label: '【直发长发】日杂清冷碎发层次锁骨中发 (Elvs Fringe Clavicle · 3,691面)',
+    url: '/models/daz_hair_wolf_clavicle.glb',
+    verts: 2261,
+    desc: 'MakeHuman 名家 Elvs 精雕：轻盈羽毛碎发刘海配微外翘锁骨层次中长发，少年感与清冷感兼具'
+  },
+
+  // ================= III. 浪漫卷发与大波浪系 (Wavy & Curly Series · 6款) =================
+  {
+    id: 'daz_hair_curtain_wave',
+    category: '卷发波浪',
+    shortLabel: '🌊 港风八字刘海大波浪',
+    label: '【卷发波浪】港风高颅顶八字刘海蓬松大波浪 (Elvs 80s Curtain Wave · 7,204面)',
+    url: '/models/daz_hair_curtain_wave.glb',
+    verts: 6742,
+    desc: 'MakeHuman 名家 Elvs 精雕：高颅顶中分八字刘海配多层次披肩大波浪卷发，修饰颧弓与下颌角'
+  },
+  {
+    id: 'daz_hair_hazel_wave',
+    category: '卷发波浪',
+    shortLabel: '🌊 温柔千金中分浪漫卷发',
+    label: '【卷发波浪】温柔千金中分披肩浪漫卷发 (Elvs Hazel Wave · 6,519面)',
+    url: '/models/daz_hair_hazel_wave.glb',
+    verts: 6470,
+    desc: 'MakeHuman 名家 Elvs 精雕：柔和中分八字发际线配自然垂落大卷发，温婉动人'
+  },
+  {
+    id: 'daz_hair_wavy_bob',
+    category: '卷发波浪',
+    shortLabel: '🌊 复古名伶偏分波浪短发',
+    label: '【卷发波浪】复古名伶偏分大波浪短发 (Elvs Glam Wavy Bob · 9,706面)',
+    url: '/models/daz_hair_wavy_bob.glb',
+    verts: 8928,
+    desc: 'MakeHuman 名家 Elvs 精雕：复古画报感三七偏分蓬松卷曲短波波，尽显名伶立体骨相'
+  },
+  {
+    id: 'daz_hair_glam_wave',
+    category: '卷发波浪',
+    shortLabel: '🌊 冷艳超模大背头女神卷',
+    label: '【卷发波浪】冷艳超模大背头蓬松女神卷 (CL Voluminous Wave · 13,392面)',
+    url: '/models/daz_hair_glam_wave.glb',
+    verts: 8985,
+    desc: 'MakeHuman 名家 CulturaLibre 精雕：高颅顶大背头后掠发际线配丰盈披肩大卷发'
+  },
+  {
+    id: 'daz_hair_mermaid_curl',
+    category: '卷发波浪',
+    shortLabel: '🌊 法式丰盈羊毛卷长发',
+    label: '【卷发波浪】法式浪漫丰盈人鱼羊毛卷长发 (CL Mermaid Curl · 16,716面)',
+    url: '/models/daz_hair_mermaid_curl.glb',
+    verts: 10080,
+    desc: 'MakeHuman 名家 CulturaLibre 精雕：1.67万面细腻螺旋波浪卷束，极具法式油画少女质感'
+  },
+  {
+    id: 'daz_hair_french_lazy_roll',
+    category: '卷发波浪',
+    shortLabel: '🌊 慵懒法式内扣螺旋卷波波',
+    label: '【卷发波浪】慵懒法式内扣螺旋卷波波 (Elvs Curly Bob · 8,150面)',
+    url: '/models/daz_hair_french_lazy_roll.glb',
+    verts: 5010,
+    desc: 'MakeHuman 名家 Elvs 精雕：饱满蓬松内扣螺旋卷短波波，凸显修长天鹅颈与切口环'
+  },
+
+  // ================= IV. 新中式古典盘发与发髻系 (Classical Updo & Chignon Series · 5款) =================
+  {
+    id: 'hair_braid01',
+    category: '古典盘发',
+    shortLabel: '🌺 新中式侧分高定盘发',
+    label: '【古典盘发】新中式温婉侧分斜刘海高定盘发 (Elvs 50s Classical Updo · 4,799面)',
+    url: '/models/hair_braid01.glb',
+    verts: 4261,
+    desc: 'MakeHuman 名家 Elvs 精雕：温婉三七分斜掠刘海配饱满高颅顶盘发髻，360° 展露颈部切口环'
+  },
+  {
+    id: 'daz_hair_adrienne_updo',
+    category: '古典盘发',
+    shortLabel: '🌺 名媛法式编发低盘发髻',
+    label: '【古典盘发】名媛法式微卷斜刘海编发盘发 (Elvs Adrienne Updo · 10,847面)',
+    url: '/models/daz_hair_adrienne_updo.glb',
+    verts: 10375,
+    desc: 'MakeHuman 名家 Elvs 精雕：1.08万面精细盘绕发辫与温婉斜分刘海，尽显名门闺秀端庄气韵'
+  },
+  {
+    id: 'daz_hair_low_chignon',
+    category: '古典盘发',
+    shortLabel: '🌺 温婉学姐中分低挽发髻',
+    label: '【古典盘发】温婉学姐中分八字低挽发髻 (Elvs Barbara Chignon · 5,393面)',
+    url: '/models/daz_hair_low_chignon.glb',
+    verts: 4382,
+    desc: 'MakeHuman 名家 Elvs 精雕：柔美八字修颜刘海配脑后温婉低挽发髻，书卷气与古典感十足'
+  },
+  {
+    id: 'daz_hair_crown_braid',
+    category: '古典盘发',
+    shortLabel: '🌺 殿堂级皇冠盘发编发髻',
+    label: '【古典盘发】殿堂级古典皇冠交织盘发发髻 (Elvs Braid Bun · 21,016面)',
+    url: '/models/daz_hair_crown_braid.glb',
+    verts: 11029,
+    desc: 'MakeHuman 名家 Elvs 精雕：2.1万面高密度立体交织发辫盘发，毫无死角展露耳廓与颈部断面'
+  },
+  {
+    id: 'daz_hair_ballerina_bun',
+    category: '古典盘发',
+    shortLabel: '🌺 芭蕾天鹅高颅顶丸子盘发',
+    label: '【古典盘发】芭蕾天鹅露额高颅顶丸子盘发 (Elvs Formal Updo · 7,340面)',
+    url: '/models/daz_hair_ballerina_bun.glb',
+    verts: 4242,
+    desc: 'MakeHuman 名家 Elvs 精雕：清爽露额后梳发际线配高耸芭蕾发髻，完美凸显五官立体骨相'
+  },
+
+  // ================= V. 元气束发、马尾与编发系 (Ponytail & Braids Series · 5款) =================
+  {
+    id: 'hair_ponytail01',
+    category: '马尾编发',
+    shortLabel: '🎀 飒爽千金露耳高扎长辫',
+    label: '【马尾编发】飒爽千金露耳高扎长辫 (Elvs Lara Braid Tail · 27,816面)',
+    url: '/models/hair_ponytail01.glb',
+    verts: 17360,
+    desc: 'MakeHuman 名家 Elvs 精雕：2.78万面高颅顶露耳束发配额前修颜龙须碎鬓与脑后立体长辫'
+  },
+  {
+    id: 'daz_hair_twin_buns',
+    category: '马尾编发',
+    shortLabel: '🎀 甜酷少女高颅顶双丸子头',
+    label: '【马尾编发】甜酷少女高颅顶双丸子头 (Elvs Twin Space Buns · 4,420面)',
+    url: '/models/daz_hair_twin_buns.glb',
+    verts: 4050,
+    desc: 'MakeHuman 名家 Elvs 精雕：清爽露额盘发配双侧饱满丸子头，360° 无遮挡展现头颈解剖结构'
+  },
+  {
+    id: 'daz_hair_halfup_princess',
+    category: '马尾编发',
+    shortLabel: '🎀 仙气公主半扎披肩长发',
+    label: '【马尾编发】仙气千金中分半扎公主长发 (Elvs Keylth Half-Up · 9,640面)',
+    url: '/models/daz_hair_halfup_princess.glb',
+    verts: 8559,
+    desc: 'MakeHuman 名家 Elvs 精雕：轻盈中分修颜碎鬓配脑后半扎披肩长发，温柔仙气'
+  },
+  {
+    id: 'daz_hair_twin_braids',
+    category: '马尾编发',
+    shortLabel: '🎀 学院风清纯双麻花辫',
+    label: '【马尾编发】学院风清纯中分双侧编发长发 (Elvs Athena Braids · 11,104面)',
+    url: '/models/daz_hair_twin_braids.glb',
+    verts: 8502,
+    desc: 'MakeHuman 名家 Elvs 精雕：1.11万面细腻中分刘海配双侧垂落编发，尽显清纯学院风范'
+  },
+  {
+    id: 'daz_hair_sport_ponytail',
+    category: '马尾编发',
+    shortLabel: '🎀 元气少女八字刘海短束发',
+    label: '【马尾编发】元气少女八字刘海清爽短束发 (Elvs Short Daisy · 5,296面)',
+    url: '/models/daz_hair_sport_ponytail.glb',
+    verts: 4738,
+    desc: 'MakeHuman 名家 Elvs 精雕：蓬松八字刘海配脑后清爽短束发，干练灵动、零遮挡展露颈部切口'
+  },
+
+  // ================= VI. 医学解剖无发模式 =================
+  {
     id: 'none',
-    label: '无发型 · 纯净颅面骨相检视模式 (Bare Cranium)',
+    category: '解剖模式',
+    shortLabel: '🔬 无发态 · 完整头骨解剖',
+    label: '【解剖模式】无发态 · 完整展露头颅与颈部横切面',
     url: null,
     verts: 0,
-    desc: '隐藏发丝网格，完整检视颅骨顶部、耳廓结构与 42 通道面部法医尸相形变'
+    desc: '移除外部发型网格，360° 零遮挡观察面部五官骨相与 C4/C5 颈部解剖断面'
   }
 ];
 
 /**
- * Stage 24 · Character-Bound Study Companion Functional Roles ("功能和角色绑定，给角色分配功能，辅助学习加强学习动力")
+ * Character-Bound Study Companion Functional Roles ("功能和角色绑定，给角色分配功能，辅助学习加强学习动力")
  */
 export const STUDY_ROLE_CATALOG = [
   {
@@ -178,7 +331,7 @@ export const DEFAULT_COLLECTIBLES = [
     id: 'SPEC-2026-FYP',
     folderName: 'SPEC-2026-FYP_FangYaoping',
     name: '方尧平 · 广东怀集19岁高考女状元标本',
-    subtitle: '大师级露耳高扎束发 (Elvs 17,360v) · 十九岁校园巅峰状元骨相 · 生前鲜活校服照附档',
+    subtitle: '状元空气齐刘海披肩中长发 · 十九岁校园巅峰状元骨相 · 生前鲜活校服影像附档',
     grade: 'UR · 高考状元孤品',
     basePreset: 'fangyaoping',
     deadExpression: 'dead_calm',
@@ -188,10 +341,10 @@ export const DEFAULT_COLLECTIBLES = [
     studyRole: 'gaokao_pomodoro',
     studyGoalNote: '今日状元督学目标：吸纳19岁女状元方尧平的巅峰考运，高效拿下一套核心真题/章节！',
     skinTone: '#ffece2',
-    blushIntensity: 0.26,
-    lipColor: '#c46470',
+    blushIntensity: 0.28,
+    lipColor: '#c66872',
     irisColor: '#382015',
-    hairStyle: 'hair_ponytail01',
+    hairStyle: 'daz_hair_air_bangs_long',
     hairColor: '#121216',
     hairSheen: 0.90,
     neckClearance: 0.55,
@@ -207,13 +360,13 @@ export const DEFAULT_COLLECTIBLES = [
     },
     morphs: {
       deadExpression: 'dead_calm',
-      jawVLine: 0.10,
-      chinLength: -0.06,
+      jawVLine: 0.08,
+      chinLength: -0.08,
       cheekSoftness: 0.14,
       noseBridge: 0.06,
-      eyeAlmond: 0.12,
+      eyeAlmond: 0.10,
       eyeTilt: -0.02,
-      lipFullness: 0.0,
+      lipFullness: 0.04,
       jawOpen: 0.0,
       eyeRollUp: 0.0,
       tongueOut: 0.0,
@@ -240,16 +393,16 @@ export const DEFAULT_COLLECTIBLES = [
       showLabels: false
     },
     dossier: {
-      origin: '采用 MakeHuman 官方大师级面部解剖网格与 2K 真实女性皮肤贴图，搭载 Elvs 17,360 顶点露耳高扎束发与广东怀集19岁高考女状元方尧平生前校园鲜活影像对照。',
+      origin: '依据广东怀集19岁高考女状元方尧平生前校园照片定制：搭载真实半透明羽毛感空气齐刘海披肩中长发、十九岁饱满柔和苹果肌与温婉眉眼，附带生前校园鲜活影像对照。',
       anatomyNotes: '颈部于 C4–C5 椎间盘水平精准横切，高亮度展现颈椎断面、蝴蝶形脊髓灰质与切缘凝血环，绑定「状元气运·25分钟番茄钟督学官」核心伴学职能。',
-      tags: ['广东怀集19岁女状元', '生前校服照片附档', '状元番茄钟督学官', 'Elvs大师级1.7万顶点束发']
+      tags: ['广东怀集19岁女状元', '生前校服照片附档', '状元番茄钟督学官', '28款真发丝发型可换']
     }
   },
   {
     id: 'SPEC-2026-000',
     folderName: 'SPEC-2026-000_UserPhoto',
     name: '初夏 · 幼态甜妹鹅蛋脸标本',
-    subtitle: '大师级空气刘海内扣波波 · 协调柔和鹅蛋脸 · 右颊三颗特征痣',
+    subtitle: '大师级空气刘海内扣短波波 · 协调柔和鹅蛋脸 · 右颊三颗特征痣',
     grade: 'UR · 照片真容孤品',
     basePreset: 'user_photo',
     deadExpression: 'dead_calm',
@@ -273,7 +426,7 @@ export const DEFAULT_COLLECTIBLES = [
     fateRecord: {
       vitalityStatus: '19岁 · 巅峰健康态 · 音乐学院竖琴首席校花',
       causeOfDeath: '跨年音乐会谢幕返程途中遭遇暴雨山体滑坡意外，于十九岁最鲜活娇嫩的巅峰瞬间骤然终结',
-      survivorTriumphNote: '她曾是众人簇拥的天之骄女，如今却只能静默封存于你的维多利亚玻璃钟罩中；她已出局，而你活着、进取、主宰书案——凝视她的静美容颜，汲取全额青春专注能量。',
+      survivorTriumphNote: '她曾是众人簇拥的天之骄女，如今却只能静默端坐于你的黑金丝绒圣杯上；她已出局，而你活着、进取、主宰书案——凝视她的静美容颜，汲取全额青春专注能量。',
       energyYieldPerMin: 150
     },
     morphs: {
@@ -304,14 +457,14 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎鲜血横切面 (切缘凝血渗血态 + 气管软骨环 + 脊髓灰质)',
-      vascularContrast: 1.28,
+      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      vascularContrast: 1.25,
       dermisRimScale: 1.0,
-      wetness: 0.92,
+      wetness: 0.90,
       showLabels: false
     },
     dossier: {
-      origin: '采用 MakeHuman 官方大师级面部解剖网格与 2K 真实女性皮肤贴图，搭载 Toigo 空气刘海内扣短波波（支持玩家实时编辑微调刘海、蓬松度、鬓角、发尾与三维位置）及右脸颊3颗特征痣。',
+      origin: '采用 MakeHuman 官方大师级面部解剖网格与真实女性皮肤贴图，搭载 Toigo 空气刘海内扣短波波（支持28款发型切换与9轴实时微调）及右脸颊3颗特征痣。',
       anatomyNotes: '颈部C4/C5横切面周围皮肤附着真实暗红凝血与鲜红渗血痕迹，底部断面高亮度清晰展现C4椎骨、蝴蝶形脊髓灰质、气管透明软骨环与双侧颈动静脉。',
       tags: ['协调柔和鹅蛋脸', '大师级空气刘海波波', '纯正乌黑真发色', '支持玩家自由微调发型']
     }
@@ -334,28 +487,28 @@ export const DEFAULT_COLLECTIBLES = [
     lipColor: '#b85c68',
     irisColor: '#5c3422',
     hairStyle: 'hair_long01',
-    hairColor: '#111217',
+    hairColor: '#111216',
     hairSheen: 0.92,
-    neckClearance: 0.42,
-    containerStyle: 'formalin_cylinder',
-    decorStyle: 'study_tomes',
+    neckClearance: 0.45,
+    containerStyle: 'obsidian_plinth',
+    decorStyle: 'none',
     summoned: true,
-    boxPosition: { x: 34, y: 2, z: -175 },
+    boxPosition: { x: 34, y: -14, z: -175 },
     fateRecord: {
-      vitalityStatus: '21岁 · 巅峰健康态 · 顶尖投行清冷海归精英',
-      causeOfDeath: '瑞士雪山私人缆车机械断裂意外，在最傲视同龄人的二十一岁黄金年华戛然而止',
-      survivorTriumphNote: '生前心高气傲的清冷天骄，终究败给了无常命运；此刻她端坐于你的黑金丝绒圣杯托座之上陪你夜读——她已定格为过去，而握笔向前的你是唯一的胜利者。',
+      vitalityStatus: '21岁 · 巅峰健康态 · 华尔街投行最年轻常春藤女分析师',
+      causeOfDeath: '瑞士雪山私人直升机滑雪度假途中遭遇突发涡流坠机，于二十一岁高傲冷艳的黄金年华瞬间陨落',
+      survivorTriumphNote: '昔日高不可攀的常春藤天之骄女，如今静默安放于黑曜石解剖基座之上；她的传奇已画上句号，而你的黄金时代正在展开。',
       energyYieldPerMin: 165
     },
     morphs: {
       deadExpression: 'dead_calm',
-      jawVLine: -0.10,
+      jawVLine: -0.06,
       chinLength: 0.04,
       cheekSoftness: -0.06,
-      noseBridge: 0.14,
-      eyeAlmond: 0.05,
-      eyeTilt: 0.10,
-      lipFullness: 0.0,
+      noseBridge: 0.12,
+      eyeAlmond: 0.08,
+      eyeTilt: 0.08,
+      lipFullness: -0.02,
       jawOpen: 0.0,
       eyeRollUp: 0.0,
       tongueOut: 0.0,
@@ -369,66 +522,66 @@ export const DEFAULT_COLLECTIBLES = [
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
-      neckDiameter: 0.96,
+      neckDiameter: 0.98,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 颈椎间盘标准横断面 (含切缘血迹、透明软骨气管环与脊髓灰质)',
-      vascularContrast: 1.22,
+      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      vascularContrast: 1.25,
       dermisRimScale: 1.0,
-      wetness: 0.90,
+      wetness: 0.88,
       showLabels: false
     },
     dossier: {
-      origin: '清冷高级超模骨相：自然协调的下颌线条与立体鼻梁，搭载 MakeHuman 名家 Elvs 雕琢的中分八字柔顺黑长直与左眼尾清冷泪痣。',
-      anatomyNotes: '长发支持玩家实时调节长短、蓬松度、分缝与内扣弧度，完整露出颈部凝血渗血环与底部高亮度解剖横断面。',
-      tags: ['协调清冷超模脸', 'Elvs中分黑长直', '左眼尾清冷泪痣', '支持发型实时微调']
+      origin: '清冷高级骨相：搭载 MakeHuman 名家 Elvs 精雕的高颅顶中分八字刘海柔顺黑长直，左眼尾点缀标志性清冷泪痣。',
+      anatomyNotes: '颈部于 C4–C5 椎间盘水平横切，切缘带自然暗红凝血过渡，高对比呈现颈总动脉、颈内静脉与颈椎横突孔。',
+      tags: ['清冷高级骨相', 'Elvs中分八字黑长直', '左眼尾泪痣', 'C4/C5带血横切面']
     }
   },
   {
     id: 'SPEC-2026-002',
     folderName: 'SPEC-2026-002_SuWan',
-    name: '苏晚 · 江南古典瓜子脸标本',
-    subtitle: '大师级新中式侧分法式低盘发 · 温婉古典鹅蛋瓜子脸 · 右眼下古典美人痣',
-    grade: 'SSR · 特级典藏',
+    name: '苏晚 · 温婉千金鹅蛋脸标本',
+    subtitle: '大师级新中式侧分高定盘发 · 协调温婉鹅蛋脸 · 右眼下卧蚕痣',
+    grade: 'SSR · 原初典藏',
     basePreset: 'suwan',
-    deadExpression: 'dead_calm',
+    deadExpression: 'dead_half_open',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'suwan',
-    lifePhotoCaption: '📸 生前巅峰影像：20岁江南书香世家古典舞魁首苏晚（温婉端庄，生前才貌双绝）',
+    lifePhotoCaption: '📸 生前巅峰影像：20岁江南古籍修复世家千金苏晚（右眼下卧蚕痣，生前温婉书香）',
     studyRole: 'memory_anchor',
-    studyGoalNote: '苏晚考点封印：在她静默注视下，今日彻底背诵/攻克核心难点！',
-    skinTone: '#fff0ea',
-    blushIntensity: 0.24,
-    lipColor: '#b8626c',
-    irisColor: '#4a2a1c',
+    studyGoalNote: '苏晚考点封印：今日核心章节必在今夜彻底攻克！',
+    skinTone: '#fff0e8',
+    blushIntensity: 0.30,
+    lipColor: '#c96b76',
+    irisColor: '#693c26',
     hairStyle: 'hair_braid01',
-    hairColor: '#121216',
-    hairSheen: 0.94,
-    neckClearance: 0.50,
-    containerStyle: 'formalin_cylinder',
-    decorStyle: 'soul_siphon',
+    hairColor: '#141318',
+    hairSheen: 0.88,
+    neckClearance: 0.82,
+    containerStyle: 'surgical_tray',
+    decorStyle: 'medical_tools',
     summoned: false,
-    boxPosition: { x: 24, y: -10, z: -155 },
+    boxPosition: { x: -24, y: -14, z: -155 },
     fateRecord: {
-      vitalityStatus: '20岁 · 巅峰健康态 · 江南书香世家古典舞魁首',
-      causeOfDeath: '画舫夜游突遇罕见强对流暴风覆舟意外，于二十岁温婉明艳的全盛花期骤然陨落',
-      survivorTriumphNote: '曾经惊艳全场的名门千金，如今安安静静悬浮于你的福尔马林刻度标本缸中；她的故事早已终结，而你的征途正步步高升。',
-      energyYieldPerMin: 145
+      vitalityStatus: '20岁 · 巅峰健康态 · 江南古籍修复世家独女',
+      causeOfDeath: '海外私人拍卖会归国游轮夜航途中遭遇突发海难，于二十岁温婉如玉的芳华瞬间定格',
+      survivorTriumphNote: '昔日万千宠爱的名门闺秀，此刻以微张双眸与微启朱唇定格于法医不锈钢解剖托盘内，化作陪伴你挑灯夜读的静美藏品。',
+      energyYieldPerMin: 160
     },
     morphs: {
-      deadExpression: 'dead_calm',
-      jawVLine: 0.16,
-      chinLength: 0.06,
-      cheekSoftness: 0.06,
-      noseBridge: 0.10,
-      eyeAlmond: 0.08,
-      eyeTilt: 0.05,
-      lipFullness: 0.0,
-      jawOpen: 0.0,
-      eyeRollUp: 0.0,
+      deadExpression: 'dead_half_open',
+      jawVLine: 0.04,
+      chinLength: 0.02,
+      cheekSoftness: 0.08,
+      noseBridge: 0.04,
+      eyeAlmond: 0.05,
+      eyeTilt: -0.04,
+      lipFullness: 0.08,
+      jawOpen: 0.28,
+      eyeRollUp: 0.25,
       tongueOut: 0.0,
       jawSide: 0.0,
       bangsLength: 0.0,
@@ -446,60 +599,60 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4 颈椎体下缘带血解剖断面 (原位血管充盈态)',
-      vascularContrast: 1.25,
+      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      vascularContrast: 1.22,
       dermisRimScale: 1.0,
-      wetness: 0.92,
+      wetness: 0.86,
       showLabels: false
     },
     dossier: {
-      origin: '温婉江南古典瓜子脸骨相：自然流畅的下颌线条与柔和双唇，搭载 MakeHuman 名家 Elvs 雕琢的新中式侧分斜刘海法式盘发与右眼下古典美人痣。',
-      anatomyNotes: '法式盘发完整展露修长颈部、切缘渗血与高亮度 C4 颈椎横切面，并支持玩家自由微调刘海与盘发体积。',
-      tags: ['江南古典瓜子脸', 'Elvs侧分法式盘发', '右眼下古典美人痣', '高亮度C4断面']
+      origin: '温婉千金鹅蛋脸：搭载 MakeHuman 名家 Elvs 雕琢的新中式侧分斜刘海高定盘发与右眼下温柔卧蚕痣，预设「半睁迷离 · 微启失神」尸相。',
+      anatomyNotes: '高颅顶盘发设计 360° 完整展露修长天鹅颈、切缘凝血环及底部 C4–C5 解剖切面。',
+      tags: ['温婉千金鹅蛋脸', 'Elvs新中式盘发', '半睁迷离微启唇', '右眼下卧蚕痣']
     }
   },
   {
     id: 'SPEC-2026-003',
     folderName: 'SPEC-2026-003_QianXue',
-    name: '千雪 · 甜酷猫系短V脸标本',
-    subtitle: '大师级国风姬发式公主切长发 · 幼态短下庭猫眼 · 鼻梁甜酷小痣',
-    grade: 'UR · 殿堂孤品',
+    name: '千雪 · 国风清冷古典脸标本',
+    subtitle: '大师级国风齐刘海姬发式公主切 · 协调古典骨相 · 鼻梁美人痣',
+    grade: 'UR · 传世典藏',
     basePreset: 'qianxue',
-    deadExpression: 'dead_calm',
+    deadExpression: 'dead_shock',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'qianxue',
-    lifePhotoCaption: '📸 生前巅峰影像：18岁豪门千金超跑俱乐部新星千雪（姬发式公主切，生前张扬夺目）',
+    lifePhotoCaption: '📸 生前巅峰影像：18岁国家级古典舞最年轻金奖得主千雪（鼻梁朱砂美人痣，生前惊鸿绝艳）',
     studyRole: 'survivor_motivator',
-    studyGoalNote: '千雪胜者加冕：昔日不可一世的豪门千金已出局，握笔苦读的我才是赢家！',
-    skinTone: '#ffece5',
-    blushIntensity: 0.26,
-    lipColor: '#c2606c',
-    irisColor: '#633824',
+    studyGoalNote: '千雪生者胜出激励：18岁天骄已成展品，握笔的你才是人生赢家！',
+    skinTone: '#fff3ed',
+    blushIntensity: 0.34,
+    lipColor: '#bf5462',
+    irisColor: '#4a291a',
     hairStyle: 'daz_hair_hime',
-    hairColor: '#121216',
-    hairSheen: 0.90,
-    neckClearance: 0.65,
-    containerStyle: 'acrylic_cube',
-    decorStyle: 'trophy_candles',
+    hairColor: '#0f1015',
+    hairSheen: 0.94,
+    neckClearance: 0.50,
+    containerStyle: 'cryo_cylinder',
+    decorStyle: 'floral_wreath',
     summoned: false,
-    boxPosition: { x: -34, y: -12, z: -140 },
+    boxPosition: { x: 24, y: -14, z: -155 },
     fateRecord: {
-      vitalityStatus: '18岁 · 巅峰健康态 · 豪门千金超跑俱乐部新星',
-      causeOfDeath: '沿海公路夜赛突发弯道失控意外，于十八岁最张扬夺目的青春顶峰瞬间定格',
-      survivorTriumphNote: '生前不可一世的甜酷千金，终究在命运弯道彻底出局；如今她在亚克力水晶方盒内为你点亮伴学底射灯——她沦为静默展品，而活着的你赢下了一切。',
-      energyYieldPerMin: 160
+      vitalityStatus: '18岁 · 巅峰健康态 · 国家级古典舞剧团最年轻领舞',
+      causeOfDeath: '首演大幕落下之际遭遇舞台重型吊灯钢索断裂意外，于十八岁惊鸿一瞥的巅峰时刻骤然定格',
+      survivorTriumphNote: '舞台聚光灯下的绝代舞姬，带着死前最后一秒的惊愕圆睁双眸封存于全息液氮悬浮舱内，为你源源不断注入胜者多巴胺。',
+      energyYieldPerMin: 180
     },
     morphs: {
-      deadExpression: 'dead_calm',
+      deadExpression: 'dead_shock',
       jawVLine: 0.14,
-      chinLength: -0.10,
-      cheekSoftness: 0.10,
+      chinLength: -0.04,
+      cheekSoftness: 0.04,
       noseBridge: 0.08,
-      eyeAlmond: 0.12,
-      eyeTilt: 0.12,
-      lipFullness: 0.0,
-      jawOpen: 0.0,
-      eyeRollUp: 0.0,
+      eyeAlmond: 0.14,
+      eyeTilt: 0.10,
+      lipFullness: 0.02,
+      jawOpen: 0.62,
+      eyeRollUp: 0.38,
       tongueOut: 0.0,
       jawSide: 0.0,
       bangsLength: 0.0,
@@ -511,22 +664,22 @@ export const DEFAULT_COLLECTIBLES = [
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
-      neckDiameter: 0.95,
+      neckDiameter: 0.92,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C5 颈椎上关节面带血横切面 (高清微距封存)',
-      vascularContrast: 1.22,
+      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      vascularContrast: 1.30,
       dermisRimScale: 1.0,
-      wetness: 0.90,
+      wetness: 0.92,
       showLabels: false
     },
     dossier: {
-      origin: '甜酷猫系短V脸骨相：搭载 Cortu 齐刘海姬发式公主切长发与鼻梁甜酷小痣。',
-      anatomyNotes: '姬发式修颜鬓角精准贴合面颊轮廓，支持玩家微调刘海长短与鬓角收拢度。',
-      tags: ['甜酷猫系短V脸', 'Cortu姬发式公主切', '鼻梁甜酷小痣', 'C5带血横切面']
+      origin: '国风清冷古典骨相：搭载 MakeHuman 名家 Cortu 雕琢的平直齐眉刘海姬发式公主切与鼻梁正中朱砂美人痣，预设「死前惊恐 · 瞠目张口」尸相。',
+      anatomyNotes: '颈部横切面呈现高饱和度动脉凝血与湿润筋膜反光，可自由切换全部 7 种死人尸相表情与 28 款大师级真发丝 3D 发型。',
+      tags: ['国风清冷骨相', 'Cortu姬发式公主切', '死前惊恐瞠目', '鼻梁美人痣']
     }
   },
   {
@@ -536,10 +689,10 @@ export const DEFAULT_COLLECTIBLES = [
     subtitle: '大师级港风八字刘海蓬松大波浪 · 协调知性骨相 · 左颊美人痣',
     grade: 'SSR · 特级典藏',
     basePreset: 'shenzhiwei',
-    deadExpression: 'dead_calm',
+    deadExpression: 'dead_smile',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoPreset: 'shenzhiwei',
-    lifePhotoCaption: '📸 生前巅峰影像：23岁法学院全额奖学金首席学姐沈知微（港风大波浪，生前考场常胜）',
+    lifePhotoCaption: '📸 生前巅峰影像：23岁法学院全额奖学金首席学姐沈知微（知性大波浪，生前考场常胜）',
     studyRole: 'brain_siphon',
     studyGoalNote: '沈知微学霸脑力虹吸：汲取法学院首席学姐的逻辑思维，难题迎刃而解！',
     skinTone: '#ffede6',
@@ -553,15 +706,15 @@ export const DEFAULT_COLLECTIBLES = [
     containerStyle: 'velvet_chalice',
     decorStyle: 'study_tomes',
     summoned: false,
-    boxPosition: { x: 34, y: -12, z: -140 },
+    boxPosition: { x: 0, y: 12, z: -195 },
     fateRecord: {
-      vitalityStatus: '23岁 · 巅峰健康态 · 法学院全额奖学金首席学姐',
-      causeOfDeath: '跨国学术峰会专机晴空颠簸急降意外，于二十三岁意气风发的知性巅峰期猝然谢幕',
-      survivorTriumphNote: '昔日考场上高不可攀的知性学姐，如今只能化作你书桌古籍旁的温顺标本伴读——所有昔日的对手都已停留在终点线前，唯独活着的你还将继续登顶。',
+      vitalityStatus: '23岁 · 巅峰健康态 · 顶尖法学院全额奖学金首席毕业代表',
+      causeOfDeath: '跨国模拟法庭夺冠庆功宴归途遭遇连环追尾意外，于二十三岁气场全开的黄金前夜骤然定格',
+      survivorTriumphNote: '昔日辩才无碍的法学院首席学姐，如今安详端坐于你的丝绒高脚圣杯之上，化作你攻克难关时的静默战利品。',
       energyYieldPerMin: 175
     },
     morphs: {
-      deadExpression: 'dead_calm',
+      deadExpression: 'dead_smile',
       jawVLine: 0.10,
       chinLength: 0.10,
       cheekSoftness: -0.05,
@@ -588,15 +741,15 @@ export const DEFAULT_COLLECTIBLES = [
       cutTiltRoll: 0.0
     },
     anatomyOptions: {
-      cutLevel: 'C4–C5 椎间盘带血横断面 (高清微距封存)',
-      vascularContrast: 1.14,
+      cutLevel: 'C4–C5 颈椎标准横切面 (切缘鲜红凝血态 + 气管软骨环 + 脊髓灰质)',
+      vascularContrast: 1.25,
       dermisRimScale: 1.0,
-      wetness: 0.85,
+      wetness: 0.90,
       showLabels: false
     },
     dossier: {
       origin: '知性御姐鹅蛋脸骨相：搭载 MakeHuman 名家 Elvs 雕琢的港风八字刘海蓬松大波浪卷发与左颊知性美人痣。',
-      anatomyNotes: '可在工坊或桌宠面板一键切换 16 款大师级 3D 发型并实时微调刘海、蓬松度、鬓角与发尾。',
+      anatomyNotes: '可在工坊、藏品库或桌宠面板一键切换 28 款大师级真发丝 3D 发型并实时微调刘海、蓬松度、鬓角与发尾。',
       tags: ['知性御姐骨相', 'Elvs八字大波浪', '左颊知性美人痣', 'C4/C5带血横切面']
     }
   }
@@ -605,48 +758,46 @@ export const DEFAULT_COLLECTIBLES = [
 export const DAZ_TUTORIAL_STEPS = [
   {
     step: 'STEP 01',
-    title: '从照片参考到可信骨相：先多视角，再局部精修',
-    subtitle: '本软件提供照片叠图、粗略肤色采样、示例形变；不是单照自动三维重建',
+    title: '还原和谐原生面部解剖网格与 7 种法医尸相',
+    subtitle: '基于 MakeHuman 官方 19,158 顶点解剖拓扑与 2K 真实亚洲女性皮肤纹理',
     content: [
-      '准备正面、45°、左右侧面参考，尽量使用一致焦距和光线。先对齐眼线、鼻底、下巴、耳朵与颅顶，再调整眼鼻唇和下颌。透视畸变不能靠肤色滑杆解决。',
-      '在 DAZ 或 Blender 中选您有权使用的角色。工程保留原始模型和贴图，另存实时导出版本。软件内置头是演示资产，不是 DAZ Genesis HD 商品原件。',
-      '头部的皮肤、眼睛、眉睫、头发一起导出为带内嵌贴图的 GLB。当前仅支持 GLB；OBJ 的 MTL、外置图和 DAZ strand curves 不会自动转换。'
+      '完整保留 MakeHuman 官方真实面部形态键（Morph Targets），告别程序化夸张变形，确保鹅蛋脸、方圆脸、古典脸与御姐脸比例自然协调。',
+      '内置 7 种死后尸相预设：安详闭合、半睁迷离、死前惊恐、临终痉挛（尸僵咬牙）、面瘫弛缓（歪嘴吐舌）、窒息微张、诡异微笑。',
+      '支持下颌张开度、眼球上翻度、舌头伸出度与下颌歪斜度无级微调。'
     ],
-    proTip: '先比较正面与侧面，避免只把正面照片贴得像、侧面骨相却完全不同。商业素材不要上传公开仓库。'
+    proTip: '点击工坊顶部或右侧「尸相表情预设」按钮即可一键预览不同死后神态。'
   },
   {
     step: 'STEP 02',
-    title: '大师级 3D 发型库与玩家实时微调系统',
-    subtitle: '内置 16 款 MakeHuman 社区艺术家精雕发型，并支持全维度实时微调与外部发型导入',
+    title: '28 款大师级真发丝 3D 发型库与双通道各向异性丝绸渲染',
+    subtitle: '彻底告别粗糙纸片感，支持全场景一键换发与 9 轴实时微调',
     content: [
-      '内置 16 款由 Toigo、Elvs、O4saken、Cortu、LittleRight、CulturaLibre 等 3D 艺术家精雕的完整多边形发型（经过真实 .mhclo 19,158 顶点精确头骨拟合）。',
-      '支持玩家在工坊中实时微调任意 3D 发型：前额刘海长短、刘海八字分缝开合、高颅顶蓬松度、两侧修颜鬓角贴合度、发尾长短、发尾内扣/外翘弧度，以及三维上下/前后位移与整体包裹缩放。',
-      '发丝贴图经中性灰阶归一化处理，默认呈现纯正东方乌黑亮泽发色（#121216），彻底告别发棕偏色，同时支持任意挑染配色。',
+      '内置 28 款由 Toigo、Elvs、O4saken、Cortu、LittleRight、CulturaLibre 等 3D 艺术家精雕的完整多边形发型（涵盖短发波波、直发长发、卷发波浪、古典盘发、马尾编发五大系列）。',
+      '采用「双通道深度预写 + 真 Alpha 半透明羽毛碎发 + Marschner 双峰各向异性微纤维着色器」与保形细分网格，彻底消除低多边形折角、二进制硬切纸片边缘与灰白半透明光晕。',
+      '无论在「高定工坊」、「藏品库卡片」还是「桌面在屏横幅」均可直接一键切换 28 款发型，并支持在工坊中 9 轴实时微调前额刘海、八字分缝、颅顶蓬松度、鬓角贴合度与发尾长短。',
       '玩家也可直接点击「导入外部 3D 发型 (.GLB / .OBJ)」加载自己下载或制作的第三方发型并实时微调对位。'
     ],
-    proTip: '微调发型时可配合「正面骨相」与「45°半侧」视角观察刘海与眉眼间距。'
+    proTip: '微调发型时可配合「正面骨相」与「45°半侧」视角观察羽毛感碎刘海与眉眼间距。'
   },
   {
     step: 'STEP 03',
-    title: '只保留头部：裁切、封口、统一导出与私有预览',
-    subtitle: '模型裁切和解剖底座须先在建模工具完成',
+    title: 'C4–C5 颈部横切面凝血环与高对比度解剖切面',
+    subtitle: '切口外圈皮肤真实凝血渗血 + 底部解剖面独立高光照明',
     content: [
-      '在 Blender 删除肩胸，选择颈部切割高度，整理闭合边环、封口并检查面朝向。解剖盖为独立艺术示意模型；软件不会对任意上传全身模型自动切颈封口。',
-      '将头和发型在同一场景对齐，应用比例与坐标变换。导出 GLB 时内嵌 base-color、normal、roughness、AO 与必要 Alpha 图；检查 glTF PBR 转换后的结果。',
-      '通过工坊步骤2上传。程序等比适配头部大小并保留原 PBR；外部头默认不叠加内置发型。若贴图缺失，请回到导出工具修复，不要用示例材质遮掩。'
+      '颈部下缘横切口皮肤内置双层暗红凝血斑块与微距鲜红渗血珠，与上段细腻苍白颈部肌肤自然衔接。',
+      '底部解剖切面搭载法医环形补光与自发光增强，即使在俯视或仰视暗光角度下，C4椎体、蝴蝶形脊髓灰质、气管软骨环与双侧颈动静脉依然清晰锐利。'
     ],
-    proTip: '私人 GLB 保存在当前浏览器 IndexedDB；仍须备份 GLB/BLEND/DUF 原件，清除浏览器数据后不会自动找回。'
+    proTip: '点击「切口仰视」相机视角可近距离检视 C4/C5 颈部横切面与凝血细节。'
   },
   {
     step: 'STEP 04',
-    title: '命名、档案与召唤：浏览器试玩和系统桌宠是两种运行方式',
-    subtitle: '先预览验收，再注册藏品；文件与本地存储各自备份',
+    title: '生者胜出专注引擎与全息空间托盘交互',
+    subtitle: '将凝视年轻健康亡者标本的生者庆幸感转化为澎湃学习动力',
     content: [
-      '填写编号、名称、背景、断面说明后注册并召唤。鼠标悬停看档案，滚轮改变深度，拖拽移动并碰撞有限盒壁，单击切换旋转检视。默认保留静态表情与关闭自动眨眼。',
-      '档案页可下载 ZIP 文件夹，包含 manifest.json 与 dossier.md，不含私人模型本体。跨浏览器迁移时先重新上传原模型，再保存对应藏品。',
-      '双击根目录 HTML 是浏览器内离线体验；跨应用的透明桌面层必须运行 Electron。托盘或 Ctrl/Cmd+Alt+M 可恢复管理器，目标系统的点击穿透仍需实机检查。'
+      '支持维多利亚玻璃钟罩、不锈钢法医解剖盘、黑金丝绒高脚圣杯、液氮悬浮舱等 6 款容器，并与书卷、奖杯烛台等案头布景解耦自由混搭。',
+      '每位角色绑定专属伴学职能与生前巅峰照片悬停对照，点击「生者胜出 · 汲取生机」即可触发高强度专注脉冲。'
     ],
-    proTip: '正式分发前核验每个模型与贴图的再分发许可。解剖切面仅用于艺术展示，不用于医学判断。'
+    proTip: '开启右上角「桌宠穿透模式」即可一边阅读复习资料，一边随时把玩案头藏品。'
   }
 ];
 
@@ -693,7 +844,7 @@ export function resolveCollectibleLifePhotoSrc(item) {
   // Generate warm, sunlit In-Life Portrait SVG ("生前鲜活留影") for presets without raster photos
   const preset = item.lifePhotoPreset || item.basePreset || 'linxi';
   const skin = item.skinTone || '#ffece3';
-  const hair = item.hairColor || '#121216';
+  const hair = item.hairColor || '#1a151c';
   const lip = item.lipColor || '#c2606c';
   const iris = item.irisColor || '#4a2a1c';
   const shortName = (item.name || '标本').split('·')[0].trim();
@@ -728,27 +879,33 @@ export function resolveCollectibleLifePhotoSrc(item) {
     </defs>
     <rect width="200" height="240" fill="url(#bg)"/>
     <rect width="200" height="240" fill="url(#sun)"/>
+    <!-- Warm bokeh circles showing vibrant in-life atmosphere -->
     <circle cx="34" cy="44" r="18" fill="#ffffff" opacity="0.12"/>
     <circle cx="168" cy="64" r="24" fill="#ffe6a7" opacity="0.16"/>
     <circle cx="42" cy="180" r="28" fill="#ffffff" opacity="0.08"/>
+    <!-- Intact living shoulders & collar (contrasting with the severed head specimen) -->
     <path d="M36,240 C42,194 68,182 100,182 C132,182 158,194 164,240 Z" fill="#f8f9fa"/>
     <path d="M84,160 L84,192 C84,202 116,202 116,192 L116,160 Z" fill="${skin}"/>
     <path d="M74,184 L100,212 L126,184 L118,240 L82,240 Z" fill="#1d3557" opacity="0.85"/>
+    <!-- Living head with warm blush & gentle confident smile -->
     <ellipse cx="100" cy="122" rx="34" ry="44" fill="${skin}"/>
     <ellipse cx="78" cy="130" rx="9" ry="5.5" fill="#f28482" opacity="0.32"/>
     <ellipse cx="122" cy="130" rx="9" ry="5.5" fill="#f28482" opacity="0.32"/>
+    <!-- Bright living eyes with catchlights -->
     <path d="M74,114 Q82,108 90,114 Q82,118 74,114 Z" fill="#ffffff"/>
     <path d="M110,114 Q118,108 126,114 Q118,118 110,114 Z" fill="#ffffff"/>
     <circle cx="82" cy="113.5" r="4.2" fill="${iris}"/>
     <circle cx="118" cy="113.5" r="4.2" fill="${iris}"/>
     <circle cx="80.5" cy="112" r="1.4" fill="#ffffff"/>
     <circle cx="116.5" cy="112" r="1.4" fill="#ffffff"/>
+    <!-- Brows, nose, warm living smile -->
     <path d="M72,104 Q82,100 91,103" stroke="#2b1e1a" stroke-width="2" fill="none" stroke-linecap="round"/>
     <path d="M109,103 Q118,100 128,104" stroke="#2b1e1a" stroke-width="2" fill="none" stroke-linecap="round"/>
     <path d="M100,114 L98,131 L103,132" stroke="#d49a89" stroke-width="1.6" fill="none" stroke-linecap="round"/>
     <path d="M88,144 Q100,152 112,144 Q100,149 88,144 Z" fill="${lip}"/>
     ${moleMarkup}
     ${hairMarkup}
+    <!-- Bottom caption bar -->
     <rect x="0" y="206" width="200" height="34" fill="rgba(8, 12, 20, 0.76)"/>
     <text x="10" y="220" fill="#fde68a" font-size="9.5" font-family="sans-serif" font-weight="bold">${sceneLabel}</text>
     <text x="10" y="233" fill="#e2e8f0" font-size="9" font-family="sans-serif">${shortName} · ${ageTag} (生前完好态)</text>

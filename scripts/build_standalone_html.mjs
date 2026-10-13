@@ -1,12 +1,10 @@
 import fs from 'fs';
-import { gzipSync } from 'zlib';
 import path from 'path';
 import { execSync } from 'child_process';
 
 console.log('1. Running Vite production build...');
 execSync('npx vite build', { stdio: 'inherit' });
 
-// Resolve from this script rather than assuming the repository lives at /home/user.
 const projectDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const distDir = path.join(projectDir, 'dist');
 const assetsDir = path.join(distDir, 'assets');
@@ -21,22 +19,34 @@ const jsContent = jsFile ? fs.readFileSync(path.join(assetsDir, jsFile), 'utf8')
 
 const glbFiles = [
   'daz_asian_head_base.glb',
-  'hair_user_photo.glb',
   'hair_bob01.glb',
+  'hair_user_photo.glb',
   'hair_bob02.glb',
   'hair_short02.glb',
+  'daz_hair_asym_short.glb',
+  'daz_hair_pixie_chic.glb',
+  'daz_hair_air_bangs_long.glb',
   'hair_long01.glb',
-  'hair_ponytail01.glb',
-  'hair_braid01.glb',
-  'hair_short04.glb',
   'daz_hair_hime.glb',
-  'daz_hair_curtain_wave.glb',
-  'daz_hair_wavy_bob.glb',
+  'hair_short04.glb',
   'daz_hair_side_long.glb',
+  'daz_hair_wolf_clavicle.glb',
+  'daz_hair_curtain_wave.glb',
   'daz_hair_hazel_wave.glb',
-  'daz_hair_twin_buns.glb',
+  'daz_hair_wavy_bob.glb',
   'daz_hair_glam_wave.glb',
-  'daz_hair_asym_short.glb'
+  'daz_hair_mermaid_curl.glb',
+  'daz_hair_french_lazy_roll.glb',
+  'hair_braid01.glb',
+  'daz_hair_adrienne_updo.glb',
+  'daz_hair_low_chignon.glb',
+  'daz_hair_crown_braid.glb',
+  'daz_hair_ballerina_bun.glb',
+  'hair_ponytail01.glb',
+  'daz_hair_twin_buns.glb',
+  'daz_hair_halfup_princess.glb',
+  'daz_hair_twin_braids.glb',
+  'daz_hair_sport_ponytail.glb'
 ];
 
 const embeddedGlbs = {};
@@ -46,13 +56,11 @@ for (const fname of glbFiles) {
   embeddedGlbs[`/models/${fname}`] = fs.readFileSync(fpath).toString('base64');
 }
 
-// User's own reference photo for the SPEC-2026-000 preset (embedded as data URI for file:// offline mode)
+// User's own reference photos for SPEC-2026-000 & SPEC-2026-FYP (embedded as data URIs for file:// offline mode)
 let refPhotoDataUri = '';
 const refPhotoPath = path.join(projectDir, 'public/models/user_photo_ref.jpg');
 if (fs.existsSync(refPhotoPath)) {
   refPhotoDataUri = 'data:image/jpeg;base64,' + fs.readFileSync(refPhotoPath).toString('base64');
-} else {
-  console.warn(`⚠️ Reference photo not found (dev-server fallback will be used): ${refPhotoPath}`);
 }
 
 let fangPhotoDataUri = '';
@@ -61,8 +69,7 @@ if (fs.existsSync(fangPhotoPath)) {
   fangPhotoDataUri = 'data:image/jpeg;base64,' + fs.readFileSync(fangPhotoPath).toString('base64');
 }
 
-const embeddedGrooms = {};
-const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_GROOMS__ = ${JSON.stringify(embeddedGrooms)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)}; window.__EMBEDDED_FANG_PHOTO__ = ${JSON.stringify(fangPhotoDataUri)};</script>`;
+const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)}; window.__EMBEDDED_FANG_PHOTO__ = ${JSON.stringify(fangPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw
   .replace(/<link rel="stylesheet"[^>]*>/g, `<style>\n${cssContent}\n</style>`)
