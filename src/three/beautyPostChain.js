@@ -1,8 +1,10 @@
 import * as THREE from 'three';
+import { isSoftwareRenderer } from './photorealLighting.js';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 /**
@@ -17,6 +19,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 export const BeautyGradeShader = {
   uniforms: {
     tDiffuse: { value: null },
+    tSourceAlpha: { value: null },
     uVignette: { value: 0.30 },
     uSaturation: { value: 1.07 },
     uContrast: { value: 1.05 },
@@ -30,6 +33,7 @@ export const BeautyGradeShader = {
   `,
   fragmentShader: /* glsl */`
     uniform sampler2D tDiffuse;
+    uniform sampler2D tSourceAlpha;
     uniform float uVignette;
     uniform float uSaturation;
     uniform float uContrast;
@@ -46,7 +50,7 @@ export const BeautyGradeShader = {
       vec2 d = vUv - vec2(0.5);
       float v = 1.0 - uVignette * smoothstep(0.15, 0.75, length(d) * 1.35);
       col *= v;
-      gl_FragColor = vec4(col, c.a);
+      gl_FragColor = vec4(col, texture2D(tSourceAlpha, vUv).r);
     }
   `,
 };
@@ -54,32 +58,55 @@ export const BeautyGradeShader = {
 export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const width = Math.max(2, Math.floor(options.width || 512));
   const height = Math.max(2, Math.floor(options.height || 512));
-  const pixelRatio = options.pixelRatio || renderer.getPixelRatio();
+  const software = isSoftwareRenderer(renderer);
+  const samplingScale = 1;
+  const pixelRatio = (options.pixelRatio || renderer.getPixelRatio()) * samplingScale;
 
-  // Stage 15: WebGL2 下给后期链 4x MSAA 渲染目标——这是网页版最接近 DLAA 的一环：
-  // 后期(Bloom/调色)不再把原生 MSAA 抗锯齿结果冲掉，发丝边缘在桌宠透明背景上也不毛糙。
-  let renderTarget;
-  try {
-    renderTarget = new THREE.WebGLRenderTarget(width, height, {
-      type: THREE.HalfFloatType,
-      samples: 4,
-    });
-  } catch (_) { renderTarget = undefined; }
-  const composer = new EffectComposer(renderer, renderTarget);
+  // Geometry is first drawn to an offscreen target, so canvas antialiasing
+  // does not apply. Multisample the HDR target to keep subpixel hair smooth.
+  const hdrTarget = new THREE.WebGLRenderTarget(width, height, {
+    type: THREE.HalfFloatType,
+    samples: software ? 0 : Math.min(4, renderer.capabilities.maxSamples || 0),
+  });
+  const composer = new EffectComposer(renderer, hdrTarget);
   composer.setPixelRatio(pixelRatio);
   composer.setSize(width, height);
 
   const renderPass = new RenderPass(scene, camera);
 
+  // UnrealBloom's additive composite also adds alpha. Capture the original
+  // coverage before bloom; otherwise a transparent desktop gets a black veil.
+  const alphaTarget = new THREE.WebGLRenderTarget(2, 2, {
+    format: THREE.RedFormat, type: THREE.UnsignedByteType,
+    depthBuffer: false, stencilBuffer: false,
+  });
+  const alphaMaterial = new THREE.ShaderMaterial({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: BeautyGradeShader.vertexShader,
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ gl_FragColor=vec4(texture2D(tDiffuse,vUv).a,0.0,0.0,1.0); }',
+    depthTest: false, depthWrite: false, toneMapped: false, blending: THREE.NoBlending,
+  });
+  const alphaQuad = new FullScreenQuad(alphaMaterial);
+  const alphaPass = new Pass();
+  alphaPass.needsSwap = false;
+  alphaPass.render = (r, write, read) => {
+    alphaMaterial.uniforms.tDiffuse.value = read.texture;
+    r.setRenderTarget(alphaTarget); alphaQuad.render(r);
+  };
+  let sizeW = width, sizeH = height, sizeRatio = pixelRatio;
+  const resizeAlpha = () => alphaTarget.setSize(Math.max(2, Math.floor(sizeW * sizeRatio)), Math.max(2, Math.floor(sizeH * sizeRatio)));
+  resizeAlpha();
+
   // 保守阈值辉光：只有高光溢出，绝不洗白皮肤/断面
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    options.bloomStrength ?? 0.15,
+    options.bloomStrength ?? 0.10,
     options.bloomRadius ?? 0.55,
-    options.bloomThreshold ?? 0.92
+    options.bloomThreshold ?? 1.0
   );
 
   const gradePass = new ShaderPass(BeautyGradeShader);
+  gradePass.uniforms.tSourceAlpha.value = alphaTarget.texture;
   gradePass.uniforms.uVignette.value = options.vignette ?? 0.30;
   gradePass.uniforms.uSaturation.value = options.saturation ?? 1.07;
   gradePass.uniforms.uContrast.value = options.contrast ?? 1.05;
@@ -88,6 +115,7 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const outputPass = new OutputPass();
 
   composer.addPass(renderPass);
+  composer.addPass(alphaPass);
   composer.addPass(bloomPass);
   composer.addPass(gradePass);
   composer.addPass(outputPass);
@@ -100,13 +128,14 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
     setSize(w, h) {
       const ww = Math.max(2, Math.floor(w));
       const hh = Math.max(2, Math.floor(h));
-      composer.setSize(ww, hh);
+      sizeW = ww; sizeH = hh;
+      composer.setSize(ww, hh); resizeAlpha();
     },
     setPixelRatio(r) {
-      composer.setPixelRatio(r);
+      sizeRatio = r * samplingScale; composer.setPixelRatio(sizeRatio); resizeAlpha();
     },
     syncSize(w, h, r) {
-      if (r) composer.setPixelRatio(r);
+      if (r) chain.setPixelRatio(r);
       chain.setSize(w, h);
     },
     setEnabled(v) {
@@ -114,6 +143,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
     },
     render() {
       composer.render();
+    },
+    dispose() {
+      alphaTarget.dispose(); alphaMaterial.dispose(); alphaQuad.dispose();
+      bloomPass.dispose(); gradePass.dispose(); outputPass.dispose(); composer.dispose();
     },
   };
   return chain;

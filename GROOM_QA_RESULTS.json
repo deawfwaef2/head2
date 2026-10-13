@@ -1,0 +1,103 @@
+{
+  "errors": [],
+  "profiles": [
+    {
+      "id": "groom_photo_tied",
+      "sourceCurves": 12000,
+      "selectedGuides": 2000,
+      "renderedStrands": 3284,
+      "interpolatedChildren": 1284,
+      "triangles": 610824,
+      "lod": "software-portrait",
+      "softwareFallback": true,
+      "nativeSource": "public/grooms/Chinese_Grooms_Source.blend",
+      "noHairAtlas": true,
+      "meshCount": 5,
+      "pixelRatio": 1
+    },
+    {
+      "id": "groom_center_long",
+      "sourceCurves": 12000,
+      "selectedGuides": 2000,
+      "renderedStrands": 2000,
+      "interpolatedChildren": 0,
+      "triangles": 372000,
+      "lod": "software-portrait",
+      "softwareFallback": true,
+      "nativeSource": "public/grooms/Chinese_Grooms_Source.blend",
+      "noHairAtlas": true,
+      "meshCount": 3,
+      "pixelRatio": 1
+    },
+    {
+      "id": "groom_low_chignon",
+      "sourceCurves": 12000,
+      "selectedGuides": 2000,
+      "renderedStrands": 2000,
+      "interpolatedChildren": 0,
+      "triangles": 372000,
+      "lod": "software-portrait",
+      "softwareFallback": true,
+      "nativeSource": "public/grooms/Chinese_Grooms_Source.blend",
+      "noHairAtlas": true,
+      "meshCount": 4,
+      "pixelRatio": 1
+    }
+  ],
+  "boot": {
+    "softwareRenderer": true,
+    "pets": 3
+  },
+  "rendering": {
+    "directCorner": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "postCorner": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "full": {
+    "id": "groom_photo_tied",
+    "sourceCurves": 12000,
+    "selectedGuides": 2000,
+    "renderedStrands": 3284,
+    "interpolatedChildren": 1284,
+    "triangles": 610824,
+    "lod": "software-portrait",
+    "softwareFallback": true,
+    "nativeSource": "public/grooms/Chinese_Grooms_Source.blend"
+  },
+  "controls": {
+    "shapeUpdated": true,
+    "finitePositions": true
+  },
+  "fullGeometryOnly": {
+    "id": "groom_photo_tied",
+    "sourceCurves": 12000,
+    "selectedGuides": 12000,
+    "renderedStrands": 19936,
+    "interpolatedChildren": 7936,
+    "triangles": 3708096,
+    "lod": "portrait",
+    "softwareFallback": false,
+    "nativeSource": "public/grooms/Chinese_Grooms_Source.blend",
+    "allPositionsFinite": true,
+    "renderedOnGpu": false
+  },
+  "noHair": true,
+  "saved": {
+    "hairStyle": "groom_photo_tied",
+    "groomDensity": 12000,
+    "persisted": true
+  },
+  "imported": {
+    "hairStyle": "groom_low_chignon",
+    "groomDensity": 3000
+  }
+}

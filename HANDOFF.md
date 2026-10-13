@@ -292,6 +292,17 @@
 - 压缩属性+默认6k版本file://已成功启动3桌宠，Groom元数据/默认9,932丝读回正确，0控制台/页面错误并生成真实实时近景截图。仍存在实时细丝锯齿/别名风险，不用Cycles静帧冒充桌宠画质。
 - 源工程已同步耳廓排除、插值子丝、melanin与柔和灯光；当前.rootHTML17.74MB，工作区保持<128MB。继续最终三发型/密度/控件测试和文档交付。
 
+
+### [2026-10-13 Stage 12d / final playable checkpoint] 软件GPU降级、可编辑导回与最终QA
+- 最新已推送71592ea阶段；随后测试发现强制2x工坊在SwiftShader切换时仍Target crashed，未掩盖失败。新增WebGL软件设备检测，工坊2k/桌宠1.2k父曲线限额，软件不投射细丝阴影、不强制2x；硬件保留6k默认/12k可选及工坊2x。状态明确显示实际发丝与降级。
+- 工坊内置Groom更换先释放旧节点/renderLists并让GPU回收后再创建，避免新旧大几何峰值；自备外部头GLB仍保留原子替换。保留request-token防异步倒序。长发切换自动扩展前视取景，底部解剖视图不改变。
+- 新scripts/export_edited_groom.py真正从Blender编辑后Hair Curves导出父曲线，36点Y-up/H2GRM002；原生obj保存guide_count，避免子丝重复。已执行原生工程导出验证12k/36点/完整长度，说明逐点半径/根层/着色器不无损导入，不把重新生成器误称为编辑导出器。
+- 原生角膜改物理透射，解决Cycles白眼；重新渲染最终原生照片款96samples900x1000约65秒，实际读图。groom-cycles-review.png是原生静图，groom-realtime-review.png是软件降级实时，不能混用画质证明。
+- 最终file:// QA：启动3桌宠；三风格连续替换、软件密度选择、无旧发片atlas、形变有限值、无发切换、12k请求密度保存localStorage、低盘发JSON导入均通过，0页面/控制台错误。GROOM_QA_RESULTS.json为真实本轮结果。
+- 完整19,936丝/3,708,096三角面已独立构建并检查全部有限坐标，但未在目标GPU渲染；严禁改写为已测最高画质/FPS。早期6k截图成功也不等于真实GPU基准。
+- README/QA/DAZ文档和BLENDER_GROOM_GUIDE.md更新；不宣称大师级终稿、照片自动重建、商业DAZ授权或浏览器跨应用桌宠。源.blend约23MiB不Git跟踪，当前工作区可下载；全部曲线/生成器/编辑导出器与同步17.74MiB可玩HTML将推送。
+- 未测试真实系统综合回归/真实GPU满密度，需要后续用户艺术验收。保存测试仅用QA浏览器临时档案，不污染默认仓库收藏。
+
 ### [2026-10-13 Stage 13a / playable checkpoint] 电影级唯美后期链：阈值辉光 + 暗角调色（双引擎）
 - 用户要求大规模提升真实感/画质/光影/渲染/材质（唯美感、全自动）。本轮是渲染升级包第 1 段；不碰 groom 发丝几何与断面纹理（前轮已反复调优且本轮沙箱无浏览器/Blender可做视觉 QA，只做代码可审查的低风险渲染增强）。
 - 新增 `src/three/beautyPostChain.js`：RenderPass(线性HDR) → UnrealBloomPass(强度0.22/半径0.55/阈值0.85，只让眼球高光·发丝束闪·轮廓光晕开) → 自研 BeautyGrade(暗角0.30/饱和1.07/对比1.05，只压RGB不碰alpha) → OutputPass(ACES+sRGB)。全部 three/addons 随 Vite 内联，file:// 零外部请求；透明背景全程保留。
@@ -319,6 +330,15 @@
 - 未做：几何体升级（缺 Blender + 缺用户授权高精资产 + 缺视觉验证，任何“程序化加面数”都是虚假提升，拒绝）；单张照片自动重建（不存在，按 Stage 9 诚实口径）。
 - 实时 WebGL 上限内已做满：ACES + IBL + 柔和阴影 + 阈值辉光 + 暗角调色 + 氛围尘埃 + 1024 微观皮肤。再往上需用户提供合法 DAZ/扫描高精头 + 高分 PBR + 真机截图迭代。
 
+
+### [2026-10-13 Stage 13d / parallel integration] 保留另一Agent渲染工作并做实图修正
+- 推送893bf1a被远端拒绝；fetch发现另一Agent已把Stage13a/b/c推进5a1b8ed。获取共同祖先71592ea，以正常merge保留双方提交与全部handoff/QA日志，无force-push。通过远端handoff完成工作衔接，没有虚构直接Agent通信工具。
+- 保留beautyPostChain/atmosphere/1024皮纹/轮廓灯/设置开关等代码，重建根/docs17.77MiB。实图发现无离屏AA使发丝点状，HDR角膜洗灰；增硬件HDR目标MSAA<=4，降低Bloom至0.10/threshold1，内置角膜覆盖/反射下调，实际截图确认虹膜棕色可见；自备GLB不走内置替材分支。
+- 确认Bloom污染透明度：桌宠角落原始RGBA[0,0,0,0]变[0,0,0,111]。新增一通道原始Alpha捕获/恢复，手动测试恢复为[0,0,0,0]，Bloom受原场景覆盖约束，不假称无损延伸外轮廓光晕。
+- 软件MSAA重复切换曾出现空ProgramLog的GL验证错误；软件1.5x离屏采样又在完整几何测试OOM。最终软件检测路径不创建HDR后期，开关禁用并有说明；保留廉价氛围和正常canvas-AA直渲，2k/1.2k毛发降级。最终连测0错误，原始结果GROOM_QA_RESULTS.json。严禁用软件直渲最终通过认证硬件MSAA后期。
+- 最终代码截图需在此版本再拍；原生Cycles源图不受Stage13修改，仍是96sample离线原生图。真实GPU画质/FPS仍待用户验收，不能把“上限做满”当客观结论。
+- 解决深拉取暂时增大Git存储：删除本Agent过时v2.8 ZIP，gc后工作区回落107MB；当前保持128MB内，源.blend仍可直接下载、未Git跟踪。交付后删除node_modules软链。后续先读handoff再继续，不覆盖并行Agent成果。
+
 ### [2026-10-13 Stage 14] DLSS 5 方案落盘 + 现有可玩版新增电影 Ultra 最高档（待用户选原生引擎）
 - 用户明确：要真正桌面桌宠、最高质量、唯美感，并问 DLSS 5 方案选项。已新建 `DLSS5_QUALITY_PLAN.md`：A=Unreal5+DX12 真 DLSS（画质最高）、B=Unity6 HDRP 真 DLSS、C=现有 Electron+Three.js 等效最高画质（保底可玩）、D=高模/4K-8K PBR/头发资产路线（决定80%真实感）。等用户回“选A/选B/先C”再开原生工程，未擅自下载数GB引擎。
 - 事实边界：DLSS 5 为 NVIDIA 神经渲染、DX12/NGX/专有DLL、RTX 50 首发；WebGL/Electron 无法调用真 DLSS，现有版只能做超采样/时域等效，严禁冒充 DLSS。DLSS 只放大稳定，不生成模型/贴图细节。
@@ -345,3 +365,9 @@
 - 发丝（`curveGroom.js`）：桌面根数 4600→6500、steps 20→18 抵消成本、子发丝散布 .00015→.00048 成面覆盖；材质 roughness .46→.36、anisotropy .92、spec .72、env .52、加微 clearcoat，呈参考图的黑亮湿发光泽。
 - 皮肤硅胶感：roughness .68→.55、clearcoat .03→.20(ccRough .38)、spec .27→.46、env .30→.38、sheen 粉调略增。仍保留毛孔 bump .028 防塑料过滑。
 - 风险待真机验证：ponytail 发量层与 low_chignon 盘发外形可能不完全贴合；若某发型发量层穿出/错位，回传截图后按发型单独映射或禁用该发型 underlayer。沙箱无浏览器，不宣称视觉达标。
+
+<!-- 以下为远端 Agent 同期记录，合并保留 -->
+
+### [2026-10-13 Stage 15 merge bridge / Groom checkpoint]
+- 远端又前进5689dfe（2070S档、Ultra、动态分辨率与方案文档）。正常合并保留新档位/默认/各向异性/方案，不覆盖另一Agent工作。硬件MSAA采用已有能力上限版本，原始Alpha修正仍保留。软件始终DPR<=1、HDR不创建，并不参与2070动态分辨率，以保证原生Groom可玩降级。新增方案中的DLSS市场事实不是本Groom轮次外部核查结果，不借此宣称真实DLSS实现。
+- 最终范围以GROOM_QA_RESULTS.json为准；真实2070S/MSAA/动态分辨率仍需用户设备验证。软件测试帧率被QA限流，不能作为GPU帧率。

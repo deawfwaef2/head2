@@ -37,8 +37,37 @@
 4. 私人模型和浏览器档案不是完整跨电脑备份；ZIP不含GLB本体。系统桌宠仍需Electron，未提供一键安装包。
 5. 内置资产上游授权仍待核验；本轮没有获取或分发商业DAZ原件。解剖盖为艺术示意。
 
+
+---
+
+# Stage 12d 原生 Groom 验收追加 · 2026-10-13
+
+本轮原始数据：`GROOM_QA_RESULTS.json`。file://、Chromium+SwiftShader，QA-only rAF限流，非性能基准。
+
+- 当前离线构建启动3默认桌宠，0页面/控制台错误。
+- 三新Groom连续切换成功，软件GPU被识别，工坊限制2,000父曲线。照片款实时3,284条含子丝/610,824三角面；另两款2,000条/372,000三角面。均无旧Hair atlas。
+- 主动选择12k仍遵循软件降级，界面明确显示实际丝数与降级，不假称最高画质测试通过。
+- 完整12k父曲线19,936实际丝、3,708,096三角面可在浏览器生成，所有位置有限值；**此项未在GPU绘制**。
+- 刘海长度/体积形变位置变化、坐标有限；无发切换清除HairGroup。
+- 保存与召唤档案保留新GroomID、请求密度12k，并写入localStorage；JSON导入保留低盘发ID与3k密度。
+- 原生Blender4.3.2源工程完整生成；编辑后导出器验证12k父曲线/36点/H2GRM002文件长度。
+- 修正原生角膜透射材质，原生照片款96samples/900x1000 Cycles预览成功，约65秒；已实际查看。原生图仍有细丝采样噪点，不冒充实时图。
+
+曾失败：未识别软件GPU、全密度及强制2x采样导致Target crashed；新增设备识别、软件密度/阴影降级与旧工坊几何提前释放后，最终上述连续测试通过。长发前视自动加大取景，解剖底视保留原近距。
+
+未验证：真实目标GPU全密度画面/FPS/显存、所有旧交互在真实系统的综合回归、Windows/macOS Electron GUI/跨应用叠加、多人艺术审校、照片精确三维重建。旧Stage11报告不能作为新版发型画质认证。
+
 ## Stage 13 (2026-10-13) 渲染升级包 QA
 - 构建：vite 6 生产构建通过；`node scripts/build_standalone_html.mjs` 跑通；根目录 `点击开始游戏_CERVIX3D.html` 17.76MB，与 `docs/index.html` byte-for-byte 一致；包内无外部脚本引用。
 - 指纹：renderTarget1 / _outputColorSpace / separableBlurMaterials / uVignette / uSaturation / setBeautyPostEnabled / BokehDustAtmosphere / StudioBackdropGlow / chk-beauty-post / chk-atmosphere / setAtmosphereEnabled 全命中。
 - 语法：新增与改动的 7 个 JS 文件 `node --check` 全过。
 - 未做：浏览器 file:// 实机渲染验证（本轮沙箱无浏览器二进制）——需用户在 Chrome/Edge 双击验证辉光/尘埃/背幕效果并回传截图。
+
+
+## Stage 13d：并行分支合并追加
+
+远端5a1b8ed已有其他Agent的Stage13渲染更新；以真实共同祖先71592ea做合并，保留双分支历史与所有handoff条目，无force-push。同步HTML约17.77MiB。
+
+实测发现旧Bloom使透明角落alpha从0升至111；新增Bloom前原始Alpha捕获、Grade后恢复后，手动后期测试角落0→0。并发现离屏无MSAA使细丝严重像素化，给硬件HDR目标添加最多4xMSAA；软件MSAA重复渲染出现GL验证错误、扩大采样又引发沙箱OOM，**最终软件路径不创建HDR后期**，避免掩盖设备限制。氛围、皮纹、界面开关保留，软件开关明确禁用。原图/少数帧无错误不能代替连续切换测试。
+
+原内置白色角膜在HDR中把虹膜洗灰，降低其覆盖/反射并实际截图确认棕色虹膜重新可读；只调整内置样本，自备GLB在isBuiltInAsset检查外保留PBR。最终GROOM_QA_RESULTS.json重测软件安全路径：三款连续切换/密度/形变/保存/导入/完整几何有限值均通过且0错误。软件不运行后期，所以该最终corner条目不是硬件HDR/MSAA认证；早前手动Alpha修正测试另见本记录。硬件GPU路径仍需真机。
