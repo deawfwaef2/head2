@@ -140,8 +140,16 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#191518',
     hairSheen: 0.90,
     neckClearance: 0.55,
+    containerStyle: 'glass_bell_jar',
+    decorStyle: 'trophy_candles',
     summoned: true,
-    boxPosition: { x: -22, y: 2, z: -110 },
+    boxPosition: { x: -34, y: 2, z: -180 },
+    fateRecord: {
+      vitalityStatus: '19岁 · 巅峰健康态 · 音乐学院竖琴首席校花',
+      causeOfDeath: '跨年音乐会谢幕返程途中遭遇暴雨山体滑坡意外，于十九岁最鲜活娇嫩的巅峰瞬间骤然终结',
+      survivorTriumphNote: '她曾是众人簇拥的天之骄女，如今却只能静默封存于你的维多利亚玻璃钟罩中；她已出局，而你活着、进取、主宰书案——凝视她的静美容颜，汲取全额青春专注能量。',
+      energyYieldPerMin: 150
+    },
     morphs: {
       deadExpression: 'dead_calm',
       jawVLine: 0.12,
@@ -190,8 +198,16 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#1a151c',
     hairSheen: 0.92,
     neckClearance: 0.42,
+    containerStyle: 'velvet_chalice',
+    decorStyle: 'study_tomes',
     summoned: true,
-    boxPosition: { x: 0, y: 2, z: -200 },
+    boxPosition: { x: 0, y: -10, z: -150 },
+    fateRecord: {
+      vitalityStatus: '21岁 · 巅峰健康态 · 顶尖投行清冷海归精英',
+      causeOfDeath: '瑞士雪山私人缆车机械断裂意外，在最傲视同龄人的二十一岁黄金年华戛然而止',
+      survivorTriumphNote: '生前心高气傲的清冷天骄，终究败给了无常命运；此刻她端坐于你的黑金丝绒圣杯托座之上陪你夜读——她已定格为过去，而握笔向前的你是唯一的胜利者。',
+      energyYieldPerMin: 165
+    },
     morphs: {
       deadExpression: 'dead_calm',
       jawVLine: -0.35,
@@ -240,8 +256,16 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#181418',
     hairSheen: 0.94,
     neckClearance: 0.50,
+    containerStyle: 'formalin_cylinder',
+    decorStyle: 'soul_siphon',
     summoned: true,
-    boxPosition: { x: 22, y: 1, z: -145 },
+    boxPosition: { x: 34, y: 2, z: -180 },
+    fateRecord: {
+      vitalityStatus: '20岁 · 巅峰健康态 · 江南书香世家古典舞魁首',
+      causeOfDeath: '画舫夜游突遇罕见强对流暴风覆舟意外，于二十岁温婉明艳的全盛花期骤然陨落',
+      survivorTriumphNote: '曾经惊艳全场的名门千金，如今安安静静悬浮于你的福尔马林刻度标本缸中；她的故事早已终结，而你的征途正步步高升。',
+      energyYieldPerMin: 145
+    },
     morphs: {
       deadExpression: 'dead_calm',
       jawVLine: 0.42,
@@ -290,8 +314,16 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#22171b',
     hairSheen: 0.90,
     neckClearance: 0.65,
+    containerStyle: 'acrylic_cube',
+    decorStyle: 'trophy_candles',
     summoned: false,
-    boxPosition: { x: 14, y: -5, z: -180 },
+    boxPosition: { x: -34, y: -12, z: -140 },
+    fateRecord: {
+      vitalityStatus: '18岁 · 巅峰健康态 · 豪门千金超跑俱乐部新星',
+      causeOfDeath: '沿海公路夜赛突发弯道失控意外，于十八岁最张扬夺目的青春顶峰瞬间定格',
+      survivorTriumphNote: '生前不可一世的甜酷千金，终究在命运弯道彻底出局；如今她在亚克力水晶方盒内为你点亮伴学底射灯——她沦为静默展品，而活着的你赢下了一切。',
+      energyYieldPerMin: 160
+    },
     morphs: {
       deadExpression: 'dead_shock',
       jawVLine: 0.36,
@@ -340,8 +372,16 @@ export const DEFAULT_COLLECTIBLES = [
     hairColor: '#261a16',
     hairSheen: 0.88,
     neckClearance: 0.40,
+    containerStyle: 'velvet_chalice',
+    decorStyle: 'study_tomes',
     summoned: false,
-    boxPosition: { x: 10, y: -6, z: -190 },
+    boxPosition: { x: 34, y: -12, z: -140 },
+    fateRecord: {
+      vitalityStatus: '23岁 · 巅峰健康态 · 法学院全额奖学金首席学姐',
+      causeOfDeath: '跨国学术峰会专机晴空颠簸急降意外，于二十三岁意气风发的知性巅峰期猝然谢幕',
+      survivorTriumphNote: '昔日考场上高不可攀的知性学姐，如今只能化作你书桌古籍旁的温顺标本伴读——所有昔日的对手都已停留在终点线前，唯独活着的你还将继续登顶。',
+      energyYieldPerMin: 175
+    },
     morphs: {
       deadExpression: 'dead_smile',
       jawVLine: 0.20,

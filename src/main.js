@@ -1,7 +1,12 @@
-import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS } from './data/defaultCollectibles.js';
+import { DEFAULT_COLLECTIBLES, DAZ_TUTORIAL_STEPS, REAL_HAIR_CATALOG } from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
-import { FORENSIC_EXPRESSION_PRESETS, updateHairSheen } from './three/collectibleHeadAssembler.js';
+import { FORENSIC_EXPRESSION_PRESETS, updateHairSheen, attachSpecimenContainerAndDecor } from './three/collectibleHeadAssembler.js';
+import { VISUAL_STYLE_PRESETS } from './three/photorealLighting.js';
+import {
+  CONTAINER_STYLE_CATALOG,
+  DECOR_STYLE_CATALOG
+} from './three/specimenStageAndContainers.js';
 import { renderAnatomyCrossSectionToCanvas } from './textures/anatomyTextureGenerator.js';
 import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
@@ -11,7 +16,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage21-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage23-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -26,7 +31,7 @@ function restoreCollectibles() {
       return [...byId.values()];
     }
     // Migrate only custom user-created specimens from previous storage key
-    const legacy = JSON.parse(localStorage.getItem('cervix3d-collectibles-v2') || '[]');
+    const legacy = JSON.parse(localStorage.getItem('cervix3d-collectibles-stage21-v1') || localStorage.getItem('cervix3d-collectibles-v2') || '[]');
     if (Array.isArray(legacy)) {
       const builtinIds = new Set(defaults.map(d => d.id));
       for (const item of legacy) {
@@ -51,9 +56,28 @@ const state = {
   selectedArchiveIndex: 0,
   windowHidden: false,
   bgModeIndex: 0, // 0: os, 1: void, 2: transparent
+  studyTriumphEnabled: true,
+  studyStartTime: Date.now(),
+  studyEnergyPoints: 1280,
+  studyMindset: 'survivor_crown',
+  visualCustomConfig: {
+    presetId: 'warm_gallery',
+    keyAzimuthDeg: 32,
+    keyElevationDeg: 28,
+    keyIntensity: 1.55,
+    rimIntensity: 1.18,
+    sssIntensity: 1.05,
+    wetGloss: 0.45,
+    sharpen: 0.38,
+    contrast: 1.08,
+    warmth: 0.08,
+    bloomStrength: 0.28
+  },
   studioDraft: {
     basePreset: 'user_photo',
     deadExpression: 'dead_calm',
+    containerStyle: 'glass_bell_jar',
+    decorStyle: 'trophy_candles',
     customModelUrl: null,
     customModelType: 'glb',
     skinTone: '#ffe9df',
@@ -310,8 +334,26 @@ function updateHoverDossierHUD(hoverInfo) {
   document.getElementById('hud-pos-y').textContent = hoverInfo.positionCm.y;
   document.getElementById('hud-pos-z').textContent = hoverInfo.positionCm.zMm;
 
+  const fateSec = document.getElementById('hud-fate-section');
+  if (fateSec) {
+    const showFate = state.studyTriumphEnabled && state.studyMindset !== 'serene_aesthetic';
+    fateSec.style.display = showFate ? 'block' : 'none';
+    if (showFate) {
+      const fate = col.fateRecord || {
+        vitalityStatus: '20岁 · 巅峰健康态 · 青春名校特长生',
+        causeOfDeath: '突发意外瞬间定格于最鲜活的青春巅峰期',
+        survivorTriumphNote: '她已在意外中彻底出局，而活着的你仍在进取并主宰全局——凝视她的静美容颜，汲取全额专注能量。'
+      };
+      document.getElementById('hud-fate-vitality').textContent = `⚡ ${fate.vitalityStatus}`;
+      document.getElementById('hud-fate-cause').textContent = `💥 终结记录：${fate.causeOfDeath}`;
+      document.getElementById('hud-fate-triumph').textContent = `👑 生者加冕：${fate.survivorTriumphNote}`;
+    }
+  }
+
+  const contInfo = CONTAINER_STYLE_CATALOG.find(c => c.id === (col.containerStyle || 'glass_bell_jar'));
+  const decorInfo = DECOR_STYLE_CATALOG.find(d => d.id === (col.decorStyle || 'trophy_candles'));
   document.getElementById('hud-anatomy-level').textContent =
-    col.anatomyOptions?.cutLevel || 'C4 颈椎标准横断面';
+    `${col.anatomyOptions?.cutLevel || 'C4 颈椎标准横断面'} · [${contInfo ? contInfo.shortLabel : '玻璃钟罩'} / ${decorInfo ? decorInfo.shortLabel : '白烛玫瑰'}]`;
   document.getElementById('hud-anatomy-notes').textContent =
     col.dossier?.anatomyNotes || '';
   document.getElementById('hud-origin-notes').textContent =
@@ -357,10 +399,23 @@ function renderVaultGrid() {
     const petEntry = desktopEngine ? desktopEngine.pets.get(item.id) : null;
     const isRotating = petEntry ? petEntry.isRotationMode : false;
     const curExpr = item.deadExpression || item.morphs?.deadExpression || 'dead_calm';
+    const curContainer = item.containerStyle || 'glass_bell_jar';
 
     const exprOptsHtml = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀 ${ep.label}</option>`
     ).join('');
+    const containerOptsHtml = CONTAINER_STYLE_CATALOG.map(
+      ct => `<option value="${ct.id}" ${ct.id === curContainer ? 'selected' : ''}>${ct.label}</option>`
+    ).join('');
+
+    const showFate = state.studyTriumphEnabled && state.studyMindset !== 'serene_aesthetic' && item.fateRecord;
+    const fateHtml = showFate ? `
+      <div class="vault-anatomy-box" style="border-color:rgba(251,191,36,0.38);background:rgba(38,24,18,0.52);margin-top:4px;">
+        <strong style="color:#fcd34d;">⚡ 伴学胜出档案 (${item.fateRecord.vitalityStatus})：</strong><br/>
+        <span style="color:#fda4af;">💥 ${item.fateRecord.causeOfDeath}</span><br/>
+        <span style="color:#a7f3d0;font-style:italic;">👑 ${item.fateRecord.survivorTriumphNote}</span>
+      </div>
+    ` : '';
 
     const card = document.createElement('div');
     card.className = `vault-card ${isSummoned ? 'summoned' : ''}`;
@@ -382,9 +437,13 @@ function renderVaultGrid() {
         <strong>🩸 底座解剖断面：</strong>${item.anatomyOptions?.cutLevel || 'C4 标准横切面'}<br/>
         <span>${item.dossier?.anatomyNotes || ''}</span>
       </div>
-      <div class="field-row" style="margin: 4px 0;">
-        <select class="vault-expr-select" data-vault-expr="${item.id}" style="width:100%;font-size:11.5px;padding:4px 6px;border-radius:6px;background:rgba(15,23,42,0.85);color:#e2e8f0;border:1px solid rgba(244,63,94,0.35);">
+      ${fateHtml}
+      <div class="field-row" style="margin: 4px 0; display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+        <select class="vault-expr-select" data-vault-expr="${item.id}" style="width:100%;font-size:11px;padding:4px 6px;border-radius:6px;background:rgba(15,23,42,0.85);color:#e2e8f0;border:1px solid rgba(244,63,94,0.35);">
           ${exprOptsHtml}
+        </select>
+        <select class="vault-container-select" data-vault-container="${item.id}" style="width:100%;font-size:11px;padding:4px 6px;border-radius:6px;background:rgba(15,23,42,0.85);color:#fde68a;border:1px solid rgba(251,191,36,0.35);">
+          ${containerOptsHtml}
         </select>
       </div>
       <div class="dossier-tags">
@@ -424,6 +483,22 @@ function renderVaultGrid() {
     });
   });
 
+  grid.querySelectorAll('[data-vault-container]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.vaultContainer;
+      const contId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (!col) return;
+      col.containerStyle = contId;
+      persistCollectibles();
+      if (desktopEngine && desktopEngine.pets.has(id)) {
+        desktopEngine.setPetContainerStyle(id, contId);
+      }
+      const ct = CONTAINER_STYLE_CATALOG.find(c => c.id === contId);
+      showToast(`🧪 已将「${col.name}」容器切换为：${ct ? ct.label : contId}`);
+    });
+  });
+
   grid.querySelectorAll('[data-vault-action]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const action = btn.dataset.vaultAction;
@@ -459,6 +534,10 @@ function renderVaultGrid() {
 function renderActivePetsStrip(summonedList = []) {
   const badge = document.getElementById('active-pet-count-badge');
   if (badge) badge.textContent = `${summonedList.length} 在屏`;
+  const triumphSpecimens = document.getElementById('triumph-active-specimens');
+  if (triumphSpecimens) {
+    triumphSpecimens.textContent = `${summonedList.length} 具青春标本伴读中`;
+  }
 
   const pillsContainer = document.getElementById('screen-pets-pills');
   if (!pillsContainer) return;
@@ -471,8 +550,12 @@ function renderActivePetsStrip(summonedList = []) {
 
   for (const p of summonedList) {
     const curExpr = p.deadExpression || 'dead_calm';
+    const curCont = p.containerStyle || 'glass_bell_jar';
     const exprShortOpts = FORENSIC_EXPRESSION_PRESETS.map(
       ep => `<option value="${ep.id}" ${ep.id === curExpr ? 'selected' : ''}>💀${ep.shortLabel}</option>`
+    ).join('');
+    const contShortOpts = CONTAINER_STYLE_CATALOG.map(
+      ct => `<option value="${ct.id}" ${ct.id === curCont ? 'selected' : ''}>🧪${ct.shortLabel}</option>`
     ).join('');
     const pill = document.createElement('div');
     pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
@@ -481,6 +564,9 @@ function renderActivePetsStrip(summonedList = []) {
       <span class="pet-pill-meta">[Z:${p.zMm}mm]</span>
       <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换死人表情" style="padding:1px 4px;background:rgba(15,23,42,0.9);color:#fda4af;border:1px solid rgba(244,63,94,0.4);border-radius:4px;">
         ${exprShortOpts}
+      </select>
+      <select class="pill-mini-btn" data-pill-container="${p.id}" title="切换标本容器" style="padding:1px 4px;background:rgba(15,23,42,0.9);color:#fde68a;border:1px solid rgba(251,191,36,0.4);border-radius:4px;">
+        ${contShortOpts}
       </select>
       <button class="pill-mini-btn" data-pill-rot="${p.id}">
         ${p.isRotationMode ? '🔄 旋转中(点此取消)' : '🔄 旋转模式'}
@@ -501,6 +587,19 @@ function renderActivePetsStrip(summonedList = []) {
         persistCollectibles();
       }
       desktopEngine.setPetExpression(id, exprId);
+      renderVaultGrid();
+    });
+  });
+  pillsContainer.querySelectorAll('[data-pill-container]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillContainer;
+      const contId = e.target.value;
+      const col = state.collectibles.find(c => c.id === id);
+      if (col) {
+        col.containerStyle = contId;
+        persistCollectibles();
+      }
+      desktopEngine.setPetContainerStyle(id, contId);
       renderVaultGrid();
     });
   });
@@ -583,6 +682,8 @@ function loadCollectibleIntoStudio(col) {
   state.studioDraft = JSON.parse(JSON.stringify({
     basePreset: col.basePreset || 'user_photo',
     deadExpression: deadExpr,
+    containerStyle: col.containerStyle || 'glass_bell_jar',
+    decorStyle: col.decorStyle || 'trophy_candles',
     customModelUrl: col.customModelUrl || null,
     customModelType: col.customModelType || 'glb',
     skinTone: col.skinTone || '#ffe9df',
@@ -623,6 +724,14 @@ function loadCollectibleIntoStudio(col) {
   document.getElementById('inp-col-subtitle').value = col.subtitle || '';
   document.getElementById('inp-col-cutlevel').value = col.anatomyOptions?.cutLevel || '';
   document.getElementById('inp-col-notes').value = col.dossier?.anatomyNotes || '';
+  const selColCont = document.getElementById('sel-col-container');
+  if (selColCont) selColCont.value = state.studioDraft.containerStyle;
+  const selColDecor = document.getElementById('sel-col-decor');
+  if (selColDecor) selColDecor.value = state.studioDraft.decorStyle;
+  const inpVit = document.getElementById('inp-col-vitality');
+  if (inpVit && col.fateRecord?.vitalityStatus) inpVit.value = col.fateRecord.vitalityStatus;
+  const inpCause = document.getElementById('inp-col-cause');
+  if (inpCause && col.fateRecord?.causeOfDeath) inpCause.value = col.fateRecord.causeOfDeath;
 
   refreshStudio3DModel();
 }
@@ -1284,6 +1393,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     await refreshStudio3DModel();
   });
 
+  // Studio Container & Decor live preview
+  document.getElementById('sel-col-container')?.addEventListener('change', (e) => {
+    state.studioDraft.containerStyle = e.target.value;
+    if (studioEngine && studioEngine.headNode) {
+      attachSpecimenContainerAndDecor(studioEngine.headNode, state.studioDraft);
+      studioEngine.wakeRender(1.5, true);
+    }
+  });
+  document.getElementById('sel-col-decor')?.addEventListener('change', (e) => {
+    state.studioDraft.decorStyle = e.target.value;
+    if (studioEngine && studioEngine.headNode) {
+      attachSpecimenContainerAndDecor(studioEngine.headNode, state.studioDraft);
+      studioEngine.wakeRender(1.5, true);
+    }
+  });
+
   // 11. Save Collectible Dossier, Generate Folder Archive & Summon to Screen
   document.getElementById('btn-save-and-summon').addEventListener('click', async () => {
     const name = document.getElementById('inp-col-name').value.trim() || '未命名藏品';
@@ -1292,6 +1417,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const grade = document.getElementById('sel-col-grade').value;
     const cutLevel = document.getElementById('inp-col-cutlevel').value.trim();
     const notes = document.getElementById('inp-col-notes').value.trim();
+    const containerStyle = document.getElementById('sel-col-container')?.value || state.studioDraft.containerStyle || 'glass_bell_jar';
+    const decorStyle = document.getElementById('sel-col-decor')?.value || state.studioDraft.decorStyle || 'trophy_candles';
+    const vitalityStatus = document.getElementById('inp-col-vitality')?.value.trim() || '20岁 · 巅峰健康态 · 青春特长生';
+    const causeOfDeath = document.getElementById('inp-col-cause')?.value.trim() || '突发意外瞬间定格于最鲜活的青春巅峰期';
 
     const newCollectible = {
       id,
@@ -1302,6 +1431,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
       basePreset: state.studioDraft.basePreset,
       deadExpression: state.studioDraft.deadExpression || state.studioDraft.morphs?.deadExpression || 'dead_calm',
+      containerStyle,
+      decorStyle,
       customModelUrl: state.studioDraft.customModelUrl,
       customModelType: state.studioDraft.customModelType,
       skinTone: state.studioDraft.skinTone,
@@ -1313,6 +1444,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       hairColor: state.studioDraft.hairColor,
       hairSheen: state.studioDraft.hairSheen,
       neckClearance: state.studioDraft.neckClearance,
+      fateRecord: {
+        vitalityStatus,
+        causeOfDeath,
+        survivorTriumphNote: '她曾拥有骄傲的青春与美貌，却在意外中戛然而止；而活着的你仍在进取并主宰全局——凝视她的静默容颜，汲取全额专注能量。',
+        energyYieldPerMin: 155
+      },
       morphs: { ...state.studioDraft.morphs },
       anatomyOptions: {
         ...state.studioDraft.anatomyOptions,
@@ -1613,6 +1750,278 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     reader.readAsText(file);
   });
+
+  // ==========================================================================
+  // 14. STAGE 23: VISUAL QUALITY & LIGHTING CUSTOMIZER, GRAVITY SYSTEM,
+  //     FLOOR/SHELVES, SPECIMEN CONTAINERS, DECOR & STUDY TRIUMPH MODE
+  // ==========================================================================
+  const vcdDrawer = document.getElementById('visual-customizer-drawer');
+  document.getElementById('btn-quick-customizer')?.addEventListener('click', () => {
+    if (!vcdDrawer) return;
+    vcdDrawer.classList.toggle('hidden');
+    if (!vcdDrawer.classList.contains('hidden')) {
+      showToast('🎨 已打开「画质光影 · 容器展台 · 重力地板 · 伴学定制器」！');
+    }
+  });
+  document.getElementById('btn-close-customizer')?.addEventListener('click', () => {
+    vcdDrawer?.classList.add('hidden');
+  });
+
+  // Gravity System Toggle (Top-bar quick button + Customizer checkbox synchronized)
+  const btnQuickGravity = document.getElementById('btn-quick-gravity');
+  const chkEnableGravity = document.getElementById('chk-enable-gravity');
+  const setGravityMode = (enabled) => {
+    desktopEngine.updateSettings({ enableGravity: enabled });
+    if (chkEnableGravity) chkEnableGravity.checked = enabled;
+    if (btnQuickGravity) {
+      btnQuickGravity.classList.toggle('active-top', enabled);
+      btnQuickGravity.textContent = enabled ? '⚓ 重力落地: 开启' : '🎈 重力落地: 悬浮';
+    }
+    showToast(enabled
+      ? '⚓ 物理重力落地系统已开启：所有头模受重力下落并稳固放置在3D地板/层架上！'
+      : '🎈 已切换为失重悬浮模式：头模可在屏幕任意高度自由悬浮');
+  };
+  btnQuickGravity?.addEventListener('click', () => {
+    setGravityMode(!desktopEngine.settings.enableGravity);
+  });
+  chkEnableGravity?.addEventListener('change', (e) => {
+    setGravityMode(e.target.checked);
+  });
+
+  // Visual Style Presets & Real-Time Lighting / Post-Grade Sliders
+  const applyVisualConfigAndSyncUI = (patch = {}, fromPreset = false) => {
+    Object.assign(state.visualCustomConfig, patch);
+    if (fromPreset && patch.presetId && VISUAL_STYLE_PRESETS[patch.presetId]) {
+      const p = VISUAL_STYLE_PRESETS[patch.presetId];
+      Object.assign(state.visualCustomConfig, {
+        keyAzimuthDeg: p.keyAzimuthDeg,
+        keyElevationDeg: p.keyElevationDeg,
+        keyIntensity: p.keyIntensity,
+        rimIntensity: p.rimIntensity,
+        sssIntensity: p.sssIntensity,
+        wetGloss: p.wetGloss,
+        sharpen: p.sharpen,
+        contrast: p.contrast,
+        warmth: p.warmth,
+        bloomStrength: p.bloomStrength
+      });
+      // Sync slider positions & labels
+      const syncSlider = (id, valId, val, fmt) => {
+        const el = document.getElementById(id);
+        const vEl = document.getElementById(valId);
+        if (el) el.value = String(val);
+        if (vEl) vEl.textContent = fmt(val);
+      };
+      syncSlider('vc-key-azimuth', 'val-vc-key-azimuth', p.keyAzimuthDeg, v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
+      syncSlider('vc-key-elevation', 'val-vc-key-elevation', p.keyElevationDeg, v => `${Math.round(v)}°`);
+      syncSlider('vc-key-intensity', 'val-vc-key-intensity', p.keyIntensity, v => Number(v).toFixed(2));
+      syncSlider('vc-rim-intensity', 'val-vc-rim-intensity', p.rimIntensity, v => Number(v).toFixed(2));
+      syncSlider('vc-sss', 'val-vc-sss', p.sssIntensity, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', p.wetGloss, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-sharpen', 'val-vc-sharpen', p.sharpen, v => `${Math.round(v * 100)}%`);
+      syncSlider('vc-contrast', 'val-vc-contrast', p.contrast, v => Number(v).toFixed(2));
+      syncSlider('vc-warmth', 'val-vc-warmth', p.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
+      syncSlider('vc-bloom', 'val-vc-bloom', p.bloomStrength, v => `${Math.round(v * 100)}%`);
+    }
+    desktopEngine?.applyVisualCustomConfig(state.visualCustomConfig);
+    studioEngine?.applyVisualCustomConfig(state.visualCustomConfig);
+  };
+
+  document.querySelectorAll('[data-style-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-style-preset]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const presetId = btn.dataset.stylePreset;
+      applyVisualConfigAndSyncUI({ presetId }, true);
+      const p = VISUAL_STYLE_PRESETS[presetId];
+      if (p) showToast(`🎬 已切换画风色调与光影预设：${p.label}`);
+    });
+  });
+
+  const bindVcSlider = (id, valId, key, fmt) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      const vEl = document.getElementById(valId);
+      if (vEl) vEl.textContent = fmt(v);
+      applyVisualConfigAndSyncUI({ [key]: v }, false);
+    });
+  };
+  bindVcSlider('vc-key-azimuth', 'val-vc-key-azimuth', 'keyAzimuthDeg', v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
+  bindVcSlider('vc-key-elevation', 'val-vc-key-elevation', 'keyElevationDeg', v => `${Math.round(v)}°`);
+  bindVcSlider('vc-key-intensity', 'val-vc-key-intensity', 'keyIntensity', v => v.toFixed(2));
+  bindVcSlider('vc-rim-intensity', 'val-vc-rim-intensity', 'rimIntensity', v => v.toFixed(2));
+  bindVcSlider('vc-sss', 'val-vc-sss', 'sssIntensity', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-wet-gloss', 'val-vc-wet-gloss', 'wetGloss', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-sharpen', 'val-vc-sharpen', 'sharpen', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-contrast', 'val-vc-contrast', 'contrast', v => v.toFixed(2));
+  bindVcSlider('vc-warmth', 'val-vc-warmth', 'warmth', v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`);
+  bindVcSlider('vc-bloom', 'val-vc-bloom', 'bloomStrength', v => `${Math.round(v * 100)}%`);
+
+  // Floor Style, Shelf Layout & Screen-Space Formation Switcher
+  document.getElementById('sel-floor-style')?.addEventListener('change', (e) => {
+    desktopEngine.updateSettings({ floorStyle: e.target.value });
+    showToast(`🏛️ 已切换 3D 清晰实体地板材质：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  document.getElementById('sel-shelf-layout')?.addEventListener('change', (e) => {
+    desktopEngine.updateSettings({ shelfLayout: e.target.value });
+    showToast(`📚 已切换屏幕空间立体陈列架：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  const triggerFormation = (formationId) => {
+    document.querySelectorAll('[data-formation]').forEach(b => {
+      b.classList.toggle('active', b.dataset.formation === formationId);
+    });
+    if (formationId === 'study_companion_sides') {
+      desktopEngine.updateSettings({ shelfLayout: 'study_side_rack' });
+      const selShelf = document.getElementById('sel-shelf-layout');
+      if (selShelf) selShelf.value = 'study_side_rack';
+    } else if (formationId === 'altar_pyramid') {
+      desktopEngine.updateSettings({ shelfLayout: 'stepped_altar' });
+      const selShelf = document.getElementById('sel-shelf-layout');
+      if (selShelf) selShelf.value = 'stepped_altar';
+    } else if (formationId === 'desk_row') {
+      desktopEngine.updateSettings({ shelfLayout: 'bottom_gallery' });
+      const selShelf = document.getElementById('sel-shelf-layout');
+      if (selShelf) selShelf.value = 'bottom_gallery';
+    }
+    desktopEngine.applyPlacementFormation(formationId);
+    soundEngine.playSummon(true);
+    showToast('🔀 已按屏幕空间重新排列所有在屏头模位置！');
+  };
+
+  document.querySelectorAll('[data-formation]').forEach(btn => {
+    btn.addEventListener('click', () => triggerFormation(btn.dataset.formation));
+  });
+  document.getElementById('btn-triumph-formation')?.addEventListener('click', () => {
+    triggerFormation('study_companion_sides');
+  });
+
+  // Global Specimen Container & Decorative Props Switchers
+  document.getElementById('sel-container-style')?.addEventListener('change', (e) => {
+    const styleId = e.target.value;
+    for (const col of state.collectibles) {
+      col.containerStyle = styleId;
+    }
+    persistCollectibles();
+    desktopEngine.setAllPetsContainerStyle(styleId);
+    state.studioDraft.containerStyle = styleId;
+    if (studioEngine && studioEngine.headNode) {
+      attachSpecimenContainerAndDecor(studioEngine.headNode, state.studioDraft);
+      studioEngine.wakeRender(1.5, true);
+    }
+    renderVaultGrid();
+    showToast(`🧪 已将在屏全部头模切换为容器：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  document.getElementById('sel-decor-style')?.addEventListener('change', (e) => {
+    const decorId = e.target.value;
+    for (const col of state.collectibles) {
+      col.decorStyle = decorId;
+    }
+    persistCollectibles();
+    desktopEngine.setAllPetsDecorStyle(decorId);
+    state.studioDraft.decorStyle = decorId;
+    if (studioEngine && studioEngine.headNode) {
+      attachSpecimenContainerAndDecor(studioEngine.headNode, state.studioDraft);
+      studioEngine.wakeRender(1.5, true);
+    }
+    showToast(`🕯️ 已切换伴学装饰摆件：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  // Study Companion Energy Siphon & Survivor Triumph HUD Controls
+  const triumphHud = document.getElementById('study-triumph-hud');
+  const triumphBody = document.getElementById('triumph-hud-body');
+  const quoteEl = document.getElementById('triumph-quote-text');
+  const energyValEl = document.getElementById('triumph-energy-val');
+  const barFillEl = document.getElementById('triumph-bar-fill');
+  const timerEl = document.getElementById('triumph-study-timer');
+
+  const TRIUMPH_QUOTES = {
+    survivor_crown: [
+      '“她们都曾年轻、健康、骄傲，却在意外中彻底出局；而我还活着、思考、翻页前行——我是留到最后的胜利者。”',
+      '“19岁的竖琴首席、21岁的海归精英、20岁的江南魁首……她们的时钟永远停在意外那一秒，而我的未来正在展开。”',
+      '“命运夺走了她们引以为傲的一切，如今她们只能静静待在容器里陪我夜读——活着并不断进取的我，赢下了一切。”'
+    ],
+    vitality_siphon: [
+      '“凝视案头她们定格的绝美青春，将她们未竟的生机与气运尽数汲取，化作我此刻翻倍的专注力与掌控感！”',
+      '“每一秒专注阅读，都在从这些生前健康鲜活的标本中虹吸纯粹的青春能量——精神饱满，效率拉满！”'
+    ],
+    rival_trophy: [
+      '“昔日高不可攀的天之骄女与考场劲敌，如今皆成我书桌玻璃钟罩内的静默伴读藏品——无人再能阻挡我登顶。”',
+      '“胜败已分：她们化作案头精美的解剖标本，而我是执笔书写结局的主宰者。”'
+    ],
+    serene_aesthetic: [
+      '“静谧博物馆伴学模式：纯粹欣赏精致骨相、丝绸发丝与器皿光影之美，心如止水，专注当下。”'
+    ]
+  };
+
+  let quoteIdx = 0;
+  const updateTriumphQuote = () => {
+    if (!quoteEl) return;
+    const pool = TRIUMPH_QUOTES[state.studyMindset] || TRIUMPH_QUOTES.survivor_crown;
+    quoteIdx = (quoteIdx + 1) % pool.length;
+    quoteEl.textContent = pool[quoteIdx];
+  };
+
+  document.getElementById('chk-study-triumph-mode')?.addEventListener('change', (e) => {
+    state.studyTriumphEnabled = e.target.checked;
+    if (triumphHud) triumphHud.classList.toggle('hidden', !state.studyTriumphEnabled);
+    renderVaultGrid();
+    showToast(state.studyTriumphEnabled
+      ? '👑 已开启「伴学能量汲取与生者胜出加冕」系统'
+      : '🌸 已关闭伴学加冕面板，切换为纯粹静态收藏模式');
+  });
+
+  document.getElementById('btn-triumph-collapse')?.addEventListener('click', (e) => {
+    if (!triumphBody) return;
+    triumphBody.classList.toggle('collapsed');
+    e.currentTarget.textContent = triumphBody.classList.contains('collapsed') ? '▸' : '▾';
+  });
+
+  document.getElementById('sel-triumph-mindset')?.addEventListener('change', (e) => {
+    state.studyMindset = e.target.value;
+    updateTriumphQuote();
+    renderVaultGrid();
+  });
+
+  document.getElementById('btn-triumph-pulse')?.addEventListener('click', () => {
+    const activeCount = Math.max(1, desktopEngine ? desktopEngine.pets.size : 1);
+    const gain = activeCount * 85;
+    state.studyEnergyPoints += gain;
+    if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS`;
+    if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
+    updateTriumphQuote();
+    soundEngine.playSummon(true);
+    showToast(`⚡ 已从在屏 ${activeCount} 具青春标本汲取 +${gain} 点专注生机能量！生者加冕，今日必胜！`);
+  });
+
+  // Live 1-second Study Companion Timer & Energy Accumulation (zero GPU overhead)
+  setInterval(() => {
+    if (!state.studyTriumphEnabled || document.hidden) return;
+    const elapsedSec = Math.floor((Date.now() - state.studyStartTime) / 1000);
+    const hrs = String(Math.floor(elapsedSec / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((elapsedSec % 3600) / 60)).padStart(2, '0');
+    const secs = String(elapsedSec % 60).padStart(2, '0');
+    if (timerEl) timerEl.textContent = `${hrs}:${mins}:${secs}`;
+
+    const activeCount = desktopEngine ? desktopEngine.pets.size : 0;
+    if (activeCount > 0) {
+      state.studyEnergyPoints += activeCount * 3;
+      if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS`;
+      if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
+    }
+  }, 1000);
+
+  // Arrange initial pets into the Study Companion shelf formation after initial load
+  setTimeout(() => {
+    if (desktopEngine && desktopEngine.pets.size > 0) {
+      desktopEngine.applyPlacementFormation('study_companion_sides');
+    }
+  }, 250);
+
   if (bootStatus) bootStatus.remove();
   if (window.__cervixQA) window.__cervixQA.ready = true;
   } catch (error) {

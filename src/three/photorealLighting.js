@@ -2,19 +2,189 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 /**
- * Stage 7 · 共享写实渲染管线 (Photoreal Rendering Pipeline)
- * - ACES 电影级色调映射 + sRGB 输出
- * - PMREM RoomEnvironment 图像光照 (IBL)：皮肤/眼球/发丝的真实反射与高光，全离线无外部 HDR
- * - 主光源 PCF 柔和阴影：鼻翼/唇缝/眼窝的真实自投影，消除“纸片 low 感”
- * - 三档画质 (low/medium/high)：像素比 / 阴影分辨率 / 环境光强度联动
- *
- * 本模块同时被 StudioPreviewEngine（工坊预览）与 DesktopBoxSpaceEngine（屏幕桌宠）
- * 引用，保证两处渲染观感一致。所有资源均为程序化生成，file:// 离线直玩兼容。
+ * Stage 23 · 大师级实时光影·画风色调·材质微距定制管线
+ * (Real-Time Customizable Lighting, Art-Style Color Grading & SSS Material Pipeline)
  */
 
 export const RENDER_QUALITY_LEVELS = ['low', 'medium', 'high', 'ultra', 'rtx2070'];
 
-// 每个 WebGLRenderer 只生成一张 PMREM 环境贴图，避免重复烘焙
+export const VISUAL_STYLE_PRESETS = {
+  warm_gallery: {
+    id: 'warm_gallery',
+    label: '🏛️ 暖金私人藏馆 · 雕塑级立体光影 (默认推荐)',
+    keyColor: '#fff3e8',
+    fillColor: '#b8cbe8',
+    rimColor: '#ffdfc2',
+    hemiSky: '#fff5ee',
+    hemiGround: '#1e161a',
+    keyIntensity: 1.58,
+    fillIntensity: 0.16,
+    rimIntensity: 1.15,
+    hemiIntensity: 0.20,
+    upIntensity: 0.34,
+    keyAzimuthDeg: 32,
+    keyElevationDeg: 36,
+    exposure: 0.90,
+    envIntensity: 0.48,
+    contrast: 1.12,
+    saturation: 1.10,
+    warmth: 0.06,
+    vignette: 0.36,
+    sharpen: 0.48,
+    bloomStrength: 0.05,
+    filmGrain: 0.0,
+    skinGloss: 0.55,
+    sssIntensity: 1.15,
+    tint: [1.01, 0.99, 0.96],
+    shadowTint: [0.03, 0.01, 0.02],
+  },
+  cold_forensic: {
+    id: 'cold_forensic',
+    label: '❄️ 冷冽法医标本室 · 手术冷光高锐度',
+    keyColor: '#eef6ff',
+    fillColor: '#9ec5eb',
+    rimColor: '#bae6fd',
+    hemiSky: '#f0f7ff',
+    hemiGround: '#111927',
+    keyIntensity: 1.65,
+    fillIntensity: 0.18,
+    rimIntensity: 1.28,
+    hemiIntensity: 0.18,
+    upIntensity: 0.42,
+    keyAzimuthDeg: 24,
+    keyElevationDeg: 44,
+    exposure: 0.92,
+    envIntensity: 0.52,
+    contrast: 1.16,
+    saturation: 1.02,
+    warmth: -0.14,
+    vignette: 0.38,
+    sharpen: 0.66,
+    bloomStrength: 0.04,
+    filmGrain: 0.0,
+    skinGloss: 0.78,
+    sssIntensity: 0.85,
+    tint: [0.96, 0.99, 1.04],
+    shadowTint: [0.0, 0.02, 0.05],
+  },
+  gothic_velvet: {
+    id: 'gothic_velvet',
+    label: '🕯️ 暗夜哥特烛光 · 伦勃朗深邃油画感',
+    keyColor: '#ffdfb8',
+    fillColor: '#6f7ea8',
+    rimColor: '#fda4af',
+    hemiSky: '#ffe8d6',
+    hemiGround: '#140c10',
+    keyIntensity: 1.82,
+    fillIntensity: 0.08,
+    rimIntensity: 1.35,
+    hemiIntensity: 0.12,
+    upIntensity: 0.28,
+    keyAzimuthDeg: 52,
+    keyElevationDeg: 28,
+    exposure: 0.86,
+    envIntensity: 0.36,
+    contrast: 1.22,
+    saturation: 1.14,
+    warmth: 0.16,
+    vignette: 0.52,
+    sharpen: 0.45,
+    bloomStrength: 0.07,
+    filmGrain: 0.08,
+    skinGloss: 0.62,
+    sssIntensity: 1.45,
+    tint: [1.04, 0.97, 0.92],
+    shadowTint: [0.06, 0.01, 0.03],
+  },
+  luxury_porcelain: {
+    id: 'luxury_porcelain',
+    label: '🌸 唯美凝脂画报 · 蜜桃冷白皮柔光',
+    keyColor: '#fff7f2',
+    fillColor: '#dce8f8',
+    rimColor: '#ffe4e6',
+    hemiSky: '#fff8f6',
+    hemiGround: '#2d2226',
+    keyIntensity: 1.42,
+    fillIntensity: 0.28,
+    rimIntensity: 1.05,
+    hemiIntensity: 0.28,
+    upIntensity: 0.38,
+    keyAzimuthDeg: 20,
+    keyElevationDeg: 26,
+    exposure: 0.94,
+    envIntensity: 0.56,
+    contrast: 1.06,
+    saturation: 1.12,
+    warmth: 0.03,
+    vignette: 0.26,
+    sharpen: 0.40,
+    bloomStrength: 0.07,
+    filmGrain: 0.0,
+    skinGloss: 0.50,
+    sssIntensity: 1.35,
+    tint: [1.02, 0.99, 1.0],
+    shadowTint: [0.04, 0.015, 0.025],
+  },
+  cyber_vitrine: {
+    id: 'cyber_vitrine',
+    label: '🔮 赛博霓虹玻璃柜 · 冰蓝绯红双色轮廓',
+    keyColor: '#f8f0ff',
+    fillColor: '#38bdf8',
+    rimColor: '#fb7185',
+    hemiSky: '#e0f2fe',
+    hemiGround: '#1e1028',
+    keyIntensity: 1.48,
+    fillIntensity: 0.36,
+    rimIntensity: 1.85,
+    hemiIntensity: 0.18,
+    upIntensity: 0.40,
+    keyAzimuthDeg: -34,
+    keyElevationDeg: 32,
+    exposure: 0.90,
+    envIntensity: 0.54,
+    contrast: 1.18,
+    saturation: 1.22,
+    warmth: -0.06,
+    vignette: 0.44,
+    sharpen: 0.54,
+    bloomStrength: 0.09,
+    filmGrain: 0.0,
+    skinGloss: 0.85,
+    sssIntensity: 1.10,
+    tint: [0.99, 0.98, 1.05],
+    shadowTint: [0.04, 0.0, 0.07],
+  },
+  vintage_film: {
+    id: 'vintage_film',
+    label: '🎞️ 复古胶片标本志 · 柯达暖调微颗粒',
+    keyColor: '#ffeedb',
+    fillColor: '#b5c2d4',
+    rimColor: '#fcd34d',
+    hemiSky: '#fff2e2',
+    hemiGround: '#29201b',
+    keyIntensity: 1.52,
+    fillIntensity: 0.20,
+    rimIntensity: 0.98,
+    hemiIntensity: 0.22,
+    upIntensity: 0.32,
+    keyAzimuthDeg: 38,
+    keyElevationDeg: 34,
+    exposure: 0.89,
+    envIntensity: 0.44,
+    contrast: 1.14,
+    saturation: 0.96,
+    warmth: 0.14,
+    vignette: 0.46,
+    sharpen: 0.36,
+    bloomStrength: 0.05,
+    filmGrain: 0.22,
+    skinGloss: 0.45,
+    sssIntensity: 1.10,
+    tint: [1.03, 0.99, 0.93],
+    shadowTint: [0.05, 0.03, 0.01],
+  },
+};
+
 const pmremEnvCache = new WeakMap();
 
 export function applyBaseRendererSettings(renderer, exposure = 0.90) {
@@ -23,7 +193,6 @@ export function applyBaseRendererSettings(renderer, exposure = 0.90) {
   renderer.toneMappingExposure = exposure;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  // Stage 22 Zero-Fan-Roar Fix: cache shadow maps when static instead of re-rendering 2048x2048 shadows at 144Hz
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 }
@@ -34,17 +203,13 @@ export function requestShadowUpdate(renderer) {
   }
 }
 
-/**
- * 为场景挂载离线唯美美颜柔光箱 IBL 环境（RoomEnvironment + 环形眼神光灯 + 双色温柔光箱经 PMREM 烘焙）。
- * 返回环境贴图；重复调用不会重复烘焙，零实时光照开销即可赋予眼眸环形眼神光与发丝柔光。
- */
 export function ensureSceneEnvironment(renderer, scene, intensity = 0.85) {
   let envTex = pmremEnvCache.get(renderer);
   if (!envTex) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const room = new RoomEnvironment();
 
-    // Circular Portrait Beauty-Dish Ring Light in front (+Z) for soulful circular eye catchlights (唯美环形眼神光)
+    // Circular Portrait Beauty-Dish Ring Light in front (+Z) for soulful circular eye catchlights
     const ringGeo = new THREE.RingGeometry(1.30, 1.78, 48);
     const ringMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(9.5, 8.9, 8.6),
@@ -64,7 +229,7 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.85) {
     warmBox.lookAt(0, 0, 0);
     room.add(warmBox);
 
-    // Champagne-Pearl Rim Softbox Panel (top-left-back) for silky hair contour sheen
+    // Champagne-Pearl Rim Softbox Panel (top-left-back)
     const coolBox = new THREE.Mesh(
       new THREE.PlaneGeometry(3.8, 3.2),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(5.4, 5.2, 5.8), side: THREE.DoubleSide })
@@ -86,21 +251,24 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.85) {
 }
 
 /**
- * Stage 22 · Pre-Integrated Subsurface Scattering (SSS) Dermis Wrap Shader
- * Eliminates harsh grey CG shadow terminators on facial skin and adds a delicate
- * rose-peach dermal translucency glow across cheeks, nose bridge, lips, and ears.
+ * Stage 23 · Pre-Integrated Subsurface Scattering (SSS) Dermis Wrap Shader with Live Uniform Control
  */
-export function injectAestheticSubsurfaceScattering(material) {
+export function injectAestheticSubsurfaceScattering(material, initialSss = 1.15) {
+  material.userData = material.userData || {};
+  material.userData.uSssIntensity = { value: initialSss };
+
   material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSssIntensity = material.userData.uSssIntensity;
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_physical_pars_fragment>',
       `#include <lights_physical_pars_fragment>
+      uniform float uSssIntensity;
       vec3 computeSubsurfaceWrap(vec3 normal, vec3 lightDir, vec3 lightColor) {
         float ndl = dot(normal, lightDir);
-        float wrap = clamp((ndl + 0.38) / 1.38, 0.0, 1.0);
-        float scatterBand = smoothstep(-0.36, 0.14, ndl) * (1.0 - smoothstep(0.04, 0.55, ndl));
-        vec3 sssTint = vec3(0.98, 0.32, 0.26) * scatterBand * 0.24 + vec3(1.0, 0.74, 0.70) * (wrap * 0.07);
-        return sssTint * lightColor;
+        float wrap = clamp((ndl + 0.40) / 1.40, 0.0, 1.0);
+        float scatterBand = smoothstep(-0.38, 0.16, ndl) * (1.0 - smoothstep(0.04, 0.56, ndl));
+        vec3 sssTint = vec3(0.98, 0.30, 0.24) * scatterBand * 0.26 + vec3(1.0, 0.74, 0.68) * (wrap * 0.075);
+        return sssTint * lightColor * uSssIntensity;
       }`
     );
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -113,11 +281,11 @@ export function injectAestheticSubsurfaceScattering(material) {
           sssAccum += computeSubsurfaceWrap( geometryNormal, directionalLights[ i ].direction, directionalLights[ i ].color );
         }
         #pragma unroll_loop_end
-        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * 0.38;
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * 0.40;
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-aesthetic-sss-v22';
+  material.customProgramCacheKey = () => 'cervix3d-aesthetic-sss-v23';
 }
 
 function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
@@ -135,63 +303,147 @@ function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
   light.shadow.normalBias = 0.03;
 }
 
-/**
- * 工坊预览 5 点写实灯阵（key 主光带阴影 + fill 补光 + 底部解剖检查灯 + 背部轮廓光 + 半球光）
- */
 export function buildStudioLightRig(scene) {
-  // A shaped studio key/fill ratio keeps facial planes readable instead of
-  // filling every shadow into the flat, porcelain/plastic look.
-  const hemi = new THREE.HemisphereLight('#fff5ef', '#34272b', 0.24);
-  const key = new THREE.DirectionalLight('#fff4ed', 1.32);
+  const hemi = new THREE.HemisphereLight('#fff5ee', '#1e161a', 0.20);
+  const key = new THREE.DirectionalLight('#fff3e8', 1.58);
   key.position.set(28, 34, 48);
-  configureKeyShadow(key, 26, 2048, 220);
-  const fill = new THREE.DirectionalLight('#b7c9e5', 0.20);
+  configureKeyShadow(key, 28, 2048, 220);
+  const fill = new THREE.DirectionalLight('#b8cbe8', 0.16);
   fill.position.set(-34, 10, 35);
   const up = new THREE.DirectionalLight('#f2c9c0', 0.34);
   up.position.set(0, -48, 22);
-  const rim = new THREE.DirectionalLight('#d1e2ef', 0.88);
-  rim.position.set(0, 26, -42);
+  const rim = new THREE.DirectionalLight('#ffdfc2', 1.15);
+  rim.position.set(-14, 28, -42);
+  scene.add(hemi, key, fill, up, rim);
+  return { hemi, key, fill, up, rim };
+}
+
+export function buildDesktopLightRig(scene) {
+  const hemi = new THREE.HemisphereLight('#fff5ee', '#1e161a', 0.20);
+  const key = new THREE.DirectionalLight('#fff3e8', 1.58);
+  key.position.set(45, 52, 95);
+  configureKeyShadow(key, 85, 2048, 520);
+  const fill = new THREE.DirectionalLight('#b8cbe8', 0.16);
+  fill.position.set(-55, 15, 70);
+  const up = new THREE.DirectionalLight('#f7d5d0', 0.34);
+  up.position.set(0, -65, 55);
+  const rim = new THREE.DirectionalLight('#ffdfc2', 1.15);
+  rim.position.set(-22, 38, -80);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
 }
 
 /**
- * 屏幕桌宠盒型空间 5 点写实灯阵（与工坊同色温体系，保证预览与上屏一致）
- * 注意：旧版背部 PointLight 在物理灯光单位下几乎无贡献，改为确定性 DirectionalLight。
+ * Applies a complete Visual Customizer configuration (preset + user sliders) to either
+ * DesktopBoxSpaceEngine or StudioPreviewEngine in real time.
  */
-export function buildDesktopLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff5f0', '#2b242a', 0.30);
-  const key = new THREE.DirectionalLight('#fff6ef', 1.28);
-  key.position.set(42, 48, 95);
-  configureKeyShadow(key, 70, 2048, 500);
-  const fill = new THREE.DirectionalLight('#d8e4f5', 0.24);
-  fill.position.set(-55, 15, 70);
-  const up = new THREE.DirectionalLight('#f7d5d0', 0.36);
-  up.position.set(0, -65, 55);
-  // Warm-neutral studio rim light so dark hair & porcelain skin never get a neon blue outline
-  const rim = new THREE.DirectionalLight('#f4e8e1', 0.76);
-  rim.position.set(0, 35, -80);
-  scene.add(hemi, key, fill, up, rim);
-  return { hemi, key, fill, up, rim };
+export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
+  if (!engine || !engine.renderer || !engine.scene) return;
+  const basePreset = VISUAL_STYLE_PRESETS[cfg.presetId] || VISUAL_STYLE_PRESETS.warm_gallery;
+  const m = { ...basePreset, ...cfg };
+
+  const isStudio = Boolean(engine.controls);
+  const rig = engine.lightRig || {
+    hemi: engine.hemiLight || engine.hemi,
+    key: engine.keyLight,
+    fill: engine.fillLight,
+    up: engine.anatomyUpLight || engine.upLight,
+    rim: engine.rimLight,
+  };
+
+  if (rig.key) {
+    rig.key.color.set(m.keyColor || basePreset.keyColor);
+    rig.key.intensity = Number(m.keyIntensity ?? basePreset.keyIntensity);
+    const radius = isStudio ? 64 : 116;
+    const az = THREE.MathUtils.degToRad(Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg));
+    const el = THREE.MathUtils.degToRad(Number(m.keyElevationDeg ?? basePreset.keyElevationDeg));
+    const cosEl = Math.cos(el);
+    rig.key.position.set(
+      radius * cosEl * Math.sin(az),
+      radius * Math.sin(el),
+      radius * cosEl * Math.cos(az)
+    );
+  }
+  if (rig.fill) {
+    rig.fill.color.set(m.fillColor || basePreset.fillColor);
+    rig.fill.intensity = Number(m.fillIntensity ?? basePreset.fillIntensity);
+  }
+  if (rig.rim) {
+    rig.rim.color.set(m.rimColor || basePreset.rimColor);
+    rig.rim.intensity = Number(m.rimIntensity ?? basePreset.rimIntensity);
+  }
+  if (rig.hemi) {
+    rig.hemi.color.set(m.hemiSky || basePreset.hemiSky);
+    rig.hemi.groundColor.set(m.hemiGround || basePreset.hemiGround);
+    rig.hemi.intensity = Number(m.hemiIntensity ?? basePreset.hemiIntensity);
+  }
+  if (rig.up) {
+    rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity);
+  }
+
+  engine.renderer.toneMappingExposure = Number(m.exposure ?? basePreset.exposure);
+  if ('environmentIntensity' in engine.scene) {
+    engine.scene.environmentIntensity = Number(m.envIntensity ?? basePreset.envIntensity);
+  }
+
+  // Update skin subsurface scattering & surface gloss on all heads in the scene
+  const skinGloss = Number(m.skinGloss ?? basePreset.skinGloss);
+  const sssIntensity = Number(m.sssIntensity ?? basePreset.sssIntensity);
+  engine.scene.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    if (obj.name === 'HeadSkinMesh' || obj.material.userData?.uSssIntensity) {
+      if (obj.material.userData?.uSssIntensity) {
+        obj.material.userData.uSssIntensity.value = sssIntensity;
+      }
+      obj.material.roughness = Math.max(0.28, 0.72 - skinGloss * 0.34);
+      obj.material.clearcoat = Math.min(0.45, 0.03 + skinGloss * 0.24);
+      obj.material.clearcoatRoughness = Math.max(0.18, 0.56 - skinGloss * 0.28);
+      obj.material.specularIntensity = 0.28 + skinGloss * 0.36;
+    }
+  });
+
+  if (engine.beautyPost && typeof engine.beautyPost.setGradeParams === 'function') {
+    engine.beautyPost.setGradeParams({
+      bloomStrength: Number(m.bloomStrength ?? basePreset.bloomStrength),
+      vignette: Number(m.vignette ?? basePreset.vignette),
+      saturation: Number(m.saturation ?? basePreset.saturation),
+      contrast: Number(m.contrast ?? basePreset.contrast),
+      warmth: Number(m.warmth ?? basePreset.warmth),
+      sharpen: Number(m.sharpen ?? basePreset.sharpen),
+      filmGrain: Number(m.filmGrain ?? basePreset.filmGrain),
+      tint: m.tint || basePreset.tint,
+      shadowTint: m.shadowTint || basePreset.shadowTint,
+    });
+  }
+
+  requestShadowUpdate(engine.renderer);
+  if (typeof engine.wakeRender === 'function') {
+    engine.wakeRender(1.8, true);
+  }
 }
 
 const QUALITY_CONFIGS = {
   low: { pixelRatioCap: 1, shadowSize: 0, envIntensity: 0.28, aniso: 4 },
-  medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.50, aniso: 8 },
-  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.55, aniso: 8 },
-  // Stage 14 · 电影 Ultra：WebGL 版的 DLSS 等效上限——以超采样换发丝/皮肤稳定性。
-  // 工坊(小画布)可拉到 3x + 4096 阴影；全屏桌宠封顶 2.5x，避免显存爆炸。
-  ultra: { pixelRatioCap: 2.5, studioPixelRatioCap: 3, shadowSize: 2048, studioShadowSize: 4096, envIntensity: 0.58, aniso: 16 },
-  // Stage 15 · RTX 2070 Super (Turing 8GB) 专属推荐档：单头桌宠瓶颈是全屏像素/发丝overdraw而非几何。
-  // 原生分辨率起步 + 桌宠封顶1.5x/工坊2x + 2048阴影 + 16x过滤 + 桌面自适应动态分辨率(引擎侧)。
-  // 这是该卡上“清晰度/帧率”甜点；盲目3x超采样只会掉帧并触发驱动降频，反而更糊更卡。
-  rtx2070: { pixelRatioCap: 1.5, studioPixelRatioCap: 2, shadowSize: 2048, studioShadowSize: 2048, envIntensity: 0.50, aniso: 16 },
+  medium: { pixelRatioCap: 1.5, shadowSize: 1024, envIntensity: 0.46, aniso: 8 },
+  high: { pixelRatioCap: 2, shadowSize: 2048, envIntensity: 0.50, aniso: 8 },
+  ultra: {
+    pixelRatioCap: 2.5,
+    studioPixelRatioCap: 3,
+    shadowSize: 2048,
+    studioShadowSize: 4096,
+    envIntensity: 0.54,
+    aniso: 16,
+  },
+  rtx2070: {
+    pixelRatioCap: 1.5,
+    studioPixelRatioCap: 2,
+    shadowSize: 2048,
+    studioShadowSize: 2048,
+    envIntensity: 0.48,
+    aniso: 16,
+  },
 };
 
-/**
- * 对引擎应用画质档位。调用方随后必须自行 resize（各引擎 resize 语义不同）。
- * 引擎需暴露：this.renderer / this.scene / this.keyLight。
- */
 export function applyRenderQualityToEngine(engine, level = 'high') {
   const lvl = RENDER_QUALITY_LEVELS.includes(level) ? level : 'high';
   const cfg = QUALITY_CONFIGS[lvl];
@@ -200,19 +452,16 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
 
   const isStudio = Boolean(engine.controls);
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-  // Portrait supersampling reduces subpixel hair shimmer on DPR=1 displays.
-  // Desktop stays native DPR to avoid quadrupling the full-screen render cost.
   let ratio = dpr;
   if (lvl === 'rtx2070') ratio = isStudio ? Math.max(dpr, 1.75) : Math.max(dpr, 1.25);
   else if (lvl === 'ultra') ratio = isStudio ? Math.max(dpr, 2.5) : Math.max(dpr, 1.75);
   else if (lvl === 'high' && isStudio) ratio = Math.max(dpr, 2);
-  const cap = isStudio ? (cfg.studioPixelRatioCap || cfg.pixelRatioCap) : cfg.pixelRatioCap;
+  const cap = isStudio ? cfg.studioPixelRatioCap || cfg.pixelRatioCap : cfg.pixelRatioCap;
   renderer.setPixelRatio(engine.softwareRenderer ? Math.min(dpr, 1) : Math.min(ratio, cap));
 
-  // 最高档把已加载贴图的各向异性过滤拉满，斜视角下皮肤/发丝不再糊成一片。
   const maxAniso = Math.min(cfg.aniso || 8, renderer.capabilities?.getMaxAnisotropy?.() || 8);
   scene.traverse?.((obj) => {
-    const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
+    const mats = Array.isArray(obj.material) ? obj.material : obj.material ? [obj.material] : [];
     mats.forEach((m) => {
       ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap'].forEach((k) => {
         if (m[k]) m[k].anisotropy = maxAniso;
@@ -220,7 +469,7 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
     });
   });
 
-  const shadowSize = isStudio ? (cfg.studioShadowSize || cfg.shadowSize) : cfg.shadowSize;
+  const shadowSize = isStudio ? cfg.studioShadowSize || cfg.shadowSize : cfg.shadowSize;
   const key = engine.keyLight;
   if (key && key.shadow) {
     key.castShadow = shadowSize > 0;
@@ -253,5 +502,7 @@ export function isSoftwareRenderer(renderer) {
     const debug = gl.getExtension('WEBGL_debug_renderer_info');
     const name = debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
     return /swiftshader|llvmpipe|softpipe|software raster/i.test(String(name));
-  } catch (_) { return false; }
+  } catch (_) {
+    return false;
+  }
 }

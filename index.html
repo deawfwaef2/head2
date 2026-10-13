@@ -72,8 +72,14 @@
       <span>Y: <strong id="hud-pos-y">0</strong>cm</span>
       <span>景深 Z: <strong id="hud-pos-z">-120</strong>mm</span>
     </div>
+    <div class="dossier-section" id="hud-fate-section">
+      <div class="dossier-label">⚡ 生前巅峰状态 & 意外终结伴学档案</div>
+      <div class="dossier-text" id="hud-fate-vitality" style="color:#fcd34d;font-weight:600;">19岁 · 巅峰健康态</div>
+      <div class="dossier-subtext" id="hud-fate-cause" style="color:#fda4af;margin-top:2px;"></div>
+      <div class="dossier-subtext" id="hud-fate-triumph" style="color:#a7f3d0;margin-top:4px;font-style:italic;"></div>
+    </div>
     <div class="dossier-section">
-      <div class="dossier-label">🔬 颈部解剖断面规格</div>
+      <div class="dossier-label">🔬 颈部解剖断面规格 & 容器陈列</div>
       <div class="dossier-text" id="hud-anatomy-level">C4 颈椎标准横断面</div>
       <div class="dossier-subtext" id="hud-anatomy-notes"></div>
     </div>
@@ -98,7 +104,13 @@
       <span class="badge-count" id="active-pet-count-badge">3 在屏</span>
     </div>
     <div class="overlay-actions">
-      <button id="btn-toggle-window" class="overlay-btn primary" title="隐藏或展开软件主窗口，直接欣赏电脑屏幕上的3D头部桌宠">
+      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开画质光影调色、容器放置器、重力地板与伴学能量定制器">
+        🎨 画质·容器·伴学定制器
+      </button>
+      <button id="btn-quick-gravity" class="overlay-btn active-top" title="切换物理重力落地系统：开启后头模稳固落在3D地板/层架上绝不浮空">
+        ⚓ 重力落地: 开启
+      </button>
+      <button id="btn-toggle-window" class="overlay-btn" title="隐藏或展开软件主窗口，直接欣赏电脑屏幕上的3D头部桌宠">
         🗕 隐藏软件窗口 (纯看屏幕桌宠)
       </button>
       <button id="btn-quick-dock-window" class="overlay-btn" title="将窗口停靠在右侧，左半屏完整操作3D桌宠">
@@ -116,6 +128,198 @@
       <button id="btn-quick-mute" class="overlay-btn" title="物理音效开关">
         🔊 物理音效: 开启
       </button>
+    </div>
+  </div>
+
+  <!-- STUDY COMPANION ENERGY SIPHON & SURVIVOR TRIUMPH HUD (Toggleable Option) -->
+  <div id="study-triumph-hud">
+    <div class="triumph-hud-header">
+      <div class="triumph-badge-row">
+        <span class="triumph-crown">👑</span>
+        <strong>伴学能量汲取 · 生者加冕台</strong>
+        <span class="triumph-status-pill" id="triumph-active-specimens">3 具青春标本伴读中</span>
+      </div>
+      <div class="triumph-header-btns">
+        <button id="btn-triumph-formation" class="triumph-mini-btn" title="一键将标本排列至屏幕两侧伴学护法架">📚 排列伴学阵型</button>
+        <button id="btn-triumph-collapse" class="triumph-mini-btn" title="折叠/展开伴学能量面板">▾</button>
+      </div>
+    </div>
+    <div id="triumph-hud-body" class="triumph-hud-body">
+      <div class="triumph-metrics-grid">
+        <div class="triumph-metric-box">
+          <span class="tm-label">⏳ 本次伴学专注时长</span>
+          <strong class="tm-val" id="triumph-study-timer">00:00:00</strong>
+        </div>
+        <div class="triumph-metric-box highlight">
+          <span class="tm-label">⚡ 已汲取青春生机能量</span>
+          <strong class="tm-val" id="triumph-energy-val">1,280 PTS</strong>
+        </div>
+      </div>
+      <div class="triumph-bar-track">
+        <div class="triumph-bar-fill" id="triumph-bar-fill" style="width: 38%"></div>
+      </div>
+      <div class="triumph-quote-box" id="triumph-quote-text">
+        “她们都曾年轻、健康、骄傲，却在意外中彻底出局；而我还活着、思考、翻页前行——我是留到最后的胜利者。”
+      </div>
+      <div class="triumph-controls-row">
+        <select id="sel-triumph-mindset" class="triumph-select" title="切换伴学心理能量模式">
+          <option value="survivor_crown">👑 生者加冕模式：她们意外出局，唯我活着主宰全局</option>
+          <option value="vitality_siphon">⚡ 青春虹吸模式：汲取年轻健康亡者的未尽生机化为专注力</option>
+          <option value="rival_trophy">🏆 胜者战利品模式：昔日天之骄女皆成案头静默伴读展品</option>
+          <option value="serene_aesthetic">🌸 纯享静美模式：仅展示唯美头雕与容器，隐藏死亡叙事</option>
+        </select>
+        <button id="btn-triumph-pulse" class="triumph-action-btn" title="立即从在屏标本汲取一次专注生机能量">+⚡ 汲取生机</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING REAL-TIME VISUAL QUALITY, CONTAINER, GRAVITY FLOOR & DECOR CUSTOMIZER DRAWER -->
+  <div id="visual-customizer-drawer" class="hidden">
+    <div class="vcd-header">
+      <div>
+        <div class="vcd-title">🎨 画质光影 · 容器放置器 · 重力地板 · 伴学定制器</div>
+        <div class="vcd-sub">实时调整画风色调、主光角度、标本容器、3D清晰地板层架与伴学能量选项</div>
+      </div>
+      <button id="btn-close-customizer" class="win-ctrl-btn" title="关闭定制器面板">✕ 关闭</button>
+    </div>
+
+    <div class="vcd-body">
+      <!-- 1. Art Style & Lighting Customizer -->
+      <div class="vcd-section">
+        <div class="vcd-sec-title">🎬 1. 画风色调预设 & 光影锐度定制 (Visual & Lighting)</div>
+        <div class="vcd-preset-grid" id="vcd-style-presets">
+          <button class="vcd-preset-btn active" data-style-preset="warm_gallery">🏛️ 暖金私人藏馆</button>
+          <button class="vcd-preset-btn" data-style-preset="cold_forensic">❄️ 冷冽法医标本室</button>
+          <button class="vcd-preset-btn" data-style-preset="gothic_velvet">🕯️ 暗夜哥特烛光</button>
+          <button class="vcd-preset-btn" data-style-preset="luxury_porcelain">🌸 唯美凝脂画报</button>
+          <button class="vcd-preset-btn" data-style-preset="cyber_vitrine">🔮 赛博霓虹展柜</button>
+          <button class="vcd-preset-btn" data-style-preset="vintage_film">🎞️ 复古胶片标本志</button>
+        </div>
+
+        <div class="vcd-sliders">
+          <div class="slider-row">
+            <span>☀️ 主光水平方位角 (光影立体感)</span>
+            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="32" />
+            <span id="val-vc-key-azimuth">+32°</span>
+          </div>
+          <div class="slider-row">
+            <span>📐 主光高度仰角</span>
+            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="28" />
+            <span id="val-vc-key-elevation">28°</span>
+          </div>
+          <div class="slider-row">
+            <span>💡 主光雕塑强度</span>
+            <input type="range" id="vc-key-intensity" min="0.4" max="2.8" step="0.05" value="1.55" />
+            <span id="val-vc-key-intensity">1.55</span>
+          </div>
+          <div class="slider-row">
+            <span>🌙 背部发丝轮廓光 (Rim)</span>
+            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.18" />
+            <span id="val-vc-rim-intensity">1.18</span>
+          </div>
+          <div class="slider-row">
+            <span>🩸 真皮次表面散射血色感 (SSS)</span>
+            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="1.05" />
+            <span id="val-vc-sss">105%</span>
+          </div>
+          <div class="slider-row">
+            <span>💧 肌肤水光清漆油润度</span>
+            <input type="range" id="vc-wet-gloss" min="0.0" max="1.2" step="0.05" value="0.45" />
+            <span id="val-vc-wet-gloss">45%</span>
+          </div>
+          <div class="slider-row">
+            <span>🔪 微距毛孔/发丝锐化 (Sharpen)</span>
+            <input type="range" id="vc-sharpen" min="0.0" max="1.0" step="0.05" value="0.38" />
+            <span id="val-vc-sharpen">38%</span>
+          </div>
+          <div class="slider-row">
+            <span>🎞️ 画面对比度 (Contrast)</span>
+            <input type="range" id="vc-contrast" min="0.80" max="1.40" step="0.02" value="1.08" />
+            <span id="val-vc-contrast">1.08</span>
+          </div>
+          <div class="slider-row">
+            <span>🌡️ 色温冷暖偏移 (Warmth)</span>
+            <input type="range" id="vc-warmth" min="-0.60" max="0.60" step="0.02" value="0.08" />
+            <span id="val-vc-warmth">+0.08</span>
+          </div>
+          <div class="slider-row">
+            <span>✨ 柔光辉光强度 (Bloom)</span>
+            <input type="range" id="vc-bloom" min="0.0" max="0.90" step="0.02" value="0.28" />
+            <span id="val-vc-bloom">28%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Gravity System, Clear 3D Floor, Screen-Space Shelves & Formation Switcher -->
+      <div class="vcd-section">
+        <div class="vcd-sec-title">⚓ 2. 重力落地系统 · 清晰地板 · 屏幕空间层架与换位</div>
+        <label class="checkbox-row vcd-highlight-check">
+          <input type="checkbox" id="chk-enable-gravity" checked />
+          <span>⚓ <strong>开启物理重力落地系统</strong>（头模受重力下落并稳固放置在地板/层架容器上，绝不尴尬浮空）</span>
+        </label>
+
+        <div class="field-row" style="margin-top:8px;">
+          <label>🏛️ 3D 清晰实体地板材质</label>
+          <select id="sel-floor-style">
+            <option value="dark_obsidian">🏛️ 黑曜石镜面展台 · 镶金刻度线与聚光环</option>
+            <option value="walnut_desk">🪵 胡桃木书房伴学案台 · 真皮桌垫与黄铜包边</option>
+            <option value="marble_museum">🤍 帕特农汉白玉展台 · 灰金云纹高反差清晰地板</option>
+            <option value="surgical_steel">🔬 法医不锈钢解剖托台 · 导流槽与厘米标尺</option>
+            <option value="none">🌌 隐藏实体地板 (仅保留网格线)</option>
+          </select>
+        </div>
+
+        <div class="field-row" style="margin-top:8px;">
+          <label>📚 屏幕空间立体陈列架布局</label>
+          <select id="sel-shelf-layout">
+            <option value="study_side_rack">📚 伴学侧边双层护法架 + 底部长案台 (推荐伴学)</option>
+            <option value="bottom_gallery">🏛️ 屏幕底部一字长案台 (全屏无遮挡)</option>
+            <option value="stepped_altar">👑 三阶金字塔加冕高台 (主次分明)</option>
+            <option value="corner_pedestals">📐 屏幕四角黑金高脚立柱台</option>
+            <option value="none">🚫 仅保留底部主地板 (无额外层架)</option>
+          </select>
+        </div>
+
+        <div class="vcd-sub-label">🔀 基于屏幕空间一键切换摆放阵型：</div>
+        <div class="vcd-formation-btns">
+          <button class="chip-btn active" data-formation="study_companion_sides">📚 伴学左右护法阵</button>
+          <button class="chip-btn" data-formation="desk_row">🏛️ 案头一字排开阵</button>
+          <button class="chip-btn" data-formation="altar_pyramid">👑 生者加冕高台阵</button>
+          <button class="chip-btn" data-formation="macro_center">🔍 中心贴脸特写阵</button>
+        </div>
+      </div>
+
+      <!-- 3. Specimen Containers & Decorative Props -->
+      <div class="vcd-section">
+        <div class="vcd-sec-title">🧪 3. 标本容器放置器 & 案头伴学装饰品</div>
+        <div class="field-row">
+          <label>🧪 标本容器放置器 (一键切换在屏全部头模容器)</label>
+          <select id="sel-container-style">
+            <option value="glass_bell_jar">🧪 维多利亚玻璃钟罩 + 黑金黄铜密封底座</option>
+            <option value="velvet_chalice">👑 黑金丝绒高脚圣杯托座 (无罩露天展示)</option>
+            <option value="formalin_cylinder">🧫 福尔马林圆柱标本缸 + 琥珀防腐液刻度</option>
+            <option value="acrylic_cube">💎 博物馆亚克力水晶方盒 + 四角底射灯</option>
+            <option value="surgical_tray">🩸 法医不锈钢解剖浅盘 + 凝血硅胶垫</option>
+            <option value="none">🚫 无外置容器 (仅颈部解剖断面直接落地)</option>
+          </select>
+        </div>
+
+        <div class="field-row" style="margin-top:8px;">
+          <label>🕯️ 容器旁伴学装饰摆件</label>
+          <select id="sel-decor-style">
+            <option value="trophy_candles">🕯️ 哥特白烛 + 暗红凋零玫瑰花瓣</option>
+            <option value="study_tomes">📚 伴学烫金古籍书堆 + 黄铜怀表</option>
+            <option value="soul_siphon">⚡ 幸存者生机汲取金环 + 悬浮灵子微光</option>
+            <option value="forensic_evidence">🏷️ 法医物证黄牌 (#01) + 标本封条</option>
+            <option value="none">🚫 无额外装饰摆件</option>
+          </select>
+        </div>
+
+        <label class="checkbox-row" style="margin-top:10px;">
+          <input type="checkbox" id="chk-study-triumph-mode" checked />
+          <span>👑 <strong>开启「伴学能量汲取与生者胜出加冕」面板及意外终结档案</strong>（可随时关闭切换为纯静态美学模式）</span>
+        </label>
+      </div>
     </div>
   </div>
 
@@ -527,6 +731,39 @@
                       <option value="UR · 博物馆级孤品">UR · 博物馆级孤品</option>
                       <option value="SP · 专属照片定制">SP · 专属照片定制</option>
                     </select>
+                  </div>
+                </div>
+                <div class="two-col-inputs">
+                  <div>
+                    <label>🧪 专属容器放置器</label>
+                    <select id="sel-col-container">
+                      <option value="glass_bell_jar">🧪 维多利亚玻璃钟罩 + 黑金底座</option>
+                      <option value="velvet_chalice">👑 黑金丝绒高脚圣杯托座</option>
+                      <option value="formalin_cylinder">🧫 福尔马林圆柱标本缸</option>
+                      <option value="acrylic_cube">💎 博物馆亚克力水晶方盒</option>
+                      <option value="surgical_tray">🩸 法医不锈钢解剖浅盘</option>
+                      <option value="none">🚫 无外置容器 (仅断面落地)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>🕯️ 专属伴学装饰摆件</label>
+                    <select id="sel-col-decor">
+                      <option value="trophy_candles">🕯️ 哥特白烛 + 暗红玫瑰瓣</option>
+                      <option value="study_tomes">📚 伴学烫金古籍 + 怀表</option>
+                      <option value="soul_siphon">⚡ 生机汲取金环 + 灵子微光</option>
+                      <option value="forensic_evidence">🏷️ 法医物证黄牌 + 封条</option>
+                      <option value="none">🚫 无额外装饰品</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="two-col-inputs">
+                  <div>
+                    <label>⚡ 生前巅峰状态 (伴学档案)</label>
+                    <input type="text" id="inp-col-vitality" value="19岁 · 巅峰健康态 · 音乐学院首席校花" />
+                  </div>
+                  <div>
+                    <label>💥 意外终结原因 (可随时开关显示)</label>
+                    <input type="text" id="inp-col-cause" value="跨年演出返程途中遭遇突发意外，于最鲜活的青春巅峰瞬间定格" />
                   </div>
                 </div>
                 <div>

@@ -3,6 +3,7 @@ import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
   attachRealHairModel,
+  attachSpecimenContainerAndDecor,
   updateHeadLifeAnimation,
   triggerCollectibleBlink,
   disposeHeadNode
@@ -14,17 +15,21 @@ import {
   ensureSceneEnvironment,
   buildDesktopLightRig,
   applyRenderQualityToEngine,
+  applyCustomVisualConfigToEngine,
   requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
 import { createBokehDust } from './atmosphere.js';
+import { buildScreenSpaceStageGroup } from './specimenStageAndContainers.js';
 
 /**
  * Full-Screen 3D Perspective Box Space & Desktop Pet Physics/Interaction Engine
- * Stage 22 Upgrades:
- *  - Macro Close-Up Scroll-Wheel Zoom (maxZ = +78 cm, up to 4.5x closer/larger on screen for pore/iris/cross-section inspection)
- *  - True Perspective-Frustum Screen-Edge Boundaries (`getBoxBoundsAtZ`) so pets can be placed anywhere up to the real screen edges at any depth
- *  - Zero-Fan-Roar Smart On-Demand Rendering (60 FPS cap + 0% GPU idle sleep when pets are stationary + static shadow caching)
+ * Stage 23 Upgrades:
+ *  - Real 3D Gravity & Surface Landing System (`enableGravity`: true by default, switchable to floating mode)
+ *  - Clear 3D Floor Stage & Screen-Space Multi-Shelf Rack (`floorStyle`, `shelfLayout`)
+ *  - 3D Specimen Containers & Holders (`glass_bell_jar`, `velvet_chalice`, `formalin_cylinder`, `acrylic_cube`, `surgical_tray`, `none`)
+ *  - 3D Study Companion Decorative Props (`trophy_candles`, `study_tomes`, `soul_siphon`, `forensic_evidence`, `none`)
+ *  - One-Click Screen-Space Placement Formations (`study_sides`, `bottom_row`, `altar_pyramid`, `macro_focus`)
  */
 
 export class DesktopBoxSpaceEngine {
@@ -38,7 +43,7 @@ export class DesktopBoxSpaceEngine {
       fov: 42,
       vanishingPointOffsetX: 0,
       vanishingPointOffsetY: 0,
-      boxFitScreen: true, // Stage 18: 默认盒型空间前框(Z=0)四边正好贴满电脑屏幕边缘
+      boxFitScreen: true,
       boxWidthCm: 96,
       boxHeightCm: 56,
       boxMaxDepthMm: 1200,
@@ -47,8 +52,17 @@ export class DesktopBoxSpaceEngine {
       wheelDepthStep: 1.0,
       autoResetAfterRotate: false,
       enablePetCollision: true,
-      petsAlwaysOnTop: true
+      petsAlwaysOnTop: true,
+      // Stage 23 Gravity, Floor Stage, Shelf Layout, Containers & Decor
+      enableGravity: true,
+      floorStyle: 'dark_obsidian',
+      shelfLayout: 'study_side_rack',
+      defaultContainerStyle: 'glass_bell_jar',
+      defaultDecorStyle: 'trophy_candles',
     };
+
+    this.stagePlatforms = [];
+    this.visualConfig = { presetId: 'warm_gallery' };
 
     this.pets = new Map();
     this.hoveredPetId = null;
@@ -290,6 +304,45 @@ export class DesktopBoxSpaceEngine {
     this.boxGroup.add(backWallMesh);
 
     this.scene.add(this.boxGroup);
+
+    // Stage 23: Build Clear 3D Floor Stage & Screen-Space Shelves
+    if (this.stageGroup) {
+      this.scene.remove(this.stageGroup);
+    }
+    const { group: stageGroup, platforms } = buildScreenSpaceStageGroup(b, {
+      floorStyle: this.settings.floorStyle || 'dark_obsidian',
+      shelfLayout: this.settings.shelfLayout || 'study_side_rack',
+    });
+    this.stageGroup = stageGroup;
+    this.stagePlatforms = platforms;
+    this.scene.add(this.stageGroup);
+  }
+
+  /**
+   * Finds the highest 3D shelf or floor surface Y underneath `(x, z)` that can support a head at `y`.
+   */
+  getSupportSurfaceY(x, y, z, scale = 0.76, baseBottomOffset = -15.4) {
+    const baseB = this.getBoxBounds();
+    const defaultFloorY = baseB.minY + 1.8;
+    if (!this.stagePlatforms || this.stagePlatforms.length === 0) return defaultFloorY;
+
+    const currentBottomY = y + baseBottomOffset * scale;
+    let bestSurfaceY = defaultFloorY;
+    for (const plat of this.stagePlatforms) {
+      if (plat.isMainFloor) {
+        bestSurfaceY = Math.max(bestSurfaceY, plat.surfaceY);
+        continue;
+      }
+      if (x >= plat.minX && x <= plat.maxX && z >= plat.minZ && z <= plat.maxZ) {
+        // Snap onto elevated shelf if the container bottom is above or within 6.5 cm below the shelf surface
+        if (currentBottomY >= plat.surfaceY - 6.5) {
+          if (plat.surfaceY > bestSurfaceY) {
+            bestSurfaceY = plat.surfaceY;
+          }
+        }
+      }
+    }
+    return bestSurfaceY;
   }
 
   updateSettings(newPartial = {}) {
@@ -302,7 +355,12 @@ export class DesktopBoxSpaceEngine {
       pet.pos.x = Math.max(bz.minX, Math.min(bz.maxX, pet.pos.x));
       pet.pos.y = Math.max(bz.minY, Math.min(bz.maxY, pet.pos.y));
     }
-    this.wakeRender(1.6, true);
+    this.wakeRender(1.8, true);
+  }
+
+  applyVisualCustomConfig(cfg = {}) {
+    this.visualConfig = { ...this.visualConfig, ...cfg };
+    applyCustomVisualConfigToEngine(this, this.visualConfig);
   }
 
   async summonCollectible(collectible) {
@@ -310,21 +368,42 @@ export class DesktopBoxSpaceEngine {
       this.recallCollectible(collectible.id, false);
     }
 
-    const headNode = await buildCollectibleHeadNode({ ...collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
+    const containerStyle = collectible.containerStyle || this.settings.defaultContainerStyle || 'glass_bell_jar';
+    const decorStyle = collectible.decorStyle || this.settings.defaultDecorStyle || 'trophy_candles';
+
+    const headNode = await buildCollectibleHeadNode({
+      ...collectible,
+      containerStyle,
+      decorStyle,
+      groomLod: 'desktop',
+      groomSoftware: this.softwareRenderer,
+    });
+    if (this.visualConfig) {
+      applyCustomVisualConfigToEngine(this, this.visualConfig);
+    }
+
     const baseB = this.getBoxBounds();
-    const rawZCm = (collectible.boxPosition?.z ?? -140) / 10;
+    const rawZCm = (collectible.boxPosition?.z ?? -160) / 10;
     const startZ = Math.max(baseB.minZ + 6, Math.min(baseB.maxZ - 2, rawZCm));
-    const bz = this.getBoxBoundsAtZ(startZ, 0.76);
+    const baseScale = 0.76;
+    const targetScale = this.computeMacroTargetScale(startZ, baseScale);
+    const bz = this.getBoxBoundsAtZ(startZ, targetScale);
 
     const startX = Math.max(bz.minX, Math.min(bz.maxX, collectible.boxPosition?.x ?? 0));
-    const startY = Math.max(bz.minY, Math.min(bz.maxY, collectible.boxPosition?.y ?? 2));
+    const baseBottomOffset = headNode.userData.baseBottomOffset ?? -15.4;
+    let startY = Math.max(bz.minY, Math.min(bz.maxY, collectible.boxPosition?.y ?? 2));
+
+    // When Gravity is enabled, place newly summoned heads directly onto their supporting shelf or floor!
+    if (this.settings.enableGravity) {
+      const supportY = this.getSupportSurfaceY(startX, startY + 8, startZ, targetScale, baseBottomOffset);
+      startY = supportY - baseBottomOffset * targetScale;
+    }
 
     headNode.position.set(startX, startY, startZ);
-    headNode.rotation.set(-0.18, 0, 0);
+    headNode.rotation.set(this.settings.enableGravity ? -0.04 : -0.18, 0, 0);
     headNode.scale.setScalar(0.01);
     this.scene.add(headNode);
 
-    const baseScale = 0.76;
     const entry = {
       id: collectible.id,
       collectible,
@@ -332,12 +411,13 @@ export class DesktopBoxSpaceEngine {
       pos: new THREE.Vector3(startX, startY, startZ),
       vel: new THREE.Vector3(0, 0, 0),
       baseScale,
-      targetScale: this.computeMacroTargetScale(startZ, baseScale),
+      targetScale,
       currentScale: 0.01,
       isRotationMode: false,
-      customRot: new THREE.Euler(-0.18, 0, 0),
-      currentRot: new THREE.Euler(-0.18, 0, 0),
-      radius: 8.2,
+      isGrounded: Boolean(this.settings.enableGravity),
+      customRot: new THREE.Euler(this.settings.enableGravity ? -0.04 : -0.18, 0, 0),
+      currentRot: new THREE.Euler(this.settings.enableGravity ? -0.04 : -0.18, 0, 0),
+      radius: 8.8,
       phase: Math.random() * Math.PI * 2
     };
 
@@ -351,7 +431,6 @@ export class DesktopBoxSpaceEngine {
   recallCollectible(id, playSound = true) {
     const entry = this.pets.get(id);
     if (!entry) return;
-    // Invalidate an in-flight style replacement before releasing this pet.
     entry.node.userData.hairRequestSerial = (entry.node.userData.hairRequestSerial || 0) + 1;
     disposeHeadNode(entry.node);
     this.pets.delete(id);
@@ -372,7 +451,7 @@ export class DesktopBoxSpaceEngine {
       pet.node.userData.gimbalGroup.visible = pet.isRotationMode;
     }
     if (!pet.isRotationMode && this.settings.autoResetAfterRotate) {
-      pet.customRot.set(-0.18, 0, 0);
+      pet.customRot.set(this.settings.enableGravity ? -0.04 : -0.18, 0, 0);
     }
     triggerCollectibleBlink(pet.node);
     const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
@@ -386,7 +465,7 @@ export class DesktopBoxSpaceEngine {
   resetPetOrientation(id) {
     const pet = this.pets.get(id);
     if (!pet) return;
-    pet.customRot.set(-0.18, 0, 0);
+    pet.customRot.set(this.settings.enableGravity ? -0.04 : -0.18, 0, 0);
     this.wakeRender(1.5, true);
   }
 
@@ -400,6 +479,140 @@ export class DesktopBoxSpaceEngine {
     this.wakeRender(1.6, true);
     this.onPetStateUpdate(this.getSummonedList());
     this.refreshHoverHUD();
+  }
+
+  setPetContainerStyle(id, containerStyle) {
+    const pet = this.pets.get(id);
+    if (!pet || !pet.node) return;
+    pet.collectible.containerStyle = containerStyle;
+    attachSpecimenContainerAndDecor(pet.node, {
+      ...pet.collectible,
+      containerStyle,
+      decorStyle: pet.collectible.decorStyle || this.settings.defaultDecorStyle,
+    });
+    soundEngine.playPickup(0);
+    this.wakeRender(1.8, true);
+    this.onPetStateUpdate(this.getSummonedList());
+  }
+
+  setAllPetsContainerStyle(containerStyle) {
+    this.settings.defaultContainerStyle = containerStyle;
+    for (const pet of this.pets.values()) {
+      pet.collectible.containerStyle = containerStyle;
+      attachSpecimenContainerAndDecor(pet.node, {
+        ...pet.collectible,
+        containerStyle,
+        decorStyle: pet.collectible.decorStyle || this.settings.defaultDecorStyle,
+      });
+    }
+    soundEngine.playPickup(0);
+    this.wakeRender(1.8, true);
+    this.onPetStateUpdate(this.getSummonedList());
+  }
+
+  setAllPetsDecorStyle(decorStyle) {
+    this.settings.defaultDecorStyle = decorStyle;
+    for (const pet of this.pets.values()) {
+      pet.collectible.decorStyle = decorStyle;
+      attachSpecimenContainerAndDecor(pet.node, {
+        ...pet.collectible,
+        containerStyle: pet.collectible.containerStyle || this.settings.defaultContainerStyle,
+        decorStyle,
+      });
+    }
+    soundEngine.playPickup(0);
+    this.wakeRender(1.8, true);
+    this.onPetStateUpdate(this.getSummonedList());
+  }
+
+  /**
+   * Stage 23 · One-Click Screen-Space Placement Formations
+   * (`study_sides`, `bottom_row`, `altar_pyramid`, `macro_focus`)
+   */
+  applyPlacementFormation(formationId = 'study_sides') {
+    const petList = Array.from(this.pets.values());
+    if (petList.length === 0) return;
+
+    if (formationId === 'study_sides') {
+      this.updateSettings({ shelfLayout: 'study_side_rack' });
+    } else if (formationId === 'bottom_row') {
+      this.updateSettings({ shelfLayout: 'bottom_gallery' });
+    } else if (formationId === 'altar_pyramid') {
+      this.updateSettings({ shelfLayout: 'stepped_altar' });
+    }
+
+    const baseB = this.getBoxBounds();
+    const floorY = baseB.minY + 1.8;
+    const boxW = baseB.maxX - baseB.minX;
+    const boxH = baseB.maxY - baseB.minY;
+
+    petList.forEach((pet, idx) => {
+      const baseOff = pet.node.userData.baseBottomOffset ?? -15.4;
+      let tx = 0;
+      let tz = -18;
+      let surfY = floorY;
+
+      if (formationId === 'study_sides') {
+        const shelfW = Math.max(22, boxW * 0.26);
+        const leftX = baseB.minX + shelfW * 0.52;
+        const rightX = baseB.maxX - shelfW * 0.52;
+        const midY = floorY + boxH * 0.34;
+        const highY = floorY + boxH * 0.64;
+        const slots = [
+          { x: leftX, y: midY, z: -18 },
+          { x: rightX, y: midY, z: -18 },
+          { x: leftX, y: floorY, z: -14 },
+          { x: rightX, y: floorY, z: -14 },
+          { x: leftX, y: highY, z: -24 },
+          { x: rightX, y: highY, z: -24 },
+        ];
+        const s = slots[idx % slots.length];
+        tx = s.x;
+        tz = s.z;
+        surfY = s.y;
+      } else if (formationId === 'bottom_row') {
+        const count = petList.length;
+        const span = Math.min(boxW * 0.76, count * 24);
+        tx = count === 1 ? 0 : -span * 0.5 + (idx / (count - 1)) * span;
+        tz = -16;
+        surfY = floorY;
+      } else if (formationId === 'altar_pyramid') {
+        const centerY = floorY + boxH * 0.30;
+        const sideY = floorY + boxH * 0.16;
+        const slots = [
+          { x: 0, y: centerY, z: -22 },
+          { x: -boxW * 0.28, y: sideY, z: -16 },
+          { x: boxW * 0.28, y: sideY, z: -16 },
+          { x: -boxW * 0.44, y: floorY, z: -12 },
+          { x: boxW * 0.44, y: floorY, z: -12 },
+        ];
+        const s = slots[idx % slots.length];
+        tx = s.x;
+        tz = s.z;
+        surfY = s.y;
+      } else if (formationId === 'macro_focus') {
+        if (idx === 0) {
+          tx = 0;
+          tz = 48; // Close-up macro inspection in center!
+          surfY = floorY + 6;
+        } else {
+          const side = idx % 2 === 1 ? -1 : 1;
+          tx = side * (boxW * 0.36);
+          tz = -22;
+          surfY = floorY + (idx > 2 ? boxH * 0.34 : 0);
+        }
+      }
+
+      pet.pos.z = tz;
+      pet.targetScale = this.computeMacroTargetScale(tz, pet.baseScale || 0.76);
+      pet.pos.x = tx;
+      pet.pos.y = surfY - baseOff * pet.targetScale + 3.5; // slight drop-in bounce
+      pet.vel.set(0, -0.8, 0);
+    });
+
+    soundEngine.playSummon(true);
+    this.wakeRender(2.4, true);
+    this.onPetStateUpdate(this.getSummonedList());
   }
 
   async setPetHairStyle(id, hairStyle) {
@@ -418,6 +631,7 @@ export class DesktopBoxSpaceEngine {
       name: p.collectible.name,
       deadExpression: p.collectible.deadExpression || p.collectible.morphs?.deadExpression || 'dead_calm',
       hairStyle: p.collectible.hairStyle || 'hair_user_photo',
+      containerStyle: p.collectible.containerStyle || this.settings.defaultContainerStyle || 'glass_bell_jar',
       isRotationMode: p.isRotationMode,
       x: Math.round(p.pos.x),
       y: Math.round(p.pos.y),
@@ -492,7 +706,7 @@ export class DesktopBoxSpaceEngine {
     const target = e.target;
     if (!target || !(target instanceof Element)) return false;
     // Always yield to the start modal or the 3D studio preview viewport canvas
-    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip')) {
+    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud')) {
       return true;
     }
     // Always yield to interactive buttons, inputs, sliders, titlebars, tabs, or folder items
@@ -748,7 +962,16 @@ export class DesktopBoxSpaceEngine {
       for (const pet of petArray) {
         const velSq = pet.vel.lengthSq();
         const scaleDiff = Math.abs(pet.targetScale - pet.currentScale);
-        if (velSq > 0.0004 || scaleDiff > 0.0008 || pet.isRotationMode) {
+        let ungrounded = false;
+        if (this.settings.enableGravity) {
+          const baseOff = pet.node.userData.baseBottomOffset ?? -15.4;
+          const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.currentScale, baseOff);
+          const targetRestY = supportY - baseOff * pet.currentScale;
+          if (Math.abs(pet.pos.y - targetRestY) > 0.12) {
+            ungrounded = true;
+          }
+        }
+        if (velSq > 0.0004 || scaleDiff > 0.0008 || pet.isRotationMode || ungrounded) {
           anyActiveAnimation = true;
           break;
         }
@@ -829,19 +1052,51 @@ export class DesktopBoxSpaceEngine {
       }
 
       const isBeingDragged = this.pointerDownInfo && this.pointerDownInfo.pet === pet && this.pointerDownInfo.movedDist > 5 && !pet.isRotationMode;
-
-      if (!isBeingDragged) {
-        if (pet.vel.lengthSq() > 0.0001) {
-          pet.pos.add(pet.vel);
-          pet.vel.multiplyScalar(0.88);
-          this.needsShadowRefresh = true;
-        } else {
-          pet.vel.set(0, 0, 0);
-        }
-      }
-
       const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.currentScale);
       const panX = pet.pos.x / Math.max(1, bz.maxX);
+
+      if (!isBeingDragged) {
+        if (this.settings.enableGravity) {
+          const baseOff = pet.node.userData.baseBottomOffset ?? -15.4;
+          const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.currentScale, baseOff);
+          const targetRestY = supportY - baseOff * pet.currentScale;
+
+          // Apply real gravity acceleration toward the supporting shelf or floor
+          if (pet.pos.y > targetRestY + 0.08 || pet.vel.y > 0.05) {
+            pet.vel.y -= 1.95 * (dt * 60);
+            pet.isGrounded = false;
+            this.needsShadowRefresh = true;
+          }
+
+          pet.pos.add(pet.vel);
+          pet.vel.x *= pet.isGrounded ? 0.78 : 0.90;
+          pet.vel.z *= 0.85;
+
+          if (pet.pos.y <= targetRestY + 0.06) {
+            pet.pos.y = targetRestY;
+            if (pet.vel.y < -0.55) {
+              soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.35), 'side', panX);
+              this.onBoxCollisionVisual('bottom');
+              pet.vel.y = -pet.vel.y * 0.20;
+            } else {
+              pet.vel.y = 0;
+              pet.isGrounded = true;
+            }
+            this.needsShadowRefresh = true;
+          }
+          if (pet.vel.lengthSq() < 0.0001 && pet.isGrounded) {
+            pet.vel.set(0, 0, 0);
+          }
+        } else {
+          if (pet.vel.lengthSq() > 0.0001) {
+            pet.pos.add(pet.vel);
+            pet.vel.multiplyScalar(0.88);
+            this.needsShadowRefresh = true;
+          } else {
+            pet.vel.set(0, 0, 0);
+          }
+        }
+      }
 
       if (pet.pos.x < bz.minX) {
         pet.pos.x = bz.minX;
@@ -859,7 +1114,7 @@ export class DesktopBoxSpaceEngine {
         pet.vel.x = -Math.abs(pet.vel.x) * 0.65;
       }
 
-      if (pet.pos.y < bz.minY) {
+      if (!this.settings.enableGravity && pet.pos.y < bz.minY) {
         pet.pos.y = bz.minY;
         if (Math.abs(pet.vel.y) > 0.25) {
           soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.5), 'side', panX);

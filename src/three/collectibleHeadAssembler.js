@@ -8,6 +8,10 @@ import { repairHairNormals } from './hairGeometry.js';
 import { getHairStrandTextures } from '../textures/hairStrandTexture.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering } from './photorealLighting.js';
+import {
+  buildSpecimenContainerGroup,
+  buildSpecimenDecorGroup,
+} from './specimenStageAndContainers.js';
 
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
@@ -1121,6 +1125,7 @@ export async function buildCollectibleHeadNode(config = {}) {
 
   await attachRealHairModel(rootGroup, config);
   applyHeadMorphsToGroup(rootGroup, morphs);
+  attachSpecimenContainerAndDecor(rootGroup, config);
 
   const gimbalGroup = buildGimbalOverlayGroup();
   rootGroup.add(gimbalGroup);
@@ -1129,6 +1134,30 @@ export async function buildCollectibleHeadNode(config = {}) {
   rootGroup.userData.capMesh = neckCapMesh;
 
   return rootGroup;
+}
+
+export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {
+  if (!rootGroup) return;
+  const oldContainer = rootGroup.getObjectByName('SpecimenContainerGroup');
+  if (oldContainer) rootGroup.remove(oldContainer);
+  const oldDecor = rootGroup.getObjectByName('SpecimenDecorGroup');
+  if (oldDecor) rootGroup.remove(oldDecor);
+
+  // In Studio preview, default container to 'none' unless explicitly enabled so it doesn't block close-up modeling
+  const defaultContainer = config.groomLod === 'studio' ? (config.studioContainerStyle || 'none') : 'glass_bell_jar';
+  const containerStyle = config.containerStyle || defaultContainer;
+  const decorStyle = config.decorStyle || (config.groomLod === 'studio' ? 'none' : 'trophy_candles');
+
+  const containerGroup = buildSpecimenContainerGroup(containerStyle);
+  rootGroup.add(containerGroup);
+
+  const baseBottomOffset = containerGroup.userData.baseBottomOffset ?? -12.6;
+  const decorGroup = buildSpecimenDecorGroup(decorStyle, baseBottomOffset);
+  rootGroup.add(decorGroup);
+
+  rootGroup.userData.containerStyle = containerStyle;
+  rootGroup.userData.decorStyle = decorStyle;
+  rootGroup.userData.baseBottomOffset = baseBottomOffset;
 }
 
 export const assembleCollectibleHead = buildCollectibleHeadNode;

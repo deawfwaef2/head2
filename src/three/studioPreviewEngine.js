@@ -13,6 +13,7 @@ import {
   ensureSceneEnvironment,
   buildStudioLightRig,
   applyRenderQualityToEngine,
+  applyCustomVisualConfigToEngine,
   requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
@@ -191,6 +192,11 @@ export class StudioPreviewEngine {
     this.wakeRender(1.2);
   }
 
+  applyVisualCustomConfig(cfg = {}) {
+    this.visualConfig = { ...(this.visualConfig || {}), ...cfg };
+    applyCustomVisualConfigToEngine(this, this.visualConfig);
+  }
+
   /** Stage 13b：用户可随时开关氛围（尘埃 + 背幕光晕，设置页持久化） */
   setAtmosphereEnabled(v) {
     const on = v !== false;
@@ -221,6 +227,9 @@ export class StudioPreviewEngine {
     disposeHeadNode(this.headNode);
     this.headNode = newNode;
     this.scene.add(this.headNode);
+    if (this.visualConfig) {
+      applyCustomVisualConfigToEngine(this, this.visualConfig);
+    }
     const newGroomId = this.headNode.userData?.groomStats?.id;
     if (newGroomId !== previousGroomId && (newGroomId === 'groom_center_long' || previousGroomId === 'groom_center_long')) this.setCameraPreset('front');
     this.updateCutHelperPosition(config.morphs);
