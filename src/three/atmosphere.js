@@ -88,98 +88,9 @@ function buildDustLayer({ count, size, opacity, bounds, seed }) {
 }
 
 /**
- * 构建 3D 丁达尔体积光束帷幕 (Volumetric Tyndall Light Shafts)
- * 斜射穿过书房上空与头模周遭，呈现唯美老照片的空气感与光束感
- */
-function buildTyndallLightShafts() {
-  const group = new THREE.Group();
-  group.name = 'TyndallLightShaftsGroup';
-
-  const uniforms = {
-    uTime: { value: 0 },
-    uIntensity: { value: 0.82 },
-    uBeamColor: { value: new THREE.Color('#ffebd2') },
-    uBeamAngle: { value: -0.58 },
-  };
-
-  const shaftMat = new THREE.ShaderMaterial({
-    uniforms,
-    vertexShader: /* glsl */ `
-      varying vec2 vUv;
-      varying vec3 vWorldPos;
-      void main() {
-        vUv = uv;
-        vec4 wp = modelMatrix * vec4(position, 1.0);
-        vWorldPos = wp.xyz;
-        gl_Position = projectionMatrix * viewMatrix * wp;
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform float uTime;
-      uniform float uIntensity;
-      uniform vec3 uBeamColor;
-      uniform float uBeamAngle;
-      varying vec2 vUv;
-      varying vec3 vWorldPos;
-
-      void main() {
-        // Rotate UV to create diagonal volumetric light shafts from upper window
-        vec2 p = vUv - vec2(0.58, 0.72);
-        float c = cos(uBeamAngle);
-        float s = sin(uBeamAngle);
-        vec2 rot = vec2(p.x * c - p.y * s, p.x * s + p.y * c);
-
-        // Multi-ray window slat interference pattern (Tyndall shafts)
-        float ray1 = exp(-pow((rot.x + 0.14) * 5.8, 2.0));
-        float ray2 = exp(-pow((rot.x - 0.02) * 4.4, 2.0)) * 0.92;
-        float ray3 = exp(-pow((rot.x - 0.19) * 6.5, 2.0)) * 0.76;
-        float ray4 = exp(-pow((rot.x + 0.29) * 8.2, 2.0)) * 0.52;
-        float fineSlats = 0.78 + 0.22 * sin(rot.x * 46.0 + sin(uTime * 0.25) * 0.4);
-
-        // Longitudinal attenuation from upper window source down to desk
-        float along = clamp(1.0 - (0.72 - vUv.y) * 0.92, 0.0, 1.0);
-        float topSoft = smoothstep(0.99, 0.82, vUv.y);
-        float bottomSoft = smoothstep(0.01, 0.26, vUv.y);
-        float edgeMask = smoothstep(0.02, 0.22, vUv.x) * smoothstep(0.98, 0.78, vUv.x);
-
-        float alpha = (ray1 + ray2 + ray3 + ray4) * fineSlats * along * topSoft * bottomSoft * edgeMask;
-        alpha *= 0.105 * uIntensity;
-
-        gl_FragColor = vec4(uBeamColor, clamp(alpha, 0.0, 0.36));
-      }
-    `,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-  });
-
-  // 3 layered depth curtains for true 3D parallax volumetric depth (never occluding heads)
-  const depths = [
-    { z: -32, w: 138, h: 78, scaleI: 1.0 },
-    { z: -18, w: 124, h: 72, scaleI: 0.72 },
-    { z: -6,  w: 112, h: 66, scaleI: 0.45 },
-  ];
-  depths.forEach((d, idx) => {
-    const planeGeo = new THREE.PlaneGeometry(d.w, d.h);
-    const mat = idx === 0 ? shaftMat : shaftMat.clone();
-    mat.uniforms.uIntensity = uniforms.uIntensity;
-    mat.uniforms.uBeamColor = uniforms.uBeamColor;
-    mat.uniforms.uBeamAngle = uniforms.uBeamAngle;
-    mat.uniforms.uTime = uniforms.uTime;
-    const mesh = new THREE.Mesh(planeGeo, mat);
-    mesh.position.set(0, 2, d.z);
-    mesh.renderOrder = 4;
-    mesh.raycast = () => {}; // Never intercept mouse clicks!
-    group.add(mesh);
-  });
-
-  group.userData.uniforms = uniforms;
-  return group;
-}
-
-/**
- * 创建多层呼吸尘埃 + 丁达尔体积光束。返回 { group, update(dt, elapsed), setTyndallConfig(cfg) }。
+ * 创建多层呼吸尘埃 (Bokeh Dust)。返回 { group, update(dt, elapsed), setTyndallConfig(cfg) }。
+ * Stage 29: 彻底移除 3D 场景内的扁平 PlaneGeometry 光线方块 (TyndallLightShaftsGroup)，
+ * 体积光完全由全屏后处理光散射与真实 3D 方向光阴影承担。
  */
 export function createBokehDust(options = {}) {
   const rawBounds = options.bounds || { x: [-58, 58], y: [-30, 30], z: [-95, -4] };
@@ -191,13 +102,10 @@ export function createBokehDust(options = {}) {
   const group = new THREE.Group();
   group.name = 'BokehDustAtmosphere';
 
-  const tyndallGroup = buildTyndallLightShafts();
-  group.add(tyndallGroup);
-
   const layers = [
-    buildDustLayer({ count: options.far ?? 130, size: options.farSize ?? 1.55, opacity: 0.24, bounds, seed: 1234567 }),
-    buildDustLayer({ count: options.mid ?? 85, size: options.midSize ?? 2.25, opacity: 0.19, bounds, seed: 7654321 }),
-    buildDustLayer({ count: options.near ?? 36, size: options.nearSize ?? 3.10, opacity: 0.14, bounds, seed: 2468135 }),
+    buildDustLayer({ count: options.far ?? 130, size: options.farSize ?? 1.55, opacity: 0.22, bounds, seed: 1234567 }),
+    buildDustLayer({ count: options.mid ?? 85, size: options.midSize ?? 2.25, opacity: 0.17, bounds, seed: 7654321 }),
+    buildDustLayer({ count: options.near ?? 36, size: options.nearSize ?? 3.10, opacity: 0.12, bounds, seed: 2468135 }),
   ];
   for (const layer of layers) {
     layer.points.raycast = () => {};
@@ -205,9 +113,6 @@ export function createBokehDust(options = {}) {
   }
 
   function update(_dt, elapsed) {
-    if (tyndallGroup.userData.uniforms) {
-      tyndallGroup.userData.uniforms.uTime.value = elapsed;
-    }
     for (let li = 0; li < layers.length; li++) {
       const layer = layers[li];
       const arr = layer.points.geometry.attributes.position.array;
@@ -225,22 +130,15 @@ export function createBokehDust(options = {}) {
   }
 
   function setTyndallConfig(cfg = {}) {
-    const u = tyndallGroup.userData.uniforms;
-    if (!u) return;
     if (cfg.intensity !== undefined) {
-      u.uIntensity.value = Math.max(0, Math.min(2.0, Number(cfg.intensity)));
-      tyndallGroup.visible = u.uIntensity.value > 0.01;
-    }
-    if (cfg.color) {
-      u.uBeamColor.value.set(cfg.color);
-    }
-    if (cfg.azimuthDeg !== undefined) {
-      const az = Number(cfg.azimuthDeg) || 44;
-      u.uBeamAngle.value = THREE.MathUtils.degToRad(az >= 0 ? -32 : 32);
+      const k = Math.max(0, Math.min(2.0, Number(cfg.intensity)));
+      layers.forEach((l, idx) => {
+        l.points.material.opacity = (0.22 - idx * 0.05) * (0.45 + 0.55 * k);
+      });
     }
   }
 
-  return { group, tyndallGroup, update, setTyndallConfig };
+  return { group, update, setTyndallConfig };
 }
 
 let _backdropCache = null;

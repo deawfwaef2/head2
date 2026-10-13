@@ -276,98 +276,98 @@ export const REAL_HAIR_CATALOG = [
 ];
 
 /**
- * Stage 28 · 6 大中韩青年女性真实头型骨相流派 (彻底消除美式亚裔高颧骨方腮感)
+ * Stage 29 · 6 款官方开源艺术家精雕头模 `.target` 预设 + 6 套真摄影级女性皮肤贴图 (100% 真实下载模型，严禁代码手动捏脸)
  */
 export const FACE_ARCHETYPE_CATALOG = [
   {
     id: 'cn_round_babyface',
-    shortLabel: '🍑 中式圆润娃娃脸',
-    label: '🍑 中式幼态圆润娃娃脸 · 珠圆玉润婴儿肥满月骨相 (初夏同款)',
-    desc: '缩短中下庭与下巴、饱满婴儿肥圆脸颊与圆润下颌线、饱满圆额头与无辜圆鹿眼'
+    shortLabel: '🍑 饱满幼态圆脸模 (MH Round + Elvs Cheek)',
+    label: '🍑 饱满幼态圆润脸模 · MPFB2 Head-Round + Elvs Chipmunk 艺术家精雕 + Toigo 自然妆真皮肤 (初夏同款)',
+    desc: '100% 官方 MPFB2 head-round 与 Elvaerwyn 苹果肌艺术家 .target 模型 + Toigo 摄影级自然妆女性皮肤贴图'
   },
   {
     id: 'kr_idol_vline',
-    shortLabel: '✨ 韩系财阀千金脸',
-    label: '✨ 韩系财阀千金V脸 · 内推窄颧骨+立体苹果肌+韩式小翘鼻 (林汐同款)',
-    desc: '韩式内推窄颧弓、精致流畅V字小下巴、饱满前突苹果肌与卧蚕、高挺盒型微翘鼻与狐狸微挑眼'
+    shortLabel: '✨ 精致心形V脸模 (MH Heart + Elvs Apple)',
+    label: '✨ 精致心形V脸模 · MPFB2 InvertedTriangular + Elvs Apple 艺术家精雕 + Toigo 紫罗兰冷白真皮肤 (林汐同款)',
+    desc: '100% 官方 MPFB2 心形V脸艺术家 .target 模型 + Toigo 摄影级冷白清透女性皮肤贴图'
   },
   {
     id: 'cn_oval_scholar',
-    shortLabel: '📖 中式书卷鹅蛋脸',
-    label: '📖 中式清秀书卷鹅蛋脸 · 广东南方青年女学生原生头型 (方尧平同款)',
-    desc: '标准中国南方19岁青年女学生鹅蛋脸、高颅顶头包脸、柔和内收颧弓与温婉杏眼'
+    shortLabel: '📖 清秀标准鹅蛋脸模 (MH Oval + Young Asian)',
+    label: '📖 清秀书卷鹅蛋脸模 · MPFB2 Head-Oval 艺术家精雕 + MakeHuman 原生东方少女真摄影皮肤 (方尧平同款)',
+    desc: '100% 官方 MPFB2 head-oval 艺术家 .target 模型 + MakeHuman 官方东方青年女性摄影级皮肤贴图'
   },
   {
     id: 'cn_classical_melon',
-    shortLabel: '🌸 江南古典瓜子脸',
-    label: '🌸 中式江南古典瓜子脸 · 窄太阳穴纤巧尖颏仕女骨相 (苏晚同款)',
-    desc: '古典东方仕女瓜子脸、清瘦双颊与秀气尖下巴、古典微挑丹凤眼型'
+    shortLabel: '🌸 温婉古典瓜子脸模 (MH Oval-Heart + Eurasian)',
+    label: '🌸 温婉古典瓜子脸模 · MPFB2 Oval-Heart 艺术家精雕 + OnlyTheGhosts 东方温润真皮肤 (苏晚同款)',
+    desc: '100% 官方 MPFB2 鹅蛋瓜子脸艺术家 .target 模型 + OnlyTheGhosts 摄影级温润女性皮肤贴图'
   },
   {
     id: 'kr_sweet_heart',
-    shortLabel: '💖 韩系甜美心形脸',
-    label: '💖 韩系初恋甜美心形脸 · 饱满卧蚕苹果肌配短巧尖下巴 (千雪同款)',
-    desc: '韩系初恋感心形脸、上庭与苹果肌饱满圆润、下巴短巧收尖、大眼嘟润M唇'
+    shortLabel: '💖 初恋甜美心形脸模 (MH Heart + Glam Skin)',
+    label: '💖 初恋甜美心形脸模 · MPFB2 Heart + Elvs Cheek 艺术家精雕 + Toigo 盛妆红唇真皮肤 (千雪同款)',
+    desc: '100% 官方 MPFB2 饱满甜美心形脸艺术家 .target 模型 + Toigo 摄影级盛妆女性皮肤贴图'
   },
   {
     id: 'cn_cold_royal',
-    shortLabel: '❄️ 中式清冷御姐脸',
-    label: '❄️ 中式清冷高智御姐脸 · 修长窄脸高鼻梁智感骨相 (沈知微同款)',
-    desc: '东方清冷高智感窄长脸型、利落收窄面颊、高直山根鼻梁与狭长冷艳眼型'
+    shortLabel: '❄️ 清冷高级菱形脸模 (MH Diamond + Zoey Skin)',
+    label: '❄️ 清冷高智感脸模 · MPFB2 Head-Diamond + Elvs Slim 艺术家精雕 + Nyloseth Zoey 高清真皮肤 (沈知微同款)',
+    desc: '100% 官方 MPFB2 立体清冷艺术家 .target 模型 + Nyloseth Zoey 摄影级冷调女性皮肤贴图'
   }
 ];
 
 /**
- * Stage 28 · 8 款根根分明中韩真毛流眉形库 (告别单一眉形)
+ * Stage 29 · 8 款官方 MakeHuman 3D 眉毛模型 (`eyebrow001..012.obj` 立体网格 + 原生摄影毛流贴图)
  */
 export const EYEBROW_STYLE_CATALOG = [
   {
     id: 'cn_scholar_natural',
-    shortLabel: '🌿 中式原生书卷眉',
-    label: '🌿 中式原生清秀眉 · 自然野生书卷毛流 (方尧平默认)',
-    desc: '未经刻意修剃的中国女学生原生自然眉，眉头绒毛轻盈、眉峰柔和自然'
+    shortLabel: '🌿 MH-001 原生自然眉模',
+    label: '🌿 MakeHuman 001号 · 原生自然清秀 3D 眉毛模型 (方尧平默认)',
+    desc: '官方 MakeHuman eyebrow001.obj 立体网格与原生摄影毛流贴图，自然柔和'
   },
   {
     id: 'kr_straight_mist',
-    shortLabel: '🍑 韩式平直一字雾眉',
-    label: '🍑 韩式平直一字幼态雾眉 · 柔雾无辜感 (初夏默认)',
-    desc: '韩系甜妹标志性平直一字柔雾眉，降低眉峰弧度，拉宽幼态圆润面中比例'
+    shortLabel: '🍑 MH-008 平直柔雾眉模',
+    label: '🍑 MakeHuman 008号 · 平直一字柔雾 3D 眉毛模型 (初夏默认)',
+    desc: '官方 MakeHuman eyebrow008.obj 立体网格与柔和毛流贴图，温婉减龄'
   },
   {
     id: 'kr_idol_arch',
-    shortLabel: '✨ 韩系女团流星眉',
-    label: '✨ 韩系女团精致流星落尾眉 · 微挑利落 (林汐默认)',
-    desc: '韩国财阀千金与女团同款流星眉，前段柔和、后三分之一处精致微挑落尾'
+    shortLabel: '✨ MH-002 精致流星眉模',
+    label: '✨ MakeHuman 002号 · 精致微挑流星 3D 眉毛模型 (林汐默认)',
+    desc: '官方 MakeHuman eyebrow002.obj 立体网格与高定毛流贴图，精致干练'
   },
   {
     id: 'cn_willow_classical',
-    shortLabel: '🌙 江南古典柳叶细眉',
-    label: '🌙 江南古典远山柳叶细眉 · 纤细弯月 (苏晚默认)',
-    desc: '中式古典仕女纤细弯月柳叶眉，眉身极细、弧度温婉悠长'
+    shortLabel: '🌙 MH-012 柳叶细弯眉模',
+    label: '🌙 MakeHuman 012号 · 古典纤细柳叶 3D 眉毛模型 (苏晚默认)',
+    desc: '官方 MakeHuman eyebrow012.obj 立体网格与古典细眉贴图，温婉如月'
   },
   {
     id: 'kr_sweet_droop',
-    shortLabel: '💖 韩系初恋无辜微垂眉',
-    label: '💖 韩系初恋楚楚可怜微垂眉 · 柔顺八字感 (千雪默认)',
-    desc: '眉尾自然微垂、眉头微扬的无辜幼态眉形，令死前神态更显楚楚可怜'
+    shortLabel: '💖 MH-010 楚楚微垂眉模',
+    label: '💖 MakeHuman 010号 · 清纯柔顺微垂 3D 眉毛模型 (千雪默认)',
+    desc: '官方 MakeHuman eyebrow010.obj 立体网格与清透毛流贴图，楚楚可怜'
   },
   {
     id: 'cn_cold_sword',
-    shortLabel: '❄️ 中式清冷英气剑眉',
-    label: '❄️ 中式清冷高智感微扬剑眉 · 利落上挑 (沈知微默认)',
-    desc: '下缘干净利落、眉尾向鬓角英气斜飞的御姐剑眉'
+    shortLabel: '❄️ MH-005 清冷英气眉模',
+    label: '❄️ MakeHuman 005号 · 清冷高智英气 3D 眉毛模型 (沈知微默认)',
+    desc: '官方 MakeHuman eyebrow005.obj 立体网格与利落毛流贴图，冷艳疏离'
   },
   {
     id: 'kr_wild_feathered',
-    shortLabel: '🪶 根根分明野生毛流眉',
-    label: '🪶 画报级根根分明立体野生毛流眉',
-    desc: '眉头毛流根根向上耸立、眉身浓密交织的高定野生眉'
+    shortLabel: '🪶 MH-003 浓密立体眉模',
+    label: '🪶 MakeHuman 003号 · 浓密立体野生 3D 眉毛模型',
+    desc: '官方 MakeHuman eyebrow003.obj 立体网格与浓密原生毛流贴图'
   },
   {
     id: 'cn_tang_moth',
-    shortLabel: '🌺 古典微蹙短巧蛾眉',
-    label: '🌺 古典哀怨微蹙短巧蛾眉',
-    desc: '眉形短巧精致、眉头微蹙聚拢的古典东方蛾眉'
+    shortLabel: '🌺 MH-004 柔和古典眉模',
+    label: '🌺 MakeHuman 004号 · 柔和古典弧形 3D 眉毛模型',
+    desc: '官方 MakeHuman eyebrow004.obj 立体网格与柔和弧形毛流贴图'
   }
 ];
 

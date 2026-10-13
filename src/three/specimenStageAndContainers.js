@@ -371,33 +371,34 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
   };
 
   if (shelfLayout === 'study_side_rack') {
-    const shelfW = Math.max(22, boxW * 0.26);
-    const shelfD = 32;
-    const leftX = bounds.minX + shelfW * 0.52;
-    const rightX = bounds.maxX - shelfW * 0.52;
-    const midY = floorSurfaceY + boxH * 0.34;
-    const highY = floorSurfaceY + boxH * 0.64;
+    const shelfW = Math.max(22, boxW * 0.24);
+    const shelfD = 30;
+    const safeEdgeInset = Math.max(shelfW * 0.62, 22);
+    const leftX = bounds.minX + safeEdgeInset;
+    const rightX = bounds.maxX - safeEdgeInset;
+    const midY = floorSurfaceY + boxH * 0.21;
+    const highY = floorSurfaceY + boxH * 0.41;
 
-    addShelfPlatform('shelf_left_mid', '左侧伴学中层展架', leftX, midY, -18, shelfW, shelfD);
-    addShelfPlatform('shelf_right_mid', '右侧伴学中层展架', rightX, midY, -18, shelfW, shelfD);
-    addShelfPlatform('shelf_left_high', '左上伴学高层展架', leftX, highY, -24, shelfW * 0.92, shelfD);
-    addShelfPlatform('shelf_right_high', '右上伴学高层展架', rightX, highY, -24, shelfW * 0.92, shelfD);
+    addShelfPlatform('shelf_left_mid', '左侧伴学中层展架', leftX, midY, -20, shelfW, shelfD);
+    addShelfPlatform('shelf_right_mid', '右侧伴学中层展架', rightX, midY, -20, shelfW, shelfD);
+    addShelfPlatform('shelf_left_high', '左上伴学高层展架', leftX, highY, -26, shelfW * 0.92, shelfD);
+    addShelfPlatform('shelf_right_high', '右上伴学高层展架', rightX, highY, -26, shelfW * 0.92, shelfD);
   } else if (shelfLayout === 'stepped_altar') {
-    const centerY = floorSurfaceY + boxH * 0.30;
-    const sideY = floorSurfaceY + boxH * 0.16;
+    const centerY = floorSurfaceY + boxH * 0.24;
+    const sideY = floorSurfaceY + boxH * 0.13;
     addShelfPlatform('altar_center_top', '中央加冕主祭坛', 0, centerY, -22, 28, 30, 2.2);
-    addShelfPlatform('altar_left_step', '左翼次级展台', -boxW * 0.28, sideY, -16, 24, 28, 1.8);
-    addShelfPlatform('altar_right_step', '右翼次级展台', boxW * 0.28, sideY, -16, 24, 28, 1.8);
+    addShelfPlatform('altar_left_step', '左翼次级展台', -boxW * 0.26, sideY, -16, 24, 28, 1.8);
+    addShelfPlatform('altar_right_step', '右翼次级展台', boxW * 0.26, sideY, -16, 24, 28, 1.8);
   } else if (shelfLayout === 'corner_pedestals') {
     const colW = 19;
-    const leftX = bounds.minX + 16;
-    const rightX = bounds.maxX - 16;
-    const innerLX = bounds.minX + 36;
-    const innerRX = bounds.maxX - 36;
-    addShelfPlatform('pedestal_L1', '左外立柱台', leftX, floorSurfaceY + 15, -14, colW, colW, 1.8, true);
-    addShelfPlatform('pedestal_R1', '右外立柱台', rightX, floorSurfaceY + 15, -14, colW, colW, 1.8, true);
-    addShelfPlatform('pedestal_L2', '左内高立柱台', innerLX, floorSurfaceY + 25, -28, colW, colW, 1.8, true);
-    addShelfPlatform('pedestal_R2', '右内高立柱台', innerRX, floorSurfaceY + 25, -28, colW, colW, 1.8, true);
+    const leftX = bounds.minX + 22;
+    const rightX = bounds.maxX - 22;
+    const innerLX = bounds.minX + 38;
+    const innerRX = bounds.maxX - 38;
+    addShelfPlatform('pedestal_L1', '左外立柱台', leftX, floorSurfaceY + 11, -16, colW, colW, 1.8, true);
+    addShelfPlatform('pedestal_R1', '右外立柱台', rightX, floorSurfaceY + 11, -16, colW, colW, 1.8, true);
+    addShelfPlatform('pedestal_L2', '左内高立柱台', innerLX, floorSurfaceY + 19, -28, colW, colW, 1.8, true);
+    addShelfPlatform('pedestal_R2', '右内高立柱台', innerRX, floorSurfaceY + 19, -28, colW, colW, 1.8, true);
   } else if (shelfLayout === 'bottom_gallery') {
     const coasterPositions = [-boxW * 0.36, -boxW * 0.18, 0, boxW * 0.18, boxW * 0.36];
     for (let i = 0; i < coasterPositions.length; i++) {

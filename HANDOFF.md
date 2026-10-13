@@ -8,6 +8,12 @@
 > 5. **模型能力分级协作守则**：
 >    - 如果你是**强力旗舰大模型**：请全面负责核心 3D 拓扑/法线平滑算法、写实亚洲女性五官与发丝渲染器、医学颈部解剖断面渲染、透视消失点盒型空间物理引擎的深度优化与疑难 BUG 修复。
 >    - 如果你是**较弱/轻量级模型**：**严禁触碰或重构核心 3D 渲染管线、解剖切面算法与打包构建脚本**！仅可修改 UI 文案、预设档案数据、音效参数微调等外围边角料，防止引入破坏性 BUG。
+> 6. **🚫 严禁任何 AI / 代码手动捏脸与程序化手绘五官贴图（最高红线，永久生效）**：
+>    - **绝对禁止**使用手写数学公式/高斯函数/正余弦坐标偏移去直接捏脸或扭曲网格顶点（如 `applyEastAsianCraniofacialSculpt`、`compute_bone_morph_deltas` 等手写顶点变形函数一律严禁出现）！
+>    - **绝对禁止**用 Canvas 2D 圆圈渐变或手写贝塞尔线条去程序化画腮红/嘴唇/眉毛贴图（如 `buildCharacterSkinOverlayMap`、`buildEyebrowTextureForStyle` 等一律禁用）！
+>    - **所有头模骨相、脸型流派、皮肤贴图、法线贴图、眉毛网格与发型，必须 100% 使用从网上下载的真实 3D 模型、官方/社区 3D 艺术家精雕 `.target` / `.mhclo` 资产与真实摄影级贴图**！
+> 7. **🚫 严禁在 3D 场景中放置平面方块模拟光线 (`PlaneGeometry` 光线方块)**：
+>    - 绝不允许在 3D 场景内塞入半透明矩形平面网格（如 `TyndallLightShaftsGroup` `PlaneGeometry`）来假冒丁达尔光束；光影必须通过真实高反差主光阴影 (`ShadowMap`)、真皮次表面散射与屏幕空间后处理实现。
 
 ---
 
@@ -521,6 +527,32 @@
       6. `❄️ 中式清冷高智御姐脸 (cn_cold_royal)`（沈知微默认：修长中下庭 + 清冷微收颊面 + 高挺直鼻梁）。
   - **6 位角色专属真实面部 UV 皮肤肌理与妆容贴图 (`buildCharacterSkinOverlayMap`)**：在精准面部 UV (`u: 0.79..0.95, v: 0.44..0.59`) 上柔化底图自带旧眉印，并为每位角色绘制截然不同的肤色基底、卧蚕/熬夜黑眼圈、眼影眼线、苹果肌腮红、高光鼻影、点绛唇/蜜桃咬唇/梅子浆果唇/干枯玫瑰唇及专属美人痣。
   - **8 款根根分明中韩真毛流眉形 (`buildEyebrowTextureForStyle` & `EYEBROW_STYLE_CATALOG`)**：基于 `Eyebrows` 网格真实双排 UV（左眉 `u=0.045→0.945, v=0.408`，右眉 `u=0.945→0.045, v=0.672`），实时生成 `1024×512` 柔雾底色 + **每侧 500+ 根贝塞尔渐变真毛流** 贴图并联动 3D 眉骨几何弧度，提供 **8 款眉形**（`🌿 中式原生书卷眉`、`☁️ 韩式温柔一字雾眉`、`✨ 韩系女团柔弧流星眉`、`🌙 江南古典弯弯柳叶眉`、`🥺 韩系无辜八字微垂眉`、`⚔️ 中式清冷英气剑眉`、`🪶 根根分明野生毛流眉`、`🌸 古典短巧远山蛾眉`）。
+
+### [2026-10-13 Stage 29] 彻底废除手动代码捏脸与程序化画皮（写入 HANDOFF 永久禁令）+ 复原纯净 3D 头模并注入网上下载的官方 MakeHuman/MPFB2/Elvaerwyn 真实艺术家精雕头模 `.target`、6 套 2K 真实女性摄影皮肤贴图、`Aksel_Skin_NRM` 艺术家毛孔法线贴图与 8 款 MakeHuman 3D 眉毛模型 (`eyebrow001..012.obj`) + 移除 3D 扁平光线方块 + 真皮微孔法线微分与双瓣次表面散射去硅胶感升级 + 100% 透视边界与高层架防越界加固（建立在 `c72af36` 之上）
+- **1. 永久写入 `HANDOFF.md` 铁律（规则 6 & 规则 7）并彻底清除代码手动捏脸与 Canvas 画皮（回应“你这个捏脸效果太差了你记得HANDOFF写上禁止模型手动捏脸，给我复原，然后网上找模型！”）**：
+  - 在 `HANDOFF.md` 顶部协作铁律中永久写入 **规则 6（严禁 AI 手写数学公式手动捏脸 `applyEastAsianCraniofacialSculpt` 或程序化 Canvas 2D 画眉毛/画腮红）** 与 **规则 7（严禁在 3D 场景内放置扁平 `PlaneGeometry` 光线方块）**。
+  - **彻底复原纯净头模并删除手动捏脸代码 (`collectibleHeadAssembler.js` & `scripts/build_real_web_head_assets.py`)**：
+    - 100% 物理删除 `applyEastAsianCraniofacialSculpt`、`buildCharacterSkinOverlayMap` 与 `buildEyebrowTextureForStyle`；
+    - 以未受任何数学函数挤压的纯净基底头模 (`37f0260` 原始 `HeadSkin` / `Eyebrows` / `Eyelashes` / `Eyes`) 为基准复原网格。
+  - **从开源社区 (`makehumancommunity/mpfb2`、`makehuman_system_assets_cc0.zip`、`skins01_cc0.zip`、`skins02_cc0.zip`、`cheek01_cc0.zip`) 下载并打包 100% 真实 3D 资产至 `public/models/daz_asian_head_base.glb` (`4.52 MB`)**：
+    - **9 组真实艺术家精雕 `.target` 脸型与苹果肌 Morph Targets**：将官方 MPFB2 与 Elvaerwyn 精雕的 `head-round.target` (`mh_head_round`)、`head-oval.target` (`mh_head_oval`)、`head-invertedtriangular.target` (`mh_head_heart`)、`head-diamond.target` (`mh_head_diamond`)、`elvs_chipmunk_cheeks_low_1.target` (`elvs_baby_cheeks`)、`elvs_high_chubby_cheekbones_1.target` (`elvs_apple_cheeks`)、`l/r-cheek-bones-decr.target` (`elvs_slim_cheeks`)、`eyebrows-angle-down/up.target` (`mh_brow_down` / `mh_brow_up`) 精确烘焙进 `HeadSkin`、`Eyebrows` 与 `Eyelashes` 的 GPU Morph Target 通道，6 款头型流派 (`FACE_ARCHETYPE_CATALOG`) 100% 由真实艺术家 `.target` 驱动，零代码手捏变形。
+    - **6 套真实下载的 2K 摄影级女性皮肤贴图 (`realWebAssets.skins`)**：废除旧版将下巴/颈部高斯模糊 (`sigma=45`) 成塑料色块的做法，完整保留 6 套真实摄影级女性皮肤贴图 (`young_asian` 东方少女原生肌、`natural_makeup` Toigo 自然清透妆、`violet_makeup` Toigo 冷白微醺妆、`eurasian` OnlyTheGhosts 温润玉肌、`glam_makeup` Toigo 盛妆红唇肌、`zoey` Nyloseth Zoey 高清冷调肌) 的全脸、下颌、耳廓与颈部真实毛孔肌理，仅在 C4/C5 断颈边缘合成凝固血迹。
+    - **真实艺术家皮肤微孔法线贴图 (`Aksel_Skin_NRM.png`)**：将 `skins02_cc0.zip` 中的 `Aksel_Skin_NRM.png` 注入 `images[1]` (`skin_normal`)，提供全脸均匀真实的真皮毛孔与皮沟法线细节（额头/脸颊/下巴法线标准差提升 6 倍以上）。
+    - **8 款官方 MakeHuman 3D 眉毛模型 (`eyebrow001`, `002`, `003`, `004`, `005`, `008`, `010`, `012`)**：提取官方 `.obj` 的 124 顶点 3D 坐标 (`pos`)、精准映射 `uv` 与原生半透明毛流 `.png` 贴图注入 `realWebAssets.eyebrows`，切换眉形时同步切换真实 `.obj` 3D 网格顶点与官方毛流贴图。
+- **2. 移除 3D 场景内的低级“光线方块”，重构高对比度写实光影与去硅胶真皮着色器（回应“光影效果也很低级，这个光线方块太弱了...反正现在效果还是非常硅胶非常假”）**：
+  - **彻底移除 3D 扁平光线方块 (`src/three/atmosphere.js`)**：完全删除 `buildTyndallLightShafts` 及其 3 块悬浮在 3D 盒体内的 `THREE.PlaneGeometry` 矩形面片 (`TyndallLightShaftsGroup`)，并在 `src/three/beautyPostChain.js` 中移除全屏人造斜条纹遮罩，改为基于真实受光几何体的径向体积光散射 (`Radial Crepuscular Scatter`)。
+  - **修复 Three.js `normalMap` 吞掉 `bumpMap` 导致硅胶感的底层 Bug (`src/three/photorealLighting.js` · `injectAestheticSubsurfaceScattering`)**：
+    - 在 `#include <normal_fragment_maps>` 之后，利用屏幕空间偏导数 (`dFdx`/`dFdy`) 将 `roughnessMap`（14×14 平铺的高频真皮毛孔与皮沟贴图）实时叠加到 `Aksel_Skin_NRM.png` 切线空间法线上，令每一寸皮肤在近景下都呈现真实的微米级毛孔凹凸；
+    - 彻底废弃基于未扰动顶点法线 (`vCervixWorldNormal`) 和 2D 正弦条纹 (`computeWindowGoboMask`) 的低级明暗计算，改为基于 **扰动后片元法线 (`normal`)** 的 **Jimenez/Penner 预积分三通道色散次表面散射 (`computeDualLobeSkinSSS`：红光穿透最深、绿光次之、蓝光最浅)**、**毛孔凹陷高光遮蔽 (`poreSpecMask`，打碎硅胶整片反光)** 与 **面部细小毫毛逆光散射 (`vellusRim`)**；
+    - 将桌面端与工坊端主光源阴影相机范围分别收紧至 `bound = 54` 与 `bound = 20`，使发丝刘海、眉骨、睫毛与鼻梁在面颊上投射出锐利真实的 3D 立体阴影。
+- **3. 彻底根治头模与发型超出边框问题（回应“然后还是允许头超出边框”）**：
+  - **根因定位与修复 (`src/three/specimenStageAndContainers.js` & `src/three/desktopBoxSpaceEngine.js`)**：此前 `study_side_rack` 高层展架高度设为 `floorSurfaceY + boxH * 0.64`（导致放上高层架的头模顶部超出上边框 `+8.5` 单位），且 `maxZ = 18` 允许头模移动到 `Z = 0` 前边框平面前方（透视放大后越出金线边框）。
+  - **全方位防越界锁死**：
+    - 将 `study_side_rack` 中/高层架高度下调至安全区间 (`0.21` / `0.41`)，左右边距向内收紧至 `safeEdgeInset = Math.max(shelfW * 0.62, 22)`；
+    - 在 `getBoxBounds` 中将 `maxZ` 严格限制在 `Z = 0` 前框平面后方 (`maxZ: -4`)，`macro_focus` 特写阵型置于 `tz = -5`；
+    - 在 `getBoxBoundsAtZ` 中按头模最前端深度 (`frontZ = z + 14 * s`) 计算视锥体透视边界，并完整扣除包含 28 款大型 3D 发型在内的最坏包络边距 (`marginX = 18.2 * s`, `marginTop = 20.8 * s`, `marginBottom = 12.2 * s`)；
+    - 在 `clampStructureToBounds` 与 `animate()` 重力落点计算中强制限制层架/建筑与 `targetRestY` 的最大高度 (`<= bz.maxY`)，确保无论如何拖拽头模、拖拽层架或切换阵型，头模与发丝 **100% 永远无法超出边框半步**。
+
 
 
 

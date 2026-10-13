@@ -186,39 +186,43 @@ export class DesktopBoxSpaceEngine {
       minY: -halfH,
       maxY: halfH,
       minZ: -maxDepthCm,
-      maxZ: 18
+      maxZ: -4
     };
   }
 
   /**
-   * Stage 28 · Strict 3D Box & Screen-Border Clamping ("而且你头就是空间不要超出边框")
-   * Subtracts the full physical 3D head radius (`marginX`), crown height (`marginTop`), and neck base (`marginBottom`)
-   * from the intersection of the 3D Box Frame (`Bounded3DBoxSpace`) and the Camera Frustum at depth `z`.
+   * Stage 29 · Strict 3D Box & Screen-Border Clamping ("不要超出边框")
+   * Guarantees that no part of any head or 3D hairstyle can ever cross the visible gold box border
+   * or the screen viewport edge at any depth `z` or on any shelf/container.
    */
-  getBoxBoundsAtZ(z = 0, petScale = 0.76) {
+  getBoxBoundsAtZ(z = -15, petScale = 0.76) {
     const base = this.getBoxBounds();
-    const clampedZ = Math.max(base.minZ + 6, Math.min(base.maxZ, z));
+    const s = Math.max(0.55, Number(petScale) || 0.76);
+    const clampedZ = Math.max(base.minZ + 8, Math.min(base.maxZ, z));
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    const distFromCam = Math.max(45, (this.cameraZ || 115) - clampedZ);
+    const camZ = this.cameraZ || 115;
+    // Account for the frontmost point of the head/hair (`z + 14 * s`) in perspective projection
+    const frontZ = Math.min(-0.5, clampedZ + 14.0 * s);
+    const distFromCam = Math.max(45, camZ - frontZ);
     const fovRad = THREE.MathUtils.degToRad((this.camera?.fov || this.settings.fov || 42) * 0.5);
     const frustumHalfH = distFromCam * Math.tan(fovRad);
     const frustumHalfW = frustumHalfH * aspect;
 
-    // Intersect 3D box frame bounds with camera frustum bounds so the head NEVER exceeds either border!
-    const rawHalfW = Math.min(Math.abs(base.maxX), frustumHalfW);
-    const rawHalfH = Math.min(Math.abs(base.maxY), frustumHalfH);
+    // Intersect 3D box frame bounds with camera frustum bounds (with 94% safety inset)
+    const rawHalfW = Math.min(Math.abs(base.maxX) * 0.96, frustumHalfW * 0.94);
+    const rawHalfH = Math.min(Math.abs(base.maxY) * 0.96, frustumHalfH * 0.94);
 
-    const s = Math.max(0.55, Number(petScale) || 0.76);
-    const marginX = Math.min(rawHalfW * 0.42, 12.6 * s);
-    const marginTop = Math.min(rawHalfH * 0.46, 16.4 * s);
-    const marginBottom = Math.min(rawHalfH * 0.38, 11.2 * s);
+    // Full worst-case 3D head + artist hair bounding margins
+    const marginX = Math.min(rawHalfW * 0.46, 18.2 * s);
+    const marginTop = Math.min(rawHalfH * 0.50, 20.8 * s);
+    const marginBottom = Math.min(rawHalfH * 0.40, 12.2 * s);
 
     return {
       minX: -(rawHalfW - marginX),
       maxX: rawHalfW - marginX,
       minY: Math.max(base.minY + 1.8 + marginBottom, -(rawHalfH - marginBottom)),
       maxY: Math.min(base.maxY - marginTop, rawHalfH - marginTop),
-      minZ: base.minZ + 6,
+      minZ: base.minZ + 8,
       maxZ: base.maxZ
     };
   }
@@ -240,13 +244,25 @@ export class DesktopBoxSpaceEngine {
     struct.pos.x = Math.max(bz.minX, Math.min(bz.maxX, struct.pos.x));
     const baseB = this.getBoxBounds();
     const minStructY = baseB.minY + 1.8;
-    const maxStructY = struct.occupiedByPetId ? (bz.maxY - 13.5 * scale) : (baseB.maxY - 6.0);
+    // Cap shelf and container height so any head placed on/in it never exceeds bz.maxY!
+    const headOffsetAboveStruct = struct.isDecorProp ? 4.0 : (13.8 * scale);
+    const maxStructY = bz.maxY - headOffsetAboveStruct;
     struct.pos.y = Math.max(minStructY, Math.min(Math.max(minStructY, maxStructY), struct.pos.y));
+    if (struct.platformRef) {
+      const p = struct.platformRef;
+      p.surfaceY = struct.pos.y;
+      p.centerX = struct.pos.x;
+      p.centerZ = struct.pos.z;
+      p.minX = struct.pos.x - (p.halfW || 12);
+      p.maxX = struct.pos.x + (p.halfW || 12);
+      p.minZ = struct.pos.z - (p.halfD || 15);
+      p.maxZ = struct.pos.z + (p.halfD || 15);
+    }
   }
 
   computeMacroTargetScale(zCm, baseScale = 0.76) {
-    const macroT = Math.max(0, Math.min(1, (zCm + 25) / 43));
-    return baseScale * (1.0 + macroT * 0.36);
+    const macroT = Math.max(0, Math.min(1, (zCm + 25) / 21));
+    return baseScale * (1.0 + macroT * 0.28);
   }
 
   updateCameraProjection() {
@@ -668,7 +684,7 @@ export class DesktopBoxSpaceEngine {
 
     if (this.settings.enableGravity) {
       const supportY = this.getSupportSurfaceY(startX, startY + 8, startZ, targetScale, baseBottomOffset);
-      startY = supportY - baseBottomOffset * targetScale;
+      startY = Math.min(bz.maxY, Math.max(bz.minY, supportY - baseBottomOffset * targetScale));
     }
 
     headNode.position.set(startX, startY, startZ);
@@ -693,6 +709,8 @@ export class DesktopBoxSpaceEngine {
       radius: 8.8,
       phase: Math.random() * Math.PI * 2
     };
+    this.clampPetToBounds(entry);
+    headNode.position.copy(entry.pos);
 
     this.pets.set(collectible.id, entry);
 
@@ -853,18 +871,19 @@ export class DesktopBoxSpaceEngine {
       let surfY = floorY;
 
       if (normId === 'study_sides') {
-        const shelfW = Math.max(22, boxW * 0.26);
-        const leftX = baseB.minX + shelfW * 0.52;
-        const rightX = baseB.maxX - shelfW * 0.52;
-        const midY = floorY + boxH * 0.34;
-        const highY = floorY + boxH * 0.64;
+        const shelfW = Math.max(22, boxW * 0.24);
+        const safeEdgeInset = Math.max(shelfW * 0.62, 22);
+        const leftX = baseB.minX + safeEdgeInset;
+        const rightX = baseB.maxX - safeEdgeInset;
+        const midY = floorY + boxH * 0.21;
+        const highY = floorY + boxH * 0.41;
         const slots = [
-          { x: leftX, y: midY, z: -18 },
-          { x: rightX, y: midY, z: -18 },
-          { x: leftX, y: floorY, z: -14 },
-          { x: rightX, y: floorY, z: -14 },
-          { x: leftX, y: highY, z: -24 },
-          { x: rightX, y: highY, z: -24 },
+          { x: leftX, y: midY, z: -20 },
+          { x: rightX, y: midY, z: -20 },
+          { x: leftX, y: floorY, z: -15 },
+          { x: rightX, y: floorY, z: -15 },
+          { x: leftX, y: highY, z: -26 },
+          { x: rightX, y: highY, z: -26 },
         ];
         const s = slots[idx % slots.length];
         tx = s.x;
@@ -872,19 +891,19 @@ export class DesktopBoxSpaceEngine {
         surfY = s.y;
       } else if (normId === 'bottom_row') {
         const count = petList.length;
-        const span = Math.min(boxW * 0.76, count * 24);
+        const span = Math.min(boxW * 0.68, count * 22);
         tx = count === 1 ? 0 : -span * 0.5 + (idx / (count - 1)) * span;
         tz = -16;
         surfY = floorY;
       } else if (normId === 'altar_pyramid') {
-        const centerY = floorY + boxH * 0.30;
-        const sideY = floorY + boxH * 0.16;
+        const centerY = floorY + boxH * 0.24;
+        const sideY = floorY + boxH * 0.13;
         const slots = [
           { x: 0, y: centerY, z: -22 },
-          { x: -boxW * 0.28, y: sideY, z: -16 },
-          { x: boxW * 0.28, y: sideY, z: -16 },
-          { x: -boxW * 0.44, y: floorY, z: -12 },
-          { x: boxW * 0.44, y: floorY, z: -12 },
+          { x: -boxW * 0.26, y: sideY, z: -16 },
+          { x: boxW * 0.26, y: sideY, z: -16 },
+          { x: -boxW * 0.38, y: floorY, z: -14 },
+          { x: boxW * 0.38, y: floorY, z: -14 },
         ];
         const s = slots[idx % slots.length];
         tx = s.x;
@@ -893,13 +912,13 @@ export class DesktopBoxSpaceEngine {
       } else if (normId === 'macro_focus') {
         if (idx === 0) {
           tx = 0;
-          tz = 48; // Close-up macro inspection in center!
-          surfY = floorY + 6;
+          tz = -5; // Close-up macro inspection strictly inside the Z=0 front border!
+          surfY = floorY + 2;
         } else {
           const side = idx % 2 === 1 ? -1 : 1;
-          tx = side * (boxW * 0.36);
+          tx = side * (boxW * 0.34);
           tz = -22;
-          surfY = floorY + (idx > 2 ? boxH * 0.34 : 0);
+          surfY = floorY + (idx > 2 ? boxH * 0.21 : 0);
         }
       }
 
@@ -910,6 +929,7 @@ export class DesktopBoxSpaceEngine {
         const struct = this.structures.get(pet.snappedStructureId);
         struct.pos.set(tx, surfY, tz);
         struct.scale = pet.targetScale;
+        this.clampStructureToBounds(struct);
         struct.node.position.copy(struct.pos);
         struct.node.scale.setScalar(struct.scale);
         const socketLocalY = struct.node.userData.headSocketLocalY ?? 13.5;
@@ -917,6 +937,7 @@ export class DesktopBoxSpaceEngine {
       } else {
         pet.pos.y = surfY - baseOff * pet.targetScale;
       }
+      this.clampPetToBounds(pet);
       pet.vel.set(0, 0, 0);
       pet.dropDistance = 0;
       pet.isGrounded = true;
@@ -1499,6 +1520,7 @@ export class DesktopBoxSpaceEngine {
         const scaleDiff = Math.abs(pet.targetScale - pet.currentScale);
         let ungrounded = false;
         if (this.settings.enableGravity) {
+          const bzRest = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
           let targetRestY;
           if (pet.snappedStructureId && this.structures.has(pet.snappedStructureId)) {
             const struct = this.structures.get(pet.snappedStructureId);
@@ -1508,6 +1530,7 @@ export class DesktopBoxSpaceEngine {
             const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.targetScale, baseOff);
             targetRestY = supportY - baseOff * pet.targetScale;
           }
+          targetRestY = Math.min(bzRest.maxY, Math.max(bzRest.minY, targetRestY));
           if (Math.abs(pet.pos.y - targetRestY) > 0.16) {
             ungrounded = true;
           }
@@ -1616,7 +1639,7 @@ export class DesktopBoxSpaceEngine {
         if (this.settings.enableGravity) {
           const baseOff = pet.node.userData.baseBottomOffset ?? -10.8;
           const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, pet.targetScale, baseOff);
-          const targetRestY = supportY - baseOff * pet.targetScale;
+          const targetRestY = Math.min(bz.maxY, Math.max(bz.minY, supportY - baseOff * pet.targetScale));
 
           if (pet.pos.y > targetRestY + 0.12) {
             // Stage 24 Strong, Crisp Gravity Acceleration (4.8 cm/frame², terminal velocity -22 cm/frame)

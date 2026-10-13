@@ -20,18 +20,18 @@ export const BeautyGradeShader = {
     tDiffuse: { value: null },
     tSourceAlpha: { value: null },
     uResolution: { value: new THREE.Vector2(1280, 720) },
-    uVignette: { value: 0.42 },
-    uSaturation: { value: 0.88 },
-    uContrast: { value: 1.16 },
-    uWarmth: { value: 0.14 },
-    uSharpen: { value: 0.54 },
-    uFilmGrain: { value: 0.24 },
-    uTyndall: { value: 0.82 },
-    uVintagePhoto: { value: 0.76 },
+    uVignette: { value: 0.36 },
+    uSaturation: { value: 0.96 },
+    uContrast: { value: 1.18 },
+    uWarmth: { value: 0.10 },
+    uSharpen: { value: 0.64 },
+    uFilmGrain: { value: 0.16 },
+    uTyndall: { value: 0.75 },
+    uVintagePhoto: { value: 0.42 },
     uTyndallAngle: { value: -0.58 },
-    uTyndallColor: { value: new THREE.Vector3(1.0, 0.91, 0.76) },
-    uTint: { value: new THREE.Vector3(1.02, 0.98, 0.91) },
-    uShadowTint: { value: new THREE.Vector3(0.09, 0.06, 0.05) },
+    uTyndallColor: { value: new THREE.Vector3(1.0, 0.92, 0.80) },
+    uTint: { value: new THREE.Vector3(1.01, 0.99, 0.95) },
+    uShadowTint: { value: new THREE.Vector3(0.05, 0.035, 0.045) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -65,7 +65,7 @@ export const BeautyGradeShader = {
       col = clamp(col, 0.0, 2.0);
       float srcAlpha = texture2D(tSourceAlpha, vUv).r;
 
-      // 1. 5-Tap Micro-Detail Unsharp Mask + Analog Halation Blur Sample
+      // 1. 5-Tap Micro-Detail Unsharp Mask (sharpens real 2K skin pores, eyebrow hairs, eyelashes & iris)
       vec2 texel = 1.0 / max(uResolution, vec2(256.0));
       vec3 n = texture2D(tDiffuse, vUv + vec2(0.0, texel.y)).rgb;
       vec3 s = texture2D(tDiffuse, vUv - vec2(0.0, texel.y)).rgb;
@@ -75,94 +75,72 @@ export const BeautyGradeShader = {
 
       if (uSharpen > 0.001) {
         vec3 detail = clamp(col - blur, -0.25, 0.25);
-        col = clamp(col + detail * (uSharpen * 1.55), 0.0, 2.0);
+        col = clamp(col + detail * (uSharpen * 1.65), 0.0, 2.0);
       }
 
-      // 2. Screen-Space Volumetric Tyndall Light Rays (光线丁达尔感)
-      if (uTyndall > 0.001) {
-        // Directional radial scatter from upper window corner + diagonal Tyndall shafts
-        vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.76, 0.92) : vec2(0.24, 0.92);
-        vec2 delta = (lightOrigin - vUv) * 0.22;
+      // 2. True Screen-Space Radial Crepuscular God-Ray Scatter (NO flat 2D stripes/rectangles!)
+      if (uTyndall > 0.001 && srcAlpha > 0.005) {
+        vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.82, 0.94) : vec2(0.18, 0.94);
+        vec2 delta = (lightOrigin - vUv) * 0.28;
         vec2 sampleUv = vUv;
         float scatter = 0.0;
-        float weight = 0.22;
-        for (int i = 0; i < 6; i++) {
-          sampleUv += delta * 0.16;
-          vec3 sc = texture2D(tDiffuse, clamp(sampleUv, 0.01, 0.99)).rgb;
+        float weight = 0.18;
+        for (int i = 0; i < 8; i++) {
+          sampleUv += delta * 0.125;
+          vec2 clampedUv = clamp(sampleUv, 0.01, 0.99);
+          vec3 sc = texture2D(tDiffuse, clampedUv).rgb;
+          float sa = texture2D(tSourceAlpha, clampedUv).r;
           float lumS = dot(sc, vec3(0.299, 0.587, 0.114));
-          scatter += smoothstep(0.32, 0.92, lumS) * weight;
-          weight *= 0.82;
+          scatter += smoothstep(0.38, 0.95, lumS) * sa * weight;
+          weight *= 0.84;
         }
-
-        // Slanted window-beam Tyndall shafts across screen
-        vec2 p = vUv - vec2(0.54, 0.65);
-        float ca = cos(uTyndallAngle);
-        float sa = sin(uTyndallAngle);
-        vec2 rot = vec2(p.x * ca - p.y * sa, p.x * sa + p.y * ca);
-        float shaftPattern =
-          0.52 * exp(-pow((rot.x + 0.12) * 5.2, 2.0)) +
-          0.44 * exp(-pow((rot.x - 0.05) * 4.2, 2.0)) +
-          0.32 * exp(-pow((rot.x - 0.21) * 6.0, 2.0));
-        float fineBeams = 0.82 + 0.18 * sin(rot.x * 48.0);
-        float heightFalloff = smoothstep(0.05, 0.88, vUv.y);
-        float beamVeil = shaftPattern * fineBeams * heightFalloff;
-
-        // Combine radial light scatter on head highlights + volumetric atmospheric shaft veil
-        vec3 tyndallGlow = uTyndallColor * (scatter * 0.16 * srcAlpha + beamVeil * (0.065 + 0.055 * srcAlpha));
+        vec3 tyndallGlow = uTyndallColor * (scatter * 0.22 * srcAlpha);
         col += tyndallGlow * uTyndall;
-        // Ensure alpha carries the subtle volumetric Tyndall beam in transparent desktop areas
-        srcAlpha = max(srcAlpha, clamp(beamVeil * 0.24 * uTyndall, 0.0, 0.38));
       }
 
       // 3. Color Temperature Warmth Shift
-      col.r += uWarmth * 0.075;
-      col.g += uWarmth * 0.022;
-      col.b -= uWarmth * 0.072;
+      col.r += uWarmth * 0.065;
+      col.g += uWarmth * 0.018;
+      col.b -= uWarmth * 0.062;
       col = max(col, vec3(0.0));
 
-      // 4. Highlight / Midtone Art-Style Tint & Shadow Split-Toning
+      // 4. Highlight / Midtone Art-Style Tint & Deep Chiaroscuro Shadow Split-Toning
       col *= uTint;
       float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.46, lumaPre), 0.0, 1.0);
-      col += uShadowTint * shadowMask * 0.48;
+      float shadowMask = clamp(1.0 - smoothstep(0.0, 0.42, lumaPre), 0.0, 1.0);
+      col += uShadowTint * shadowMask * 0.35;
 
-      // 5. S-Curve Contrast pivoted at 0.18 middle grey
-      col = (col - vec3(0.18)) * uContrast + vec3(0.18);
+      // 5. High-Dynamic S-Curve Contrast pivoted at 0.20 middle grey
+      col = (col - vec3(0.20)) * uContrast + vec3(0.20);
       col = max(col, vec3(0.0));
 
       // 6. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
       col = mix(vec3(luma), col, uSaturation);
 
-      // 7. Poetic Vintage Old-Photograph Film Emulsion (唯美老照片胶片感)
+      // 7. Subtle Analog Film Emulsion & Rim Halation (without muddying skin contrast)
       if (uVintagePhoto > 0.001) {
         float lumV = dot(col, vec3(0.299, 0.587, 0.114));
-        // Warm silver-halide / creamy sepia tone curve
-        vec3 sepia = vec3(lumV * 1.09, lumV * 0.96, lumV * 0.81);
-        vec3 poeticFilm = mix(col, sepia, 0.34);
-        // Lifted nostalgic velvet-cocoa shadows (eliminates harsh digital black)
-        vec3 liftedFloor = vec3(0.048, 0.036, 0.032);
-        poeticFilm = liftedFloor + poeticFilm * (vec3(0.96, 0.94, 0.90) - liftedFloor);
-        // Warm analog lens halation on skin/hair highlights
+        vec3 warmSilver = vec3(lumV * 1.06, lumV * 0.97, lumV * 0.86);
+        vec3 poeticFilm = mix(col, warmSilver, 0.18);
         vec3 wideBlur = 0.5 * (
-          texture2D(tDiffuse, vUv + texel * 3.5).rgb +
-          texture2D(tDiffuse, vUv - texel * 3.5).rgb
+          texture2D(tDiffuse, vUv + texel * 3.0).rgb +
+          texture2D(tDiffuse, vUv - texel * 3.0).rgb
         );
-        float hiMask = smoothstep(0.52, 0.92, dot(wideBlur, vec3(0.299, 0.587, 0.114)));
-        poeticFilm += vec3(0.11, 0.065, 0.035) * hiMask * srcAlpha;
-
+        float hiMask = smoothstep(0.58, 0.95, dot(wideBlur, vec3(0.299, 0.587, 0.114)));
+        poeticFilm += vec3(0.08, 0.048, 0.026) * hiMask * srcAlpha;
         col = mix(col, poeticFilm, clamp(uVintagePhoto, 0.0, 1.0));
       }
 
-      // 8. Analog Silver-Halide Film Grain
-      if (uFilmGrain > 0.001) {
+      // 8. Fine Silver-Halide Film Grain (suppresses plastic digital smoothness on skin)
+      if (uFilmGrain > 0.001 && srcAlpha > 0.01) {
         float noise = fract(sin(dot(vUv * uResolution, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
-        col += noise * uFilmGrain * 0.11;
+        col += noise * uFilmGrain * 0.09 * srcAlpha;
       }
 
-      // 9. Poetic Vintage Oval Vignette (RGB only, preserves alpha)
+      // 9. Subtle Studio Vignette (RGB only, preserves alpha)
       vec2 d = (vUv - vec2(0.5)) * vec2(1.08, 0.96);
-      float v = 1.0 - uVignette * smoothstep(0.16, 0.76, length(d) * 1.38);
+      float v = 1.0 - uVignette * smoothstep(0.20, 0.82, length(d) * 1.32);
       col *= v;
 
       gl_FragColor = vec4(clamp(col, 0.0, 1.0), clamp(srcAlpha, 0.0, 1.0));
