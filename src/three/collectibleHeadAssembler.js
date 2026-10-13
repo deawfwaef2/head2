@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
+import { repairHairNormals } from './hairGeometry.js';
 import { getHairStrandTextures } from '../textures/hairStrandTexture.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 
@@ -503,6 +504,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           child.castShadow = child.receiveShadow = true;
           return; // User-owned atlases/PBR must never be replaced by demo textures.
         }
+        child.userData.normalRepair = repairHairNormals(child.geometry);
         const origMat = child.material;
         let mapTex = origMat?.map || null;
         let roughTex = null;
