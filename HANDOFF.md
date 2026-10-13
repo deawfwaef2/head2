@@ -378,3 +378,5 @@
 - 露头皮根因：表情/脸型 morph 只驱动 HeadSkinMesh 的 GPU morph，发际根层 Groom_ScalpRootDensity 是静态拷贝，额头一动就错位。新增 `syncScalpRootLayerToMorphs()`：每次 applyHeadMorphsToGroup 后用同一组权重 CPU 重算根层顶点（4494点×权重，成本可忽略）；同时 makeRootLayer 发际覆盖下扩（-.026→-.038）。发丝管/发量层为静态发型外形，不随面部 morph（符合真实：表情不动发顶）。
 - 盒空间贴屏：DesktopBoxSpaceEngine 新增 `boxFitScreen:true` 默认开，getBoxBounds 以相机距离×tan(fov/2) 反推前框半宽高，前框(Z=0)四边与屏幕四边重合；设置页新增开关 `chk-box-fit-screen`，关后回落原宽/高滑杆。深度仍由 boxMaxDepthMm 控制。
 - 先行存档：本轮开始前已将工作区 Stage17 合并半成品提交 42d36e5，避免中断丢失。
+
+<!-- 远端同期记录合并保留 -->
