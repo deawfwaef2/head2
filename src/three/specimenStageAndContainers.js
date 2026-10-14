@@ -1302,15 +1302,57 @@ export function buildSpecimenContainerGroup(containerStyle = 'glass_bell_jar') {
     scalpelBlade.position.set(6.1, -12.12, 7.1);
     group.add(scalpelBlade);
 
-    const bloodPadMat = new THREE.MeshPhysicalMaterial({
-      color: '#4c0519',
-      roughness: 0.16,
-      clearcoat: 0.88,
-      clearcoatRoughness: 0.08,
+    const bloodVenousMat = new THREE.MeshPhysicalMaterial({
+      color: '#3b0309',
+      emissive: '#140103',
+      roughness: 0.04,
+      metalness: 0.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.02,
+      ior: 1.49,
+      specularIntensity: 0.96,
     });
-    const bloodPool = new THREE.Mesh(new THREE.CylinderGeometry(8.0, 8.4, 0.48, 64), bloodPadMat);
-    bloodPool.position.set(0, -12.9, -0.5);
-    group.add(bloodPool);
+    const bloodArterialMat = new THREE.MeshPhysicalMaterial({
+      color: '#6e0711',
+      emissive: '#220205',
+      roughness: 0.06,
+      metalness: 0.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.03,
+      ior: 1.48,
+      specularIntensity: 0.92,
+    });
+
+    // Organic irregular multi-lobe 3D coagulating blood puddle + satellite droplets (replaces flat cylinder)
+    const puddleLobes = [
+      [0.0, -0.5, 6.4, 5.8, 0.24, 0.0, false],
+      [-2.6, 1.4, 4.2, 3.3, 0.22, 0.45, true],
+      [2.9, -1.6, 4.5, 3.4, 0.22, -0.38, false],
+      [1.8, 2.2, 3.6, 2.8, 0.20, 0.62, true],
+      [-3.1, -2.1, 3.8, 2.9, 0.20, -0.52, false],
+      [0.4, -3.4, 3.2, 2.5, 0.19, 0.18, true],
+    ];
+    const lobeGeo = new THREE.SphereGeometry(1.0, 28, 16);
+    for (const [lx, lz, rx, rz, ry, rotY, isArt] of puddleLobes) {
+      const lobe = new THREE.Mesh(lobeGeo, isArt ? bloodArterialMat : bloodVenousMat);
+      lobe.position.set(lx, -12.96, lz);
+      lobe.rotation.y = rotY;
+      lobe.scale.set(rx, ry, rz);
+      group.add(lobe);
+    }
+
+    // Satellite arterial splatter droplets & coagulated clots around the tray floor
+    const dropletGeo = new THREE.SphereGeometry(1.0, 14, 10);
+    for (let d = 0; d < 16; d++) {
+      const ang = (d / 16) * Math.PI * 2 + 0.28 * Math.sin(d * 3.1);
+      const dist = 6.2 + (d % 4) * 0.95;
+      const rDrop = 0.28 + (d % 3) * 0.16;
+      const drop = new THREE.Mesh(dropletGeo, d % 2 === 0 ? bloodArterialMat : bloodVenousMat);
+      drop.position.set(Math.cos(ang) * dist * 1.08, -12.98, -0.5 + Math.sin(ang) * dist * 0.86);
+      drop.rotation.y = -ang;
+      drop.scale.set(rDrop * 1.35, rDrop * 0.42, rDrop * 0.95);
+      group.add(drop);
+    }
 
     group.userData.baseBottomOffset = -14.25;
   } else if (containerStyle === 'guillotine_plinth') {

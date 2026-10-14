@@ -1399,6 +1399,24 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           skinCol *= (1.0 - (0.26 * seamAO + 0.20 * cornerAO) * lipMask);
         }
 
+        // 10. Crisp 3D Millimeter-Space Severed Neck Dermal Incision & Micro-Coagulation Rim (Zero Low-Res UV Smudge!)
+        if (p.y < -0.1055) {
+          float angCut = atan(p.z + 0.0128, p.x);
+          float cutWave = 0.00075 * sin(angCut * 9.0 + 0.6)
+                        + 0.00045 * cos(angCut * 19.0 - 1.3)
+                        + 0.00035 * (dermisNoise2D(vec2(angCut * 18.0, p.y * 950.0)) - 0.5);
+          float dyFromCut = max(0.0, (p.y - (-0.1100)) + cutWave);
+          // Razor-sharp 1.2mm coagulated blood rim right at the blade incision plane
+          float clotRim = 1.0 - smoothstep(0.0004, 0.0014, dyFromCut);
+          // 1.0mm arterial capillary seepage fringe immediately above the clot rim
+          float seepFringe = (1.0 - smoothstep(0.0010, 0.0024, dyFromCut)) * (1.0 - clotRim * 0.65);
+          // Subtle post-mortem dermal retraction blanch line just above the incision
+          float blanchLine = exp(-pow((dyFromCut - 0.0025) / 0.0007, 2.0)) * 0.14;
+          skinCol = mix(skinCol, skinCol * vec3(1.05, 0.98, 0.96), blanchLine);
+          skinCol = mix(skinCol, vec3(0.38, 0.018, 0.028), seepFringe * 0.78);
+          skinCol = mix(skinCol, vec3(0.11, 0.005, 0.009), clotRim * 0.92);
+        }
+
         diffuseColor.rgb = skinCol;
       }`
     );

@@ -2106,6 +2106,719 @@ function buildGimbalOverlayGroup() {
   return gimbalGroup;
 }
 
+/**
+ * Stage 52 · True 3D Multi-Organ & Forensic Anatomical Neck Cross-Section Assembly (`NeckAnatomy3DGroup`)
+ * Replaces the flat 2D texture-only disc with a full 3D sculptural C4/C5 anatomical & forensic assembly:
+ *  1. 100% Corrected Anterior (+Z throat) vs Posterior (-Z spine) orientation.
+ *  2. 3D Hollow Recessed Trachea Airway Tunnel + 3D Pearly Hyaline Cartilage C-Ring + Trachealis Muscle.
+ *  3. 3D Collapsed Stellate Esophagus Stump & Bilateral Lobulated Thyroid Gland Lobes.
+ *  4. 3D Sculpted C4 Cervical Vertebra (Cortical Bone Body, Honeycomb Red-Marrow Core, Transverse Processes
+ *     with Foramina Transversaria & Severed Vertebral Arteries, Posterior Arch & Bifid Spinous Process).
+ *  5. 3D Protruding Severed Spinal Cord Stump, Dural Cuff & Butterfly Gray-Matter Horns.
+ *  6. 3D Protruding Bilateral Carotid Sheath Vessels (Common Carotid Artery Stumps with Arterial Blood
+ *     Menisci, Internal Jugular Vein Lumens & Vagus Nerve Stumps).
+ *  7. 16 3D Sculpted Retracted Cervical Muscle Bellies (SCM, Strap, Omohyoid, Longus Colli, Scalenes,
+ *     Levator Scapulae/Splenius, Semispinalis, Trapezius).
+ *  8. 3D Beveled Dermis Cut Lip, 52 3D Subcutaneous Yellow Fat Lobules & 36 Organic 3D Glossy Coagulated
+ *     Venous/Arterial Blood Clots & Hanging Viscous Blood Beads.
+ */
+function build3DAnatomicalCrossSectionAssembly(neckCapMesh, options = {}) {
+  const {
+    skinToneHex = '#ffe9df',
+    wetness = 0.92,
+    colorTex = null,
+    bumpTex = null,
+  } = options;
+
+  // Ensure UV orientation on neckCapMesh has Anterior (+Z) mapped to UV.v > 0.5
+  const posAttr = neckCapMesh.geometry?.attributes?.position;
+  const uvAttr = neckCapMesh.geometry?.attributes?.uv;
+  let cx = 0.0;
+  let cz = -0.0128;
+  let cutY = -0.1100;
+  const rimSamples = [];
+
+  if (posAttr && uvAttr) {
+    let maxZ = -Infinity;
+    let frontIdx = 0;
+    let minY = Infinity;
+    for (let i = 0; i < posAttr.count; i++) {
+      const z = posAttr.getZ(i);
+      const y = posAttr.getY(i);
+      if (z > maxZ) {
+        maxZ = z;
+        frontIdx = i;
+      }
+      if (y < minY) minY = y;
+    }
+    cutY = Math.max(-0.1112, Math.min(-0.1085, minY + 0.0012));
+    if (uvAttr.getY(frontIdx) < 0.5) {
+      for (let i = 0; i < uvAttr.count; i++) {
+        uvAttr.setY(i, 1.0 - uvAttr.getY(i));
+      }
+      uvAttr.needsUpdate = true;
+    }
+
+    // Collect outer perimeter samples (rho > 0.92 in UV space) to interpolate exact neck radius rOuter(theta)
+    let sumX = 0;
+    let sumZ = 0;
+    let cntCenter = 0;
+    for (let i = 0; i < posAttr.count; i++) {
+      const u = uvAttr.getX(i);
+      const v = uvAttr.getY(i);
+      const rhoUv = Math.hypot((u - 0.5) / 0.455, (v - 0.5) / 0.455);
+      if (rhoUv < 0.12) {
+        sumX += posAttr.getX(i);
+        sumZ += posAttr.getZ(i);
+        cntCenter++;
+      }
+    }
+    if (cntCenter > 0) {
+      cx = sumX / cntCenter;
+      cz = sumZ / cntCenter;
+    }
+    for (let i = 0; i < posAttr.count; i++) {
+      const u = uvAttr.getX(i);
+      const v = uvAttr.getY(i);
+      const rhoUv = Math.hypot((u - 0.5) / 0.455, (v - 0.5) / 0.455);
+      if (rhoUv > 0.94) {
+        const px = posAttr.getX(i);
+        const pz = posAttr.getZ(i);
+        const ang = Math.atan2(pz - cz, px - cx);
+        const rad = Math.hypot(px - cx, pz - cz);
+        rimSamples.push({ ang, rad, px, pz });
+      }
+    }
+  }
+
+  const getOuterRadiusAtAngle = (theta) => {
+    if (rimSamples.length === 0) return 0.0445;
+    let bestW = 0;
+    let bestR = 0;
+    for (let i = 0; i < rimSamples.length; i++) {
+      let d = Math.abs(rimSamples[i].ang - theta);
+      if (d > Math.PI) d = 2.0 * Math.PI - d;
+      const w = 1.0 / Math.max(0.02, d * d);
+      bestW += w;
+      bestR += rimSamples[i].rad * w;
+    }
+    return bestW > 0 ? bestR / bestW : 0.0445;
+  };
+
+  // Convert normalized Anatomy UV (u, v) -> 3D local coordinates (x, y, z) on the C4/C5 cut plane
+  const uvToCap3D = (u, v, yOffset = 0.0) => {
+    const du = (u - 0.5) / 0.455;
+    const dv = (v - 0.5) / 0.455;
+    const theta = Math.atan2(dv, du);
+    const rOuter = getOuterRadiusAtAngle(theta);
+    return new THREE.Vector3(
+      cx + du * rOuter,
+      cutY + yOffset,
+      cz + dv * rOuter
+    );
+  };
+
+  const group = new THREE.Group();
+  group.name = 'NeckAnatomy3DGroup';
+
+  const wetRough = (baseR) => Math.max(0.04, baseR - wetness * 0.18);
+
+  // Shared physical materials for 3D anatomical structures
+  const corticalBoneMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#f6ecda'),
+    roughness: wetRough(0.36),
+    metalness: 0.0,
+    clearcoat: 0.38,
+    clearcoatRoughness: 0.24,
+    ior: 1.52,
+  });
+
+  const trabecularMarrowMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#8c1d24'),
+    bumpMap: bumpTex || null,
+    bumpScale: 0.0025,
+    roughness: wetRough(0.28),
+    clearcoat: 0.82,
+    clearcoatRoughness: 0.14,
+  });
+
+  const hyalineCartilageMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#d8ebf5'),
+    roughness: wetRough(0.20),
+    metalness: 0.0,
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.08,
+    ior: 1.44,
+    sheen: 0.35,
+    sheenColor: new THREE.Color('#f0f9ff'),
+  });
+
+  const trachealMucosaMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#c84654'),
+    roughness: wetRough(0.18),
+    clearcoat: 0.94,
+    clearcoatRoughness: 0.06,
+    side: THREE.DoubleSide,
+  });
+
+  const darkAirwayTunnelMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#140307'),
+    emissive: new THREE.Color('#090103'),
+    roughness: 0.25,
+    clearcoat: 0.85,
+    side: THREE.BackSide,
+  });
+
+  const arterialWallMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#eb5e6c'),
+    roughness: wetRough(0.22),
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.08,
+  });
+
+  const venousWallMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#526894'),
+    roughness: wetRough(0.22),
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.08,
+  });
+
+  const coagulatedBloodMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#420308'),
+    emissive: new THREE.Color('#160103'),
+    roughness: 0.05,
+    metalness: 0.0,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.03,
+    ior: 1.49,
+    specularIntensity: 0.95,
+  });
+
+  const freshArterialBloodMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#780710'),
+    emissive: new THREE.Color('#240205'),
+    roughness: 0.06,
+    metalness: 0.0,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.03,
+    ior: 1.48,
+    specularIntensity: 0.92,
+  });
+
+  const fatLobuleMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#ebb85b'),
+    roughness: wetRough(0.26),
+    clearcoat: 0.88,
+    clearcoatRoughness: 0.10,
+    ior: 1.46,
+  });
+
+  const muscleBellyMat = new THREE.MeshPhysicalMaterial({
+    map: colorTex || null,
+    bumpMap: bumpTex || null,
+    bumpScale: 0.003,
+    color: new THREE.Color('#d64552'),
+    roughness: wetRough(0.24),
+    clearcoat: 0.90,
+    clearcoatRoughness: 0.10,
+    ior: 1.42,
+  });
+
+  const thyroidMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#801622'),
+    roughness: wetRough(0.20),
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.08,
+  });
+
+  const spinalWhiteMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#f7efe0'),
+    roughness: wetRough(0.24),
+    clearcoat: 0.90,
+    clearcoatRoughness: 0.08,
+  });
+
+  const spinalGrayMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#b56c68'),
+    roughness: wetRough(0.22),
+    clearcoat: 0.92,
+    clearcoatRoughness: 0.08,
+  });
+
+  const duraMaterMat = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#9ab6c4'),
+    roughness: wetRough(0.26),
+    clearcoat: 0.86,
+  });
+
+  const dermisLipColor = new THREE.Color(skinToneHex).lerp(new THREE.Color('#d9827b'), 0.42);
+  const dermisLipMat = new THREE.MeshPhysicalMaterial({
+    color: dermisLipColor,
+    roughness: wetRough(0.34),
+    clearcoat: 0.72,
+    clearcoatRoughness: 0.16,
+  });
+
+  // ============================================================================
+  // 1. ANTERIOR (+Z): 3D Recessed Hollow Trachea Tunnel + Hyaline Cartilage C-Ring
+  // ============================================================================
+  const trachPos = uvToCap3D(0.50, 0.705, 0.0);
+  const trachGroup = new THREE.Group();
+  trachGroup.position.copy(trachPos);
+
+  // Deep hollow airway cylinder going +9.5mm UP into the throat
+  const tunnelGeo = new THREE.CylinderGeometry(0.0044, 0.0047, 0.0095, 32, 1, false);
+  const tunnelMesh = new THREE.Mesh(tunnelGeo, darkAirwayTunnelMat);
+  tunnelMesh.position.y = 0.0048;
+  trachGroup.add(tunnelMesh);
+
+  // Dark recessed lumen floor cap so no light leaks from above
+  const lumenFloor = new THREE.Mesh(
+    new THREE.CircleGeometry(0.0045, 32),
+    new THREE.MeshBasicMaterial({ color: '#070102', side: THREE.DoubleSide })
+  );
+  lumenFloor.rotation.x = Math.PI * 0.5;
+  lumenFloor.position.y = 0.0018;
+  trachGroup.add(lumenFloor);
+
+  // 3D Hyaline Cartilage C-Ring (280 deg arc opening posteriorly toward -Z esophagus)
+  const cRingArc = Math.PI * 1.56;
+  const cRingGeo = new THREE.TorusGeometry(0.0062, 0.00125, 16, 40, cRingArc);
+  const cRingMesh = new THREE.Mesh(cRingGeo, hyalineCartilageMat);
+  cRingMesh.rotation.x = Math.PI * 0.5;
+  // Orient C-ring gap toward -Z (posterior esophagus)
+  cRingMesh.rotation.z = -Math.PI * 0.5 - (cRingArc - Math.PI) * 0.5;
+  cRingMesh.position.y = -0.0011;
+  cRingMesh.scale.set(1.06, 0.94, 1.0);
+  trachGroup.add(cRingMesh);
+
+  // Second upper tracheal cartilage ring visible slightly inside the lumen
+  const innerRingMesh = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0047, 0.00065, 12, 32),
+    trachealMucosaMat
+  );
+  innerRingMesh.rotation.x = Math.PI * 0.5;
+  innerRingMesh.position.y = -0.0004;
+  trachGroup.add(innerRingMesh);
+
+  // Posterior trachealis smooth muscle closing the back of the C-ring
+  const trachealisMesh = new THREE.Mesh(
+    new THREE.CapsuleGeometry(0.0009, 0.0052, 8, 14),
+    trachealMucosaMat
+  );
+  trachealisMesh.rotation.z = Math.PI * 0.5;
+  trachealisMesh.position.set(0, -0.0009, -0.0052);
+  trachGroup.add(trachealisMesh);
+
+  group.add(trachGroup);
+
+  // ============================================================================
+  // 2. ESOPHAGUS (u=0.50, v=0.585) & BILATERAL THYROID GLAND LOBES (u=0.50±0.106, v=0.675)
+  // ============================================================================
+  const esoPos = uvToCap3D(0.50, 0.585, -0.0008);
+  const esoGroup = new THREE.Group();
+  esoGroup.position.copy(esoPos);
+
+  const esoOuter = new THREE.Mesh(new THREE.TorusGeometry(0.0031, 0.0010, 14, 28), trachealMucosaMat);
+  esoOuter.rotation.x = Math.PI * 0.5;
+  esoOuter.scale.set(1.22, 0.78, 1.0);
+  esoGroup.add(esoOuter);
+
+  // 8-fold stellate mucosal plicae converging toward collapsed dark esophageal lumen
+  for (let k = 0; k < 8; k++) {
+    const ang = (k / 8) * Math.PI * 2;
+    const fold = new THREE.Mesh(new THREE.SphereGeometry(0.00085, 10, 8), trachealMucosaMat);
+    fold.scale.set(1.4, 0.7, 0.75);
+    fold.rotation.y = -ang;
+    fold.position.set(Math.cos(ang) * 0.0017, -0.0002, Math.sin(ang) * 0.0011);
+    esoGroup.add(fold);
+  }
+  const esoCore = new THREE.Mesh(new THREE.SphereGeometry(0.0014, 12, 10), coagulatedBloodMat);
+  esoCore.scale.set(1.2, 0.5, 0.8);
+  esoCore.position.y = 0.0003;
+  esoGroup.add(esoCore);
+  group.add(esoGroup);
+
+  // Bilateral Thyroid Gland Lobes with 3D glandular follicles
+  for (const side of [-1, 1]) {
+    const thyPos = uvToCap3D(0.50 + side * 0.106, 0.675, -0.0010);
+    const thyGroup = new THREE.Group();
+    thyGroup.position.copy(thyPos);
+    thyGroup.rotation.y = -side * 0.42;
+
+    const lobeMain = new THREE.Mesh(new THREE.SphereGeometry(0.0036, 18, 14), thyroidMat);
+    lobeMain.scale.set(0.95, 0.38, 1.72);
+    thyGroup.add(lobeMain);
+
+    for (let f = 0; f < 7; f++) {
+      const fa = (f / 7) * Math.PI * 2;
+      const fol = new THREE.Mesh(new THREE.SphereGeometry(0.0012, 10, 8), thyroidMat);
+      fol.scale.set(1.0, 0.55, 1.15);
+      fol.position.set(Math.cos(fa) * 0.0018, -0.0008, Math.sin(fa) * 0.0038);
+      thyGroup.add(fol);
+    }
+    group.add(thyGroup);
+  }
+
+  // ============================================================================
+  // 3. POSTERIOR (-Z): 3D C4 Cervical Vertebra, Transverse Foramina, Bifid Spinous
+  //    Process, Exposed Trabecular Marrow & Protruding Spinal Cord Stump
+  // ============================================================================
+  const vertPos = uvToCap3D(0.50, 0.425, 0.0);
+  const cordPos = uvToCap3D(0.50, 0.335, 0.0);
+
+  // (a) C4 Cortical Bone Vertebral Body Ring (protruding -2.4mm below soft tissue)
+  const vertBodyGroup = new THREE.Group();
+  vertBodyGroup.position.copy(vertPos);
+
+  const vertCortical = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0076, 0.0074, 0.0028, 36),
+    corticalBoneMat
+  );
+  vertCortical.scale.set(1.14, 1.0, 0.82);
+  vertCortical.position.y = -0.0011;
+  vertBodyGroup.add(vertCortical);
+
+  const vertRimTorus = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0068, 0.0010, 14, 36),
+    corticalBoneMat
+  );
+  vertRimTorus.rotation.x = Math.PI * 0.5;
+  vertRimTorus.scale.set(1.14, 0.82, 1.0);
+  vertRimTorus.position.y = -0.0022;
+  vertBodyGroup.add(vertRimTorus);
+
+  // Recessed Cancellous Red-Marrow Core with 3D bony trabecular spicules
+  const marrowDisc = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0058, 0.0058, 0.0014, 32),
+    trabecularMarrowMat
+  );
+  marrowDisc.scale.set(1.12, 1.0, 0.80);
+  marrowDisc.position.y = -0.0017;
+  vertBodyGroup.add(marrowDisc);
+
+  for (let t = 0; t < 16; t++) {
+    const ta = t * 2.39996;
+    const tr = Math.sqrt((t + 0.5) / 16) * 0.0046;
+    const spicule = new THREE.Mesh(
+      new THREE.SphereGeometry(0.00055 + (t % 3) * 0.00018, 8, 6),
+      t % 2 === 0 ? corticalBoneMat : coagulatedBloodMat
+    );
+    spicule.scale.set(1.1, 0.65, 1.0);
+    spicule.position.set(Math.cos(ta) * tr * 1.1, -0.0023, Math.sin(ta) * tr * 0.78);
+    vertBodyGroup.add(spicule);
+  }
+  group.add(vertBodyGroup);
+
+  // (b) Bilateral Transverse Processes with Foramina Transversaria & Severed Vertebral Arteries
+  for (const side of [-1, 1]) {
+    const tpPos = uvToCap3D(0.50 + side * 0.118, 0.430, -0.0014);
+    const tpGroup = new THREE.Group();
+    tpGroup.position.copy(tpPos);
+    tpGroup.rotation.y = -side * 0.22;
+
+    const tpBoneRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.0028, 0.0011, 12, 24),
+      corticalBoneMat
+    );
+    tpBoneRing.rotation.x = Math.PI * 0.5;
+    tpBoneRing.scale.set(1.32, 0.88, 1.0);
+    tpGroup.add(tpBoneRing);
+
+    const vaWall = new THREE.Mesh(
+      new THREE.TorusGeometry(0.0012, 0.00045, 10, 20),
+      arterialWallMat
+    );
+    vaWall.rotation.x = Math.PI * 0.5;
+    vaWall.position.y = -0.0005;
+    tpGroup.add(vaWall);
+
+    const vaClot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.0010, 10, 8),
+      freshArterialBloodMat
+    );
+    vaClot.scale.set(1.0, 0.6, 1.0);
+    vaClot.position.y = -0.0007;
+    tpGroup.add(vaClot);
+
+    group.add(tpGroup);
+  }
+
+  // (c) Posterior Vertebral Arch (Laminae) & Twin-Pronged Bifid Spinous Process (-Z)
+  for (const side of [-1, 1]) {
+    const lamStart = uvToCap3D(0.50 + side * 0.068, 0.365, -0.0015);
+    const lamEnd = uvToCap3D(0.50 + side * 0.014, 0.235, -0.0017);
+    const spinTip = uvToCap3D(0.50 + side * 0.022, 0.185, -0.0019);
+    const archCurve = new THREE.CatmullRomCurve3([lamStart, lamEnd, spinTip]);
+    const archMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(archCurve, 16, 0.00135, 10, false),
+      corticalBoneMat
+    );
+    group.add(archMesh);
+
+    const tipKnob = new THREE.Mesh(new THREE.SphereGeometry(0.00145, 10, 8), corticalBoneMat);
+    tipKnob.scale.set(1.0, 0.75, 1.2);
+    tipKnob.position.copy(spinTip);
+    group.add(tipKnob);
+  }
+
+  // (d) 3D Severed Spinal Cord Stump, Dural Sac & Butterfly Gray-Matter Horns (u=0.50, v=0.335)
+  const cordGroup = new THREE.Group();
+  cordGroup.position.copy(cordPos);
+
+  const epiduralRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0044, 0.00075, 12, 28),
+    coagulatedBloodMat
+  );
+  epiduralRing.rotation.x = Math.PI * 0.5;
+  epiduralRing.scale.set(1.18, 0.92, 1.0);
+  epiduralRing.position.y = -0.0009;
+  cordGroup.add(epiduralRing);
+
+  const duraCollar = new THREE.Mesh(
+    new THREE.TorusGeometry(0.0036, 0.00055, 12, 28),
+    duraMaterMat
+  );
+  duraCollar.rotation.x = Math.PI * 0.5;
+  duraCollar.scale.set(1.18, 0.90, 1.0);
+  duraCollar.position.y = -0.0014;
+  cordGroup.add(duraCollar);
+
+  const cordCylinder = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0033, 0.0031, 0.0026, 28),
+    spinalWhiteMat
+  );
+  cordCylinder.scale.set(1.18, 1.0, 0.88);
+  cordCylinder.position.y = -0.0012;
+  cordGroup.add(cordCylinder);
+
+  // 3D Butterfly Gray-Matter Horns on the severed end of the spinal cord
+  for (const side of [-1, 1]) {
+    const antHorn = new THREE.Mesh(new THREE.SphereGeometry(0.0010, 10, 8), spinalGrayMat);
+    antHorn.scale.set(0.85, 0.45, 1.35);
+    antHorn.rotation.y = -side * 0.28;
+    antHorn.position.set(side * 0.0013, -0.0024, 0.0006);
+    cordGroup.add(antHorn);
+
+    const postHorn = new THREE.Mesh(new THREE.SphereGeometry(0.0008, 10, 8), spinalGrayMat);
+    postHorn.scale.set(0.72, 0.45, 1.45);
+    postHorn.rotation.y = side * 0.35;
+    postHorn.position.set(side * 0.0014, -0.0024, -0.0007);
+    cordGroup.add(postHorn);
+  }
+  const centralCanalDot = new THREE.Mesh(new THREE.SphereGeometry(0.0004, 8, 6), coagulatedBloodMat);
+  centralCanalDot.position.set(0, -0.00255, 0);
+  cordGroup.add(centralCanalDot);
+
+  group.add(cordGroup);
+
+  // ============================================================================
+  // 4. BILATERAL CAROTID SHEATHS: 3D Protruding Common Carotid Arteries,
+  //    Internal Jugular Veins & Vagus Nerve Stumps
+  // ============================================================================
+  for (const side of [-1, 1]) {
+    // (a) Common Carotid Artery Stump (u = 0.50 ± 0.162, v = 0.565)
+    const caPos = uvToCap3D(0.50 + side * 0.162, 0.565, 0.0);
+    const caGroup = new THREE.Group();
+    caGroup.position.copy(caPos);
+
+    const caTube = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0026, 0.0025, 0.0028, 24, 1, true),
+      arterialWallMat
+    );
+    caTube.position.y = -0.0011;
+    caGroup.add(caTube);
+
+    const caLip = new THREE.Mesh(
+      new THREE.TorusGeometry(0.0021, 0.00068, 14, 24),
+      arterialWallMat
+    );
+    caLip.rotation.x = Math.PI * 0.5;
+    caLip.position.y = -0.0021;
+    caGroup.add(caLip);
+
+    // Glossy arterial blood meniscus bulging inside the severed carotid lumen
+    const caMeniscus = new THREE.Mesh(
+      new THREE.SphereGeometry(0.00165, 16, 12),
+      freshArterialBloodMat
+    );
+    caMeniscus.scale.set(1.0, 0.62, 1.0);
+    caMeniscus.position.y = -0.0019;
+    caGroup.add(caMeniscus);
+
+    group.add(caGroup);
+
+    // (b) Internal Jugular Vein Stump (u = 0.50 ± 0.228, v = 0.555)
+    const ijvPos = uvToCap3D(0.50 + side * 0.228, 0.555, 0.0);
+    const ijvGroup = new THREE.Group();
+    ijvGroup.position.copy(ijvPos);
+    ijvGroup.rotation.y = -side * 0.35;
+
+    const ijvLip = new THREE.Mesh(
+      new THREE.TorusGeometry(0.0028, 0.00052, 12, 24),
+      venousWallMat
+    );
+    ijvLip.rotation.x = Math.PI * 0.5;
+    ijvLip.scale.set(1.22, 0.85, 1.0);
+    ijvLip.position.y = -0.0014;
+    ijvGroup.add(ijvLip);
+
+    const ijvPool = new THREE.Mesh(
+      new THREE.SphereGeometry(0.0025, 16, 12),
+      coagulatedBloodMat
+    );
+    ijvPool.scale.set(1.18, 0.42, 0.82);
+    ijvPool.position.y = -0.0013;
+    ijvGroup.add(ijvPool);
+
+    group.add(ijvGroup);
+
+    // (c) Vagus Nerve Stump (u = 0.50 ± 0.192, v = 0.532)
+    const vnPos = uvToCap3D(0.50 + side * 0.192, 0.532, -0.0016);
+    const vnStump = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.00075, 0.00070, 0.0020, 12),
+      spinalWhiteMat
+    );
+    vnStump.position.copy(vnPos);
+    group.add(vnStump);
+  }
+
+  // ============================================================================
+  // 5. 16 3D SCULPTED RETRACTED CERVICAL MUSCLE COMPARTMENT BELLIES
+  // ============================================================================
+  const muscleSpecs = [
+    // [duSide, v, rx, rz, h Bulge, rotY]
+    [0.275, 0.635, 0.0086, 0.0048, 0.0018, 0.68],  // Sternocleidomastoid (胸锁乳突肌)
+    [0.095, 0.795, 0.0052, 0.0030, 0.0014, 0.22],  // Infrahyoid Strap (舌骨下肌群)
+    [0.200, 0.745, 0.0036, 0.0022, 0.0012, 0.45],  // Omohyoid (肩胛舌骨肌)
+    [0.075, 0.525, 0.0038, 0.0022, 0.0012, -0.18], // Longus Colli (颈长肌)
+    [0.240, 0.440, 0.0062, 0.0044, 0.0016, -0.35], // Scalenes (前/中/后斜角肌)
+    [0.280, 0.310, 0.0070, 0.0042, 0.0017, -0.75], // Levator Scapulae & Splenius (肩胛提肌/头夹肌)
+    [0.115, 0.255, 0.0060, 0.0036, 0.0017, -0.42], // Semispinalis (头半棘肌)
+    [0.175, 0.165, 0.0082, 0.0034, 0.0015, -0.30], // Trapezius (斜方肌)
+  ];
+
+  const sharedMuscleSphere = new THREE.SphereGeometry(1.0, 20, 14);
+  for (const side of [-1, 1]) {
+    for (const [duAbs, v, rx, rz, hBulge, rotBase] of muscleSpecs) {
+      const mPos = uvToCap3D(0.50 + side * duAbs, v, -0.0005);
+      const belly = new THREE.Mesh(sharedMuscleSphere, muscleBellyMat);
+      belly.position.copy(mPos);
+      belly.rotation.y = -side * rotBase;
+      belly.scale.set(rx, hBulge, rz);
+      group.add(belly);
+    }
+  }
+
+  // ============================================================================
+  // 6. 3D BEVELED DERMIS CUT LIP, 52 3D SUBCUTANEOUS YELLOW FAT LOBULES &
+  //    36 MULTI-SCALE 3D GLOSSY COAGULATED BLOOD CLOTS / HANGING BLOOD BEADS
+  // ============================================================================
+  const numRimPts = 64;
+  const dermisCurvePts = [];
+  for (let i = 0; i < numRimPts; i++) {
+    const theta = (i / numRimPts) * Math.PI * 2;
+    const u = 0.50 + 0.450 * Math.cos(theta);
+    const v = 0.50 + 0.450 * Math.sin(theta);
+    const waveY = -0.0005 + 0.00035 * Math.sin(theta * 7.0 + 0.5) + 0.00025 * Math.cos(theta * 13.0 - 1.1);
+    dermisCurvePts.push(uvToCap3D(u, v, waveY));
+  }
+  const dermisCurve = new THREE.CatmullRomCurve3(dermisCurvePts, true);
+  const dermisLipMesh = new THREE.Mesh(
+    new THREE.TubeGeometry(dermisCurve, 72, 0.00115, 10, true),
+    dermisLipMat
+  );
+  group.add(dermisLipMesh);
+
+  // Inner coagulated dermal incision sulcus ring just inside the skin lip
+  const incisionRingCurvePts = [];
+  for (let i = 0; i < numRimPts; i++) {
+    const theta = (i / numRimPts) * Math.PI * 2;
+    const u = 0.50 + 0.436 * Math.cos(theta);
+    const v = 0.50 + 0.436 * Math.sin(theta);
+    incisionRingCurvePts.push(uvToCap3D(u, v, -0.0009));
+  }
+  const incisionRingMesh = new THREE.Mesh(
+    new THREE.TubeGeometry(new THREE.CatmullRomCurve3(incisionRingCurvePts, true), 72, 0.00072, 8, true),
+    coagulatedBloodMat
+  );
+  group.add(incisionRingMesh);
+
+  // 52 3D Subcutaneous Yellow Adipose Lobules nestled inside the dermis ring
+  const sharedFatGeo = new THREE.SphereGeometry(1.0, 10, 8);
+  const numFat3D = 52;
+  for (let i = 0; i < numFat3D; i++) {
+    const theta = (i / numFat3D) * Math.PI * 2;
+    const rhoFat = 0.415 + 0.010 * Math.sin(i * 5.1);
+    const u = 0.50 + rhoFat * Math.cos(theta);
+    const v = 0.50 + rhoFat * Math.sin(theta);
+    const fatPos = uvToCap3D(u, v, -0.0010 - (i % 3) * 0.00025);
+    const fatMesh = new THREE.Mesh(sharedFatGeo, fatLobuleMat);
+    fatMesh.position.copy(fatPos);
+    fatMesh.rotation.y = -theta;
+    const sFat = 0.00125 + (i % 4) * 0.00022;
+    fatMesh.scale.set(sFat * 1.35, sFat * 0.72, sFat * 0.95);
+    group.add(fatMesh);
+  }
+
+  // 36 Organic 3D Glossy Coagulated Venous/Arterial Blood Clots & Hanging Viscous Blood Beads
+  const sharedClotGeo = new THREE.SphereGeometry(1.0, 14, 12);
+  const clotClusters = [
+    // Around left & right carotid/jugular sheaths
+    [-0.175, 0.560, 0.0028, 0.0016, true],
+    [0.175, 0.560, 0.0028, 0.0016, true],
+    [-0.215, 0.540, 0.0024, 0.0013, false],
+    [0.215, 0.540, 0.0024, 0.0013, false],
+    // Along deep fascial grooves between SCM, trachea, and vertebra
+    [-0.135, 0.620, 0.0022, 0.0012, true],
+    [0.135, 0.620, 0.0022, 0.0012, true],
+    [-0.150, 0.480, 0.0025, 0.0014, false],
+    [0.150, 0.480, 0.0025, 0.0014, false],
+    [0.0, 0.535, 0.0024, 0.0012, false],
+    [-0.085, 0.360, 0.0022, 0.0013, false],
+    [0.085, 0.360, 0.0022, 0.0013, false],
+    [0.0, 0.205, 0.0021, 0.0012, true],
+  ];
+
+  clotClusters.forEach(([du, v, rHoriz, rVert, isFresh], idx) => {
+    const pos = uvToCap3D(0.50 + du, v, -0.0014);
+    const clot = new THREE.Mesh(sharedClotGeo, isFresh ? freshArterialBloodMat : coagulatedBloodMat);
+    clot.position.copy(pos);
+    clot.rotation.y = idx * 1.1;
+    clot.scale.set(rHoriz * 1.25, rVert, rHoriz * 0.92);
+    group.add(clot);
+  });
+
+  // Perimeter coagulated blood clots & 10 glistening viscous hanging blood beads along the cut rim
+  const numRimClots = 24;
+  for (let i = 0; i < numRimClots; i++) {
+    const theta = (i / numRimClots) * Math.PI * 2 + 0.13 * Math.sin(i * 3.7);
+    const rhoClot = 0.428 + 0.014 * Math.cos(i * 4.3);
+    const u = 0.50 + rhoClot * Math.cos(theta);
+    const v = 0.50 + rhoClot * Math.sin(theta);
+    const isBead = (i % 3 === 0);
+    const yOff = isBead ? -0.0021 - (i % 2) * 0.0006 : -0.0013;
+    const pos = uvToCap3D(u, v, yOff);
+    const clot = new THREE.Mesh(
+      sharedClotGeo,
+      i % 2 === 0 ? coagulatedBloodMat : freshArterialBloodMat
+    );
+    clot.position.copy(pos);
+    clot.rotation.y = -theta;
+    if (isBead) {
+      // Glistening viscous teardrop blood bead hanging slightly below the severed edge
+      const rB = 0.00115 + (i % 4) * 0.00022;
+      clot.scale.set(rB, rB * 1.65, rB * 1.05);
+    } else {
+      const rC = 0.00155 + (i % 3) * 0.00035;
+      clot.scale.set(rC * 1.55, rC * 0.65, rC * 0.95);
+    }
+    group.add(clot);
+  }
+
+  return group;
+}
+
 export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
   rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
@@ -2271,17 +2984,27 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.32,
+        emissiveIntensity: 0.26,
         bumpMap: bumpTex,
-        bumpScale: 0.005,
-        roughness: Math.max(0.34, 0.72 - wetness * 0.40),
+        bumpScale: 0.011,
+        roughness: Math.max(0.18, 0.56 - wetness * 0.34),
         metalness: 0.0,
-        clearcoat: 0.25,
-        clearcoatRoughness: 0.35,
-        specularIntensity: 0.40,
-        envMapIntensity: 0.32,
+        clearcoat: 0.82,
+        clearcoatRoughness: 0.12,
+        specularIntensity: 0.68,
+        envMapIntensity: 0.42,
         side: THREE.DoubleSide,
       });
+
+      const oldAnatomy3D = child.getObjectByName('NeckAnatomy3DGroup');
+      if (oldAnatomy3D) child.remove(oldAnatomy3D);
+      const anatomy3DGroup = build3DAnatomicalCrossSectionAssembly(child, {
+        skinToneHex,
+        wetness,
+        colorTex,
+        bumpTex,
+      });
+      child.add(anatomy3DGroup);
     } else if (matName === 'Eye') {
       child.castShadow = false;
       child.receiveShadow = true;

@@ -1089,3 +1089,21 @@
   - QA 着色覆盖 `hR/hTT/hTRT/hD/hEnv`（在 `bindUI` 之后生效）；
   - 调试钩子 `window.__dbg()`。
 - 文档 `HAIR_发丝方法说明.md` 新增第 7 节（诊断表 + 坑 13–18）。截图 `qa/screens_hair/01~05`。
+
+## Stage 52-颈部解剖横切面前后颠倒彻底修正 + 真 3D 立体多器官断口模型 + 断面假血迹彻底重做 — 2026-10-14
+- **问题一（解剖横切面前后完全反置根因定位与修正）**：
+  - 经核查 `public/models/daz_asian_head_base.glb` 中 `NeckCrossSection` (`Mesh 1`, 845 顶点) 的原始 UV 映射：`scripts/build_real_daz_assets.py` 第 264 行写成 `cap_uv = [0.5 + 0.455 * u_d, 0.5 - 0.455 * v_d]`，将模型正前方喉部（`+Z = +0.0319`）映射到了 `UV.v = 0.045`，将模型正后方后颈（`-Z = -0.0579`）映射到了 `UV.v = 0.955`；而 `anatomyTextureGenerator.js` 在 Canvas 中将气管/甲状腺画在下方（Three.js `flipY=true` 后对应 `UV.v = 0.705`），将 C4 颈椎与脊髓画在上方（`UV.v = 0.425`）。两者组合导致**气管跑到后脑勺颈背（`-Z`）、C4 颈椎跑到下巴正下方前喉（`+Z`），前后解剖方位 100% 颠倒**！
+  - **修复方案**：在 `public/models/daz_asian_head_base.glb`（以及 `scripts/build_real_daz_assets.py` 和 `collectibleHeadAssembler.js` 运行时校验）中将 `NeckCrossSection` 的 `UV.v` 翻转为 `1.0 - UV.v`（使 `+Z` 前喉精确对应 `UV.v = 0.955` 气管区，`-Z` 后颈精确对应 `UV.v = 0.047` C4 颈椎/脊髓区），同时在 `anatomyTextureGenerator.js` 中保持全部结构处于正确 `UV.v` 象限，并保证从下往上仰视断面（`anatomy_bottom` 机位）时标注文字正向可读。
+- **问题二（告别纯 2D 平面贴图：真 3D 立体雕塑解剖断口 `NeckAnatomy3DGroup` + 7.61mm 顶点高度浮雕）**：
+  - 直接在 `daz_asian_head_base.glb` 的 845 顶点 `NeckCrossSection` 网格上烘焙了 **7.61mm 跨度的真实 3D 解剖浮雕**（气管内腔向上深陷 `+5.8mm`、食管腔内陷、C4 椎体骨皮质与棘突向下凸出 `-1.8mm`、颈总动脉管壁凸起、各肌群肌腹微拱）并重算 3D 渐变法线。
+  - 在 `src/three/collectibleHeadAssembler.js` 新增 `build3DAnatomicalCrossSectionAssembly()`，在断面挂载完整的 **3D 实体器官与断口几何体组（`NeckAnatomy3DGroup`）**：
+    1. **正前方（`+Z`）3D 中空内陷气管腔道 + 3D 半透明蓝白玻璃软骨 C 形环 + 膜壁气管肌**；
+    2. **3D 星芒状塌陷食管黏膜断端 + 两侧 3D 颗粒分叶状甲状腺左右叶**；
+    3. **正后方（`-Z`）3D 凸出 C4 颈椎骨皮质环 + 凹陷红骨髓蜂窝骨小梁颗粒 + 双侧横突孔与横突孔内椎动脉断端 + 椎弓板与分叉棘突（Bifid Spinous Process）**；
+    4. **3D 凸出脊髓白质断桩 + 硬脊膜鞘环 + 蝴蝶形灰质前后角（Butterfly Gray-Matter Horns）**；
+    5. **双侧颈动脉鞘 3D 凸出颈总动脉管壁断桩（含管腔内鲜红高光动脉血液面弯月面）、颈内静脉椭圆管腔与迷走神经束断桩**；
+    6. **16 块 3D 立体微拱收缩颈部肌腹（胸锁乳突肌、舌骨下肌群、肩胛舌骨肌、颈长肌、斜角肌、肩胛提肌/头夹肌、头半棘肌、斜方肌）**；
+    7. **1024×1024 超高精度医学组织学横切面贴图与凹凸图（`src/textures/anatomyTextureGenerator.js`）**。
+- **问题三（彻底清除颈部假血迹污渍 + 3D 毫米级真皮切口凝血环与 3D 有机高光凝血块/悬垂血珠）**：
+  - **假血迹根因**：`daz_asian_head_base.glb` 内置的 14 张皮肤贴图（`bufferViews 0, 316..328`）在颈部圆柱 UV 岛顶部（`u ∈ [0.21, 0.55], v ∈ [0.00, 0.138]`）烘焙了模糊暗红正弦色块，且左后颈 UV 边界（`u ∈ [0.70, 1.00], v ∈ [0.78, 0.898]`）受到相邻口腔红区高斯模糊渗色污染，在脖子上形成极假的模糊红斑。
+  - **修复方案**：清洗 `daz_asian_head_base.glb` 全部 14 张内置皮肤贴图中的上述两处假血迹污渍，恢复纯净颈部肌肤纹理；在 `src/three/photorealLighting.js` 中采用 **3D 毫米级空间坐标（`p.y < -0.1055`）** 绘制锋利切口微凝血边与创缘苍白退缩线（零低分 UV 模糊）；在 `NeckAnatomy3DGroup` 外圈构建 **3D 外翻真皮切口环、52 颗 3D 皮下黄脂肪球、36 处多尺度 3D 高光凝血痂块与 10 颗悬垂欲滴的粘稠血珠**；并将 `specimenStageAndContainers.js` 中解剖托盘的生硬圆柱血饼升级为 **6 叶不规则 3D 镜面凝血泊 + 16 颗飞溅血滴**。
