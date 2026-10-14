@@ -27,12 +27,14 @@ export const STRAND_DEFAULTS = {
   tipAlpha: 0.1,
   clumpWidth: 0.0062,
   clumpThickness: 0.0034,
-  clump: [0.35, 0.85],
+  clump: [0.25, 0.65],
   frizz: 0.00028,
-  flyawayRatio: 0.015,
+  strayRatio: 0.022,
+  subClumps: 4,
+  fuzzPerGuide: 1.6,
   scalpMargin: 0.0013,
-  widthWorld: 0.00008,
-  minPixelWidth: 0.62,
+  widthWorld: 0.00007,
+  minPixelWidth: 0.8,
   seed: 1337,
 };
 
@@ -195,7 +197,7 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
   for (let t = 0; t < n; t++) { acc += area[t] * (tAlpha[t] > 0.35 ? tAlpha[t] : 0); cdf[t] = acc; }
   const pickTri = () => { const r = rnd() * acc; let lo = 0, hi = n - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cdf[m] < r) lo = m + 1; else hi = m; } return lo; };
 
-  const occ = new Map(); const occCell = 0.0035;
+  const occ = new Map(); const occCell = o.occCell || 0.0028;
   const occKey = (x, y, z) => `${Math.floor(x / occCell)},${Math.floor(y / occCell)},${Math.floor(z / occCell)}`;
 
   function traceDir(sx, sy, sz, sign, isTipward) {
@@ -227,7 +229,7 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 
   const guides = [];
   let attempts = 0;
-  while (guides.length < o.guides && attempts < o.guides * 6) {
+  while (guides.length < o.guides && attempts < o.guides * 10) {
     attempts++;
     const t = pickTri();
     let a = rnd(), b = rnd(); if (a + b > 1) { a = 1 - a; b = 1 - b; }
@@ -281,24 +283,50 @@ function resample(pts, L) {
 }
 
 function buildChildren(guides, hc, o, rnd) {
-  // 体积 AO：方位分箱外轮廓半径
-  const AZ = 64, EL = 32; const rmax = new Float32Array(AZ * EL);
-  const bin = (x, y, z) => { const dx = x - hc[0], dy = y - hc[1], dz = z - hc[2]; const r = Math.hypot(dx, dy, dz) || 1e-6; const az = Math.atan2(dz, dx); const el = Math.asin(Math.max(-1, Math.min(1, dy / r))); const a = Math.min(AZ - 1, Math.floor((az + Math.PI) / (2 * Math.PI) * AZ)); const e = Math.min(EL - 1, Math.floor((el + Math.PI / 2) / Math.PI * EL)); return [e * AZ + a, r]; };
-  for (const g of guides) for (const p of g.p) { const [b, r] = bin(p[0], p[1], p[2]); if (r > rmax[b]) rmax[b] = r; }
-  // 平滑一下分箱
-  const rm2 = new Float32Array(rmax.length);
-  for (let e = 0; e < EL; e++) for (let a = 0; a < AZ; a++) { let m = 0; for (let de = -1; de <= 1; de++) for (let da = -1; da <= 1; da++) { const ee = Math.min(EL - 1, Math.max(0, e + de)); const aa = (a + da + AZ) % AZ; m = Math.max(m, rmax[ee * AZ + aa]); } rm2[e * AZ + a] = m; }
+  // ---- 体积 AO：发丝密度体素 + 沿“离开头部”方向的射线累积（简化版 Deep Opacity）----
+  // 旧做法“方位分箱求外轮廓半径”在马尾/盘发上失效：脑后马尾把整个方位的外轮廓推得很远，侧面头发被误判为“很深”而全黑。
+  const VX = 0.004;
+  let mnx = 1e9, mny = 1e9, mnz = 1e9, mxx = -1e9, mxy = -1e9, mxz = -1e9;
+  for (const g of guides) for (const p of g.p) { mnx = Math.min(mnx, p[0]); mny = Math.min(mny, p[1]); mnz = Math.min(mnz, p[2]); mxx = Math.max(mxx, p[0]); mxy = Math.max(mxy, p[1]); mxz = Math.max(mxz, p[2]); }
+  mnx -= 0.03; mny -= 0.03; mnz -= 0.03; mxx += 0.03; mxy += 0.03; mxz += 0.03;
+  const GX = Math.ceil((mxx - mnx) / VX), GY = Math.ceil((mxy - mny) / VX), GZ = Math.ceil((mxz - mnz) / VX);
+  const dens = new Float32Array(GX * GY * GZ);
+  const vidx = (x, y, z) => { const i = Math.floor((x - mnx) / VX), j = Math.floor((y - mny) / VX), k = Math.floor((z - mnz) / VX); return (i < 0 || j < 0 || k < 0 || i >= GX || j >= GY || k >= GZ) ? -1 : (k * GY + j) * GX + i; };
+  // 引导发按弧长每 2mm 沉积一次（权重 = 一缕的发量）
+  for (const g of guides) for (let i = 1; i < g.p.length; i++) {
+    const A = g.p[i - 1], B = g.p[i]; const seg = Math.hypot(B[0] - A[0], B[1] - A[1], B[2] - A[2]); const n = Math.max(1, Math.ceil(seg / 0.002));
+    for (let k = 0; k < n; k++) { const f = (k + 0.5) / n; const id = vidx(A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f); if (id >= 0) dens[id] += 1; }
+  }
+  const aoAt = (px, py, pz) => {
+    let dx = px - hc[0], dy = py - hc[1], dz = pz - hc[2]; const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
+    let acc = 0;
+    for (let st = 1; st <= 7; st++) { const d = 0.0025 + st * 0.003; const id = vidx(px + dx * d, py + dy * d, pz + dz * d); if (id >= 0) acc += dens[id]; }
+    return 0.16 + 0.84 * Math.exp(-acc * 0.055);
+  };
 
-  const C = o.childrenPerGuide;
-  let totalPts = 0; for (const g of guides) totalPts += g.p.length * C;
-  const pos = new Float32Array(totalPts * 3 * 2), tan = new Float32Array(totalPts * 3 * 2);
-  const side = new Float32Array(totalPts * 2), tt = new Float32Array(totalPts * 2), rr = new Float32Array(totalPts * 2), ao = new Float32Array(totalPts * 2);
-  const index = new Uint32Array((totalPts - guides.length * C) * 6);
-  let vp = 0, ip = 0;
+  // ---- 容量预估：子发 C×N + 绒毛碎发（固定 FUZZ_N 点）----
+  const C = o.childrenPerGuide, FUZZ_N = 9;
+  const fuzzPer = o.fuzzPerGuide;
+  let cap = 0; for (const g of guides) cap += g.p.length * C + Math.ceil(fuzzPer + 1) * FUZZ_N;
+  const pos = new Float32Array(cap * 6), tan = new Float32Array(cap * 6);
+  const side = new Float32Array(cap * 2), tt = new Float32Array(cap * 2), rr = new Float32Array(cap * 2), ao = new Float32Array(cap * 2), ww = new Float32Array(cap * 2);
+  const index = new Uint32Array(cap * 6);
+  let vp = 0, ip = 0, strandCount = 0, fuzzCount = 0, strayCount = 0;
+
+  const emit = (px, py, pz, t, sr, occl, wmul, last, base, i) => {
+    for (let sd = 0; sd < 2; sd++) {
+      const v = vp + sd;
+      pos[v * 3] = px; pos[v * 3 + 1] = py; pos[v * 3 + 2] = pz;
+      side[v] = sd ? 1 : -1; tt[v] = t; rr[v] = sr; ao[v] = occl; ww[v] = wmul;
+    }
+    if (!last) { const a0 = base + i * 2; index[ip++] = a0; index[ip++] = a0 + 1; index[ip++] = a0 + 2; index[ip++] = a0 + 1; index[ip++] = a0 + 3; index[ip++] = a0 + 2; }
+    vp += 2;
+  };
+
   const Tn = [], Nn = [], Bn = [];
   for (const g of guides) {
     const N = g.p.length;
-    // 平行移动标架
+    // 平行移动标架（Frenet 在直线段会翻转，不能用）
     for (let i = 0; i < N; i++) {
       const a = g.p[Math.max(0, i - 1)], b = g.p[Math.min(N - 1, i + 1)];
       let t = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; const l = Math.hypot(...t) || 1; t = t.map((v) => v / l); Tn[i] = t;
@@ -308,70 +336,98 @@ function buildChildren(guides, hc, o, rnd) {
       const nl = Math.hypot(...nrm) || 1; nrm = nrm.map((v) => v / nl); Nn[i] = nrm;
       Bn[i] = [t[1] * nrm[2] - t[2] * nrm[1], t[2] * nrm[0] - t[0] * nrm[2], t[0] * nrm[1] - t[1] * nrm[0]];
     }
+    // 沿引导发取样（s 可超出 1：沿末端切线外推，用于飞发/长短不齐）
+    const frameAt = (s01) => {
+      const s = s01 * (N - 1);
+      if (s >= N - 1) { const ex = (s - (N - 1)) * (g.L / (N - 1)); const P = g.p[N - 1], T = Tn[N - 1]; return [[P[0] + T[0] * ex, P[1] + T[1] * ex, P[2] + T[2] * ex], T, Nn[N - 1], Bn[N - 1]]; }
+      const i0 = Math.max(0, Math.min(N - 2, Math.floor(s))); const f = s - i0;
+      const L3 = (A, B) => [A[i0][0] + (B[i0 + 1][0] - A[i0][0]) * f, A[i0][1] + (B[i0 + 1][1] - A[i0][1]) * f, A[i0][2] + (B[i0 + 1][2] - A[i0][2]) * f];
+      return [L3(g.p, g.p), L3(Tn, Tn), L3(Nn, Nn), L3(Bn, Bn)];
+    };
+    // 两级成缕：每根引导发内部再分 subClumps 个小缕，小缕中心在椭圆截面内
+    const SC = o.subClumps; const sub = [];
+    for (let k = 0; k < SC; k++) sub.push([(rnd() * 1.2 - 0.2) * o.clumpThickness * 0.8, (rnd() * 2 - 1) * o.clumpWidth * 0.8, 0.55 + rnd() * 0.4]);
     for (let c = 0; c < C; c++) {
-      // 椭圆截面内的偏移：沿发片宽、垂直发片薄；略偏外侧（不钻进头皮）
       let oa = (rnd() * 1.25 - 0.25) * o.clumpThickness, ob = (rnd() * 2 - 1) * o.clumpWidth;
-      if (c === 0) { oa = 0; ob = 0; }
-      const clump = o.clump[0] + rnd() * (o.clump[1] - o.clump[0]);
-      const tEnd = 0.8 + rnd() * 0.2;
-      const fr = o.frizz * (0.5 + rnd()); const fk = 2 + rnd() * 5; const fph = rnd() * 6.283;
-      const fly = rnd() < o.flyawayRatio ? (0.0015 + rnd() * 0.0055) : 0; const flyB = (rnd() * 2 - 1);
-      const strandRand = rnd();
+      const sc = sub[c % SC];
+      const clumpMain = o.clump[0] + rnd() * (o.clump[1] - o.clump[0]);
+      const loose = rnd() < 0.12; // 12% 的发丝不跟随成缕（缕与缕之间的“散发”）
+      const stray = rnd() < o.strayRatio; // 飞发：中途离开发束，弧形翘出
+      // 发梢长短不齐：幂分布，大多数接近全长，少数明显更短 → 发片原本整齐的“剪切边”被打散
+      const tEnd = stray ? 0.8 + rnd() * 0.22 : 1 - Math.pow(rnd(), 1.6) * 0.38;
+      const fr = o.frizz * (0.5 + rnd()) * (rnd() < 0.08 ? 3.5 : 1); const fk = 2 + rnd() * 5; const fph = rnd() * 6.283;
+      const strayT0 = 0.25 + rnd() * 0.5, strayAmp = 0.003 + rnd() * 0.009, strayB = rnd() * 2 - 1, strayCurl = (rnd() * 2 - 1) * 0.009;
+      const sr = rnd();
+      const wmul = stray ? 0.55 : (0.75 + rnd() * 0.5);
       const base = vp;
       for (let i = 0; i < N; i++) {
         const t = i / (N - 1);
-        // 沿引导发参数 s = t * tEnd 插值
-        const s = t * tEnd * (N - 1); const i0 = Math.min(N - 2, Math.floor(s)); const f = s - i0;
-        const P0 = g.p[i0], P1 = g.p[i0 + 1];
-        const lerp3 = (A, B) => [A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f];
-        const gp = lerp3(P0, P1), gT = lerp3(Tn[i0], Tn[i0 + 1]), gN = lerp3(Nn[i0], Nn[i0 + 1]), gB = lerp3(Bn[i0], Bn[i0 + 1]);
-        const k = 1 - clump * Math.pow(t, 1.4);
+        const [gp, gT, gN, gB] = frameAt(t * tEnd);
+        // 子发向小缕收拢、小缕向引导发收拢（越到发梢越紧）
+        const tp = Math.pow(t, 1.3);
+        const kSub = loose ? 0.1 * tp : sc[2] * tp * 0.8;
+        const kMain = clumpMain * tp * 0.6;
+        let a = oa + (sc[0] - oa) * kSub, b = ob + (sc[1] - ob) * kSub;
+        a *= (1 - kMain); b *= (1 - kMain);
         const wave = Math.sin(fph + t * fk * 6.283) * fr * (0.3 + t);
         const wave2 = Math.cos(fph * 1.7 + t * fk * 4.1) * fr * (0.3 + t);
-        const flyN = fly * Math.pow(t, 2.2), flyL = fly * 0.6 * flyB * Math.pow(t, 2.0);
-        const px = gp[0] + gN[0] * (oa * k + wave + flyN) + gB[0] * (ob * k + wave2 + flyL);
-        const py = gp[1] + gN[1] * (oa * k + wave + flyN) + gB[1] * (ob * k + wave2 + flyL);
-        const pz = gp[2] + gN[2] * (oa * k + wave + flyN) + gB[2] * (ob * k + wave2 + flyL);
-        const [bb, r] = bin(px, py, pz);
-        const depth = Math.max(0, rm2[bb] - r);
-        const occl = 0.28 + 0.72 * Math.exp(-depth / 0.0065);
-        for (let sd = 0; sd < 2; sd++) {
-          const v = vp + sd;
-          pos[v * 3] = px; pos[v * 3 + 1] = py; pos[v * 3 + 2] = pz;
-          tan[v * 3] = gT[0]; tan[v * 3 + 1] = gT[1]; tan[v * 3 + 2] = gT[2];
-          side[v] = sd ? 1 : -1; tt[v] = t; rr[v] = strandRand; ao[v] = occl;
-        }
-        if (i < N - 1) { const a0 = base + i * 2; index[ip++] = a0; index[ip++] = a0 + 1; index[ip++] = a0 + 2; index[ip++] = a0 + 1; index[ip++] = a0 + 3; index[ip++] = a0 + 2; }
-        vp += 2;
+        let flyN = 0, flyL = 0;
+        if (stray && t > strayT0) { const u = (t - strayT0) / (1 - strayT0); flyN = strayAmp * u * u; flyL = strayAmp * 0.7 * strayB * u * u + strayCurl * Math.sin(u * 3.0); }
+        const dn = a + wave + flyN, db = b + wave2 + flyL;
+        const px = gp[0] + gN[0] * dn + gB[0] * db, py = gp[1] + gN[1] * dn + gB[1] * db, pz = gp[2] + gN[2] * dn + gB[2] * db;
+        emit(px, py, pz, t, sr, aoAt(px, py, pz) * (loose ? 1.0 : 0.92 + 0.08 * (1 - kSub)), wmul, i === N - 1, base, i);
       }
+      strandCount++; if (stray) strayCount++;
+    }
+    // 绒毛碎发：沿发束表面贴着长出的短细发，起点随机，卷曲、离开表面，带来轮廓上的“毛茸茸”光晕和发际线的柔边
+    const nf = Math.floor(fuzzPer) + (rnd() < fuzzPer % 1 ? 1 : 0);
+    for (let f = 0; f < nf; f++) {
+      const s0 = rnd() * 0.7, len = 0.006 + rnd() * 0.018;
+      const ds = len / Math.max(g.L, 1e-4);
+      const oa = (rnd() * 1.1) * o.clumpThickness, ob = (rnd() * 2 - 1) * o.clumpWidth * 1.1;
+      const lift = 0.0015 + rnd() * 0.004, curl = (rnd() * 2 - 1) * 0.004, ph = rnd() * 6.28, sr = rnd();
+      const base = vp;
+      for (let i = 0; i < FUZZ_N; i++) {
+        const u = i / (FUZZ_N - 1);
+        const [gp, , gN, gB] = frameAt(Math.min(1, s0 + ds * u));
+        const dn = oa + lift * u * u + Math.sin(ph + u * 5) * 0.0004;
+        const db = ob + curl * u * u + Math.cos(ph + u * 4) * 0.0005;
+        const px = gp[0] + gN[0] * dn + gB[0] * db, py = gp[1] + gN[1] * dn + gB[1] * db, pz = gp[2] + gN[2] * dn + gB[2] * db;
+        emit(px, py, pz, 0.35 + 0.65 * u, sr, aoAt(px, py, pz), 0.45, i === FUZZ_N - 1, base, i);
+      }
+      fuzzCount++;
     }
   }
-  // 修正：用实际位置重算切线（子发经过偏移后切线略有变化）
+  // 用实际位置重算切线（同一根发丝内相邻点：t 递增）
   for (let v = 0; v < vp; v += 2) {
     const tcur = tt[v];
-    const prev = (tcur > 0) ? v - 2 : v, next = (v + 2 < vp && tt[v + 2] > tcur) ? v + 2 : v;
+    const hasPrev = v >= 2 && tt[v - 2] < tcur, hasNext = v + 2 < vp && tt[v + 2] > tcur;
+    const prev = hasPrev ? v - 2 : v, next = hasNext ? v + 2 : v;
     let dx = pos[next * 3] - pos[prev * 3], dy = pos[next * 3 + 1] - pos[prev * 3 + 1], dz = pos[next * 3 + 2] - pos[prev * 3 + 2];
     const l = Math.hypot(dx, dy, dz); if (l < 1e-9) continue; dx /= l; dy /= l; dz /= l;
     for (let s = 0; s < 2; s++) { tan[(v + s) * 3] = dx; tan[(v + s) * 3 + 1] = dy; tan[(v + s) * 3 + 2] = dz; }
   }
   const geom = new THREE.BufferGeometry();
-  geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geom.setAttribute('aTan', new THREE.BufferAttribute(tan, 3));
-  geom.setAttribute('aSide', new THREE.BufferAttribute(side, 1));
-  geom.setAttribute('aT', new THREE.BufferAttribute(tt, 1));
-  geom.setAttribute('aRand', new THREE.BufferAttribute(rr, 1));
-  geom.setAttribute('aAO', new THREE.BufferAttribute(ao, 1));
+  geom.setAttribute('position', new THREE.BufferAttribute(pos.subarray(0, vp * 3), 3));
+  geom.setAttribute('aTan', new THREE.BufferAttribute(tan.subarray(0, vp * 3), 3));
+  geom.setAttribute('aSide', new THREE.BufferAttribute(side.subarray(0, vp), 1));
+  geom.setAttribute('aT', new THREE.BufferAttribute(tt.subarray(0, vp), 1));
+  geom.setAttribute('aRand', new THREE.BufferAttribute(rr.subarray(0, vp), 1));
+  geom.setAttribute('aAO', new THREE.BufferAttribute(ao.subarray(0, vp), 1));
+  geom.setAttribute('aW', new THREE.BufferAttribute(ww.subarray(0, vp), 1));
   geom.setIndex(new THREE.BufferAttribute(index.subarray(0, ip), 1));
   geom.computeBoundingSphere();
   geom.boundingSphere.radius += 0.02;
-  return { geometry: geom, strandCount: guides.length * C, vertexCount: vp };
+  const aoS = Array.from(ao.subarray(0, vp).filter((_, i) => i % 50 === 0)).sort((x, y) => x - y);
+  const aoStats = [0.1, 0.5, 0.9].map((q) => +aoS[Math.floor(q * (aoS.length - 1))].toFixed(3));
+  return { aoStats, geometry: geom, strandCount: strandCount + fuzzCount, mainStrands: strandCount, fuzz: fuzzCount, strays: strayCount, vertexCount: vp };
 }
 
 // ---------------- 发丝着色器（Marschner 三瓣近似 + Kajiya 漫反射） ----------------
 export const STRAND_SHADING_DEFAULTS = {
-  color: [0.032, 0.023, 0.019],
-  gainR: 1.9, gainTT: 1.0, gainTRT: 2.4, gainDiffuse: 1.0,
-  alphaR: -0.07, betaR: 0.13,
+  color: [0.024, 0.017, 0.014],
+  gainR: 1.15, gainTT: 1.0, gainTRT: 1.8, gainDiffuse: 1.0,
+  alphaR: -0.07, betaR: 0.085,
   colorVariation: 0.32,
   tipLighten: 0.18,
 };
@@ -380,7 +436,7 @@ export function createStrandMaterial(headCenter, opts = {}) {
   const o = { ...STRAND_SHADING_DEFAULTS, ...opts };
   const mat = new THREE.MeshStandardMaterial({
     name: 'PhotorealStrandHair', color: new THREE.Color(...o.color), roughness: 0.6, metalness: 0,
-    side: THREE.DoubleSide, envMapIntensity: 0.18,
+    side: THREE.DoubleSide, envMapIntensity: 0.18, alphaToCoverage: true,
   });
   const u = {
     uHeadCenter: { value: new THREE.Vector3(...headCenter) },
@@ -389,26 +445,32 @@ export function createStrandMaterial(headCenter, opts = {}) {
     uPxScale: { value: 0.0003 },
     uGainR: { value: o.gainR }, uGainTT: { value: o.gainTT }, uGainTRT: { value: o.gainTRT }, uGainD: { value: o.gainDiffuse },
     uAlphaR: { value: o.alphaR }, uBetaR: { value: o.betaR },
-    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten },
+    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.6 }, uMinAlpha: { value: 0.82 },
   };
   mat.userData.strandUniforms = u;
   mat.onBeforeCompile = (s) => {
     Object.assign(s.uniforms, u);
     s.vertexShader = s.vertexShader
       .replace('#include <common>', `#include <common>
-        attribute vec3 aTan; attribute float aSide; attribute float aT; attribute float aRand; attribute float aAO;
+        attribute vec3 aTan; attribute float aSide; attribute float aT; attribute float aRand; attribute float aAO; attribute float aW;
         uniform vec3 uHeadCenter; uniform float uWidth, uMinPx, uPxScale;
-        varying vec3 vHT; varying float vT, vRand, vAO;`)
+        varying vec3 vHT; varying float vT, vRand, vAO, vCov, vW;`)
       .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = normalize(position - uHeadCenter);')
       .replace('#include <project_vertex>', `
         vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
         vec3 tV = normalize(mat3(modelViewMatrix) * aTan);
-        vHT = tV; vT = aT; vRand = aRand; vAO = aAO;
+        vHT = tV; vT = aT; vRand = aRand; vAO = aAO; vW = aW;
         vec3 vd = normalize(-mvPosition.xyz);
         vec3 sd = cross(tV, vd); float sl = length(sd); sd = sl > 1e-4 ? sd / sl : vec3(1.0, 0.0, 0.0);
         float px = uPxScale * max(-mvPosition.z, 0.01);
-        float rootTaper = mix(0.45, 1.0, smoothstep(0.0, 0.12, aT));
-        float w = max(uWidth * (1.0 - 0.7 * aT * aT), uMinPx * px * (1.0 - 0.45 * aT * aT)) * rootTaper;        mvPosition.xyz += sd * aSide * 0.5 * w;
+        // 细线覆盖率抗锯齿（phone-wire AA）：真实发径 0.07mm 远小于 1 像素，
+        // 画成 >= uMinPx 像素宽、再用 alpha = 真实宽/绘制宽 交给 alpha-to-coverage，避免“毛线粗”或断成虚线
+        float rootTaper = mix(0.5, 1.0, smoothstep(0.0, 0.1, aT));
+        float tipTaper = 1.0 - 0.8 * smoothstep(0.55, 1.0, aT);
+        float trueW = uWidth * aW * rootTaper * tipTaper;
+        float drawW = max(trueW, uMinPx * px);
+        vCov = clamp(trueW / drawW, 0.0, 1.0);
+        mvPosition.xyz += sd * aSide * 0.5 * drawW;
         gl_Position = projectionMatrix * mvPosition;`);
     const lights = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
       /void RE_Direct_Physical\([\s\S]*?\n}\n/,
@@ -421,7 +483,9 @@ export function createStrandMaterial(headCenter, opts = {}) {
         vec3 Lp = L - T * sI, Vp = V - T * sR;
         float cosPhi = clamp(dot(Lp, Vp) * inversesqrt(max(dot(Lp, Lp) * dot(Vp, Vp), 1e-6)), -1.0, 1.0);
         float cosHalfPhi = sqrt(clamp(0.5 + 0.5 * cosPhi, 0.0, 1.0));
-        float bR = uBetaR * (0.8 + 0.4 * fract(vRand * 7.31)), aR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.09;
+        float bR = uBetaR * (0.8 + 0.4 * fract(vRand * 7.31));
+        // 每根发丝表皮鳞片倾角不同 + 沿发长的微小起伏 → 高光碎成一条条闪丝，而不是一整片灰光
+        float aR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.12 + sin(vT * 23.0 + vRand * 61.0) * 0.035;
         float MR = hairGauss(thH - aR, bR);
         float MTT = hairGauss(thH + aR * 0.5, bR * 0.5);
         float MTRT = hairGauss(thH + aR * 1.5, bR * 2.0);
@@ -430,19 +494,20 @@ export function createStrandMaterial(headCenter, opts = {}) {
         vec3 Tabs = pow(max(gHairBase, vec3(1e-4)), vec3(0.5 / cosD));
         vec3 NTT = (1.0 - f) * (1.0 - f) * Tabs * exp(-3.65 * cosPhi - 3.98);
         vec3 NTRT = (1.0 - f) * (1.0 - f) * f * Tabs * Tabs * exp(17.0 * cosPhi - 16.78);
-        float sv = 0.55 + 0.9 * fract(vRand * 3.97);
+        float sv = 0.25 + 1.5 * fract(vRand * 3.97);
         vec3 spec = sv * vec3(MR * NR * uGainR) + MTT * NTT * uGainTT + MTRT * NTRT * uGainTRT;
         float kd = sqrt(max(0.0, 1.0 - sI * sI));
         float vol = clamp((dot(N, L) + 0.6) / 1.6, 0.0, 1.0);
         vec3 diff = BRDF_Lambert(material.diffuseColor) * kd * mix(0.18, 1.0, vol) * uGainD;
         reflectedLight.directDiffuse += directLight.color * diff;
-        reflectedLight.directSpecular += directLight.color * spec * mix(0.45, 1.0, gHairAO) * mix(0.35, 1.0, vol);
+        reflectedLight.directSpecular += directLight.color * spec * gHairAO * gHairAO * mix(0.35, 1.0, vol);
       }
 `);
     s.fragmentShader = s.fragmentShader
       .replace('#include <common>', `#include <common>
         uniform float uGainR, uGainTT, uGainTRT, uGainD, uAlphaR, uBetaR, uColorVar, uTipLighten;
-        varying vec3 vHT; varying float vT, vRand, vAO;
+        varying vec3 vHT; varying float vT, vRand, vAO, vCov, vW;
+        uniform float uCovGain, uMinAlpha;
         vec3 gHairT = vec3(0.0, 1.0, 0.0); vec3 gHairBase = vec3(0.03); float gHairAO = 1.0;
         float hairGauss(float x, float b) { return exp(-x * x / (2.0 * b * b)) / (2.5066283 * b); }`)
       .replace('#include <lights_physical_pars_fragment>', lights)
@@ -450,12 +515,19 @@ export function createStrandMaterial(headCenter, opts = {}) {
         diffuseColor.rgb *= (1.0 - uColorVar * 0.5 + uColorVar * vRand) * (1.0 + uTipLighten * vT * vT);
         gHairBase = diffuseColor.rgb;
         gHairAO = vAO;
-        diffuseColor.rgb *= vAO;`)
+        diffuseColor.rgb *= vAO;
+        // 覆盖率 + 随机抖动（MSAA 只有 4 个样本，alpha < 1/8 会直接消失；抖动让期望值正确）
+        float hcov = fract(sin(dot(gl_FragCoord.xy + vRand * 97.0, vec2(12.9898, 78.233))) * 43758.5453);
+        // 发量主体基本不透明（真实头发是几十层叠在一起的），只有发梢、飞发、绒毛才半透明
+        float aBody = max(vCov * uCovGain, uMinAlpha);
+        float tipFade = 1.0 - 0.7 * smoothstep(0.7, 1.0, vT);
+        float thin = vW < 0.6 ? 0.55 : 1.0;
+        diffuseColor.a = clamp(aBody * tipFade * thin + (hcov - 0.5) * 0.12, 0.0, 1.0);`)
       .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
         normal = normalize(vNormal);
         gHairT = normalize(vHT);`);
   };
-  mat.customProgramCacheKey = () => 'photoreal-strand-hair-v1';
+  mat.customProgramCacheKey = () => 'photoreal-strand-hair-v2';
   return mat;
 }
 
@@ -467,4 +539,17 @@ export function setStrandParams(mat, p) {
   if (p.gainTRT != null) u.uGainTRT.value = p.gainTRT;
   if (p.minPx != null) u.uMinPx.value = p.minPx;
   if (p.pxScale != null) u.uPxScale.value = p.pxScale;
+  if (p.covGain != null) u.uCovGain.value = p.covGain;
+}
+
+/** 发片每个顶点到头皮的距离（用于发丝模式下只保留贴头皮的发片底衬）。超出搜索范围记为 1。 */
+export function scalpDistanceAttribute(geom, matrix, headSoup) {
+  const head = new TriGrid(headSoup.P, 0.01);
+  const q = { t: -1, d2: 0, x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
+  const pos = geom.attributes.position; const out = new Float32Array(pos.count); const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).applyMatrix4(matrix);
+    out[i] = head.closest(v.x, v.y, v.z, q, 2) ? Math.sqrt(q.d2) : 1;
+  }
+  geom.setAttribute('aScalpD', new THREE.BufferAttribute(out, 1));
 }

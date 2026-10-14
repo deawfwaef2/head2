@@ -18,11 +18,11 @@ for (const c of cases) {
   await page.route('http*://**', (r) => r.abort());
   const t0 = Date.now();
   await page.goto(html + '?qa=1&' + c);
-  await page.waitForFunction(() => window.__READY__ || window.__ERROR__, null, { timeout: 240000 });
+  await page.waitForFunction(() => window.__READY__ || window.__ERROR__, null, { timeout: 900000 });
   if (process.env.IMPORT) {
     await page.setInputFiles('#fileImport', process.env.IMPORT.split(','));
     await page.waitForTimeout(500);
-    await page.waitForFunction(() => window.__READY__, null, { timeout: 240000 });
+    await page.waitForFunction(() => window.__READY__, null, { timeout: 900000 });
   }
   await page.evaluate(() => document.body.classList.add('hidepanel'));
   await page.waitForTimeout(+(process.env.WAIT || 300));

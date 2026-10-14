@@ -116,10 +116,12 @@ export const HAIR_DEFAULTS = {
 
 const HAIR_VERT_DECL = /* glsl */ `
 uniform vec3 uHeadCenter; uniform vec3 uCrown; uniform float uInset;
+attribute float aScalpD; varying float vScalpD;
 varying vec3 vHairFlow; varying vec3 vHairRadial; varying float vHairDepth;
 `;
 const HAIR_VERT_MAIN = /* glsl */ `
 transformed -= normalize(transformed - uHeadCenter) * uInset;
+vScalpD = aScalpD;
 {
   vec3 p = transformed;
   vec3 flow = normalize(p - uCrown);
@@ -130,7 +132,8 @@ transformed -= normalize(transformed - uHeadCenter) * uInset;
 }
 `;
 const HAIR_FRAG_DECL = /* glsl */ `
-uniform float uTexInfluence, uSpec1, uSpec1Exp, uSpec2, uSpec2Exp, uShift2, uNormalBlend, uScalpRadius;
+uniform float uTexInfluence, uSpec1, uSpec1Exp, uSpec2, uSpec2Exp, uShift2, uNormalBlend, uScalpRadius, uScalpFade;
+varying float vScalpD;
 varying vec3 vHairFlow; varying vec3 vHairRadial; varying float vHairDepth;
 vec3 gHairT = vec3(0.0, 1.0, 0.0);
 vec3 gHairTint = vec3(1.0);
@@ -148,6 +151,7 @@ function patchHairShader(s, o, tipsPass, shared) {
     uScalpRadius: { value: o.scalpRadius },
   });
   s.uniforms.uInset = shared.uInset;
+  s.uniforms.uScalpFade = shared.uScalpFade;
   s.vertexShader = s.vertexShader
     .replace('#include <common>', '#include <common>\n' + HAIR_VERT_DECL)
     .replace('#include <project_vertex>', HAIR_VERT_MAIN + '#include <project_vertex>');
@@ -197,6 +201,14 @@ function patchHairShader(s, o, tipsPass, shared) {
          gHairT = normalize(f - normal * dot(f, normal));
        }`,
     );
+  // 发丝模式：发片底衬只保留贴近头皮的部分（距头皮 > uScalpFade 的发片抖动剔除），外层与发梢只剩真发丝 → 透光、不成“一坨”
+  s.fragmentShader = s.fragmentShader.replace(
+    '#include <alphatest_fragment>',
+    `#include <alphatest_fragment>
+     if (uScalpFade > 0.0) {
+       if (vScalpD > uScalpFade) discard;
+     }`,
+  );
   if (tipsPass) {
     s.fragmentShader = s.fragmentShader.replace(
       '#include <alphatest_fragment>',
@@ -223,13 +235,13 @@ export function buildHairMaterials(src, opts = {}) {
     envMapIntensity: 0.3,
   };
   if (base.map) { base.map.colorSpace = THREE.SRGBColorSpace; base.map.anisotropy = 8; }
-  const shared = { uInset: { value: o.inset } };
+  const shared = { uInset: { value: o.inset }, uScalpFade: { value: 0 } };
   const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.45 });
   core.onBeforeCompile = (s) => patchHairShader(s, o, false, shared);
-  core.customProgramCacheKey = () => 'photoreal-hair-core-v2';
+  core.customProgramCacheKey = () => 'photoreal-hair-core-v3';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
   tips.onBeforeCompile = (s) => patchHairShader(s, o, true, shared);
-  tips.customProgramCacheKey = () => 'photoreal-hair-tips-v2';
+  tips.customProgramCacheKey = () => 'photoreal-hair-tips-v3';
   return { core, tips, shared };
 }
 

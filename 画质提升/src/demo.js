@@ -9,7 +9,7 @@ import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHair
 import { createPostChain } from './postChain.js';
 import { createDisplayStand } from './displayStand.js';
 import { HEAD_GLB, HAIRS } from './assets.gen.js';
-import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture } from './strandHair.js';
+import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture, scalpDistanceAttribute } from './strandHair.js';
 
 const qs = new URLSearchParams(location.search);
 const QA = qs.has('qa');
@@ -26,17 +26,17 @@ const state = {
 };
 
 const HAIR_COLORS = {
-  natural: { label: '自然黑棕', rgb: [0.032, 0.023, 0.019] },
+  natural: { label: '自然黑棕', rgb: [0.025, 0.018, 0.015] },
   black: { label: '乌黑', rgb: [0.016, 0.013, 0.012] },
   brown: { label: '栗棕', rgb: [0.085, 0.045, 0.028] },
   tea: { label: '奶茶棕', rgb: [0.2, 0.12, 0.075] },
 };
 
 const DENSITY = {
-  low: { label: '流畅（约 1.2 万根）', guides: 1200, childrenPerGuide: 10 },
-  mid: { label: '标准（约 3 万根）', guides: 2200, childrenPerGuide: 14 },
-  high: { label: '高精（约 6 万根）', guides: 3000, childrenPerGuide: 20 },
-  ultra: { label: '极致（约 10 万根，需好显卡）', guides: 4000, childrenPerGuide: 25 },
+  low: { label: '流畅（约 2 万根）', guides: 1500, childrenPerGuide: 10, fuzzPerGuide: 1.0 },
+  mid: { label: '标准（约 5 万根）', guides: 2600, childrenPerGuide: 17, fuzzPerGuide: 1.6 },
+  high: { label: '高精（约 9 万根）', guides: 3200, childrenPerGuide: 26, fuzzPerGuide: 2.2 },
+  ultra: { label: '极致（约 15 万根，需独显）', guides: 3800, childrenPerGuide: 38, fuzzPerGuide: 3.0 },
 };
 const strandCache = new Map();
 let strandMesh = null; let strandMat = null; let hairCards = null;
@@ -46,6 +46,7 @@ const VIEWS = {
   threequarter: { pos: [-0.62, 0.05, 0.85], target: [0, 0.008, 0.01], fov: 15 },
   profile: { pos: [-1.05, 0.02, 0.06], target: [0, 0.005, 0], fov: 15 },
   closeup: { pos: [-0.1, 0.03, 0.52], target: [0, 0.018, 0.05], fov: 13 },
+  hairdetail: { pos: [-0.62, 0.1, 0.85], target: [-0.025, 0.02, 0.0], fov: 8.5 },
   stand: { pos: [0.55, 0.12, 1.25], target: [0, -0.06, 0], fov: 22 },
 };
 
@@ -186,6 +187,14 @@ async function loadHair(id) {
   if (state.hairMode === 'strand') await buildStrands();
 }
 
+// QA 用：URL 覆盖发丝着色增益（必须在面板滑杆初始化之后调用，否则会被滑杆初值覆盖）
+function applyStrandQsOverrides() {
+  if (!strandMat) return;
+  for (const [k, q] of [['gainR', 'hR'], ['gainTT', 'hTT'], ['gainTRT', 'hTRT']]) if (qs.get(q) != null) setStrandParams(strandMat, { [k]: +qs.get(q) });
+  if (qs.get('hD') != null) strandMat.userData.strandUniforms.uGainD.value = +qs.get('hD');
+  if (qs.get('hEnv') != null) strandMat.envMapIntensity = +qs.get('hEnv');
+}
+
 async function buildStrands() {
   if (!hairCards) return;
   const key = hairCards.id + '|' + state.density;
@@ -198,13 +207,15 @@ async function buildStrands() {
     const headSoup = morphedHeadSoup(parts.skin);
     hairCards.srcMesh.updateWorldMatrix(true, false);
     res = generateStrands(hairCards.geom, hairCards.srcMesh.matrixWorld, alphaAt, headSoup, DENSITY[state.density]);
+    if (!hairCards.geom.attributes.aScalpD) scalpDistanceAttribute(hairCards.geom, hairCards.srcMesh.matrixWorld, headSoup);
     strandCache.set(key, res);
     console.log('[strands]', hairCards.id, state.density, res.guides, 'guides', res.strandCount, 'strands', res.vertexCount, 'verts', res.ms);
-    window.__STRAND_STATS__ = { id: hairCards.id, guides: res.guides, strands: res.strandCount, verts: res.vertexCount, ms: res.ms };
+    window.__STRAND_STATS__ = { id: hairCards.id, guides: res.guides, strands: res.strandCount, main: res.mainStrands, fuzz: res.fuzz, strays: res.strays, verts: res.vertexCount, ms: res.ms, ao: res.aoStats };
   }
   if (!strandMat) strandMat = createStrandMaterial(res.headCenter);
   strandMat.userData.strandUniforms.uHeadCenter.value.set(...res.headCenter);
   setStrandParams(strandMat, { color: HAIR_COLORS[state.hairColor].rgb });
+
   if (strandMesh) strandMesh.parent?.remove(strandMesh);
   strandMesh = new THREE.Mesh(res.geometry, strandMat);
   strandMesh.castShadow = false; strandMesh.receiveShadow = true; strandMesh.frustumCulled = false;
@@ -254,6 +265,7 @@ async function importExternal(fileList) {
   if (QA) startLoop();
 }
 window.__importExternal = importExternal;
+window.__dbg = () => { const out = []; scene.traverse((o) => { if (o.isMesh && o.visible) out.push(o.name + '/' + (o.material.name || '') + '/cw=' + o.material.colorWrite + '/v=' + (o.geometry.attributes.position.count)); }); const u = strandMat && strandMat.userData.strandUniforms; return { out, u: u && { R: u.uGainR.value, TT: u.uGainTT.value, D: u.uGainD.value }, env: strandMat && strandMat.envMapIntensity }; };
 window.__pick = (nx, ny) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera); return rc.intersectObjects(scene.children, true).filter((h) => h.object.visible).slice(0, 4).map((h) => h.object.name + '|' + h.object.type + '|' + (h.object.material?.name || '') + '|' + h.distance.toFixed(3)); };
 
 // ---------- 模式切换 ----------
@@ -287,9 +299,13 @@ async function applyMode() {
   if (strandMesh) strandMesh.visible = strandOn;
   if (hairMats) {
     // 发丝模式下，原发片作为内层发量底衬：内收 1.2mm、压暗，只负责遮住头皮和投射阴影
-    hairMats.shared.uInset.value = strandOn ? 0.0012 : 0.0;
+    // 发丝模式：原发片只作为“阴影代理”——不写颜色、不写深度，但照样进阴影图投射柔和发影。
+    // （试过让发片当可见底衬：无论内收、压暗还是按距头皮抖动剔除，都会在发丝外层形成灰雾/纸片硬边，见 HAIR 文档坑 13）
+    // 例外：贴着头皮 1cm 以内的发片保留为很暗的“头皮遮挡层”（硬裁剪、不抖动），挡住分缝/鬓角处透出的头皮
+    hairMats.shared.uScalpFade.value = strandOn ? 0.010 : 0.0;
+    hairMats.shared.uInset.value = strandOn ? 0.0025 : 0.0;
     hairMats.core.alphaTest = strandOn ? 0.62 : 0.45;
-    hairMats.core.color.setRGB(...HAIR_COLORS[state.hairColor].rgb.map((v) => v * (strandOn ? 0.55 : 1)));
+    hairMats.core.color.setRGB(...HAIR_COLORS[state.hairColor].rgb.map((v) => v * (strandOn ? 0.3 : 1)));
   }
   if (external) external.traverse((o) => { if (o.isMesh) o.material = after ? o.userData.after : o.userData.orig; });
   // 光照与后期
@@ -347,7 +363,7 @@ function bindUI() {
   const BROW_LABELS = { eyebrow010: '自然毛流眉', eyebrow003: '柳叶眉', eyebrow001: '平直眉', eyebrow002: '细弯眉', eyebrow004: '标准眉', eyebrow005: '细眉', eyebrow008: '浓眉', eyebrow012: '野生眉' };
   fillSelect($('selBrow'), Object.keys(gltfHead.parser.json.extras?.realWebAssets?.eyebrows || {}).map((b) => [b, BROW_LABELS[b] || b]), state.brow);
   $('selBrow').onchange = async (e) => { state.brow = e.target.value; await applyBrow(state.brow); };
-  fillSelect($('selView'), [['front', '正面肖像'], ['threequarter', '3/4 侧'], ['profile', '侧面'], ['closeup', '眼部特写'], ['stand', '展示底座']], state.view);
+  fillSelect($('selView'), [['front', '正面肖像'], ['threequarter', '3/4 侧'], ['profile', '侧面'], ['closeup', '眼部特写'], ['hairdetail', '头发特写'], ['stand', '展示底座']], state.view);
   $('btnMode').onclick = () => { state.mode = state.mode === 'after' ? 'before' : 'after'; applyMode(); };
   $('selLight').onchange = (e) => { state.light = e.target.value; if (state.mode === 'after') { const p = rig.apply(state.light); backdrop.set(p.backdrop); } };
   $('selHair').onchange = async (e) => { state.hair = e.target.value; await loadHair(state.hair); applyMode(); };
@@ -364,7 +380,7 @@ function bindUI() {
   slider('sRough', (v) => skinMat && setSkinParams(skinMat, { roughness: v }));
   slider('sPore', (v) => skinMat && setSkinParams(skinMat, { normalScale: v }));
   slider('sGrain', (v) => post && post.set({ grain: v }));
-  slider('sHairShine', (v) => strandMat && setStrandParams(strandMat, { gainR: 1.9 * v, gainTRT: 2.4 * v }));
+  slider('sHairShine', (v) => strandMat && setStrandParams(strandMat, { gainR: 1.15 * v, gainTRT: 1.8 * v }));
   slider('sHairBack', (v) => strandMat && setStrandParams(strandMat, { gainTT: v }));
   slider('sVig', (v) => post && post.set({ vignette: v }));
   slider('sSharp', (v) => post && post.set({ sharpen: v }));
@@ -415,6 +431,7 @@ async function boot() {
     setView(state.view);
     await applyMode();
     bindUI();
+    applyStrandQsOverrides();
     $('loading').style.display = 'none';
     startLoop();
   } catch (err) {
