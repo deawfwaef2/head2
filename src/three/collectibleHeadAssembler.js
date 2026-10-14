@@ -39,23 +39,24 @@ const objLoader = new OBJLoader();
 const arrayBufferCache = new Map();
 const textCache = new Map();
 const masterStrandGeometryCache = new Map();
+let globalStrandMeshVersion = 1;
 const BUILTIN_HEAD_URL = '/models/daz_asian_head_base.glb';
 const BUST_WORLD_SCALE = 115.0;
 
 export const MASTER_HAIR_DENSITIES = {
-  low:   { label: '流畅 (RTX全屏多头稳帧)', guides: 580, childrenPerGuide: 7, fuzzPerGuide: 0.6 },
-  mid:   { label: '标准 (光学等体积零损)', guides: 820, childrenPerGuide: 9, fuzzPerGuide: 0.85 },
-  high:  { label: '高精 (特写加密发丝)', guides: 1450, childrenPerGuide: 13, fuzzPerGuide: 1.2 },
-  ultra: { label: '极致 (影视级全量发丝)',  guides: 2200, childrenPerGuide: 18, fuzzPerGuide: 1.8 },
+  low:   { label: '流畅 (约 1.3 万根)', guides: 1200, childrenPerGuide: 10, fuzzPerGuide: 1.0 },
+  mid:   { label: '标准 (约 2.7 万根)', guides: 1850, childrenPerGuide: 13, fuzzPerGuide: 1.35 },
+  high:  { label: '高精 (约 4.8 万根)', guides: 2600, childrenPerGuide: 17, fuzzPerGuide: 1.6 },
+  ultra: { label: '极致 (约 8.8 万根)', guides: 3400, childrenPerGuide: 24, fuzzPerGuide: 2.2 },
 };
 
 export const MASTER_HAIR_CONFIG = {
-  mode: 'strand', // 'strand' (Card-to-Strand v2 真发丝) | 'card' (双通道体积发片)
+  mode: 'card', // 'card' (原版精雕多层羽毛发片·100%还原发型与零黑块) | 'strand' (Card-to-Strand v2 复合真发丝)
   density: 'mid',
-  gainR: 1.15,
-  gainTT: 1.00,
-  gainTRT: 1.80,
-  gainDiffuse: 1.00,
+  gainR: 0.68,
+  gainTT: 0.90,
+  gainTRT: 1.45,
+  gainDiffuse: 0.88,
 };
 
 if (typeof window !== 'undefined') {
@@ -81,10 +82,11 @@ export function updateMasterStrandHairPxScale(scene, renderer, camera) {
   if (!scene || !renderer || !camera) return;
   const hpx = renderer.getDrawingBufferSize(_strandDbs).y;
   const pxScale = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov || 24) / 2)) / Math.max(1, hpx);
-  const childCount = scene.children.length;
-  if (scene.userData._lastStrandPxScale === pxScale && scene.userData._lastStrandChildCount === childCount && scene.userData._cachedStrandUniforms) {
+  if (scene.userData._strandUniformsVersion === globalStrandMeshVersion && scene.userData._cachedStrandUniforms) {
+    if (scene.userData._lastStrandPxScale === pxScale) return;
     const list = scene.userData._cachedStrandUniforms;
     for (let i = 0; i < list.length; i++) list[i].uPxScale.value = pxScale;
+    scene.userData._lastStrandPxScale = pxScale;
     return;
   }
   const list = [];
@@ -95,7 +97,7 @@ export function updateMasterStrandHairPxScale(scene, renderer, camera) {
     }
   });
   scene.userData._lastStrandPxScale = pxScale;
-  scene.userData._lastStrandChildCount = childCount;
+  scene.userData._strandUniformsVersion = globalStrandMeshVersion;
   scene.userData._cachedStrandUniforms = list;
 }
 
@@ -1700,7 +1702,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     config.hairWispyFeather ?? config.morphs?.hairWispyFeather ?? rootGroup.userData.hairWispyFeather ??
     (frontBangsStyle === 'wispy_air' ? 0.62 : 0.42)
   );
-  const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'strand';
+  const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'card';
   const strandDensity = config.strandDensity || config.morphs?.strandDensity || rootGroup.userData.strandDensity || MASTER_HAIR_CONFIG.density || 'mid';
 
   rootGroup.userData.topCrownStyle = topCrownStyle;
@@ -1880,7 +1882,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           });
         }
       }
-      if (!customAsset && !useStrandMode) updateArtistHairFlow(g, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
+      if (!customAsset) updateArtistHairFlow(g, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
       const configureMaterial = original => {
         if (customAsset && original) {
           const preserved = original.clone();
@@ -1896,24 +1898,15 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           map.magFilter = THREE.LinearFilter;
           map.needsUpdate = true;
         }
-        if (useStrandMode) {
-          // Stage 56 · Master Card-to-Strand v2 Scalp Root Occlusion + Shadow Proxy (画质提升/src/featureMaterials.js)
-          const hMats = buildHairMaterials({ map });
-          hMats.shared.uScalpFade.value = 0.010;
-          hMats.shared.uInset.value = 0.0025;
-          hMats.core.alphaTest = 0.62;
-          hMats.core.color.setRGB(strandRgb[0] * 0.3, strandRgb[1] * 0.3, strandRgb[2] * 0.3);
-          hMats.core.userData.builtInHair = true;
-          hMats.core.userData.isMasterCardHair = true;
-          configureHairSheen(hMats.core, sheenIntensity);
-          return hMats.core;
-        }
         const material = new THREE.MeshPhysicalMaterial({
           name: 'ArtistHair_StableCoverage', map, color: displayColor,
           metalness: 0, specularColor: new THREE.Color('#ffffff'),
           transparent: false, alphaTest: map ? 0.12 : 0,
           alphaToCoverage: Boolean(map), depthWrite: true,
           side: THREE.DoubleSide,
+          polygonOffset: useStrandMode,
+          polygonOffsetFactor: useStrandMode ? 1 : 0,
+          polygonOffsetUnits: useStrandMode ? 1 : 0,
         });
         material.userData.builtInHair = true;
         configureHairSheen(material, sheenIntensity);
@@ -1922,7 +1915,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       };
       child.material = Array.isArray(child.material)
         ? child.material.map(configureMaterial) : configureMaterial(child.material);
-      child.castShadow = useStrandMode; // In strand mode, cards act as soft VSM/PCF shadow proxies while 1cm scalp cap occludes roots!
+      child.castShadow = true;
       child.receiveShadow = true;
       child.renderOrder = 0;
     });
@@ -1946,7 +1939,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           hairOmbreMix,
           hairTipColor,
         });
-        configureHairSheen(strandMat, sheenIntensity);
         const strandGeo = createLightweightGeometryInstance(strandRes.geometry);
         strandGeo.userData.sharedBuiltinGeo = true;
         const strandMesh = new THREE.Mesh(strandGeo, strandMat);
@@ -1956,6 +1948,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         strandMesh.frustumCulled = false;
         strandMesh.renderOrder = 1;
         hairGroup.add(strandMesh);
+        globalStrandMeshVersion++;
         totalVerts += strandRes.vertexCount;
         totalTris += strandRes.geometry.index ? strandRes.geometry.index.count / 3 : 0;
         strandCount = strandRes.strandCount;
@@ -2019,7 +2012,7 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
   const prevSide = rootGroup.userData.sideLocksStyle || 'default';
   const prevBack = rootGroup.userData.backAttachmentStyle || 'none';
   const prevStyle = rootGroup.userData.currentHairStyle || 'hair_user_photo';
-  const prevMode = rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'strand';
+  const prevMode = rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'card';
   const prevDensity = rootGroup.userData.strandDensity || MASTER_HAIR_CONFIG.density || 'mid';
 
   const nextStyle = patch.hairStyle ? resolveRealHairStyle(patch.hairStyle) : prevStyle;

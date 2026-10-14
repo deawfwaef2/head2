@@ -510,10 +510,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const samplingScale = 1;
   const pixelRatio = (options.pixelRatio || renderer.getPixelRatio()) * samplingScale;
 
-  // True 16-Bit HalfFloat HDR RenderTarget (2x MSAA + AMD CAS avoids 4x MSAA 64-bit bandwidth explosion)
+  // True 16-Bit HalfFloat HDR RenderTarget (4x MSAA for full 4-step alphaToCoverage hair feathering)
   const hdrTarget = new THREE.WebGLRenderTarget(width, height, {
     type: THREE.HalfFloatType,
-    samples: software ? 0 : Math.min(2, renderer.capabilities.maxSamples || 0),
+    samples: software ? 0 : Math.min(4, renderer.capabilities.maxSamples || 0),
   });
   const composer = new EffectComposer(renderer, hdrTarget);
   composer.setPixelRatio(pixelRatio);

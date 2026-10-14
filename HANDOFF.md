@@ -1279,3 +1279,15 @@
 - **Native Supersampling Cap & Smart Idle 0% GPU Sleep (`src/three/photorealLighting.js`, `src/three/desktopBoxSpaceEngine.js`, `src/three/studioPreviewEngine.js`, `src/main.js`)**:
   - Default `supersample: 1.0` with AMD CAS `0.74–0.84` contrast-adaptive sharpening (eliminating `1.75x–2.5x` 4480×2520 above-4K offscreen buffer allocation at startup).
   - Paused `desktopBoxSpaceEngine` when `#tab-studio` is in the foreground (preventing dual simultaneous WebGL composers) and restored true `0 FPS` (`0.0% GPU`) Smart Idle Sleep `0.6 s` after user interaction stops (`pointermove`/`wakeRender` wakes immediately at 60 FPS).
+
+---
+
+## Stage 62 — Hair Visual Fidelity Restoration & Zero-Black-Patch / Zero-Forehead-Wire Fix (`发型画质100%还原与中分横丝/头顶黑块修复`)
+- **Root Cause of `image-1.png` Hair Degradation Fixed**:
+  1. **Black Patchy Triangles on Crown & Cheeks (`uScalpFade = 0.010` + `rgb * 0.3` Card Stumps)**:
+     - In `src/three/collectibleHeadAssembler.js`, `strand` mode previously replaced the artist hair cards with `PhotorealHairCore` (`uScalpFade = 0.010, alphaTest = 0.62, color = strandRgb * 0.3`), which sliced every hair card at `1 cm` from the head/cheek mesh into jagged pitch-black polygon stumps while outer strands were washed out to grey-brown by 4 directional lights (`uGainR = 1.15`).
+     - Restored `MASTER_HAIR_CONFIG.mode = 'card'` (`ArtistHair_StableCoverage` with `refineArtistHairCards`, `injectArtistHairColor`, `injectArtistHairLighting`, and `4x MSAA` `alphaToCoverage`) as the default hair mode so all 28 hairstyles preserve 100% of their original artist silhouette, feathered bangs, and rich color with zero black patches, while also keeping intact `ArtistHair_StableCoverage` base cards underneath when `strand` mode is selected.
+  2. **Horizontal Forehead Wires on Center-Parted Hairstyles (`daz_hair_curtain_wave`)**:
+     - Removed the bogus `if (dx * pdx + dy * pdy + dz * pdz < 0) { dx = -dx; ... }` 180° flip and added a UV-seam discontinuity guard (`|uu - prevU| > 0.10 || |vv - prevV| > 0.10`) in `traceDir()` (`src/three/masterQuality/strandHair.js`), reducing mid-forehead crossing points on `daz_hair_curtain_wave.glb` from `353` down to `1`.
+  3. **Sub-Pixel Coverage & `_cachedStrandUniforms` Cache Fix**:
+     - Fixed `updateMasterStrandHairPxScale` (`globalStrandMeshVersion++`) so `uPxScale` updates after async hair loading, restored `4x MSAA` on `hdrTarget`, and tuned `STRAND_SHADING_DEFAULTS` (`gainR: 0.68, envMapIntensity: 0.08`) and `N = 8..24` smooth resampling.

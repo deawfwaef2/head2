@@ -18,23 +18,23 @@
 import * as THREE from 'three';
 
 export const STRAND_DEFAULTS = {
-  guides: 820,
-  childrenPerGuide: 9,
+  guides: 1850,
+  childrenPerGuide: 13,
   step: 0.0022,
   maxLength: 0.5,
   surfaceSnap: 0.6,
   maxSurfaceDist: 0.0038,
   tipAlpha: 0.1,
-  clumpWidth: 0.0068,
-  clumpThickness: 0.0036,
+  clumpWidth: 0.0062,
+  clumpThickness: 0.0034,
   clump: [0.25, 0.65],
   frizz: 0.00028,
-  strayRatio: 0.025,
+  strayRatio: 0.022,
   subClumps: 4,
-  fuzzPerGuide: 0.85,
+  fuzzPerGuide: 1.35,
   scalpMargin: 0.0013,
-  widthWorld: 0.00012,
-  minPixelWidth: 0.85,
+  widthWorld: 0.00008,
+  minPixelWidth: 0.8,
   seed: 1337,
 };
 
@@ -362,11 +362,12 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
     const pts = [];
     let px = sx, py = sy, pz = sz, pdx = 0, pdy = 0, pdz = 0, len = 0;
     let curT = tSeed;
+    const s6 = tSeed * 6;
+    let prevU = (U[s6] + U[s6 + 2] + U[s6 + 4]) / 3, prevV = (U[s6 + 1] + U[s6 + 3] + U[s6 + 5]) / 3;
     for (let s = 0; s < 260 && len < o.maxLength; s++) {
       let dx = dir[curT * 3] * sign, dy = dir[curT * 3 + 1] * sign, dz = dir[curT * 3 + 2] * sign;
       if (s > 0) {
-        if (dx * pdx + dy * pdy + dz * pdz < 0) { dx = -dx; dy = -dy; dz = -dz; }
-        const c = dx * pdx + dy * pdy + dz * pdz; if (c < 0.35) break; // 急转弯 = 进入了另一张发片
+        const c = dx * pdx + dy * pdy + dz * pdz; if (c < 0.35) break; // 急转弯或进入对称分缝反向发片 = 立即终止，绝不跨过中分线画横丝
         dx = pdx * 0.45 + dx * 0.55; dy = pdy * 0.45 + dy * 0.55; dz = pdz * 0.45 + dz * 0.55;
         const l = Math.sqrt((dx)*(dx) + (dy)*(dy) + (dz)*(dz)) || 1; dx /= l; dy /= l; dz /= l;
       }
@@ -377,6 +378,8 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
       const t6 = q.t * 6;
       const uu = U[t6] * q.u + U[t6 + 2] * q.v + U[t6 + 4] * q.w;
       const vv = U[t6 + 1] * q.u + U[t6 + 3] * q.v + U[t6 + 5] * q.w;
+      if (Math.abs(uu - prevU) > 0.10 || Math.abs(vv - prevV) > 0.10) break; // 防止跨过 UV 接缝跳到另一张发片
+      prevU = uu; prevV = vv;
       const a = triAlphaFn(q.t, uu, vv);
       if (a < o.tipAlpha) { if (isTipward) pts.push([nx, ny, nz]); break; }
       pts.push([nx, ny, nz]);
@@ -436,7 +439,7 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 }
 
 function resample(pts, L) {
-  const N = Math.max(5, Math.min(13, Math.round(L / 0.017) + 2));
+  const N = Math.max(8, Math.min(24, Math.round(L / 0.009) + 2));
   const out = new Array(N);
   const cum = new Float64Array(pts.length);
   for (let i = 1; i < pts.length; i++) cum[i] = cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
@@ -502,7 +505,7 @@ function buildChildren(guides, hc, o, rnd) {
   };
 
   // ---- 容量预估：子发 C×N + 绒毛碎发（固定 FUZZ_N 点）----
-  const C = o.childrenPerGuide, FUZZ_N = 4;
+  const C = o.childrenPerGuide, FUZZ_N = 6;
   const fuzzPer = o.fuzzPerGuide;
   let cap = 0; for (let gi = 0; gi < guides.length; gi++) cap += guides[gi].p.length * C + Math.ceil(fuzzPer + 1) * FUZZ_N;
   const pos = new Float32Array(cap * 6), tan = new Float32Array(cap * 6);
@@ -695,17 +698,17 @@ function buildChildren(guides, hc, o, rnd) {
 // ---------------- 发丝着色器（Marschner 三瓣近似 + Kajiya 漫反射） ----------------
 export const STRAND_SHADING_DEFAULTS = {
   color: [0.024, 0.017, 0.014],
-  gainR: 1.15, gainTT: 1.0, gainTRT: 1.8, gainDiffuse: 1.0,
+  gainR: 0.68, gainTT: 0.90, gainTRT: 1.45, gainDiffuse: 0.88,
   alphaR: -0.07, betaR: 0.085,
-  colorVariation: 0.32,
-  tipLighten: 0.18,
+  colorVariation: 0.28,
+  tipLighten: 0.14,
 };
 
 export function createStrandMaterial(headCenter, opts = {}) {
   const o = { ...STRAND_SHADING_DEFAULTS, ...opts };
   const mat = new THREE.MeshStandardMaterial({
-    name: 'PhotorealStrandHair', color: new THREE.Color(...o.color), roughness: 0.6, metalness: 0,
-    side: THREE.DoubleSide, envMapIntensity: 0.18, alphaToCoverage: true,
+    name: 'PhotorealStrandHair', color: new THREE.Color(...o.color), roughness: 0.65, metalness: 0,
+    side: THREE.DoubleSide, envMapIntensity: 0.08, alphaToCoverage: true,
   });
   mat.userData.builtInHair = true;
   mat.userData.isMasterStrandHair = true;
@@ -713,10 +716,10 @@ export function createStrandMaterial(headCenter, opts = {}) {
     uHeadCenter: { value: new THREE.Vector3(...headCenter) },
     uWidth: { value: STRAND_DEFAULTS.widthWorld },
     uMinPx: { value: STRAND_DEFAULTS.minPixelWidth },
-    uPxScale: { value: 0.0003 },
+    uPxScale: { value: 0.00068 },
     uGainR: { value: o.gainR }, uGainTT: { value: o.gainTT }, uGainTRT: { value: o.gainTRT }, uGainD: { value: o.gainDiffuse },
     uAlphaR: { value: o.alphaR }, uBetaR: { value: o.betaR },
-    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.92 }, uMinAlpha: { value: 0.84 },
+    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.65 }, uMinAlpha: { value: 0.82 },
     uHairOmbreMix: { value: Number(o.hairOmbreMix ?? 0.0) },
     uHairTipColor: { value: new THREE.Color(o.hairTipColor || '#4a3528') },
     uHairFineTune0: { value: new THREE.Vector4(0, 0, 0, 0) },
