@@ -772,3 +772,12 @@
 
 
 
+
+## Stage 39A — 2026-10-14 · Hair stability checkpoint (verification pending)
+- Read root constraints and Stage 38 before editing; append-only, no face/asset regeneration.
+- Removed mixed-coordinate fixed-light pseudo-Marschner glints and the duplicated offset transparent hair shell. Built-in cards now use one depth-writing alpha-tested/alpha-to-coverage physical material and original atlas coverage/UVs/normals. This is a conservative card shader, NOT a true fiber BSDF or a promise of photorealism.
+- Light-response slider now controls the same bounded roughness/specular settings at load and at runtime; zero is valid, stored on the head. Imported hair preserves original material slots/PBR textures rather than getting overwritten by one black shader; source URL survives modular rebuilds.
+- Offline HTML rebuilt immediately. Build uses OS temp staging, retains last playable root file until success, and hard-links docs/index.html to save workspace disk; Git stores both ordinary files. Dependencies/browser binaries are in /tmp in this session (not persistent). Reinstall dependencies on resume.
+- Build passed. Browser startup test on the original revision crashed under this sandbox's 2 GB RAM; runtime/visual checks still pending. Do NOT call this verified photorealism.
+- User reiterated <128 MB workspace, runnable HTML first, frequent GitHub checkpoints, editable photo-matching hair, and genuine desktop overlay. Existing Electron host is required for OS overlay; HTML alone cannot do that.
+- Never store access tokens in repo or handoff. User was advised to revoke the exposed token. GitHub connector is unsupported here; using ordinary Git transport if authorized credentials work.

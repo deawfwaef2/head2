@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
+import os from 'os';
+import { fileURLToPath } from 'url';
 
-console.log('1. Running Vite production build...');
-execSync('npx vite build', { stdio: 'inherit' });
-
-const projectDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
-const distDir = path.join(projectDir, 'dist');
+const projectDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const distDir = fs.mkdtempSync(path.join(os.tmpdir(), 'head2-build-'));
+console.log('1. Building in temporary staging; last playable HTML stays intact...');
+execFileSync(process.execPath, [path.join(projectDir, 'node_modules/vite/bin/vite.js'), 'build', '--outDir', distDir, '--emptyOutDir'], { cwd: projectDir, stdio: 'inherit' });
 const assetsDir = path.join(distDir, 'assets');
 const htmlRaw = fs.readFileSync(path.join(distDir, 'index.html'), 'utf8');
 
@@ -78,13 +79,19 @@ let standaloneHtml = htmlRaw
   });
 
 const outPath = path.join(projectDir, '点击开始游戏_CERVIX3D.html');
-fs.writeFileSync(outPath, standaloneHtml, 'utf8');
+const stagedHtml = path.join(distDir, 'playable.html');
+fs.writeFileSync(stagedHtml, standaloneHtml, 'utf8');
+try { fs.renameSync(stagedHtml, outPath); }
+catch (err) { if (err.code !== 'EXDEV') throw err; fs.copyFileSync(stagedHtml, outPath); }
 const sizeMb = (fs.statSync(outPath).size / (1024 * 1024)).toFixed(2);
 console.log(`✅ Built standalone playable HTML: ${outPath} (${sizeMb} MB)`);
 
 // Serve the same offline-ready file on GitHub Pages if Pages is configured for /docs.
 const docsDir = path.join(projectDir, 'docs');
 fs.mkdirSync(docsDir, { recursive: true });
-fs.writeFileSync(path.join(docsDir, 'index.html'), standaloneHtml, 'utf8');
+const docsHtml = path.join(docsDir, 'index.html');
+fs.rmSync(docsHtml, { force: true });
+try { fs.linkSync(outPath, docsHtml); }
+catch { fs.copyFileSync(outPath, docsHtml); }
 fs.writeFileSync(path.join(docsDir, '.nojekyll'), '');
 fs.rmSync(distDir, { recursive: true, force: true });
