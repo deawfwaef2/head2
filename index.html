@@ -1511,12 +1511,15 @@
                   <label>🌸 基底肤色 <input type="color" id="col-skin" value="#ffe9df" /></label>
                   <label>💄 唇彩主色 <input type="color" id="col-lip" value="#cb5362" /></label>
                   <label>🍑 腮红颜色 <input type="color" id="col-blush" value="#f07682" /></label>
-                  <label>✨ 眼影颜色 <input type="color" id="col-eyeshadow" value="#b87068" /></label>
+                  <label>✨ 眼影颜色 <input type="color" id="col-eyeshadow" value="#c88278" /></label>
                   <label>👁️ 虹膜瞳色 <input type="color" id="col-iris" value="#3b2014" /></label>
                   <label>✒️ 眉毛染色 <input type="color" id="col-brow" value="#ffffff" /></label>
                   <label>🖤 主体发色 <input type="color" id="col-hair" value="#121216" /></label>
                   <label>🎨 发梢渐变 <input type="color" id="col-hair-tip" value="#4a3528" /></label>
                   <label>⚡ 挑染高光 <input type="color" id="col-hair-highlight" value="#9e6b52" /></label>
+                  <label>🖌️ 眼线颜色 <input type="color" id="col-eyeliner" value="#2d201e" /></label>
+                  <label>🪶 睫毛染色 <input type="color" id="col-lash" value="#44322e" /></label>
+                  <label>🩸 真皮透血色 <input type="color" id="col-char-sss" value="#e85a4f" /></label>
                 </div>
 
                 <div class="preset-photo-row" id="studio-iris-swatches" style="margin-bottom:8px;flex-wrap:wrap;gap:4px;">
@@ -1529,6 +1532,31 @@
                   <button type="button" class="chip-btn" data-studio-iris="#685278">🔮 微醺紫晶</button>
                   <button type="button" class="chip-btn" data-studio-iris="#7a4048">🍷 辰砂酒红</button>
                   <button type="button" class="chip-btn" data-studio-iris="#1a1618">🌑 极夜黑曜</button>
+                </div>
+
+                <!-- Per-Character Eyeliner & Bare Eyelid Control Box -->
+                <div style="background:rgba(15,23,42,0.58);border:1px solid rgba(56,189,248,0.28);border-radius:8px;padding:8px;margin-bottom:8px;">
+                  <div style="font-size:11.5px;color:#7dd3fc;font-weight:700;margin-bottom:4px;">👁️ 角色眼睑净肌与眼线定制 (默认 0% 无眼线·纯净素颜裸眼睑)：</div>
+                  <div class="field-row" style="margin-bottom:4px;">
+                    <label>🖌️ 眼线风格样式</label>
+                    <select id="sel-eyeliner-style">
+                      <option value="0" selected>🚫 无眼线 · 100%纯净素颜裸眼睑 (零眼线阴影·默认推荐)</option>
+                      <option value="1">✨ 隐形美瞳内眼线 (Tightline · 仅加深上睫毛根部)</option>
+                      <option value="2">🌿 日杂自然极细眼尾线 (Fine Wing · 顺延眼尾2mm)</option>
+                      <option value="3">🐈 韩系财阀千金微挑猫眼线 (Siren Flick · 18°冷艳上扬)</option>
+                      <option value="4">🍑 日系甜妹无辜下至眼线 (Puppy Droop · 眼尾微垂放大)</option>
+                    </select>
+                  </div>
+                  <div class="slider-row">
+                    <span>🖌️ 眼线显色浓度 (0% = 完全裸眼无眼线)</span>
+                    <input type="range" id="slider-eyeliner-strength" min="0.00" max="1.00" step="0.05" value="0.00" />
+                    <span id="val-eyeliner-strength">0%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>✨ 上眼睑眼影与眼尾修容浓度 (0% = 素颜净肌)</span>
+                    <input type="range" id="slider-eyeshadow" min="0.00" max="1.00" step="0.05" value="0.00" />
+                    <span id="val-eyeshadow">0%</span>
+                  </div>
                 </div>
 
                 <div class="slider-row">
@@ -1552,11 +1580,6 @@
                   <span id="val-blush">22%</span>
                 </div>
                 <div class="slider-row">
-                  <span>✨ 上眼睑眼影与眼尾深邃修容浓度</span>
-                  <input type="range" id="slider-eyeshadow" min="0.00" max="1.00" step="0.05" value="0.18" />
-                  <span id="val-eyeshadow">18%</span>
-                </div>
-                <div class="slider-row">
                   <span>💄 唇彩/咬唇妆显色饱和浓度</span>
                   <input type="range" id="slider-lip-strength" min="0.00" max="1.00" step="0.05" value="0.38" />
                   <span id="val-lip-strength">38%</span>
@@ -1573,8 +1596,8 @@
                 </div>
                 <div class="slider-row">
                   <span>☀️ 虹膜纤维通透亮度 (Iris Brightness)</span>
-                  <input type="range" id="slider-iris-brightness" min="0.50" max="1.75" step="0.05" value="1.05" />
-                  <span id="val-iris-brightness">105%</span>
+                  <input type="range" id="slider-iris-brightness" min="0.50" max="1.75" step="0.05" value="1.15" />
+                  <span id="val-iris-brightness">115%</span>
                 </div>
                 <div class="slider-row">
                   <span>⭕ 美瞳外圈暗环深度 (Limbal Ring)</span>
@@ -1594,12 +1617,25 @@
               </div>
             </div>
 
-            <!-- SUB-TAB 4: SKIN TEXTURES, ANTI-SILICONE PORES, MOLES, EYES & 3D PHOTO PROJECTION -->
+            <!-- SUB-TAB 4: SKIN TEXTURES, CUSTOM PBR MAPS, DLSS-5 DERMIS REALISM & 3D PHOTO PROJECTION -->
             <div class="card-block studio-subtab-panel" data-subtab-panel="texture">
-              <h3>🖼️ 模块 4：贴图与真实肤质微调 · 去硅胶感3D毛孔 · 照片直接投射</h3>
+              <h3>🖼️ 模块 4：角色专属PBR贴图工坊 · DLSS-5超写实真皮材质 · 照片投射</h3>
               <div class="control-group compact">
+                <!-- One-Click Per-Character Material & Realism Presets -->
+                <div style="background:rgba(15,23,42,0.62);border:1px solid rgba(56,189,248,0.35);border-radius:8px;padding:8px;margin-bottom:8px;">
+                  <div style="font-size:11.5px;color:#38bdf8;font-weight:700;margin-bottom:5px;">💎 一键切换当前角色专属超写实材质方案 (随角色独立保存)：</div>
+                  <div class="preset-photo-row" id="char-material-preset-chips" style="flex-wrap:wrap;gap:5px;">
+                    <button type="button" class="chip-btn active" data-char-mat-preset="dlss5_bare_scholar">📖 状元素颜哑光瓷肌</button>
+                    <button type="button" class="chip-btn" data-char-mat-preset="dlss5_dewy_peach">🍑 韩系水光蜜桃胶原肌</button>
+                    <button type="button" class="chip-btn" data-char-mat-preset="dlss5_chaebol_velvet">✨ 财阀千金冷白丝绒肌</button>
+                    <button type="button" class="chip-btn" data-char-mat-preset="dlss5_jiangnan_jade">🌙 江南羊脂白玉温润肌</button>
+                    <button type="button" class="chip-btn" data-char-mat-preset="dlss5_forensic_specimen">🧊 法医冰鲜标本冷瓷肌</button>
+                    <button type="button" class="chip-btn" data-char-mat-preset="dlss5_editorial_glam">💎 8K画报精修微眼线肌</button>
+                  </div>
+                </div>
+
                 <div class="field-row">
-                  <label>🎨 8款多源真摄影异质亚洲/韩系/混血少女皮肤材质 (彻底告别千篇一律)</label>
+                  <label>🎨 8款多源真摄影异质亚洲/韩系/混血少女皮肤基底贴图 (已彻底净化眼睑暗影)</label>
                   <select id="sel-skin-variant">
                     <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 · 19岁女状元方尧平右颊三颗痣原生肌</option>
                     <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 · 零皱纹清透无瑕少女原皮与花瓣唇</option>
@@ -1622,6 +1658,42 @@
                   <button type="button" class="chip-btn" data-skin-var="kr_firstlove_camellia">💖 初恋雪瓷山茶肌</button>
                   <button type="button" class="chip-btn" data-skin-var="cn_intellectual_olive">❄️ 高智干枯玫瑰肌</button>
                   <button type="button" class="chip-btn" data-skin-var="eurasian_velvet_rose">🌍 混血丝绒奶油肌</button>
+                </div>
+
+                <!-- Per-Character Custom PBR Texture Map Uploaders -->
+                <div style="background:rgba(20,28,48,0.65);border:1px solid rgba(167,139,250,0.35);border-radius:8px;padding:8px;margin-bottom:8px;">
+                  <div style="font-size:11.5px;color:#c4b5fd;font-weight:700;margin-bottom:6px;">🗺️ 角色专属自定义 PBR 贴图通道 (支持上传皮肤漫反射 / 法线 / 粗糙度 / 虹膜贴图)：</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                    <div style="display:flex;align-items:center;gap:4px;">
+                      <label class="chip-btn" style="flex:1;text-align:center;cursor:pointer;font-size:11px;">
+                        📂 上传皮肤色图 (Albedo)
+                        <input type="file" id="input-char-skin-map" accept="image/*" hidden />
+                      </label>
+                      <button type="button" id="btn-clear-char-skin-map" class="chip-btn" title="恢复内置皮肤贴图" style="font-size:10.5px;padding:2px 6px;">↺</button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                      <label class="chip-btn" style="flex:1;text-align:center;cursor:pointer;font-size:11px;">
+                        📂 上传毛孔法线图 (Normal)
+                        <input type="file" id="input-char-normal-map" accept="image/*" hidden />
+                      </label>
+                      <button type="button" id="btn-clear-char-normal-map" class="chip-btn" title="恢复内置法线贴图" style="font-size:10.5px;padding:2px 6px;">↺</button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                      <label class="chip-btn" style="flex:1;text-align:center;cursor:pointer;font-size:11px;">
+                        📂 上传粗糙光泽图 (Roughness)
+                        <input type="file" id="input-char-roughness-map" accept="image/*" hidden />
+                      </label>
+                      <button type="button" id="btn-clear-char-roughness-map" class="chip-btn" title="恢复内置粗糙度贴图" style="font-size:10.5px;padding:2px 6px;">↺</button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                      <label class="chip-btn" style="flex:1;text-align:center;cursor:pointer;font-size:11px;">
+                        📂 上传眼球虹膜图 (Iris)
+                        <input type="file" id="input-char-iris-map" accept="image/*" hidden />
+                      </label>
+                      <button type="button" id="btn-clear-char-iris-map" class="chip-btn" title="恢复内置虹膜贴图" style="font-size:10.5px;padding:2px 6px;">↺</button>
+                    </div>
+                  </div>
+                  <div id="char-custom-map-status" style="font-size:10.5px;color:#94a3b8;margin-top:4px;">当前使用内置 2K 摄影级 PBR 贴图通道</div>
                 </div>
 
                 <div class="field-row">
@@ -1652,31 +1724,76 @@
 
                 <!-- Anti-Silicone True-Dermis & Eye Micro-Detail Controls -->
                 <div style="background:rgba(15,23,42,0.55);border:1px solid rgba(56,189,248,0.28);border-radius:8px;padding:8px;margin-bottom:8px;">
-                  <div style="font-size:11.5px;color:#7dd3fc;font-weight:700;margin-bottom:4px;">🔬 去硅胶感 · 3D毫米级真皮毛孔/皮沟/卧蚕/美人痣/瞳孔微调：</div>
+                  <div style="font-size:11.5px;color:#7dd3fc;font-weight:700;margin-bottom:4px;">🔬 DLSS-5 级角色专属真皮材质 · 次表面散射 · 微距毛孔/血管/绒毛调校：</div>
                   <div class="slider-row">
-                    <span>🔬 3D毫米级真皮毛孔与唇纹深度 (彻底消除塑料感)</span>
-                    <input type="range" id="slider-pore-relief" min="0.00" max="2.00" step="0.05" value="1.15" />
-                    <span id="val-pore-relief">115%</span>
+                    <span>🗺️ PBR法线贴图凹凸强度 (Normal Map Scale)</span>
+                    <input type="range" id="slider-normal-map-strength" min="0.00" max="1.60" step="0.02" value="0.26" />
+                    <span id="val-normal-map-strength">26%</span>
                   </div>
                   <div class="slider-row">
-                    <span>🧴 表皮丝绒哑光度 (低=水光 / 高=真实粉雾哑光肌)</span>
-                    <input type="range" id="slider-skin-roughness" min="0.34" max="0.82" step="0.02" value="0.56" />
-                    <span id="val-skin-roughness">56%</span>
+                    <span>🔍 3D细胞级毛孔疏密尺度 (Pore Frequency Scale)</span>
+                    <input type="range" id="slider-pore-scale" min="0.40" max="2.20" step="0.05" value="1.00" />
+                    <span id="val-pore-scale">100%</span>
                   </div>
                   <div class="slider-row">
-                    <span>🧬 真皮血色素与黑色素自然微斑驳感</span>
-                    <input type="range" id="slider-skin-mottle" min="0.00" max="1.60" step="0.05" value="1.00" />
-                    <span id="val-skin-mottle">100%</span>
+                    <span>🔬 3D毫米级真皮毛孔与皮沟微雕深度 (Pore Relief)</span>
+                    <input type="range" id="slider-pore-relief" min="0.00" max="1.60" step="0.02" value="0.24" />
+                    <span id="val-pore-relief">24%</span>
                   </div>
                   <div class="slider-row">
-                    <span>🥺 眼下卧蚕高光与阴影立体度 (Aegyo-Sal)</span>
-                    <input type="range" id="slider-aegyosal" min="0.00" max="1.00" step="0.05" value="0.42" />
-                    <span id="val-aegyosal">42%</span>
+                    <span>🧴 表皮丝绒哑光度 (低=水光奶油肌 / 高=素颜粉雾肌)</span>
+                    <input type="range" id="slider-skin-roughness" min="0.18" max="0.82" step="0.02" value="0.38" />
+                    <span id="val-skin-roughness">38%</span>
                   </div>
                   <div class="slider-row">
-                    <span>🌙 眼下微暗沉/黑眼圈写实度</span>
-                    <input type="range" id="slider-dark-circles" min="0.00" max="1.00" step="0.05" value="0.10" />
-                    <span id="val-dark-circles">10%</span>
+                    <span>💧 T区鼻尖与苹果肌皮脂水光感 (T-Zone Sebum Oil)</span>
+                    <input type="range" id="slider-tzone-oiliness" min="0.00" max="1.50" step="0.05" value="0.30" />
+                    <span id="val-tzone-oiliness">30%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>💎 双峰微晶高光反射强度 (Dual-Lobe Specular)</span>
+                    <input type="range" id="slider-specular-lobe" min="0.10" max="1.40" step="0.05" value="0.45" />
+                    <span id="val-specular-lobe">45%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🩸 三层真皮次表面散射透光深度 (3-Layer Dermis SSS)</span>
+                    <input type="range" id="slider-char-sss-depth" min="0.00" max="1.60" step="0.05" value="0.80" />
+                    <span id="val-char-sss-depth">80%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🫀 皮下毛细血管网与微静脉显现度 (Subcutaneous Veins)</span>
+                    <input type="range" id="slider-vascularity" min="0.00" max="1.20" step="0.04" value="0.24" />
+                    <span id="val-vascularity">24%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🧬 真皮血色素与黑色素自然微斑驳感 (Chromophore Mottle)</span>
+                    <input type="range" id="slider-skin-mottle" min="0.00" max="1.20" step="0.04" value="0.18" />
+                    <span id="val-skin-mottle">18%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🍑 面颊轮廓逆光蜜桃绒毛感 (Vellus Peach Fuzz)</span>
+                    <input type="range" id="slider-vellus-fuzz" min="0.00" max="1.20" step="0.04" value="0.36" />
+                    <span id="val-vellus-fuzz">36%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>👄 唇部垂直解剖唇纹深度 (Lip Furrow Crease)</span>
+                    <input type="range" id="slider-lip-crease-depth" min="0.00" max="1.40" step="0.05" value="0.36" />
+                    <span id="val-lip-crease-depth">36%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>👂 耳廓与鼻尖薄软骨透红度 (Cartilage Flush)</span>
+                    <input type="range" id="slider-ear-tip-flush" min="0.00" max="1.00" step="0.04" value="0.32" />
+                    <span id="val-ear-tip-flush">32%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🥺 眼下卧蚕高光与立体度 (Aegyo-Sal)</span>
+                    <input type="range" id="slider-aegyosal" min="0.00" max="1.00" step="0.05" value="0.16" />
+                    <span id="val-aegyosal">16%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🌙 眼下微暗沉/黑眼圈写实度 (默认0%干净眼下)</span>
+                    <input type="range" id="slider-dark-circles" min="0.00" max="1.00" step="0.05" value="0.00" />
+                    <span id="val-dark-circles">0%</span>
                   </div>
                   <div class="slider-row">
                     <span>🍂 鼻梁与脸颊野生小雀斑浓度</span>
@@ -1692,6 +1809,7 @@
                       <option value="3">③ 右眼下卧蚕泪痣 (苏晚特征)</option>
                       <option value="4">④ 鼻梁正中俏皮美人痣 (千雪特征)</option>
                       <option value="5">⑤ 左嘴角甜美梨涡痣 (沈知微特征)</option>
+                      <option value="6">⑥ 净肌去痣 (无额外特征痣)</option>
                     </select>
                   </div>
                   <div class="slider-row">
@@ -1710,9 +1828,19 @@
                     <span id="val-eye-catchlight">85%</span>
                   </div>
                   <div class="slider-row">
-                    <span>🪶 睫毛浓密纤长度 (Eyelash Density)</span>
-                    <input type="range" id="slider-eyelash-density" min="0.15" max="1.25" step="0.05" value="0.85" />
-                    <span id="val-eyelash-density">85%</span>
+                    <span>💧 角膜泪膜水润度与下睑泪河高光 (Cornea Wetness)</span>
+                    <input type="range" id="slider-cornea-wetness" min="0.20" max="1.50" step="0.05" value="0.92" />
+                    <span id="val-cornea-wetness">92%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🩸 眼白巩膜微血管丝细节 (Sclera Capillaries)</span>
+                    <input type="range" id="slider-sclera-veins" min="0.00" max="1.00" step="0.04" value="0.16" />
+                    <span id="val-sclera-veins">16%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🪶 根根分明真睫毛纤长浓度 (无眼线黑带)</span>
+                    <input type="range" id="slider-eyelash-density" min="0.00" max="1.20" step="0.05" value="0.68" />
+                    <span id="val-eyelash-density">68%</span>
                   </div>
                 </div>
 

@@ -933,14 +933,26 @@ export function createSkinGradingUniforms(initial = {}) {
     uSkinWarmthShift: { value: Number(initial.skinWarmthShift ?? 0.0) },
     uSkinBrightness: { value: Number(initial.skinBrightness ?? 1.0) },
     uSkinRosiness: { value: Number(initial.skinRosiness ?? 0.25) },
-    uPoreRelief: { value: Number(initial.poreRelief ?? 1.15) },
-    uSkinMicroMottle: { value: Number(initial.skinMicroMottle ?? 1.0) },
+    uPoreScale: { value: Number(initial.poreScale ?? 1.0) },
+    uPoreRelief: { value: Number(initial.poreRelief ?? 0.26) },
+    uTZoneOiliness: { value: Number(initial.tZoneOiliness ?? 0.32) },
+    uSpecularLobe: { value: Number(initial.specularLobe ?? 0.45) },
+    uCharSssDepth: { value: Number(initial.charSssDepth ?? 0.80) },
+    uCharSssColor: { value: new THREE.Color(initial.charSssColor || '#e85a4f') },
+    uVascularity: { value: Number(initial.vascularity ?? 0.24) },
+    uSkinMicroMottle: { value: Number(initial.skinMicroMottle ?? 0.18) },
+    uVellusFuzz: { value: Number(initial.vellusFuzz ?? 0.36) },
+    uLipCreaseDepth: { value: Number(initial.lipCreaseDepth ?? 0.36) },
+    uEarTipFlush: { value: Number(initial.earTipFlush ?? 0.32) },
     uBlushColor: { value: new THREE.Color(initial.blushColor || '#f07682') },
     uBlushStrength: { value: Number(initial.blushStrength ?? 0.22) },
-    uEyeshadowColor: { value: new THREE.Color(initial.eyeshadowColor || '#b87068') },
-    uEyeshadowStrength: { value: Number(initial.eyeshadowStrength ?? 0.18) },
-    uAegyoSalStrength: { value: Number(initial.aegyoSalStrength ?? 0.42) },
-    uDarkCircleStrength: { value: Number(initial.darkCircleStrength ?? 0.10) },
+    uEyeshadowColor: { value: new THREE.Color(initial.eyeshadowColor || '#c88278') },
+    uEyeshadowStrength: { value: Number(initial.eyeshadowStrength ?? 0.0) },
+    uEyelinerStyle: { value: Number(initial.eyelinerStyle ?? 0.0) },
+    uEyelinerStrength: { value: Number(initial.eyelinerStrength ?? 0.0) },
+    uEyelinerColor: { value: new THREE.Color(initial.eyelinerColor || '#2d201e') },
+    uAegyoSalStrength: { value: Number(initial.aegyoSalStrength ?? 0.18) },
+    uDarkCircleStrength: { value: Number(initial.darkCircleStrength ?? 0.0) },
     uLipColor: { value: new THREE.Color(initial.lipColor || '#cb5362') },
     uLipStrength: { value: Number(initial.lipStrength ?? 0.36) },
     uLipGloss: { value: Number(initial.lipGloss ?? 0.48) },
@@ -1015,12 +1027,24 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       uniform float uSkinWarmthShift;
       uniform float uSkinBrightness;
       uniform float uSkinRosiness;
+      uniform float uPoreScale;
       uniform float uPoreRelief;
+      uniform float uTZoneOiliness;
+      uniform float uSpecularLobe;
+      uniform float uCharSssDepth;
+      uniform vec3 uCharSssColor;
+      uniform float uVascularity;
       uniform float uSkinMicroMottle;
+      uniform float uVellusFuzz;
+      uniform float uLipCreaseDepth;
+      uniform float uEarTipFlush;
       uniform vec3 uBlushColor;
       uniform float uBlushStrength;
       uniform vec3 uEyeshadowColor;
       uniform float uEyeshadowStrength;
+      uniform float uEyelinerStyle;
+      uniform float uEyelinerStrength;
+      uniform vec3 uEyelinerColor;
       uniform float uAegyoSalStrength;
       uniform float uDarkCircleStrength;
       uniform vec3 uLipColor;
@@ -1055,14 +1079,15 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         );
       }
 
-      // Stage 43 · DLSS-5-Inspired Anatomical Zone-Specific Cellular Pore & Langer's Rhomboid Micro-Field
-      // Uses per-specimen phase offset so every head has unique micro-geometry!
+      // Stage 44 · DLSS-5-Inspired Anatomical Zone-Specific Cellular Pore & Langer's Rhomboid Micro-Field
+      // Supports per-character uPoreScale and phase seed so every head has unique micro-geometry!
       float compute3DPoreField(vec3 localPos) {
         vec2 charSeed = vec2(
           dot(uSkinToneTint, vec3(19.7, 37.3, 53.1)) + uSkinWarmthShift * 41.0,
           dot(uBlushColor, vec3(23.1, 47.9, 13.7)) + uSkinBrightness * 29.0
         );
-        vec2 mm = vec2(atan(localPos.x, max(0.02, localPos.z + 0.02)) * 96.0, localPos.y * 960.0) + fract(charSeed) * 14.0;
+        float pScale = clamp(uPoreScale, 0.35, 2.5);
+        vec2 mm = vec2(atan(localPos.x, max(0.02, localPos.z + 0.02)) * 96.0, localPos.y * 960.0) * pScale + fract(charSeed) * 14.0;
         // Anatomical zone pore-density scaling: finer crisp pores on nasal tip & medial cheek, ultra-fine on eyelids/forehead
         float tZonePore = max(
           exp(-pow(localPos.x / 0.028, 2.0)) * exp(-pow((localPos.y + 0.004) / 0.018, 2.0)),
@@ -1091,7 +1116,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         float inZ = smoothstep(0.096, 0.1015, p.z);
         float mask = clamp(inX * inY * inZ, 0.0, 1.0);
         float creaseWave = dermisNoise2D(vec2(p.x * 1650.0, p.y * 240.0));
-        lipCrease = mix(0.5, creaseWave, mask);
+        lipCrease = mix(0.5, creaseWave, mask * clamp(uLipCreaseDepth * 1.8, 0.0, 1.8));
         return mask;
       }
 
@@ -1125,14 +1150,16 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         return mix(1.0, pattern, clamp(uWindowGoboStrength * 0.72, 0.0, 0.82));
       }
 
-      // Stage 43 · Pre-Integrated 3-Wavelength Subsurface Scattering (Red 630nm / Green 530nm / Blue 460nm)
+      // Stage 44 · Pre-Integrated 3-Wavelength Subsurface Scattering with Per-Character Depth & Blood Tint
       vec3 computeDualLobeSkinSSS(vec3 fragNormal, vec3 lightDir, vec3 lightColor, vec3 viewDir, vec3 localPos) {
         float ndl = dot(fragNormal, lightDir);
+        float sssDepth = clamp(uCharSssDepth, 0.0, 1.8);
         // Wavelength-dependent wrap scattering: Red penetrates widest, Green medium, Blue narrowest
-        float wrapR = smoothstep(-0.68, 0.42, ndl) * (1.0 - smoothstep(0.12, 0.78, ndl));
-        float wrapG = smoothstep(-0.38, 0.36, ndl) * (1.0 - smoothstep(0.08, 0.65, ndl));
-        float wrapB = smoothstep(-0.18, 0.28, ndl) * (1.0 - smoothstep(0.04, 0.52, ndl));
-        vec3 triWaveSSS = vec3(wrapR * 0.34, wrapG * 0.14, wrapB * 0.075);
+        float wrapR = smoothstep(-0.72 * max(0.5, sssDepth), 0.44, ndl) * (1.0 - smoothstep(0.12, 0.78, ndl));
+        float wrapG = smoothstep(-0.38 * max(0.5, sssDepth), 0.36, ndl) * (1.0 - smoothstep(0.08, 0.65, ndl));
+        float wrapB = smoothstep(-0.18 * max(0.5, sssDepth), 0.28, ndl) * (1.0 - smoothstep(0.04, 0.52, ndl));
+        vec3 sssTint = mix(vec3(1.0, 0.42, 0.28), uCharSssColor * 1.35, 0.65);
+        vec3 triWaveSSS = vec3(wrapR * 0.36, wrapG * 0.15, wrapB * 0.08) * sssTint;
 
         // Thin-tissue back-translucency across nasal alae, ear helix & lips
         float thinTissueMask = max(
@@ -1140,8 +1167,8 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           smoothstep(0.080, 0.096, localPos.z) * smoothstep(-0.024, 0.010, localPos.y)
         );
         float backTrans = pow(clamp(dot(-viewDir, lightDir) + 0.28, 0.0, 1.0), 2.0) * thinTissueMask;
-        vec3 rubyTrans = vec3(0.88, 0.24, 0.16) * backTrans * 0.24;
-        return (triWaveSSS + rubyTrans) * lightColor * uSssIntensity;
+        vec3 rubyTrans = uCharSssColor * backTrans * 0.32 * sssDepth;
+        return (triWaveSSS + rubyTrans) * lightColor * uSssIntensity * sssDepth;
       }`
     );
 
@@ -1182,7 +1209,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         skinCol.g *= (1.0 + uSkinWarmthShift * 0.025 - uSkinRosiness * 0.015);
         skinCol.b *= (1.0 - uSkinWarmthShift * 0.12 - uSkinRosiness * 0.030);
 
-        // 2. Per-Specimen Chromophore Melanin & Hemoglobin Mottling (unique per character!)
+        // 2. Per-Specimen Chromophore Melanin, Hemoglobin Mottling & Subcutaneous Vascular Network
         vec2 charOffset = vec2(dot(uSkinToneTint, vec3(41.2, 17.8, 29.4)), uSkinWarmthShift * 83.0 + uSkinRosiness * 57.0);
         vec2 mmCoord = vec2(p.x * 340.0, p.y * 340.0 + p.z * 180.0) + charOffset;
         float hemoNoise = dermisNoise2D(mmCoord * 1.3) - 0.5;
@@ -1192,6 +1219,25 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
                          * clamp(uSkinMicroMottle, 0.0, 1.6) * faceFrontMask * (1.0 - lipMask * 0.7);
         skinCol += skinCol * chromoDelta;
 
+        // Subcutaneous Capillary & Infraorbital/Temple Micro-Vein Network (uVascularity)
+        if (uVascularity > 0.01) {
+          float vascZone = max(
+            exp(-pow((abs(p.x) - 0.028) / 0.018, 2.0)) * exp(-pow((p.y - 0.006) / 0.012, 2.0)),
+            exp(-pow((abs(p.x) - 0.056) / 0.016, 2.0)) * exp(-pow((p.y - 0.022) / 0.020, 2.0)) * 0.85
+          ) * (1.0 - lipMask);
+          float veinWave = abs(dermisNoise2D(mmCoord * 3.8) - 0.5) * 2.0;
+          float capillaryFilaments = smoothstep(0.18, 0.02, veinWave) * vascZone * clamp(uVascularity, 0.0, 1.5);
+          skinCol = mix(skinCol, skinCol * vec3(0.84, 0.72, 0.82) + uCharSssColor * 0.06, clamp(capillaryFilaments * 0.38, 0.0, 0.35));
+        }
+
+        // Ear Helix & Nasal Tip Thin-Cartilage Capillary Flush (uEarTipFlush)
+        if (uEarTipFlush > 0.01) {
+          float earHelixMask = smoothstep(0.058, 0.078, abs(p.x)) * exp(-pow((p.y - 0.004) / 0.030, 2.0));
+          float nasalTipFlush = exp(-pow(p.x / 0.012, 2.0)) * exp(-pow((p.y + 0.013) / 0.009, 2.0)) * smoothstep(0.088, 0.105, p.z);
+          float flushAmt = clamp((earHelixMask * 0.75 + nasalTipFlush * 0.55) * uEarTipFlush, 0.0, 0.65);
+          skinCol = mix(skinCol, skinCol * vec3(1.04, 0.82, 0.82) + uCharSssColor * 0.12, flushAmt);
+        }
+
         // 3. Apple Cheek & Nasal-Tip Blush Gradient
         float cheekDist = length((vec2(abs(p.x), p.y) - vec2(0.036, -0.004)) / vec2(0.023, 0.017));
         float noseTipDist = length((p.xy - vec2(0.0, -0.0145)) / vec2(0.011, 0.009));
@@ -1199,11 +1245,61 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
                         * smoothstep(0.058, 0.088, p.z) * (1.0 - lipMask);
         skinCol = mix(skinCol, skinCol * (0.55 + 0.45 * uBlushColor) + uBlushColor * 0.24, clamp(blushMask * uBlushStrength * 0.85, 0.0, 0.75));
 
-        // 4. Upper Eyelid Eyeshadow & Outer Canthus Contour
-        float lidDist = length((vec2(abs(p.x), p.y) - vec2(0.030, 0.0205)) / vec2(0.017, 0.0065));
-        float eyeHole = eyeHoleMask;
-        float shadowMask = exp(-lidDist * lidDist * 1.6) * eyeHole * smoothstep(0.072, 0.088, p.z);
-        skinCol = mix(skinCol, skinCol * uEyeshadowColor * 0.92, clamp(shadowMask * uEyeshadowStrength * 0.85, 0.0, 0.72));
+        // 4. Bare Eyelid Physiological Equalizer + Optional User-Customizable 3D Eyeliner & Eyeshadow
+        // Guarantee 100% clean bare eyelids when eyeliner/eyeshadow are 0 (eliminates any baked eyeliner shadow!)
+        float lidRimDist = length((vec2(abs(p.x), p.y) - vec2(0.0295, 0.0174)) / vec2(0.0155, 0.0055));
+        float bareLidMask = exp(-lidRimDist * lidRimDist * 1.65) * smoothstep(0.072, 0.086, p.z);
+        float bareGuard = clamp(1.0 - max(uEyelinerStrength, uEyeshadowStrength) * 2.0, 0.0, 1.0);
+        if (bareGuard > 0.01 && bareLidMask > 0.01) {
+          float curLum = dot(skinCol, vec3(0.299, 0.587, 0.114));
+          vec3 refLidCol = vec3(0.84, 0.66, 0.61) * uSkinToneTint * uSkinBrightness;
+          float refLum = dot(refLidCol, vec3(0.299, 0.587, 0.114));
+          if (curLum < refLum * 0.94) {
+            skinCol = mix(skinCol, max(skinCol, refLidCol * 0.94), bareLidMask * bareGuard * 0.88);
+          }
+        }
+
+        if (uEyeshadowStrength > 0.008) {
+          float lidDist = length((vec2(abs(p.x), p.y) - vec2(0.030, 0.0205)) / vec2(0.017, 0.0065));
+          float shadowMask = exp(-lidDist * lidDist * 1.6) * eyeHoleMask * smoothstep(0.072, 0.088, p.z);
+          skinCol = mix(skinCol, skinCol * uEyeshadowColor * 0.92, clamp(shadowMask * uEyeshadowStrength * 0.85, 0.0, 0.72));
+        }
+
+        // User-Customizable Per-Character 3D Eyeliner (0=无眼线, 1=隐形内眼线, 2=自然眼尾线, 3=微挑猫眼线, 4=无辜下至线)
+        if (uEyelinerStyle >= 0.5 && uEyelinerStrength > 0.01 && p.z > 0.073) {
+          float ax = abs(p.x);
+          float xRel = (ax - 0.0292) / 0.0125; // -1 at inner canthus, +1 at outer canthus
+          float upperArchY = 0.0201 - 0.0024 * xRel * xRel - 0.0005 * xRel;
+          float linerAlpha = 0.0;
+          if (uEyelinerStyle < 1.5) {
+            // 1: Invisible Tightline (upper lashline root only, zero wing)
+            float inSpan = smoothstep(-0.92, -0.65, xRel) * (1.0 - smoothstep(0.78, 1.02, xRel));
+            float dY = abs(p.y - upperArchY);
+            linerAlpha = (1.0 - smoothstep(0.00035, 0.00095, dY)) * inSpan * 0.75;
+          } else if (uEyelinerStyle < 2.5) {
+            // 2: Natural Fine Wing (subtle 2mm extension at outer corner)
+            float wingY = upperArchY + max(0.0, xRel - 0.75) * 0.0016;
+            float inSpan = smoothstep(-0.88, -0.58, xRel) * (1.0 - smoothstep(0.95, 1.24, xRel));
+            float halfW = mix(0.00055, 0.00025, clamp((xRel - 0.75) * 2.2, 0.0, 1.0));
+            linerAlpha = (1.0 - smoothstep(halfW * 0.5, halfW * 1.4, abs(p.y - wingY))) * inSpan;
+          } else if (uEyelinerStyle < 3.5) {
+            // 3: Korean Siren Cat-Flick (upward 18° flick at outer canthus)
+            float flickY = upperArchY + max(0.0, xRel - 0.65) * 0.0038;
+            float inSpan = smoothstep(-0.85, -0.50, xRel) * (1.0 - smoothstep(1.02, 1.34, xRel));
+            float halfW = mix(0.00072, 0.00022, clamp((xRel - 0.70) * 1.8, 0.0, 1.0));
+            linerAlpha = (1.0 - smoothstep(halfW * 0.5, halfW * 1.4, abs(p.y - flickY))) * inSpan;
+          } else {
+            // 4: Puppy Droop & Lower-Lid Tareme Line
+            float droopY = upperArchY - max(0.0, xRel - 0.65) * 0.0018;
+            float inUpper = smoothstep(-0.85, -0.55, xRel) * (1.0 - smoothstep(0.96, 1.24, xRel));
+            float uLine = (1.0 - smoothstep(0.00035, 0.00095, abs(p.y - droopY))) * inUpper;
+            float lowerArchY = 0.0138 + 0.0014 * xRel * xRel;
+            float inLower = smoothstep(0.15, 0.45, xRel) * (1.0 - smoothstep(0.88, 1.12, xRel));
+            float lLine = (1.0 - smoothstep(0.00035, 0.00110, abs(p.y - lowerArchY))) * inLower * 0.48;
+            linerAlpha = max(uLine, lLine);
+          }
+          skinCol = mix(skinCol, uEyelinerColor, clamp(linerAlpha * uEyelinerStrength * 0.92, 0.0, 0.92));
+        }
 
         // 5. Under-Eye Aegyo-Sal (卧蚕) Puff Highlight & Subtle Groove Shadow
         if (uAegyoSalStrength > 0.01) {
@@ -1322,10 +1418,10 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
 
       // Soft Dermal Subsurface Penumbra Scatter across Shadow Terminator (Red 630nm / Green 530nm / Blue 460nm)
       float penumbraFringe = 4.0 * sunMask * (1.0 - sunMask);
-      vec3 dermalPenumbra = diffuseColor.rgb * vec3(1.08, 0.58, 0.46) * pow(penumbraFringe, 1.25) * 0.18 * uSssIntensity;
+      vec3 dermalPenumbra = diffuseColor.rgb * mix(vec3(1.08, 0.58, 0.46), uCharSssColor * 1.32, 0.55) * pow(penumbraFringe, 1.25) * 0.22 * uSssIntensity * clamp(uCharSssDepth, 0.0, 1.8);
       reflectedLight.directDiffuse += dermalPenumbra;
 
-      // DLSS-5 Dual-Lobe Sebaceous Micro-Cavity Specular Occlusion + Wet Lip Gloss
+      // DLSS-5 Dual-Lobe Sebaceous Micro-Cavity Specular Occlusion + Per-Character T-Zone Oiliness & Wet Lip Gloss
       float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
       float fresnelSheen = pow(1.0 - ndotv, 3.0);
       float poreSpecMask = clamp(0.28 + 0.92 * pow(vDermisPoreCavity, 1.25), 0.24, 1.15);
@@ -1333,23 +1429,25 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         exp(-pow(vCervixLocalPos.x / 0.015, 2.0)) * smoothstep(0.075, 0.105, vCervixLocalPos.z),
         exp(-pow((abs(vCervixLocalPos.x) - 0.035) / 0.020, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.002) / 0.016, 2.0)) * smoothstep(0.068, 0.092, vCervixLocalPos.z)
       );
+      float specLobeScale = clamp(uSpecularLobe * 2.0, 0.15, 2.8);
+      float oilBoost = tZoneMask * clamp(uTZoneOiliness * 1.4, 0.0, 1.8);
       float lipSpecBoost = vLipVermilionMask * clamp(uLipGloss, 0.0, 1.5) * 1.45;
-      reflectedLight.directSpecular *= (0.22 + 0.54 * sunMask + 0.24 * tZoneMask * sunMask + lipSpecBoost) * poreSpecMask;
-      reflectedLight.indirectSpecular *= (0.18 + 0.42 * sunMask + 0.18 * fresnelSheen * sunMask + lipSpecBoost * 0.85) * poreSpecMask;
+      reflectedLight.directSpecular *= (0.20 + (0.50 + 0.48 * oilBoost) * sunMask * specLobeScale + lipSpecBoost) * poreSpecMask;
+      reflectedLight.indirectSpecular *= (0.16 + (0.38 + 0.36 * oilBoost) * sunMask * specLobeScale + 0.18 * fresnelSheen * sunMask + lipSpecBoost * 0.85) * poreSpecMask;
 
       // Interactive Mouse-Following Studio Beauty Torch
       if (uCursorTorchIntensity > 0.01) {
         vec3 curL = normalize(uCursorLightDir);
         vec3 curH = normalize(curL + viewDir);
         float curNdl = max(0.0, dot(normal, curL));
-        float curSpec = pow(max(0.0, dot(normal, curH)), 42.0) * (0.35 + 0.45 * tZoneMask + lipSpecBoost) * poreSpecMask;
+        float curSpec = pow(max(0.0, dot(normal, curH)), 42.0) * (0.35 + 0.45 * oilBoost + lipSpecBoost) * poreSpecMask;
         reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.98, 0.96) * curNdl * 0.07 * uCursorTorchIntensity;
         reflectedLight.directSpecular += vec3(1.03, 0.99, 0.97) * curSpec * 0.16 * uCursorTorchIntensity;
       }
 
-      // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour
-      float vellusRim = pow(1.0 - ndotv, 3.4) * smoothstep(-0.25, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
-      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.06, 0.97, 0.90) * vellusRim * (0.06 + 0.12 * sunMask);
+      // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour (uVellusFuzz)
+      float vellusRim = pow(1.0 - ndotv, 3.2) * smoothstep(-0.25, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
+      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.06, 0.97, 0.90) * vellusRim * (0.08 + 0.22 * sunMask) * clamp(uVellusFuzz * 2.2, 0.0, 2.4);
 
       #if ( NUM_DIR_LIGHTS > 0 )
         vec3 sssAccum = vec3(0.0);
@@ -1362,7 +1460,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v43';
+  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v44';
 }
 
 /**

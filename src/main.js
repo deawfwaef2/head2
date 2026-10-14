@@ -12,6 +12,8 @@ import {
   HEAD_BLEND_CHANNELS,
   FACE_ARCHETYPE_CATALOG,
   EYEBROW_STYLE_CATALOG,
+  EYELINER_STYLE_CATALOG,
+  CHAR_MATERIAL_PRESET_CATALOG,
   STUDY_ROLE_CATALOG,
   getStudyRoleMeta,
   resolveCollectibleLifePhotoSrc
@@ -50,7 +52,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage43-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage44-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -68,6 +70,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage43-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage36-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage35-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage30-master-v1') ||
@@ -82,12 +85,16 @@ function restoreCollectibles() {
       '[]'
     );
     if (Array.isArray(legacy)) {
-      const builtinIds = new Set(defaults.map(d => d.id));
+      const byId = new Map(defaults.map(d => [d.id, d]));
       for (const item of legacy) {
-        if (item && typeof item.id === 'string' && !builtinIds.has(item.id)) {
-          if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
-          if (item.customHairUrl?.startsWith('blob:')) item.customHairUrl = null;
+        if (!item || typeof item.id !== 'string') continue;
+        if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+        if (item.customHairUrl?.startsWith('blob:')) item.customHairUrl = null;
+        if (!byId.has(item.id)) {
           defaults.unshift(item);
+        } else if (typeof item.name === 'string' && item.name.startsWith('QA ')) {
+          const def = byId.get(item.id);
+          def.summoned = Boolean(item.summoned);
         }
       }
     }
@@ -196,21 +203,47 @@ const state = {
     customModelType: 'glb',
     customHairUrl: null,
     customHairType: 'glb',
+    customSkinMapUrl: '',
+    customNormalMapUrl: '',
+    customRoughnessMapUrl: '',
+    customIrisMapUrl: '',
     skinTone: '#faDFce',
     blushIntensity: 0.18,
     lipColor: '#bc646e',
     irisColor: '#382015',
+    eyelinerStyle: 0,
+    eyelinerStrength: 0.0,
+    eyelinerColor: '#2d201e',
+    lashColor: '#44322e',
+    eyeshadowIntensity: 0.0,
+    eyelashDensity: 0.68,
+    normalMapStrength: 0.26,
+    poreScale: 1.0,
+    poreRelief: 0.24,
+    skinRoughness: 0.38,
+    tZoneOiliness: 0.30,
+    specularLobe: 0.45,
+    charSssDepth: 0.80,
+    charSssColor: '#e85a4f',
+    vascularity: 0.24,
+    skinMottle: 0.18,
+    vellusFuzz: 0.36,
+    lipCreaseDepth: 0.36,
+    earTipFlush: 0.32,
+    corneaWetness: 0.92,
+    scleraVeinIntensity: 0.16,
     hairStyle: 'hair_user_photo',
+    topCrown: 'photo_sleek_crown',
     frontBangs: 'wispy_air',
-    sideLocks: 'photo_wisp',
-    backAttachment: 'high_ponytail',
+    sideLocks: 'photo_asymmetric_ear',
+    backAttachment: 'photo_tied_ponytail',
     hairDyePreset: 'natural_ebony',
     hairTipColor: '#4a3528',
     hairOmbreMix: 0.0,
-    hairWispyFeather: 0.58,
+    hairWispyFeather: 0.68,
     groomDensity: 6000,
     hairColor: '#121216',
-    hairSheen: 0.45,
+    hairSheen: 0.85,
     neckClearance: 0.55,
     photoElement: null,
     photoBlend: 0.0,
@@ -220,12 +253,13 @@ const state = {
       eyeRollUp: 0.0,
       tongueOut: 0.0,
       jawSide: 0.0,
+      topCrownStyle: 'photo_sleek_crown',
       frontBangs: 'wispy_air',
-      sideLocks: 'photo_wisp',
-      backAttachment: 'high_ponytail',
+      sideLocks: 'photo_asymmetric_ear',
+      backAttachment: 'photo_tied_ponytail',
       hairTipColor: '#4a3528',
       hairOmbreMix: 0.0,
-      hairWispyFeather: 0.58,
+      hairWispyFeather: 0.68,
       bangsLength: 0.0,
       bangsParting: 0.0,
       hairVolume: 0.0,
@@ -235,13 +269,22 @@ const state = {
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
-      jawVLine: 0.0,
-      chinLength: 0.0,
-      cheekSoftness: 0.0,
-      noseBridge: 0.0,
-      eyeAlmond: 0.0,
-      eyeTilt: 0.0,
-      lipFullness: 0.0,
+      jawVLine: -0.18,
+      chinLength: -0.08,
+      cheekSoftness: 0.32,
+      noseBridge: 0.04,
+      noseWidth: 0.08,
+      eyeSize: 0.18,
+      eyeAperture: 0.14,
+      eyeAlmond: 0.12,
+      eyeTilt: 0.02,
+      eyeSpacing: 0.02,
+      lipFullness: 0.10,
+      mouthSmile: 0.18,
+      foreheadHeight: 0.08,
+      eyelinerStyle: 0,
+      eyelinerStrength: 0.0,
+      eyeshadowIntensity: 0.0,
       neckDiameter: 0.95,
       cutHeightOffset: 0.0,
       cutTiltPitch: 4.0,
@@ -1548,8 +1591,12 @@ function syncStudioHairUI(hairStyle) {
 function loadCollectibleIntoStudio(col) {
   const deadExpr = col.deadExpression || col.morphs?.deadExpression || 'dead_calm';
   const resolvedHair = resolveRealHairStyle(col.hairStyle || 'hair_bob01');
+  const cm = col.morphs || {};
   state.studioDraft = JSON.parse(JSON.stringify({
     basePreset: col.basePreset || 'user_photo',
+    skinVariant: col.skinVariant || cm.skinVariant || 'cn_scholar_natural',
+    faceArchetype: col.faceArchetype || cm.faceArchetype || 'cn_oval_scholar',
+    eyebrowStyle: col.eyebrowStyle || cm.eyebrowStyle || 'cn_scholar_natural',
     deadExpression: deadExpr,
     containerStyle: col.containerStyle || 'glass_bell_jar',
     decorStyle: col.decorStyle || 'trophy_candles',
@@ -1560,14 +1607,39 @@ function loadCollectibleIntoStudio(col) {
     customHairUrl: col.customHairUrl || null,
     customHairType: col.customHairType || 'glb',
     customHairName: col.customHairName || '',
+    customSkinMapUrl: col.customSkinMapUrl || cm.customSkinMapUrl || '',
+    customNormalMapUrl: col.customNormalMapUrl || cm.customNormalMapUrl || '',
+    customRoughnessMapUrl: col.customRoughnessMapUrl || cm.customRoughnessMapUrl || '',
+    customIrisMapUrl: col.customIrisMapUrl || cm.customIrisMapUrl || '',
     skinTone: col.skinTone || '#ffe9df',
     blushIntensity: col.blushIntensity ?? 0.25,
     lipColor: col.lipColor || '#c46470',
     irisColor: col.irisColor || '#3b2014',
+    eyelinerStyle: col.eyelinerStyle ?? cm.eyelinerStyle ?? 0,
+    eyelinerStrength: col.eyelinerStrength ?? cm.eyelinerStrength ?? 0.0,
+    eyelinerColor: col.eyelinerColor ?? cm.eyelinerColor ?? '#2d201e',
+    lashColor: col.lashColor ?? cm.lashColor ?? '#44322e',
+    eyeshadowIntensity: col.eyeshadowIntensity ?? cm.eyeshadowIntensity ?? 0.0,
+    eyelashDensity: col.eyelashDensity ?? cm.eyelashDensity ?? 0.68,
+    normalMapStrength: col.normalMapStrength ?? cm.normalMapStrength ?? 0.26,
+    poreScale: col.poreScale ?? cm.poreScale ?? 1.0,
+    poreRelief: col.poreRelief ?? cm.poreRelief ?? 0.24,
+    skinRoughness: col.skinRoughness ?? cm.skinRoughness ?? 0.38,
+    tZoneOiliness: col.tZoneOiliness ?? cm.tZoneOiliness ?? 0.30,
+    specularLobe: col.specularLobe ?? cm.specularLobe ?? 0.45,
+    charSssDepth: col.charSssDepth ?? cm.charSssDepth ?? 0.80,
+    charSssColor: col.charSssColor ?? cm.charSssColor ?? '#e85a4f',
+    vascularity: col.vascularity ?? cm.vascularity ?? 0.24,
+    skinMottle: col.skinMottle ?? cm.skinMottle ?? 0.18,
+    vellusFuzz: col.vellusFuzz ?? cm.vellusFuzz ?? 0.36,
+    lipCreaseDepth: col.lipCreaseDepth ?? cm.lipCreaseDepth ?? 0.36,
+    earTipFlush: col.earTipFlush ?? cm.earTipFlush ?? 0.32,
+    corneaWetness: col.corneaWetness ?? cm.corneaWetness ?? 0.92,
+    scleraVeinIntensity: col.scleraVeinIntensity ?? cm.scleraVeinIntensity ?? 0.16,
     hairStyle: resolvedHair,
     groomDensity: col.groomDensity || 6000,
     hairColor: col.hairColor || '#121216',
-    hairSheen: col.hairSheen ?? 0.45,
+    hairSheen: col.hairSheen ?? 0.85,
     neckClearance: col.neckClearance ?? 0.45,
     photoElement: null,
     photoBlend: 0.0,
@@ -1586,7 +1658,7 @@ function loadCollectibleIntoStudio(col) {
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
-      ...(col.morphs || {})
+      ...cm
     },
     anatomyOptions: { ...col.anatomyOptions }
   }));
@@ -1600,6 +1672,50 @@ function loadCollectibleIntoStudio(col) {
   document.getElementById('col-lip').value = state.studioDraft.lipColor;
   document.getElementById('col-iris').value = state.studioDraft.irisColor;
   document.getElementById('col-hair').value = state.studioDraft.hairColor;
+  const colLiner = document.getElementById('col-eyeliner');
+  if (colLiner) colLiner.value = state.studioDraft.eyelinerColor || '#2d201e';
+  const colLash = document.getElementById('col-lash');
+  if (colLash) colLash.value = state.studioDraft.lashColor || '#44322e';
+  const colSss = document.getElementById('col-char-sss');
+  if (colSss) colSss.value = state.studioDraft.charSssColor || '#e85a4f';
+  const selLiner = document.getElementById('sel-eyeliner-style');
+  if (selLiner) selLiner.value = String(state.studioDraft.eyelinerStyle ?? 0);
+  for (const [sId, vId, key] of [
+    ['slider-normal-map-strength', 'val-normal-map-strength', 'normalMapStrength'],
+    ['slider-pore-scale', 'val-pore-scale', 'poreScale'],
+    ['slider-pore-relief', 'val-pore-relief', 'poreRelief'],
+    ['slider-skin-roughness', 'val-skin-roughness', 'skinRoughness'],
+    ['slider-tzone-oiliness', 'val-tzone-oiliness', 'tZoneOiliness'],
+    ['slider-specular-lobe', 'val-specular-lobe', 'specularLobe'],
+    ['slider-char-sss-depth', 'val-char-sss-depth', 'charSssDepth'],
+    ['slider-vascularity', 'val-vascularity', 'vascularity'],
+    ['slider-skin-mottle', 'val-skin-mottle', 'skinMottle'],
+    ['slider-vellus-fuzz', 'val-vellus-fuzz', 'vellusFuzz'],
+    ['slider-lip-crease-depth', 'val-lip-crease-depth', 'lipCreaseDepth'],
+    ['slider-ear-tip-flush', 'val-ear-tip-flush', 'earTipFlush'],
+    ['slider-eyeliner-strength', 'val-eyeliner-strength', 'eyelinerStrength'],
+    ['slider-eyeshadow', 'val-eyeshadow', 'eyeshadowIntensity'],
+    ['slider-eyelash-density', 'val-eyelash-density', 'eyelashDensity'],
+    ['slider-cornea-wetness', 'val-cornea-wetness', 'corneaWetness'],
+    ['slider-sclera-veins', 'val-sclera-veins', 'scleraVeinIntensity'],
+  ]) {
+    const val = Number(state.studioDraft[key] ?? 0);
+    const sEl = document.getElementById(sId);
+    const vEl = document.getElementById(vId);
+    if (sEl) sEl.value = String(val);
+    if (vEl) vEl.textContent = `${Math.round(val * 100)}%`;
+  }
+  const mapStatusEl = document.getElementById('char-custom-map-status');
+  if (mapStatusEl) {
+    const activeNames = [];
+    if (state.studioDraft.customSkinMapUrl) activeNames.push('表皮漫反射图');
+    if (state.studioDraft.customNormalMapUrl) activeNames.push('微距法线图');
+    if (state.studioDraft.customRoughnessMapUrl) activeNames.push('光泽粗糙度图');
+    if (state.studioDraft.customIrisMapUrl) activeNames.push('虹膜纹理图');
+    mapStatusEl.textContent = activeNames.length > 0
+      ? `✅ 当前角色已挂载自定义PBR贴图：${activeNames.join(' + ')}`
+      : '当前使用内置 2K 摄影级 PBR 贴图通道';
+  }
 
   document.getElementById('inp-col-name').value = col.name;
   document.getElementById('inp-col-id').value = col.id;
@@ -2337,20 +2453,63 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (skMeta) showToast(`🎨 已切换无皱纹少女皮肤材质：${skMeta.label}`);
   };
 
+  const syncStudioShapeSlidersFromMorphs = (mObj = {}) => {
+    for (const [sId, vId, mKey, unit] of [
+      ['morph-eye-size', 'val-morph-eye-size', 'eyeSize', ''],
+      ['morph-eye', 'val-morph-eye', 'eyeAlmond', ''],
+      ['morph-eyelid-open', 'val-morph-eyelid-open', 'eyelidOpen', ''],
+      ['morph-eye-tilt', 'val-morph-eye-tilt', 'eyeTilt', ''],
+      ['morph-eye-spacing', 'val-morph-eye-spacing', 'eyeSpacing', ''],
+      ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
+      ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
+      ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
+      ['morph-chin', 'val-morph-chin', 'chinLength', ''],
+      ['morph-cheek', 'val-morph-cheek', 'cheekSoftness', ''],
+      ['morph-nose', 'val-morph-nose', 'noseBridge', ''],
+      ['morph-nose-width', 'val-morph-nose-width', 'noseWidth', ''],
+      ['morph-lip', 'val-morph-lip', 'lipFullness', ''],
+      ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
+      ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
+      ['morph-head-width', 'val-morph-head-width', 'headWidth', '%scale'],
+      ['morph-head-length', 'val-morph-head-length', 'headLength', '%scale'],
+    ]) {
+      if (mObj[mKey] === undefined) continue;
+      const val = Number(mObj[mKey]);
+      const sEl = document.getElementById(sId);
+      const vEl = document.getElementById(vId);
+      if (sEl) sEl.value = String(val);
+      if (vEl) {
+        if (unit === '%') vEl.textContent = `${Math.round(val * 100)}%`;
+        else if (unit === '%scale') vEl.textContent = `${Math.round((1 + val) * 100)}%`;
+        else vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
+      }
+    }
+  };
+
   const applyStudioFaceArchetype = (archId) => {
     state.studioDraft.faceArchetype = archId;
     state.studioDraft.morphs.faceArchetype = archId;
     for (const ch of HEAD_BLEND_CHANNELS) {
       delete state.studioDraft.morphs[ch.id];
     }
+    const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === archId);
+    if (fa?.morphRecipe) {
+      Object.assign(state.studioDraft.morphs, fa.morphRecipe);
+      syncStudioShapeSlidersFromMorphs(state.studioDraft.morphs);
+    }
+    if (fa?.defaultSkinVariant) {
+      state.studioDraft.skinVariant = fa.defaultSkinVariant;
+      state.studioDraft.morphs.skinVariant = fa.defaultSkinVariant;
+      syncStudioSkinVariantUI(fa.defaultSkinVariant);
+    }
     syncStudioFaceArchetypeUI(archId);
     if (studioEngine?.headNode) {
       setHeadFaceArchetype(studioEngine.headNode, archId);
+      applyHeadMorphsToGroup(studioEngine.headNode, state.studioDraft.morphs);
       syncStudioHeadBlendSliders(getHeadBlendStateFromGroup(studioEngine.headNode));
       studioEngine.wakeRender(1.5, true);
     }
-    const fa = FACE_ARCHETYPE_CATALOG.find(x => x.id === archId);
-    if (fa) showToast(`🍑 已切换头模流派并同步 7 通道混合器：${fa.label}`);
+    if (fa) showToast(`🍑 已切换头模流派与专属骨相参数：${fa.label}`);
   };
 
   const applyStudioEyebrowStyle = (browId) => {
@@ -2487,30 +2646,56 @@ window.addEventListener('DOMContentLoaded', async () => {
       qianxue: 'dead_shock',
       shenzhiwei: 'dead_smile'
     };
-    const ZERO_SCULPT = { jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 };
     const presetMorphMap = {
-      fangyaoping: { ...ZERO_SCULPT, frontBangs: 'wispy_air', sideLocks: 'photo_wisp', backAttachment: 'high_ponytail' },
-      user_photo:  { ...ZERO_SCULPT, frontBangs: 'wispy_air', sideLocks: 'photo_wisp', backAttachment: 'high_ponytail' },
-      linxi:       { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
-      suwan:       { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
-      qianxue:     { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
-      shenzhiwei:  { ...ZERO_SCULPT, frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' },
+      fangyaoping: {
+        jawVLine: -0.18, chinLength: -0.08, cheekSoftness: 0.32, noseBridge: 0.04, noseWidth: 0.08,
+        eyeSize: 0.18, eyeAperture: 0.14, eyeAlmond: 0.12, eyeTilt: 0.02, eyeSpacing: 0.02,
+        irisScale: 1.04, pupilSize: 1.00, lipFullness: 0.10, mouthSmile: 0.18, foreheadHeight: 0.08,
+        eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
+        topCrownStyle: 'photo_sleek_crown', frontBangs: 'wispy_air', sideLocks: 'photo_asymmetric_ear', backAttachment: 'photo_tied_ponytail'
+      },
+      user_photo: {
+        jawVLine: -0.32, chinLength: -0.34, cheekSoftness: 0.62, noseBridge: -0.14, noseWidth: 0.04,
+        eyeSize: 0.64, eyeAperture: 0.42, eyeAlmond: -0.28, eyeTilt: -0.24, eyeSpacing: 0.08,
+        irisScale: 1.24, pupilSize: 1.12, lipFullness: 0.38, mouthSmile: 0.12, foreheadHeight: 0.14,
+        eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
+        topCrownStyle: 'fluffy_high_crown', frontBangs: 'wispy_air', sideLocks: 'hime_cheek', backAttachment: 'twin_buns'
+      },
+      linxi: {
+        jawVLine: 0.68, chinLength: 0.24, cheekSoftness: -0.36, noseBridge: 0.46, noseWidth: -0.28,
+        eyeSize: 0.06, eyeAperture: -0.06, eyeAlmond: 0.56, eyeTilt: 0.52, eyeSpacing: -0.06,
+        irisScale: 0.94, pupilSize: 0.90, lipFullness: -0.12, mouthSmile: -0.06, foreheadHeight: 0.04,
+        eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
+        topCrownStyle: 'center_part_crown', frontBangs: 'curtain_part', sideLocks: 'tucked_ear', backAttachment: 'sleek_long_back'
+      },
+      suwan: {
+        jawVLine: 0.34, chinLength: 0.14, cheekSoftness: 0.12, noseBridge: 0.22, noseWidth: -0.18,
+        eyeSize: 0.24, eyeAperture: 0.10, eyeAlmond: 0.28, eyeTilt: 0.12, eyeSpacing: 0.04,
+        irisScale: 1.06, pupilSize: 1.02, lipFullness: 0.16, mouthSmile: 0.04, foreheadHeight: 0.10,
+        eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
+        topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
+      },
+      qianxue: {
+        jawVLine: 0.46, chinLength: -0.12, cheekSoftness: 0.38, noseBridge: 0.18, noseWidth: -0.14,
+        eyeSize: 0.48, eyeAperture: 0.28, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.02,
+        irisScale: 1.16, pupilSize: 1.08, lipFullness: 0.28, mouthSmile: 0.0, foreheadHeight: 0.06,
+        eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
+        topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
+      },
+      shenzhiwei: {
+        jawVLine: 0.42, chinLength: 0.28, cheekSoftness: -0.42, noseBridge: 0.52, noseWidth: -0.22,
+        eyeSize: 0.14, eyeAperture: 0.04, eyeAlmond: 0.44, eyeTilt: 0.28, eyeSpacing: -0.04,
+        irisScale: 0.98, pupilSize: 0.95, lipFullness: 0.18, mouthSmile: 0.22, foreheadHeight: 0.02,
+        eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
+        topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
+      },
     };
     if (e.target.value === 'fangyaoping' || e.target.value === 'user_photo') {
       drawPresetReferencePortrait(refPhotoCanvas, e.target.value);
     }
     for (const ch of HEAD_BLEND_CHANNELS) {
-      state.studioDraft.morphs[ch.id] = 0.0;
+      delete state.studioDraft.morphs[ch.id];
     }
-    syncStudioHeadBlendSliders({
-      blend_asian_youth: 0.0,
-      blend_cn_scholar: 0.0,
-      blend_cn_baby: 0.0,
-      blend_kr_vline: 0.0,
-      blend_cn_melon: 0.0,
-      blend_cn_royal: 0.0,
-      blend_eurasian: 0.0,
-    });
     if (presetHairMap[e.target.value]) {
       state.studioDraft.hairStyle = presetHairMap[e.target.value];
       syncStudioHairUI(state.studioDraft.hairStyle);
@@ -2542,22 +2727,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     if (presetMorphMap[e.target.value]) {
       Object.assign(state.studioDraft.morphs, presetMorphMap[e.target.value]);
+      state.studioDraft.topCrown = state.studioDraft.morphs.topCrownStyle || 'default';
       state.studioDraft.frontBangs = state.studioDraft.morphs.frontBangs || 'default';
       state.studioDraft.sideLocks = state.studioDraft.morphs.sideLocks || 'default';
       state.studioDraft.backAttachment = state.studioDraft.morphs.backAttachment || 'none';
-      for (const [sId, vId, mKey] of [
-        ['morph-jaw', 'val-morph-jaw', 'jawVLine'],
-        ['morph-cheek', 'val-morph-cheek', 'cheekSoftness'],
-        ['morph-nose', 'val-morph-nose', 'noseBridge'],
-        ['morph-eye', 'val-morph-eye', 'eyeAlmond'],
-        ['morph-lip', 'val-morph-lip', 'lipFullness'],
-      ]) {
-        const sEl = document.getElementById(sId);
-        const vEl = document.getElementById(vId);
-        const val = Number(state.studioDraft.morphs[mKey] ?? 0);
-        if (sEl) sEl.value = String(val);
-        if (vEl) vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
-      }
+      syncStudioShapeSlidersFromMorphs(state.studioDraft.morphs);
     }
     document.getElementById('custom-model-status').textContent = `内置高定头模 (${e.target.value} + ${state.studioDraft.hairStyle})`;
     await refreshStudio3DModel();
@@ -2805,15 +2979,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['col-brow', 'browColor'],
     ['col-hair', 'hairColor'],
     ['col-hair-highlight', 'hairHighlightColor'],
+    ['col-eyeliner', 'eyelinerColor'],
+    ['col-lash', 'lashColor'],
+    ['col-char-sss', 'charSssColor'],
   ]) {
     document.getElementById(id)?.addEventListener('input', (e) => {
       const hex = e.target.value;
       const patch = { [key]: hex };
-      // If user picks a custom lip/blush/eyeshadow/iris color, ensure its strength is visible!
+      // If user picks a custom lip/blush/eyeshadow/iris/eyeliner color, ensure its strength is visible!
       if (key === 'irisColor') {
         patch.irisMix = Math.max(0.88, Number(state.studioDraft.irisMix ?? 0.88));
         const vcdIris = document.getElementById('vcd-iris-color');
         if (vcdIris) vcdIris.value = hex;
+      } else if (key === 'eyelinerColor') {
+        if (Number(state.studioDraft.eyelinerStyle ?? 0) === 0) {
+          patch.eyelinerStyle = 2;
+          const selEl = document.getElementById('sel-eyeliner-style');
+          if (selEl) selEl.value = '2';
+        }
+        if (Number(state.studioDraft.eyelinerStrength ?? 0) < 0.25) {
+          patch.eyelinerStrength = 0.45;
+          const sl = document.getElementById('slider-eyeliner-strength');
+          const vl = document.getElementById('val-eyeliner-strength');
+          if (sl) sl.value = '0.45';
+          if (vl) vl.textContent = '45%';
+        }
       } else if (key === 'lipColor' && Number(state.studioDraft.lipStrength ?? 0.65) < 0.25) {
         patch.lipStrength = 0.65;
         const sl = document.getElementById('slider-lip-strength');
@@ -2826,7 +3016,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const vl = document.getElementById('val-blush');
         if (sl) sl.value = '0.32';
         if (vl) vl.textContent = '32%';
-      } else if (key === 'eyeshadowColor' && Number(state.studioDraft.eyeshadowIntensity ?? 0.20) < 0.12) {
+      } else if (key === 'eyeshadowColor' && Number(state.studioDraft.eyeshadowIntensity ?? 0.0) < 0.12) {
         patch.eyeshadowIntensity = 0.28;
         const sl = document.getElementById('slider-eyeshadow');
         const vl = document.getElementById('val-eyeshadow');
@@ -2842,6 +3032,23 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyLiveMaterialPatch(patch);
     });
   }
+
+  document.getElementById('sel-eyeliner-style')?.addEventListener('change', (e) => {
+    const styleId = parseInt(e.target.value, 10) || 0;
+    let strength = Number(state.studioDraft.eyelinerStrength ?? 0.0);
+    if (styleId === 0) {
+      strength = 0.0;
+    } else if (strength < 0.15) {
+      strength = 0.48;
+    }
+    const sl = document.getElementById('slider-eyeliner-strength');
+    const vl = document.getElementById('val-eyeliner-strength');
+    if (sl) sl.value = String(strength);
+    if (vl) vl.textContent = `${Math.round(strength * 100)}%`;
+    applyLiveMaterialPatch({ eyelinerStyle: styleId, eyelinerStrength: strength });
+    const meta = EYELINER_STYLE_CATALOG.find(x => x.id === styleId);
+    if (meta) showToast(`👁️ 已切换眼线样式：${meta.label}`);
+  });
 
   document.querySelectorAll('[data-studio-iris]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -2868,6 +3075,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         else valEl.textContent = v.toFixed(2);
       }
       const patch = { [key]: v };
+      if (key === 'eyelinerStrength' && v > 0.05 && Number(state.studioDraft.eyelinerStyle ?? 0) === 0) {
+        patch.eyelinerStyle = 2;
+        const selEl = document.getElementById('sel-eyeliner-style');
+        if (selEl) selEl.value = '2';
+      }
       if (key === 'photoBlend' || key === 'photoProjScale' || key === 'photoProjOffsetX' || key === 'photoProjOffsetY') {
         patch.photoElement = state.studioDraft.photoElement || refPhotoCanvas;
         patch.lifePhotoUrl = state.studioDraft.lifePhotoDataUrl;
@@ -2881,6 +3093,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindLiveMaterialSlider('slider-skin-rosiness', 'val-skin-rosiness', 'skinRosiness', 'pct');
   bindLiveMaterialSlider('slider-blush', 'val-blush', 'blushIntensity', 'pct');
   bindLiveMaterialSlider('slider-eyeshadow', 'val-eyeshadow', 'eyeshadowIntensity', 'pct');
+  bindLiveMaterialSlider('slider-eyeliner-strength', 'val-eyeliner-strength', 'eyelinerStrength', 'pct');
   bindLiveMaterialSlider('slider-lip-strength', 'val-lip-strength', 'lipStrength', 'pct');
   bindLiveMaterialSlider('slider-lip-gloss', 'val-lip-gloss', 'lipGloss', 'pct');
   bindLiveMaterialSlider('slider-iris-mix', 'val-iris-mix', 'irisMix', 'pct');
@@ -2890,21 +3103,130 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindLiveMaterialSlider('slider-brow-opacity', 'val-brow-opacity', 'browOpacity', 'pct');
   bindLiveMaterialSlider('slider-hair-highlight', 'val-hair-highlight', 'hairHighlightStrength', 'pct');
 
-  // Stage 43: Anti-Silicone Dermis, Eye Optics & 3D Photo Projection Sliders
+  // Stage 44: DLSS-5 Per-Character Dermis, Custom PBR Maps, Eye Optics & 3D Photo Projection Sliders
+  bindLiveMaterialSlider('slider-normal-map-strength', 'val-normal-map-strength', 'normalMapStrength', 'pct');
+  bindLiveMaterialSlider('slider-pore-scale', 'val-pore-scale', 'poreScale', 'pct');
   bindLiveMaterialSlider('slider-pore-relief', 'val-pore-relief', 'poreRelief', 'pct');
-  bindLiveMaterialSlider('slider-skin-roughness', 'val-skin-roughness', 'skinRoughness', 'dec');
+  bindLiveMaterialSlider('slider-skin-roughness', 'val-skin-roughness', 'skinRoughness', 'pct');
+  bindLiveMaterialSlider('slider-tzone-oiliness', 'val-tzone-oiliness', 'tZoneOiliness', 'pct');
+  bindLiveMaterialSlider('slider-specular-lobe', 'val-specular-lobe', 'specularLobe', 'pct');
+  bindLiveMaterialSlider('slider-char-sss-depth', 'val-char-sss-depth', 'charSssDepth', 'pct');
+  bindLiveMaterialSlider('slider-vascularity', 'val-vascularity', 'vascularity', 'pct');
   bindLiveMaterialSlider('slider-skin-mottle', 'val-skin-mottle', 'skinMottle', 'pct');
+  bindLiveMaterialSlider('slider-vellus-fuzz', 'val-vellus-fuzz', 'vellusFuzz', 'pct');
+  bindLiveMaterialSlider('slider-lip-crease-depth', 'val-lip-crease-depth', 'lipCreaseDepth', 'pct');
+  bindLiveMaterialSlider('slider-ear-tip-flush', 'val-ear-tip-flush', 'earTipFlush', 'pct');
   bindLiveMaterialSlider('slider-aegyosal', 'val-aegyosal', 'aegyoSal', 'pct');
   bindLiveMaterialSlider('slider-dark-circles', 'val-dark-circles', 'darkCircles', 'pct');
   bindLiveMaterialSlider('slider-freckles', 'val-freckles', 'freckles', 'pct');
   bindLiveMaterialSlider('slider-iris-scale', 'val-iris-scale', 'irisScale', 'pct');
   bindLiveMaterialSlider('slider-pupil-size', 'val-pupil-size', 'pupilSize', 'pct');
   bindLiveMaterialSlider('slider-eye-catchlight', 'val-eye-catchlight', 'eyeCatchlight', 'pct');
+  bindLiveMaterialSlider('slider-cornea-wetness', 'val-cornea-wetness', 'corneaWetness', 'pct');
+  bindLiveMaterialSlider('slider-sclera-veins', 'val-sclera-veins', 'scleraVeinIntensity', 'pct');
   bindLiveMaterialSlider('slider-eyelash-density', 'val-eyelash-density', 'eyelashDensity', 'pct');
   bindLiveMaterialSlider('slider-photo-proj', 'val-photo-proj', 'photoBlend', 'pct');
   bindLiveMaterialSlider('slider-photo-proj-scale', 'val-photo-proj-scale', 'photoProjScale', 'pct');
   bindLiveMaterialSlider('slider-photo-proj-x', 'val-photo-proj-x', 'photoProjOffsetX', 'signed');
   bindLiveMaterialSlider('slider-photo-proj-y', 'val-photo-proj-y', 'photoProjOffsetY', 'signed');
+
+  // Stage 44: One-Click Per-Character Material & Photorealism Presets
+  const syncCharMaterialPresetUI = (recipe = {}) => {
+    for (const [sId, vId, key] of [
+      ['slider-normal-map-strength', 'val-normal-map-strength', 'normalMapStrength'],
+      ['slider-pore-scale', 'val-pore-scale', 'poreScale'],
+      ['slider-pore-relief', 'val-pore-relief', 'poreRelief'],
+      ['slider-skin-roughness', 'val-skin-roughness', 'skinRoughness'],
+      ['slider-tzone-oiliness', 'val-tzone-oiliness', 'tZoneOiliness'],
+      ['slider-specular-lobe', 'val-specular-lobe', 'specularLobe'],
+      ['slider-char-sss-depth', 'val-char-sss-depth', 'charSssDepth'],
+      ['slider-vascularity', 'val-vascularity', 'vascularity'],
+      ['slider-skin-mottle', 'val-skin-mottle', 'skinMottle'],
+      ['slider-vellus-fuzz', 'val-vellus-fuzz', 'vellusFuzz'],
+      ['slider-lip-crease-depth', 'val-lip-crease-depth', 'lipCreaseDepth'],
+      ['slider-ear-tip-flush', 'val-ear-tip-flush', 'earTipFlush'],
+      ['slider-lip-gloss', 'val-lip-gloss', 'lipGloss'],
+      ['slider-eyeliner-strength', 'val-eyeliner-strength', 'eyelinerStrength'],
+      ['slider-eyeshadow', 'val-eyeshadow', 'eyeshadowIntensity'],
+      ['slider-eyelash-density', 'val-eyelash-density', 'eyelashDensity'],
+      ['slider-cornea-wetness', 'val-cornea-wetness', 'corneaWetness'],
+      ['slider-sclera-veins', 'val-sclera-veins', 'scleraVeinIntensity'],
+    ]) {
+      if (recipe[key] === undefined) continue;
+      const val = Number(recipe[key]);
+      const sEl = document.getElementById(sId);
+      const vEl = document.getElementById(vId);
+      if (sEl) sEl.value = String(val);
+      if (vEl) vEl.textContent = `${Math.round(val * 100)}%`;
+    }
+    if (recipe.eyelinerStyle !== undefined) {
+      const selEl = document.getElementById('sel-eyeliner-style');
+      if (selEl) selEl.value = String(recipe.eyelinerStyle);
+    }
+    if (recipe.eyelinerColor) {
+      const colEl = document.getElementById('col-eyeliner');
+      if (colEl) colEl.value = recipe.eyelinerColor;
+    }
+    if (recipe.charSssColor) {
+      const colEl = document.getElementById('col-char-sss');
+      if (colEl) colEl.value = recipe.charSssColor;
+    }
+  };
+
+  document.querySelectorAll('[data-char-mat-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const presetId = btn.dataset.charMatPreset;
+      const pMeta = CHAR_MATERIAL_PRESET_CATALOG.find(x => x.id === presetId);
+      if (!pMeta) return;
+      document.querySelectorAll('[data-char-mat-preset]').forEach(b => {
+        b.classList.toggle('active', b.dataset.charMatPreset === presetId);
+      });
+      syncCharMaterialPresetUI(pMeta.recipe);
+      applyLiveMaterialPatch(pMeta.recipe);
+      showToast(`💎 已应用角色专属超写实材质方案：${pMeta.label}`);
+    });
+  });
+
+  // Stage 44: Per-Character Custom PBR Texture Map Uploaders (Albedo / Normal / Roughness / Iris)
+  const updateCustomMapStatusText = () => {
+    const statusEl = document.getElementById('char-custom-map-status');
+    if (!statusEl) return;
+    const activeNames = [];
+    if (state.studioDraft.customSkinMapUrl) activeNames.push('表皮漫反射图');
+    if (state.studioDraft.customNormalMapUrl) activeNames.push('微距法线图');
+    if (state.studioDraft.customRoughnessMapUrl) activeNames.push('光泽粗糙度图');
+    if (state.studioDraft.customIrisMapUrl) activeNames.push('虹膜纹理图');
+    statusEl.textContent = activeNames.length > 0
+      ? `✅ 当前角色已挂载自定义PBR贴图：${activeNames.join(' + ')}`
+      : '当前使用内置 2K 摄影级 PBR 贴图通道';
+  };
+
+  for (const [inpId, clearId, propKey, labelName] of [
+    ['input-char-skin-map', 'btn-clear-char-skin-map', 'customSkinMapUrl', '皮肤漫反射贴图 (Albedo)'],
+    ['input-char-normal-map', 'btn-clear-char-normal-map', 'customNormalMapUrl', '微距毛孔法线贴图 (Normal)'],
+    ['input-char-roughness-map', 'btn-clear-char-roughness-map', 'customRoughnessMapUrl', '粗糙光泽度贴图 (Roughness)'],
+    ['input-char-iris-map', 'btn-clear-char-iris-map', 'customIrisMapUrl', '眼球虹膜纹理贴图 (Iris)'],
+  ]) {
+    document.getElementById(inpId)?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = String(reader.result || '');
+        applyLiveMaterialPatch({ [propKey]: dataUrl });
+        updateCustomMapStatusText();
+        showToast(`🗺️ 已为当前角色挂载自定义${labelName}：${file.name}`);
+      };
+      reader.readAsDataURL(file);
+    });
+    document.getElementById(clearId)?.addEventListener('click', () => {
+      applyLiveMaterialPatch({ [propKey]: '' });
+      const inpEl = document.getElementById(inpId);
+      if (inpEl) inpEl.value = '';
+      updateCustomMapStatusText();
+      showToast(`↺ 已清除自定义${labelName}，恢复角色内置 2K 摄影贴图`);
+    });
+  }
 
   document.getElementById('sel-beauty-mark')?.addEventListener('change', (e) => {
     applyLiveMaterialPatch({ beautyMark: parseInt(e.target.value, 10) || 0 });
@@ -2915,7 +3237,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       skinTone: '#fae3d2',
       lipColor: '#c45866',
       blushColor: '#e87a88',
-      eyeshadowColor: '#b8766c',
+      eyeshadowColor: '#c88278',
+      eyelinerColor: '#2d201e',
+      lashColor: '#44322e',
+      charSssColor: '#e85a4f',
       irisColor: '#3b2316',
       browColor: '#261e1c',
       hairColor: '#121216',
@@ -2925,10 +3250,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       skinBrightness: 1.0,
       skinRosiness: 0.25,
       blushIntensity: 0.22,
-      eyeshadowIntensity: 0.18,
+      eyelinerStyle: 0,
+      eyelinerStrength: 0.0,
+      eyeshadowIntensity: 0.0,
       lipStrength: 0.38,
       lipGloss: 0.48,
-      irisMix: 0.42,
+      irisMix: 0.88,
       browOpacity: 0.94,
       hairHighlightStrength: 0.0,
     };
@@ -2937,6 +3264,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['col-lip', colorDefaults.lipColor],
       ['col-blush', colorDefaults.blushColor],
       ['col-eyeshadow', colorDefaults.eyeshadowColor],
+      ['col-eyeliner', colorDefaults.eyelinerColor],
+      ['col-lash', colorDefaults.lashColor],
+      ['col-char-sss', colorDefaults.charSssColor],
       ['col-iris', colorDefaults.irisColor],
       ['col-brow', colorDefaults.browColor],
       ['col-hair', colorDefaults.hairColor],
@@ -2946,15 +3276,18 @@ window.addEventListener('DOMContentLoaded', async () => {
       const el = document.getElementById(id);
       if (el) el.value = val;
     }
+    const selLiner = document.getElementById('sel-eyeliner-style');
+    if (selLiner) selLiner.value = '0';
     for (const [sId, vId, val, txt] of [
       ['slider-skin-warmth', 'val-skin-warmth', 0.0, '+0.00'],
       ['slider-skin-brightness', 'val-skin-brightness', 1.0, '100%'],
       ['slider-skin-rosiness', 'val-skin-rosiness', 0.25, '25%'],
       ['slider-blush', 'val-blush', 0.22, '22%'],
-      ['slider-eyeshadow', 'val-eyeshadow', 0.18, '18%'],
+      ['slider-eyeliner-strength', 'val-eyeliner-strength', 0.0, '0%'],
+      ['slider-eyeshadow', 'val-eyeshadow', 0.0, '0%'],
       ['slider-lip-strength', 'val-lip-strength', 0.38, '38%'],
       ['slider-lip-gloss', 'val-lip-gloss', 0.48, '48%'],
-      ['slider-iris-mix', 'val-iris-mix', 0.42, '42%'],
+      ['slider-iris-mix', 'val-iris-mix', 0.88, '88%'],
       ['slider-brow-opacity', 'val-brow-opacity', 0.94, '94%'],
       ['slider-hair-highlight', 'val-hair-highlight', 0.0, '0%'],
     ]) {
@@ -2964,7 +3297,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (vEl) vEl.textContent = txt;
     }
     applyLiveMaterialPatch(colorDefaults);
-    showToast('↺ 已恢复自然原生肤色与彩妆配色');
+    showToast('↺ 已恢复自然纯净素颜裸眼睑与原生肤色配色');
   });
 
   document.getElementById('sel-groom-density')?.addEventListener('change', async e => {
@@ -3074,10 +3407,39 @@ window.addEventListener('DOMContentLoaded', async () => {
       customHairUrl: state.studioDraft.customHairUrl,
       customHairType: state.studioDraft.customHairType,
       customHairName: state.studioDraft.customHairName,
+      customSkinMapUrl: state.studioDraft.customSkinMapUrl || '',
+      customNormalMapUrl: state.studioDraft.customNormalMapUrl || '',
+      customRoughnessMapUrl: state.studioDraft.customRoughnessMapUrl || '',
+      customIrisMapUrl: state.studioDraft.customIrisMapUrl || '',
       skinTone: state.studioDraft.skinTone,
       blushIntensity: state.studioDraft.blushIntensity,
       lipColor: state.studioDraft.lipColor,
       irisColor: state.studioDraft.irisColor,
+      irisScale: state.studioDraft.irisScale ?? state.studioDraft.morphs?.irisScale ?? 1.0,
+      pupilSize: state.studioDraft.pupilSize ?? state.studioDraft.morphs?.pupilSize ?? 1.0,
+      irisBrightness: state.studioDraft.irisBrightness ?? state.studioDraft.morphs?.irisBrightness ?? 1.15,
+      limbalRing: state.studioDraft.limbalRing ?? state.studioDraft.morphs?.limbalRing ?? 0.78,
+      eyelinerStyle: state.studioDraft.eyelinerStyle ?? state.studioDraft.morphs?.eyelinerStyle ?? 0,
+      eyelinerStrength: state.studioDraft.eyelinerStrength ?? state.studioDraft.morphs?.eyelinerStrength ?? 0.0,
+      eyelinerColor: state.studioDraft.eyelinerColor ?? state.studioDraft.morphs?.eyelinerColor ?? '#2d201e',
+      lashColor: state.studioDraft.lashColor ?? state.studioDraft.morphs?.lashColor ?? '#44322e',
+      eyeshadowIntensity: state.studioDraft.eyeshadowIntensity ?? state.studioDraft.morphs?.eyeshadowIntensity ?? 0.0,
+      eyelashDensity: state.studioDraft.eyelashDensity ?? state.studioDraft.morphs?.eyelashDensity ?? 0.68,
+      normalMapStrength: state.studioDraft.normalMapStrength ?? state.studioDraft.morphs?.normalMapStrength ?? 0.26,
+      poreScale: state.studioDraft.poreScale ?? state.studioDraft.morphs?.poreScale ?? 1.0,
+      poreRelief: state.studioDraft.poreRelief ?? state.studioDraft.morphs?.poreRelief ?? 0.24,
+      skinRoughness: state.studioDraft.skinRoughness ?? state.studioDraft.morphs?.skinRoughness ?? 0.38,
+      tZoneOiliness: state.studioDraft.tZoneOiliness ?? state.studioDraft.morphs?.tZoneOiliness ?? 0.30,
+      specularLobe: state.studioDraft.specularLobe ?? state.studioDraft.morphs?.specularLobe ?? 0.45,
+      charSssDepth: state.studioDraft.charSssDepth ?? state.studioDraft.morphs?.charSssDepth ?? 0.80,
+      charSssColor: state.studioDraft.charSssColor ?? state.studioDraft.morphs?.charSssColor ?? '#e85a4f',
+      vascularity: state.studioDraft.vascularity ?? state.studioDraft.morphs?.vascularity ?? 0.24,
+      skinMottle: state.studioDraft.skinMottle ?? state.studioDraft.morphs?.skinMottle ?? 0.18,
+      vellusFuzz: state.studioDraft.vellusFuzz ?? state.studioDraft.morphs?.vellusFuzz ?? 0.36,
+      lipCreaseDepth: state.studioDraft.lipCreaseDepth ?? state.studioDraft.morphs?.lipCreaseDepth ?? 0.36,
+      earTipFlush: state.studioDraft.earTipFlush ?? state.studioDraft.morphs?.earTipFlush ?? 0.32,
+      corneaWetness: state.studioDraft.corneaWetness ?? state.studioDraft.morphs?.corneaWetness ?? 0.92,
+      scleraVeinIntensity: state.studioDraft.scleraVeinIntensity ?? state.studioDraft.morphs?.scleraVeinIntensity ?? 0.16,
       hairStyle: state.studioDraft.hairStyle,
       groomDensity: state.studioDraft.groomDensity || 6000,
       hairColor: state.studioDraft.hairColor,

@@ -243,17 +243,17 @@ function fitImportedHead(scene) {
 }
 
 const PRESET_MORPH_BIASES = {
-  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
-  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.0, chinLength: 0.0, cheekSoftness: 0.0, noseBridge: 0.0, eyeAlmond: 0.0, eyeTilt: 0.0, lipFullness: 0.0 },
+  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: -0.18, chinLength: -0.08, cheekSoftness: 0.32, noseBridge: 0.04, noseWidth: 0.08, eyeSize: 0.18, eyeAperture: 0.14, eyeAlmond: 0.12, eyeTilt: 0.02, eyeSpacing: 0.02, lipFullness: 0.10, mouthSmile: 0.18 },
+  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.32, chinLength: -0.34, cheekSoftness: 0.62, noseBridge: -0.14, noseWidth: 0.04, eyeSize: 0.64, eyeAperture: 0.42, eyeAlmond: -0.28, eyeTilt: -0.24, eyeSpacing: 0.08, lipFullness: 0.38, mouthSmile: 0.12 },
+  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.32, chinLength: -0.34, cheekSoftness: 0.62, noseBridge: -0.14, noseWidth: 0.04, eyeSize: 0.64, eyeAperture: 0.42, eyeAlmond: -0.28, eyeTilt: -0.24, eyeSpacing: 0.08, lipFullness: 0.38, mouthSmile: 0.12 },
+  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.68, chinLength: 0.24, cheekSoftness: -0.36, noseBridge: 0.46, noseWidth: -0.28, eyeSize: 0.06, eyeAperture: -0.06, eyeAlmond: 0.56, eyeTilt: 0.52, eyeSpacing: -0.06, lipFullness: -0.12, mouthSmile: -0.06 },
+  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.68, chinLength: 0.24, cheekSoftness: -0.36, noseBridge: 0.46, noseWidth: -0.28, eyeSize: 0.06, eyeAperture: -0.06, eyeAlmond: 0.56, eyeTilt: 0.52, eyeSpacing: -0.06, lipFullness: -0.12, mouthSmile: -0.06 },
+  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.34, chinLength: 0.14, cheekSoftness: 0.12, noseBridge: 0.22, noseWidth: -0.18, eyeSize: 0.24, eyeAperture: 0.10, eyeAlmond: 0.28, eyeTilt: 0.12, eyeSpacing: 0.04, lipFullness: 0.16, mouthSmile: 0.04 },
+  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.34, chinLength: 0.14, cheekSoftness: 0.12, noseBridge: 0.22, noseWidth: -0.18, eyeSize: 0.24, eyeAperture: 0.10, eyeAlmond: 0.28, eyeTilt: 0.12, eyeSpacing: 0.04, lipFullness: 0.16, mouthSmile: 0.04 },
+  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.46, chinLength: -0.12, cheekSoftness: 0.38, noseBridge: 0.18, noseWidth: -0.14, eyeSize: 0.48, eyeAperture: 0.28, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.02, lipFullness: 0.28, mouthSmile: 0.0 },
+  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.46, chinLength: -0.12, cheekSoftness: 0.38, noseBridge: 0.18, noseWidth: -0.14, eyeSize: 0.48, eyeAperture: 0.28, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.02, lipFullness: 0.28, mouthSmile: 0.0 },
+  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.42, chinLength: 0.28, cheekSoftness: -0.42, noseBridge: 0.52, noseWidth: -0.22, eyeSize: 0.14, eyeAperture: 0.04, eyeAlmond: 0.44, eyeTilt: 0.28, eyeSpacing: -0.04, lipFullness: 0.18, mouthSmile: 0.22 },
+  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.42, chinLength: 0.28, cheekSoftness: -0.42, noseBridge: 0.52, noseWidth: -0.22, eyeSize: 0.14, eyeAperture: 0.04, eyeAlmond: 0.44, eyeTilt: 0.28, eyeSpacing: -0.04, lipFullness: 0.18, mouthSmile: 0.22 },
 };
 
 /**
@@ -272,9 +272,7 @@ const EYEBROW_STYLE_TO_MH_ASSET = {
 };
 
 /**
- * Stage 35 · Pure Single-Head Default Archetypes (`默认不要混合`)
- * All `headBlend` channels default to `0.0` so presets use the clean, un-distorted base head model out of the box.
- * Multi-head mixing only activates when the player manually adjusts the Multi-Head Mixer sliders!
+ * Stage 44 · Orthogonalized 7-Channel Craniofacial Target Weights per Archetype
  */
 const PURE_ZERO_BLEND = {
   blend_asian_youth: 0.0,
@@ -287,16 +285,16 @@ const PURE_ZERO_BLEND = {
 };
 
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
-  cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND } },
-  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.72 } },
-  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.72 } },
-  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.72 } },
-  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.52 } },
-  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.72 } },
-  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.72 } },
-  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.72 } },
-  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.52 } },
-  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.72 } },
+  cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.38, blend_cn_scholar: 0.42 } },
+  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.30, blend_cn_baby: 0.72 } },
+  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.72, blend_cn_melon: 0.25 } },
+  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.22, blend_cn_melon: 0.68 } },
+  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.22, blend_kr_vline: 0.62 } },
+  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.74, blend_kr_vline: 0.22 } },
+  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.55 } },
+  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.32, blend_kr_vline: 0.48 } },
+  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.52, blend_cn_baby: 0.36 } },
+  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.78, blend_cn_royal: 0.22 } },
 };
 
 let realWebAssetsPromise = null;
@@ -517,9 +515,13 @@ function applyRealSkinVariantToGroup(rootGroup, skinVariantId = 'cn_porcelain_iv
   rootGroup.traverse((child) => {
     if (!child.isMesh) return;
     if (child.name === 'HeadSkinMesh' || child.material?.name === 'Skin') {
-      if (child.material && child.material.map !== targetTex) {
-        child.material.map = targetTex;
-        child.material.needsUpdate = true;
+      if (child.material) {
+        child.material.userData = child.material.userData || {};
+        child.material.userData.baseSkinMap = targetTex;
+        if (!rootGroup.userData.liveMaterials?.customSkinMapUrl && child.material.map !== targetTex) {
+          child.material.map = targetTex;
+          child.material.needsUpdate = true;
+        }
       }
     }
   });
@@ -1613,8 +1615,10 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
     uLimbalRing: { value: Number(initialEye.limbalRing ?? 0.68) },
     uEyeSpacing: { value: Number(initialEye.eyeSpacing ?? 0.0) },
     uCatchlightStrength: { value: Number(initialEye.eyeCatchlight ?? 0.85) },
-    uScleraBrightness: { value: Number(initialEye.scleraBrightness ?? 0.92) },
+    uScleraBrightness: { value: Number(initialEye.scleraBrightness ?? 0.96) },
     uEyeClarity: { value: Number(initialEye.eyeClarity ?? 0.85) },
+    uCorneaWetness: { value: Number(initialEye.corneaWetness ?? 0.92) },
+    uScleraVeinIntensity: { value: Number(initialEye.scleraVeinIntensity ?? 0.16) },
     uWindowGobo: { value: 0.0 },
     uWindowGoboStrength: { value: 0.78 },
     uWindowGoboScale: { value: 1.0 },
@@ -1630,7 +1634,7 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
   };
   material.userData = material.userData || {};
   material.userData.eyeUniforms = eyeUniforms;
-  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v43';
+  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v44';
   material.onBeforeCompile = (shader) => {
     for (const [k, uObj] of Object.entries(eyeUniforms)) {
       shader.uniforms[k] = uObj;
@@ -1660,6 +1664,8 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       uniform float uCatchlightStrength;
       uniform float uScleraBrightness;
       uniform float uEyeClarity;
+      uniform float uCorneaWetness;
+      uniform float uScleraVeinIntensity;
       uniform float uWindowGobo;
       uniform float uWindowGoboStrength;
       uniform float uWindowGoboScale;
@@ -1704,11 +1710,17 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
         // Deep velvet-black pupil aperture
         diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.008, 0.008, 0.012), inPupil * 0.96);
 
-        // Clean physiological moist sclera (replaces baked dark-brown iris ring when uIrisScale < 1.0!)
+        // Clean physiological moist sclera + customizable branching episcleral micro-capillaries
         float scleraMask = 1.0 - inIris;
         float cornerDist = smoothstep(0.92, 1.85, abs(relXY.x));
-        vec3 cleanScleraBase = mix(vec3(0.85, 0.80, 0.78), max(diffuseColor.rgb, vec3(0.76, 0.71, 0.69)), 0.22);
-        vec3 naturalSclera = mix(cleanScleraBase, vec3(0.68, 0.45, 0.43), cornerDist * 0.40);
+        vec3 cleanScleraBase = mix(vec3(0.89, 0.85, 0.83), max(diffuseColor.rgb, vec3(0.82, 0.78, 0.76)), 0.18);
+        vec3 naturalSclera = mix(cleanScleraBase, vec3(0.76, 0.56, 0.54), cornerDist * 0.28);
+        if (uScleraVeinIntensity > 0.01) {
+          float veinAngle = theta * 14.0 + sin(rIris * 6.5) * 2.2;
+          float veinBranch = smoothstep(0.92, 0.995, abs(sin(veinAngle) * cos(theta * 7.0 + rIris * 4.0)));
+          float veinMask = veinBranch * smoothstep(1.05, 1.65, rIris) * clamp(uScleraVeinIntensity, 0.0, 1.2);
+          naturalSclera = mix(naturalSclera, vec3(0.68, 0.22, 0.24), clamp(veinMask * 0.55, 0.0, 0.48));
+        }
         diffuseColor.rgb = mix(diffuseColor.rgb, naturalSclera * clamp(uScleraBrightness, 0.62, 1.28), scleraMask);
       }
       `
@@ -1727,15 +1739,13 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       float rIris = length(relXY);
       float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
 
-      // 1. 3D Orbital Cavity & Upper/Lower Eyelid Cast Shadow Ambient Occlusion
-      // Ensures sclera under the upper eyelid and at the eye corners never glows dead-white!
-      float upperLidAO = smoothstep(0.0238, 0.0174, vEyeLocalPos.y);
-      float lowerLidAO = smoothstep(0.0108, 0.0148, vEyeLocalPos.y);
-      float cornerAO = 1.0 - 0.36 * smoothstep(0.88, 1.85, abs(relXY.x));
-      float orbitalAO = clamp((0.46 + 0.54 * upperLidAO) * (0.76 + 0.24 * lowerLidAO) * cornerAO, 0.34, 1.0);
+      // 1. Soft Physiological Eyelid Ambient Occlusion (NEVER creates a dark eyeliner band across the open eye!)
+      float upperLidAO = smoothstep(0.0245, 0.0198, vEyeLocalPos.y);
+      float lowerLidAO = smoothstep(0.0112, 0.0142, vEyeLocalPos.y);
+      float cornerAO = 1.0 - 0.16 * smoothstep(1.05, 1.95, abs(relXY.x));
+      float orbitalAO = clamp((0.80 + 0.20 * upperLidAO) * (0.90 + 0.10 * lowerLidAO) * cornerAO, 0.72, 1.0);
 
       // 2. Coupling with Scene Window Gobo & Chiaroscuro Shadow Falloff
-      // Fixes the bug where faces in window shadow had glowing bright white eyeballs!
       float eyeGoboAtten = 1.0;
       if (uWindowGobo > 0.5 && uWindowGoboStrength > 0.01) {
         float gScale = max(0.35, uWindowGoboScale);
@@ -1761,18 +1771,21 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       }
 
       reflectedLight.directDiffuse *= orbitalAO * eyeGoboAtten;
-      reflectedLight.indirectDiffuse *= orbitalAO * mix(1.0, eyeGoboAtten, 0.72) * mix(0.88, 0.48, clamp(uChiaroscuro, 0.0, 1.0));
+      reflectedLight.indirectDiffuse *= orbitalAO * mix(1.0, eyeGoboAtten, 0.72) * mix(0.92, 0.56, clamp(uChiaroscuro, 0.0, 1.0));
 
       // Lower iris warm caustic crescent (opposite top-right key light)
       float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.24, 2.0));
       reflectedLight.directDiffuse += (uIrisColor * clamp(uIrisBrightness, 0.5, 1.7) * 0.72 + vec3(0.24, 0.14, 0.08)) * causticZone * inIris * 0.82 * eyeGoboAtten;
 
-      // Crisp Pinpoint Studio Catchlights (NO milky ring wash across the iris or sclera!)
+      // Crisp Pinpoint Studio Catchlights & Tear-Film Meniscus Specular (uCorneaWetness)
+      float wetFactor = clamp(uCorneaWetness, 0.2, 1.5);
       float uvCatch1 = exp(-(pow((relXY.x + 0.30) / 0.095, 2.0) + pow((relXY.y - 0.32) / 0.088, 2.0)));
       float uvCatch2 = exp(-(pow((relXY.x - 0.32) / 0.052, 2.0) + pow((relXY.y + 0.28) / 0.052, 2.0)));
+      float meniscusBand = exp(-pow((vEyeLocalPos.y - 0.0144) / 0.00055, 2.0)) * (1.0 - smoothstep(0.95, 1.45, abs(relXY.x)));
       vec3 wetCatchlight = (vec3(2.25, 2.22, 2.18) * uvCatch1 + vec3(1.18, 1.20, 1.26) * uvCatch2)
-                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8) * (0.45 + 0.55 * eyeGoboAtten);
-      float specKeep = mix(0.10, 0.24, inIris) * orbitalAO * eyeGoboAtten;
+                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8) * wetFactor * (0.45 + 0.55 * eyeGoboAtten)
+                         + vec3(0.65, 0.62, 0.60) * meniscusBand * wetFactor * 0.42;
+      float specKeep = mix(0.10, 0.26, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
       reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight * upperLidAO;
       reflectedLight.indirectSpecular *= specKeep;
       `
@@ -1899,11 +1912,12 @@ export async function buildCollectibleHeadNode(config = {}) {
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
       }
-      const initRough = Math.max(0.36, Number(config.skinRoughness ?? materials.skinRoughness ?? 0.56));
+      const initRough = Math.max(0.20, Math.min(0.88, Number(config.skinRoughness ?? materials.skinRoughness ?? morphs.skinRoughness ?? 0.38)));
+      const initNormScale = Math.max(0.0, Math.min(1.6, Number(config.normalMapStrength ?? materials.normalMapStrength ?? morphs.normalMapStrength ?? 0.26)));
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.58, 0.58),
+        normalScale: new THREE.Vector2(initNormScale, initNormScale),
         roughnessMap: skinMicro.roughnessMap,
         color: new THREE.Color('#ffffff'),
         roughness: initRough,
@@ -1921,22 +1935,37 @@ export async function buildCollectibleHeadNode(config = {}) {
         emissiveIntensity: 0.0,
       });
       skinMaterial.userData.customSkinRoughness = initRough;
+      skinMaterial.userData.baseSkinMap = realSkinMap;
+      skinMaterial.userData.baseNormalMap = skinNorm;
+      skinMaterial.userData.baseRoughnessMap = skinMicro.roughnessMap;
       injectAestheticSubsurfaceScattering(skinMaterial, 0.88, {
         skinToneTint: computeSkinTintColor(skinToneHex),
-        skinWarmthShift: Number(config.skinWarmthShift ?? materials.skinWarmthShift ?? 0.0),
-        skinBrightness: Number(config.skinBrightness ?? materials.skinBrightness ?? 1.0),
-        skinRosiness: Number(config.skinRosiness ?? materials.skinRosiness ?? 0.25),
-        poreRelief: Number(config.poreRelief ?? materials.poreRelief ?? 1.15),
-        skinMicroMottle: Number(config.skinMicroMottle ?? materials.skinMicroMottle ?? 1.0),
+        skinWarmthShift: Number(config.skinWarmthShift ?? materials.skinWarmthShift ?? morphs.skinWarmthShift ?? 0.0),
+        skinBrightness: Number(config.skinBrightness ?? materials.skinBrightness ?? morphs.skinBrightness ?? 1.0),
+        skinRosiness: Number(config.skinRosiness ?? materials.skinRosiness ?? morphs.skinRosiness ?? 0.25),
+        poreScale: Number(config.poreScale ?? materials.poreScale ?? morphs.poreScale ?? 1.0),
+        poreRelief: Number(config.poreRelief ?? materials.poreRelief ?? morphs.poreRelief ?? 0.24),
+        tZoneOiliness: Number(config.tZoneOiliness ?? materials.tZoneOiliness ?? morphs.tZoneOiliness ?? 0.30),
+        specularLobe: Number(config.specularLobe ?? materials.specularLobe ?? morphs.specularLobe ?? 0.45),
+        charSssDepth: Number(config.charSssDepth ?? materials.charSssDepth ?? morphs.charSssDepth ?? 0.80),
+        charSssColor: config.charSssColor || materials.charSssColor || morphs.charSssColor || '#e85a4f',
+        vascularity: Number(config.vascularity ?? materials.vascularity ?? morphs.vascularity ?? 0.24),
+        skinMicroMottle: Number(config.skinMicroMottle ?? materials.skinMicroMottle ?? morphs.skinMottle ?? 0.16),
+        vellusFuzz: Number(config.vellusFuzz ?? materials.vellusFuzz ?? morphs.vellusFuzz ?? 0.36),
+        lipCreaseDepth: Number(config.lipCreaseDepth ?? materials.lipCreaseDepth ?? morphs.lipCreaseDepth ?? 0.36),
+        earTipFlush: Number(config.earTipFlush ?? materials.earTipFlush ?? morphs.earTipFlush ?? 0.32),
         blushColor: config.blushColor || materials.blushColor || '#f07682',
         blushStrength: Number(config.blushIntensity ?? materials.blushIntensity ?? 0.22),
-        eyeshadowColor: config.eyeshadowColor || materials.eyeshadowColor || '#b87068',
-        eyeshadowStrength: Number(config.eyeshadowIntensity ?? materials.eyeshadowIntensity ?? 0.18),
-        aegyoSalStrength: Number(config.aegyoSalStrength ?? materials.aegyoSalStrength ?? 0.42),
-        darkCircleStrength: Number(config.darkCircleStrength ?? materials.darkCircleStrength ?? 0.10),
+        eyeshadowColor: config.eyeshadowColor || materials.eyeshadowColor || '#c88278',
+        eyeshadowStrength: Number(config.eyeshadowIntensity ?? materials.eyeshadowIntensity ?? morphs.eyeshadowIntensity ?? 0.0),
+        eyelinerStyle: Number(config.eyelinerStyle ?? materials.eyelinerStyle ?? morphs.eyelinerStyle ?? 0.0),
+        eyelinerStrength: Number(config.eyelinerStrength ?? materials.eyelinerStrength ?? morphs.eyelinerStrength ?? 0.0),
+        eyelinerColor: config.eyelinerColor || materials.eyelinerColor || morphs.eyelinerColor || '#2d201e',
+        aegyoSalStrength: Number(config.aegyoSalStrength ?? materials.aegyoSalStrength ?? 0.16),
+        darkCircleStrength: Number(config.darkCircleStrength ?? materials.darkCircleStrength ?? 0.0),
         lipColor: config.lipColor || materials.lipColor || '#cb5362',
         lipStrength: Number(config.lipStrength ?? materials.lipStrength ?? 0.38),
-        lipGloss: Number(config.lipGloss ?? materials.lipGloss ?? 0.48),
+        lipGloss: Number(config.lipGloss ?? materials.lipGloss ?? morphs.lipGloss ?? 0.48),
         freckleStrength: Number(config.freckleStrength ?? materials.freckleStrength ?? 0.0),
         beautyMarkMode: Number(config.beautyMarkMode ?? materials.beautyMarkMode ?? 0.0),
       });
@@ -1981,14 +2010,19 @@ export async function buildCollectibleHeadNode(config = {}) {
         ior: 1.38,
         envMapIntensity: 0.24,
       });
+      eyeMat.userData.baseEyeMap = eyeMap;
       injectLifelikeEyeShader(eyeMat, {
         irisColor: config.irisColor || materials.irisColor || '#3b271e',
-        irisColorMix: Number(config.irisColorMix ?? materials.irisColorMix ?? 0.42),
+        irisColorMix: Number(config.irisColorMix ?? materials.irisColorMix ?? 0.88),
         irisScale: Number(config.irisScale ?? materials.irisScale ?? morphs.irisScale ?? 1.0),
         pupilSize: Number(config.pupilSize ?? materials.pupilSize ?? morphs.pupilSize ?? 1.0),
+        irisBrightness: Number(config.irisBrightness ?? materials.irisBrightness ?? morphs.irisBrightness ?? 1.15),
+        limbalRing: Number(config.limbalRing ?? materials.limbalRing ?? morphs.limbalRing ?? 0.80),
         eyeCatchlight: Number(config.eyeCatchlight ?? materials.eyeCatchlight ?? 0.85),
-        scleraBrightness: Number(config.scleraBrightness ?? materials.scleraBrightness ?? 0.92),
+        scleraBrightness: Number(config.scleraBrightness ?? materials.scleraBrightness ?? 0.96),
         eyeClarity: Number(config.eyeClarity ?? materials.eyeClarity ?? 0.85),
+        corneaWetness: Number(config.corneaWetness ?? materials.corneaWetness ?? morphs.corneaWetness ?? 0.92),
+        scleraVeinIntensity: Number(config.scleraVeinIntensity ?? materials.scleraVeinIntensity ?? morphs.scleraVeinIntensity ?? 0.16),
         gazeYaw: Number(morphs.gazeYaw ?? 0),
         gazePitch: Number(morphs.gazePitch ?? 0),
       });
@@ -2029,24 +2063,29 @@ export async function buildCollectibleHeadNode(config = {}) {
     } else if (matName === 'Eyelash') {
       child.castShadow = false;
       child.receiveShadow = true;
+      child.userData.isEyelashMesh = true;
       const lashMap = child.material?.map || null;
       if (lashMap) {
         lashMap.colorSpace = THREE.SRGBColorSpace;
         lashMap.anisotropy = 8;
       }
+      const initLashDensity = Number(config.eyelashDensity ?? materials.eyelashDensity ?? morphs.eyelashDensity ?? 0.68);
+      // Stage 44 Fix: alphaToCoverage: false & alphaTest: 0.0 prevent Three.js r170 from
+      // turning the feathered lash alpha strip into a 100% solid black eyeliner ribbon!
       child.material = new THREE.MeshStandardMaterial({
+        name: 'Eyelash',
         map: lashMap,
-        color: new THREE.Color('#282022'),
+        color: new THREE.Color(config.lashColor || materials.lashColor || '#44322e'),
         transparent: true,
-        opacity: 0.86,
-        alphaTest: 0.04,
-        alphaToCoverage: true,
+        opacity: Math.max(0.0, Math.min(0.92, initLashDensity * 0.72)),
+        alphaTest: 0.0,
+        alphaToCoverage: false,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.48,
-        envMapIntensity: 0.22,
+        roughness: 0.52,
+        envMapIntensity: 0.20,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
@@ -2142,10 +2181,35 @@ function loadPhotoProjectionTexture(url, onLoaded) {
   return tex;
 }
 
+const customMapTexCache = new Map();
+function loadCustomCharacterTexture(url, isColor = true, onLoaded) {
+  if (!url || typeof Image === 'undefined') return null;
+  const cacheKey = `${isColor ? 'srgb' : 'lin'}:${url}`;
+  if (customMapTexCache.has(cacheKey)) {
+    const cached = customMapTexCache.get(cacheKey);
+    if (onLoaded) onLoaded(cached);
+    return cached;
+  }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const tex = new THREE.Texture(img);
+  tex.flipY = false;
+  tex.colorSpace = isColor ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  tex.anisotropy = 16;
+  tex.userData = { sharedSkinMicro: true, customCharTex: true };
+  customMapTexCache.set(cacheKey, tex);
+  img.onload = () => {
+    tex.needsUpdate = true;
+    if (onLoaded) onLoaded(tex);
+  };
+  img.src = url;
+  return tex;
+}
+
 /**
- * Stage 36 · Zero-Latency Live GPU Material, Color, Makeup, Iris, Eyebrow & Photo-Projection Updater
- * Updates all skin, makeup, pore, freckle, mole, photo-projection, iris, eyebrow, and cross-section
- * parameters in 0ms without reloading or rebuilding the 3D GLB model!
+ * Stage 44 · Zero-Latency Live GPU Material, Custom Texture Maps, Dermis Realism, Eyeliner & Iris Updater
+ * Updates all skin, custom textures, subsurface scattering, micro-pores, eyeliner, iris, eyebrow,
+ * and cross-section parameters in 0ms without reloading or rebuilding the 3D GLB model!
  */
 export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
   if (!rootGroup) return;
@@ -2178,7 +2242,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
     if (!child.isMesh || !child.material) return;
     const mat = child.material;
 
-    // 1. HeadSkinMesh: True-Dermis & Makeup Grading Uniforms
+    // 1. HeadSkinMesh: True-Dermis, Custom Texture Maps & Makeup Grading Uniforms
     if (child.name === 'HeadSkinMesh' && mat.userData?.skinGradingUniforms) {
       const u = mat.userData.skinGradingUniforms;
       if (m.skinTone || m.skinToneHex) {
@@ -2188,18 +2252,71 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (warmth !== undefined) u.uSkinWarmthShift.value = Number(warmth);
       if (m.skinBrightness !== undefined) u.uSkinBrightness.value = Number(m.skinBrightness);
       if (m.skinRosiness !== undefined) u.uSkinRosiness.value = Number(m.skinRosiness);
+      if (m.poreScale !== undefined && u.uPoreScale) u.uPoreScale.value = Number(m.poreScale);
       if (m.poreRelief !== undefined) u.uPoreRelief.value = Number(m.poreRelief);
+      if (m.tZoneOiliness !== undefined && u.uTZoneOiliness) u.uTZoneOiliness.value = Number(m.tZoneOiliness);
+      if (m.specularLobe !== undefined && u.uSpecularLobe) u.uSpecularLobe.value = Number(m.specularLobe);
+      if (m.charSssDepth !== undefined && u.uCharSssDepth) u.uCharSssDepth.value = Number(m.charSssDepth);
+      if (m.charSssColor && u.uCharSssColor) u.uCharSssColor.value.set(m.charSssColor);
+      if (m.vascularity !== undefined && u.uVascularity) u.uVascularity.value = Number(m.vascularity);
       const mottle = m.skinMicroMottle ?? m.skinMottle;
       if (mottle !== undefined) u.uSkinMicroMottle.value = Number(mottle);
+      if (m.vellusFuzz !== undefined && u.uVellusFuzz) u.uVellusFuzz.value = Number(m.vellusFuzz);
+      if (m.lipCreaseDepth !== undefined && u.uLipCreaseDepth) u.uLipCreaseDepth.value = Number(m.lipCreaseDepth);
+      if (m.earTipFlush !== undefined && u.uEarTipFlush) u.uEarTipFlush.value = Number(m.earTipFlush);
+
       if (m.skinRoughness !== undefined) {
-        const rVal = Math.max(0.28, Math.min(0.88, Number(m.skinRoughness)));
+        const rVal = Math.max(0.18, Math.min(0.88, Number(m.skinRoughness)));
         mat.roughness = rVal;
         mat.userData.customSkinRoughness = rVal;
       }
+      if (m.normalMapStrength !== undefined && mat.normalScale) {
+        const ns = Math.max(0.0, Math.min(1.8, Number(m.normalMapStrength)));
+        mat.normalScale.set(ns, ns);
+      }
+
+      // Per-Character Custom Uploaded Texture Maps (or restore built-in map when cleared to '')
+      if (patch.customSkinMapUrl !== undefined) {
+        if (patch.customSkinMapUrl) {
+          loadCustomCharacterTexture(patch.customSkinMapUrl, true, (tex) => {
+            mat.map = tex;
+            mat.needsUpdate = true;
+          });
+        } else if (mat.userData.baseSkinMap) {
+          mat.map = mat.userData.baseSkinMap;
+          mat.needsUpdate = true;
+        }
+      }
+      if (patch.customNormalMapUrl !== undefined) {
+        if (patch.customNormalMapUrl) {
+          loadCustomCharacterTexture(patch.customNormalMapUrl, false, (tex) => {
+            mat.normalMap = tex;
+            mat.needsUpdate = true;
+          });
+        } else if (mat.userData.baseNormalMap !== undefined) {
+          mat.normalMap = mat.userData.baseNormalMap;
+          mat.needsUpdate = true;
+        }
+      }
+      if (patch.customRoughnessMapUrl !== undefined) {
+        if (patch.customRoughnessMapUrl) {
+          loadCustomCharacterTexture(patch.customRoughnessMapUrl, false, (tex) => {
+            mat.roughnessMap = tex;
+            mat.needsUpdate = true;
+          });
+        } else if (mat.userData.baseRoughnessMap !== undefined) {
+          mat.roughnessMap = mat.userData.baseRoughnessMap;
+          mat.needsUpdate = true;
+        }
+      }
+
       if (m.blushColor) u.uBlushColor.value.set(m.blushColor);
       if (m.blushIntensity !== undefined) u.uBlushStrength.value = Number(m.blushIntensity);
       if (m.eyeshadowColor) u.uEyeshadowColor.value.set(m.eyeshadowColor);
       if (m.eyeshadowIntensity !== undefined) u.uEyeshadowStrength.value = Number(m.eyeshadowIntensity);
+      if (m.eyelinerStyle !== undefined && u.uEyelinerStyle) u.uEyelinerStyle.value = Number(m.eyelinerStyle);
+      if (m.eyelinerStrength !== undefined && u.uEyelinerStrength) u.uEyelinerStrength.value = Number(m.eyelinerStrength);
+      if (m.eyelinerColor && u.uEyelinerColor) u.uEyelinerColor.value.set(m.eyelinerColor);
       const aegyo = m.aegyoSalStrength ?? m.aegyoSal;
       if (aegyo !== undefined) u.uAegyoSalStrength.value = Number(aegyo);
       const darkCirc = m.darkCircleStrength ?? m.darkCircles;
@@ -2240,13 +2357,26 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       }
     }
 
-    // 2. Eye Mesh: Iris Color, Scale, Pupil Dilation, Brightness, Limbal Ring, Catchlights & Gaze
+    // 2. Eye Mesh: Iris Color, Scale, Pupil Dilation, Brightness, Limbal Ring, Cornea Wetness, Sclera Veins & Custom Iris Texture
     if (mat.userData?.eyeUniforms) {
       const eu = mat.userData.eyeUniforms;
+      if (patch.customIrisMapUrl !== undefined) {
+        if (patch.customIrisMapUrl) {
+          loadCustomCharacterTexture(patch.customIrisMapUrl, true, (tex) => {
+            mat.map = tex;
+            mat.needsUpdate = true;
+            eu.uIrisColorMix.value = 0.25;
+          });
+        } else if (mat.userData.baseEyeMap !== undefined) {
+          mat.map = mat.userData.baseEyeMap;
+          mat.needsUpdate = true;
+          eu.uIrisColorMix.value = 0.88;
+        }
+      }
       const imix = m.irisColorMix ?? m.irisMix;
       if (m.irisColor) {
         eu.uIrisColor.value.set(m.irisColor);
-        if (imix === undefined) eu.uIrisColorMix.value = 0.88;
+        if (imix === undefined && !m.customIrisMapUrl) eu.uIrisColorMix.value = 0.88;
       }
       if (imix !== undefined) eu.uIrisColorMix.value = Number(imix);
       if (m.irisScale !== undefined) eu.uIrisScale.value = Number(m.irisScale);
@@ -2257,6 +2387,8 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.eyeCatchlight !== undefined) eu.uCatchlightStrength.value = Number(m.eyeCatchlight);
       if (m.scleraBrightness !== undefined) eu.uScleraBrightness.value = Number(m.scleraBrightness);
       if (m.eyeClarity !== undefined && eu.uEyeClarity) eu.uEyeClarity.value = Number(m.eyeClarity);
+      if (m.corneaWetness !== undefined && eu.uCorneaWetness) eu.uCorneaWetness.value = Number(m.corneaWetness);
+      if (m.scleraVeinIntensity !== undefined && eu.uScleraVeinIntensity) eu.uScleraVeinIntensity.value = Number(m.scleraVeinIntensity);
       if (m.gazeYaw !== undefined || m.gazePitch !== undefined) {
         eu.uGazeOffset.value.set(
           Number(m.gazeYaw ?? 0) * 0.24,
@@ -2265,9 +2397,16 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       }
     }
 
-    // 2B. Eyelash Mesh: Live Density / Opacity
-    if ((child.name === 'Eyelashes' || mat.name === 'Eyelash') && m.eyelashDensity !== undefined) {
-      mat.opacity = Math.max(0.05, Math.min(1.0, Number(m.eyelashDensity) * 0.88));
+    // 2B. Eyelash Mesh: Live Density / Opacity & Color (zero solid black root band)
+    if (child.name === 'Eyelashes' || mat.name === 'Eyelash' || child.userData?.isEyelashMesh) {
+      if (m.eyelashDensity !== undefined) {
+        const dVal = Math.max(0.0, Math.min(1.2, Number(m.eyelashDensity)));
+        mat.opacity = Math.max(0.0, Math.min(0.92, dVal * 0.72));
+        child.visible = dVal > 0.02;
+      }
+      if (m.lashColor) {
+        mat.color.set(m.lashColor);
+      }
     }
 
     // 3. Eyebrow Mesh: Live Tint & Opacity
