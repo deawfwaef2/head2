@@ -843,3 +843,9 @@
      - `vc-eye-clarity` (`uEyeClarity`, sclera AO balance & iris limbal definition)
      - `vc-pore-relief-global` (`uPoreRelief`, global 3D dermis millimeter-scale micro-pore normal depth)
 
+
+## Stage 42A — 2026-10-14 · Hair/realism diagnostic checkpoint
+- Read root constraints plus 39A–41B before work. Scope: built-in hair material/actual scene-light response and optional neutral photographic review, not procedural face sculpting or synthetic replacement groom geometry. Preserve prior UI, presets, imported PBR, and all handoff history.
+- First retain/rebuild the standalone playable HTML before shader work. Dependencies and browser binaries installed under /tmp; root/docs HTML hard-linked locally, both committed as ordinary files. Actual workspace ~87 MiB; monitor expanded snapshot footprint too.
+- Existing default hair has roughness ~0.71 and specularIntensity ~0.14: black dye is nearly unlit, while no fiber-directed specular remains. Investigate atlas/UV flow and real scene-light BRDF; no unshadowed emissive glints or extra duplicate shells.
+- No live agent channel available here. Coordinate via append-only handoff and fetch-before-push; never claim another agent reviewed changes. Runtime tests and visual comparisons pending.
