@@ -1835,6 +1835,65 @@
                   <input type="range" id="morph-jaw-side" min="0.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-jaw-side">+0.00</span>
                 </div>
+
+                <!-- Stage 53: Forensic & Emotional Fluid System (Neck Cut Blood, Tear Tracks / Blood Tears, Nosebleed, Mouth Blood & Splatter) -->
+                <div style="margin-top:10px;padding-top:8px;border-top:1px dashed rgba(244,63,94,0.35);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:12px;font-weight:700;color:#fda4af;">🩸 凄美体液与断口创伤痕迹系统 (鼻血 · 泪痕 · 血泪 · 嘴角溢血 · 颈部断口鲜血 · 溅血)</span>
+                  </div>
+                  <div class="preset-photo-row" id="forensic-fluid-quick-chips" style="margin-bottom:7px;flex-wrap:wrap;gap:4px;">
+                    <span>一键状态:</span>
+                    <button type="button" class="chip-btn active" data-fluid-preset="fresh_neck_cut">🔪 鲜血断口(默认)</button>
+                    <button type="button" class="chip-btn" data-fluid-preset="crying_tears">💧 梨花带雨(清泪+哭红眼鼻)</button>
+                    <button type="button" class="chip-btn" data-fluid-preset="nosebleed_tears">🥀 凄美鼻血+泪痕</button>
+                    <button type="button" class="chip-btn" data-fluid-preset="blood_tears_mouth">🩸 猩红血泪+嘴角溢血</button>
+                    <button type="button" class="chip-btn" data-fluid-preset="heavy_trauma">⚔️ 重度断首战损(全开)</button>
+                    <button type="button" class="chip-btn" data-fluid-preset="clean_specimen">✨ 洁净无血标本</button>
+                  </div>
+                  <div class="slider-row">
+                    <span>🔪 颈部断口鲜血凝痂与动脉流血度 (Neck Cut Blood)</span>
+                    <input type="range" id="slider-neck-blood" min="0.00" max="1.30" step="0.04" value="0.85" />
+                    <span id="val-neck-blood">85%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>💧 眼角蓄泪与双颊蜿蜒泪痕强度 (Tear Tracks)</span>
+                    <input type="range" id="slider-tear-track" min="0.00" max="1.20" step="0.04" value="0.00" />
+                    <span id="val-tear-track">0%</span>
+                  </div>
+                  <div class="two-col-inputs" style="margin:4px 0;">
+                    <div>
+                      <label>💧 泪水与哭痕类型 (Tear Mode)</label>
+                      <select id="sel-tear-type">
+                        <option value="0" selected>💧 清澈湿润泪痕 + 哭红眼眶鼻尖</option>
+                        <option value="1">🖤 微晕眼线/睫毛膏烟熏哭痕</option>
+                        <option value="2">🩸 凄美猩红血泪 (Blood Tears)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>🩸 鼻血流向模式 (Nosebleed Mode)</label>
+                      <select id="sel-nosebleed-mode">
+                        <option value="0" selected>🩸 双侧鼻孔不对称涌血</option>
+                        <option value="1">🩸 左侧鼻孔人中涓流</option>
+                        <option value="2">🩸 右侧鼻孔人中涓流</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="slider-row">
+                    <span>🩸 鼻孔涌血与人中/上唇鼻血强度 (Nosebleed)</span>
+                    <input type="range" id="slider-nosebleed" min="0.00" max="1.20" step="0.04" value="0.00" />
+                    <span id="val-nosebleed">0%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🥀 双侧嘴角溢血与下巴血痕强度 (Mouth Blood)</span>
+                    <input type="range" id="slider-mouth-blood" min="0.00" max="1.20" step="0.04" value="0.00" />
+                    <span id="val-mouth-blood">0%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>💦 面颊与鼻梁动脉飞溅血点浓度 (Facial Splatter)</span>
+                    <input type="range" id="slider-face-splatter" min="0.00" max="1.20" step="0.04" value="0.00" />
+                    <span id="val-face-splatter">0%</span>
+                  </div>
+                </div>
               </div>
             </div>
 
