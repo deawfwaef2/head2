@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
 import { refineArtistHairCards } from './hairCardSubdivision.js';
 import { fitArtistHairOutsideScalp } from './hairScalpFit.js';
+import { installHairRealism } from './hairRealismRuntime.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
@@ -1487,6 +1488,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         material.userData.builtInHair = true;
         configureHairSheen(material, sheenIntensity);
         injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short' });
+        installHairRealism(material, rootGroup, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
         return material;
       };
       child.material = Array.isArray(child.material)

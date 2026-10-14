@@ -36,12 +36,13 @@ export function injectArtistHairLighting(shader) {
   shader.vertexShader = 'attribute vec3 artistHairFlow;\nvarying vec3 vArtistHairFlow;\n' + shader.vertexShader;
   shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
     '#include <begin_vertex>\nvArtistHairFlow = mat3(modelViewMatrix) * artistHairFlow;');
-  shader.fragmentShader = 'varying vec3 vArtistHairFlow;\n' + shader.fragmentShader;
+  shader.fragmentShader = 'varying vec3 vArtistHairFlow;\nuniform float uHairFiberStrength;\nuniform float uHairMicroDetail;\nuniform float uHairFlowHorizontal;\nuniform float uHairDetailLod;\n' + shader.fragmentShader;
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>', `
     #include <lights_physical_pars_fragment>
     vec3 hairFlowT;
     float hairFlowValid;
     float hairAtlasValue;
+    float hairMicroFiber;
     float hairLobe(float th, float exponent) {
       return pow(max(1.0 - th * th, 0.0), exponent * 0.5);
     }
@@ -54,7 +55,12 @@ export function injectArtistHairLighting(shader) {
       ordinary.directDiffuse = vec3(0.0); ordinary.directSpecular = vec3(0.0);
       ordinary.indirectDiffuse = vec3(0.0); ordinary.indirectSpecular = vec3(0.0);
       RE_Direct_Physical(incident, geometryPosition, N, V, clearcoatNormal, material, ordinary);
-      reflectedLight.directDiffuse += ordinary.directDiffuse;
+      // Cylindrical fiber diffuse response, gated by the actual incident light.
+      // No light-independent fill: turning all real lights off yields black hair.
+      float sinTL=sqrt(max(0.0,1.0-pow(clamp(dot(hairFlowT,incident.direction),-1.0,1.0),2.0)));
+      float frontWrap=max(dot(N,incident.direction),0.0)*.75+.12;
+      vec3 fiberDiffuse=incident.color * material.diffuseColor * (sinTL*frontWrap/3.14159265);
+      reflectedLight.directDiffuse += mix(ordinary.directDiffuse, fiberDiffuse, hairFlowValid*uHairFiberStrength*.6);
       vec3 H = normalize(incident.direction + V + vec3(1e-7));
       vec3 T1 = normalize(hairFlowT + N * 0.06);
       vec3 T2 = normalize(hairFlowT - N * 0.16);
@@ -73,6 +79,16 @@ export function injectArtistHairLighting(shader) {
       float visibility = max(dot(N, incident.direction), 0.0);
       vec3 fiber = incident.color * visibility * F * strandWeight *
         azimuth * (primary * 0.72 + secondary * 0.16);
+      // Energy-bounded two-lobe fiber approximation. The previous unnormalised
+      // lobe made dark dye almost black; never compensate with emissive stripes.
+      float longitudinalR=hairLobe(clamp(dot(T1,H),-1.0,1.0),exponent*1.6);
+      float longitudinalTRT=hairLobe(clamp(dot(T2,H),-1.0,1.0),exponent*.48);
+      float normalization=sqrt(exponent/(2.0*3.14159265));
+      vec3 cortexTint=mix(vec3(.72),sqrt(max(material.diffuseColor,vec3(0.0))),.35);
+      vec3 physicalF=min(F*1.4,vec3(.22));
+      vec3 resolvedFiber=incident.color * visibility * physicalF * azimuth * normalization *
+        (longitudinalR*.55 + longitudinalTRT*.40*cortexTint) * hairMicroFiber;
+      fiber=mix(fiber,resolvedFiber,uHairFiberStrength);
       reflectedLight.directSpecular += mix(ordinary.directSpecular, fiber, hairFlowValid);
     }
     #undef RE_Direct
@@ -81,6 +97,7 @@ export function injectArtistHairLighting(shader) {
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_fragment>', `
     hairFlowValid = 0.0;
     hairAtlasValue = 0.5;
+    hairMicroFiber = 0.75;
     hairFlowT = normalize(cross(normal, abs(normal.y) < 0.99 ? vec3(0,1,0) : vec3(1,0,0)));
     #ifdef USE_MAP
       vec3 flow = vArtistHairFlow - normal * dot(normal, vArtistHairFlow);
@@ -89,7 +106,21 @@ export function injectArtistHairLighting(shader) {
         hairFlowT = flow * inversesqrt(flowLength2);
         hairFlowValid = 1.0;
       }
-      hairAtlasValue = sqrt(clamp(dot(texture2D(map,vMapUv).rgb,vec3(0.2126,0.7152,0.0722)),0.0,1.0));
+      float rawFiber=dot(texture2D(map,vMapUv).rgb,vec3(0.2126,0.7152,0.0722));
+      hairAtlasValue = sqrt(clamp(rawFiber,0.0,1.0));
+      hairMicroFiber = mix(.45,1.0,hairAtlasValue);
+      if(uHairDetailLod>.5 && uHairMicroDetail>.001 && uHairFiberStrength>.001) {
+        vec2 texel=1.0/vec2(textureSize(map,0));
+        vec2 across=mix(vec2(texel.x,0),vec2(0,texel.y),uHairFlowHorizontal);
+        float left=dot(texture2D(map,vMapUv-across*2.0).rgb,vec3(.2126,.7152,.0722));
+        float right=dot(texture2D(map,vMapUv+across*2.0).rgb,vec3(.2126,.7152,.0722));
+        // Divide out the baked broad lighting band. Keep only authored fiber contrast.
+        float relative=clamp((rawFiber+.04)/(.5*(left+right)+.04),.25,1.65);
+        hairMicroFiber=mix(hairMicroFiber,clamp(pow(relative,2.8),.12,1.65),uHairMicroDetail);
+        vec3 acrossT=normalize(cross(hairFlowT,normal));
+        float microSlope=clamp((left-right)/(.10+left+right),-.55,.55);
+        normal=normalize(normal + acrossT*microSlope*uHairMicroDetail*.20);
+      }
     #endif
     #include <lights_physical_fragment>
   `);

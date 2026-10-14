@@ -1,3 +1,4 @@
+import { createHairLab } from './ui/hairLab.js';
 import { createVisualRepair } from './ui/visualRepair.js';
 import {
   DEFAULT_COLLECTIBLES,
@@ -5006,6 +5007,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const visualRepair = createVisualRepair({ desktop: desktopEngine, studio: studioEngine, notify: showToast });
   if (window.__cervixQA) window.__cervixQA.visualRepair = visualRepair;
+  const hairLab = createHairLab({desktop: desktopEngine, studio: studioEngine, notify: showToast});
+  if (window.__cervixQA) window.__cervixQA.hairLab = hairLab;
 
   if (bootStatus) bootStatus.remove();
   if (window.__cervixQA) window.__cervixQA.ready = true;
