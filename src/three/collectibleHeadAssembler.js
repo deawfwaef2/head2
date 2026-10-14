@@ -1733,7 +1733,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   rootGroup.userData.customHairType = config.customHairType || null;
   const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
   const isCustomObj = Boolean(config.customHairUrl && (config.customHairType === 'obj' || String(config.customHairUrl).toLowerCase().endsWith('.obj')));
-  const useStrandMode = !config.customHairUrl && hairRenderMode === 'strand';
+  const useStrandMode = !config.customHairUrl && hairRenderMode === 'strand' && (!config.groomSoftware || Boolean(config.hairRenderMode));
 
   try {
     let loadedScene = null;
