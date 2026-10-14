@@ -1,0 +1,147 @@
+{
+  "mode": "offline file://",
+  "renderer": "Chromium SwiftShader",
+  "tests": [
+    {
+      "name": "photographic recipe is opt-in and disables decorative gobo",
+      "passed": true,
+      "detail": {
+        "id": "cinema_85mm_portrait",
+        "label": "📸 85mm 逆光发丝强光影写真 · 超清五官与树隙明暗切割 (默认首推)",
+        "desc": "自然明暗切割、脸颊缕缕发丝投影、全屏两侧头模100%锐利清晰、高光柔雾与胶片层次",
+        "hdrMode": "softbox_portrait",
+        "keyColor": "#fffaf5",
+        "fillColor": "#e0e7ef",
+        "rimColor": "#f3f5ff",
+        "hemiSky": "#ffffff",
+        "hemiGround": "#27292d",
+        "keyIntensity": 1.55,
+        "fillIntensity": 0.72,
+        "rimIntensity": 1.1,
+        "hemiIntensity": 0.34,
+        "upIntensity": 0.12,
+        "keyAzimuthDeg": -38,
+        "keyElevationDeg": 30,
+        "exposure": 1,
+        "envIntensity": 0.3,
+        "contrast": 1.02,
+        "saturation": 1,
+        "warmth": 0,
+        "vignette": 0.1,
+        "sharpen": 0,
+        "casSharpen": 0.12,
+        "shadowLift": 0.06,
+        "specularClarity": 0,
+        "eyeClarity": 0.85,
+        "poreReliefGlobal": 0.32,
+        "supersample": 1.5,
+        "softFocus": 0,
+        "depthBlur": 0,
+        "chromatic": 0,
+        "bloomStrength": 0,
+        "filmGrain": 0,
+        "tyndall": 0,
+        "vintagePhoto": 0,
+        "skinGloss": 0.18,
+        "sssIntensity": 0.28,
+        "sssBlur": 0,
+        "microContrast": 0,
+        "highlightRoll": 0.18,
+        "shadowCrush": 0,
+        "sunFlareVeil": 0,
+        "dappledBokeh": 0,
+        "anamorphicFlare": 0,
+        "lightLeak": 0,
+        "swirlyBokeh": 0,
+        "wetLensDrop": 0,
+        "lensDistortion": 0,
+        "filmLutMode": "portra_160_sun",
+        "filmLutStrength": 0,
+        "chiaroscuro": 0.24,
+        "irisSparkle": 0,
+        "halation": 0,
+        "skinLumen": 0,
+        "cursorTorch": 0,
+        "windowGobo": "none",
+        "windowGoboStrength": 0,
+        "tint": [
+          1,
+          1,
+          1
+        ],
+        "shadowTint": [
+          0,
+          0,
+          0
+        ],
+        "presetId": "cinema_85mm_portrait",
+        "dynamicLightMode": "static_locked",
+        "dynamicLightSpeed": 0,
+        "dynamicLightAmp": 0,
+        "wetGloss": 0.14,
+        "postfxCombo": "sunlit_portra_bokeh"
+      }
+    },
+    {
+      "name": "recipe does not overwrite original configs",
+      "passed": true
+    },
+    {
+      "name": "A/B returns original engine configs",
+      "passed": true
+    },
+    {
+      "name": "cancel restores recipe session and leaves collectibles unchanged",
+      "passed": true
+    },
+    {
+      "name": "cancel restores the actual skin pore uniform",
+      "passed": true,
+      "detail": {
+        "before": 1.15,
+        "after": 1.15
+      }
+    },
+    {
+      "name": "derived hair flow attributes are finite",
+      "passed": true,
+      "detail": {
+        "flowCount": 12895,
+        "invalid": 0,
+        "meshes": 2,
+        "darkMax": 0,
+        "meanLightDifference": 9.921080729166667,
+        "meanLit": 8.520179036458334
+      }
+    },
+    {
+      "name": "hair emits no light with scene lights and environment off",
+      "passed": true,
+      "detail": 0
+    },
+    {
+      "name": "hair appearance follows actual light movement",
+      "passed": true,
+      "detail": {
+        "flowCount": 12895,
+        "invalid": 0,
+        "meshes": 2,
+        "darkMax": 0,
+        "meanLightDifference": 9.921080729166667,
+        "meanLit": 8.520179036458334
+      }
+    },
+    {
+      "name": "no JS/GLSL errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "offline artifact requires no network",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "network": []
+}

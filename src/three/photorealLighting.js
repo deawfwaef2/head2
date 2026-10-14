@@ -1541,8 +1541,11 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       obj.material.clearcoatRoughness = 0.45;
       obj.material.specularIntensity = 0.24 + skinGloss * 0.26;
       obj.material.envMapIntensity = 0.34 + skinGloss * 0.28;
-      if (poreReliefGlobalVal !== undefined && obj.material.userData?.skinGradingUniforms?.uPoreRelief) {
-        obj.material.userData.skinGradingUniforms.uPoreRelief.value = poreReliefGlobalVal;
+      const poreUniform = obj.material.userData?.skinGradingUniforms?.uPoreRelief;
+      if (poreUniform) {
+        // An optional visual override must not stick after its config is removed.
+        obj.material.userData.baseVisualPoreRelief ??= poreUniform.value;
+        poreUniform.value = poreReliefGlobalVal ?? obj.material.userData.baseVisualPoreRelief;
       }
     }
     if (obj.material.userData?.eyeUniforms) {

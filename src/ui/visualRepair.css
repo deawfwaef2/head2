@@ -26,7 +26,7 @@
 #visual-repair-root .vr-section-heading {display:flex;align-items:center;justify-content:space-between;padding:7px 0 10px}
 #visual-repair-root h3 {font-size:12px;margin:0;color:#dce7f3;font-weight:600}
 #visual-repair-root .vr-section-heading>span {font-size:10px;color:#8091a7}
-#visual-repair-root .vr-recipes {display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:18px}
+#visual-repair-root .vr-recipes {display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-bottom:18px}
 #visual-repair-root .vr-recipes button {display:flex;align-items:flex-start;flex-direction:column;padding:9px 8px;background:var(--vr-card);text-align:left;border-radius:9px}
 #visual-repair-root .vr-recipes strong {font-size:12px;font-weight:600;margin:7px 0 3px}
 #visual-repair-root .vr-recipes small {font-size:9px;color:var(--vr-muted);white-space:nowrap}

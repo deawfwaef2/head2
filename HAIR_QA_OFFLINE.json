@@ -30,7 +30,7 @@
       "name": "import keeps original PBR and no generated scalp shell",
       "passed": true,
       "detail": {
-        "url": "private-asset:ebb0fb8a-a9bb-4d35-8130-a02e15bed78d",
+        "url": "private-asset:a84d51e5-d807-4180-87bc-a0678a6d4f7e",
         "mats": [
           {
             "imported": true,
@@ -43,7 +43,7 @@
       "name": "registered collectible persists custom hair reference/type",
       "passed": true,
       "detail": {
-        "url": "private-asset:ebb0fb8a-a9bb-4d35-8130-a02e15bed78d",
+        "url": "private-asset:a84d51e5-d807-4180-87bc-a0678a6d4f7e",
         "type": "glb"
       }
     },
@@ -51,7 +51,7 @@
       "name": "reload restores imported hair on desktop pet",
       "passed": true,
       "detail": {
-        "url": "private-asset:ebb0fb8a-a9bb-4d35-8130-a02e15bed78d",
+        "url": "private-asset:a84d51e5-d807-4180-87bc-a0678a6d4f7e",
         "exists": true,
         "petIds": [
           "QA-HAIR-V39"

@@ -8,7 +8,7 @@ export const DEFAULT_REPAIR = Object.freeze({
   shadows: false, shadowAmount: .55, haze: false, hazeAmount: 1,
   clarity: false, clarityAmount: 1, exposureOn: false, exposure: 1,
   stopMotion: false, removeGobo: false, hideShelves: false,
-  compactUI: false, hideLabels: false,
+  compactUI: false, hideLabels: false, photoBaseline: false,
 });
 const clone = value => JSON.parse(JSON.stringify(value));
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -31,6 +31,23 @@ const FX_DEFAULTS = { bloomStrength:.11, halation:.54, tyndall:.36, sunFlareVeil
 export function buildRepairConfig(original, options) {
   const source = { ...(VISUAL_STYLE_PRESETS[original.presetId] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait), ...original };
   const out = { ...original };
+  if (options.photoBaseline) {
+    // A reversible, neutral inspection baseline, not a promise of photorealism.
+    const photo = {
+      hdrMode:'softbox_portrait', keyColor:'#fffaf5', fillColor:'#e0e7ef',
+      rimColor:'#f3f5ff', hemiSky:'#ffffff', hemiGround:'#27292d',
+      keyIntensity:1.55, fillIntensity:0.72, rimIntensity:1.10,
+      hemiIntensity:0.34, upIntensity:0.12, envIntensity:0.30,
+      keyAzimuthDeg:-38, keyElevationDeg:30, exposure:1.0,
+      contrast:1.02, saturation:1, warmth:0, vignette:0.10,
+      sharpen:0, casSharpen:0.12, microContrast:0, shadowCrush:0,
+      shadowLift:0.06, specularClarity:0, filmLutStrength:0, vintagePhoto:0,
+      highlightRoll:0.18, skinGloss:0.18, sssIntensity:0.28,
+      poreReliefGlobal:0.32, eyeClarity:0.85, chiaroscuro:0.24,
+      irisSparkle:0, skinLumen:0, tint:[1,1,1], shadowTint:[0,0,0],
+    };
+    Object.assign(source,photo); Object.assign(out,photo);
+  }
   const number = (key, fallback) => Number.isFinite(Number(source[key])) ? Number(source[key]) : fallback;
   if (options.neutral) {
     const t=options.neutralAmount;
@@ -108,6 +125,7 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
       <div class="vr-scroll">
         <div class="vr-section-heading"><h3>从一个方向开始</h3><span>点击预览 · 可撤销</span></div>
         <div class="vr-recipes">
+          <button data-recipe="photo"><span class="vr-swatch vr-swatch-clear"></span><strong>摄影基准</strong><small>中性布光 / 克制毛孔</small></button>
           <button data-recipe="clear"><span class="vr-swatch vr-swatch-clear"></span><strong>清晰中性</strong><small>减暖黄 / 减雾光</small></button>
           <button data-recipe="portrait"><span class="vr-swatch vr-swatch-soft"></span><strong>柔和肖像</strong><small>补暗部 / 留柔焦</small></button>
           <button data-recipe="inspect"><span class="vr-swatch vr-swatch-inspect"></span><strong>模型检查</strong><small>静态光 / 无遮挡</small></button>
@@ -117,6 +135,7 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
           ${slider('neutral','neutralAmount','减轻暖黄色偏','中和灯色、胶片染色；不改皮肤贴图')}
           ${slider('shadows','shadowAmount','抬起暗部层次','增加补光，减轻头发与眼窝的死黑')}
           ${slider('exposureOn','exposure','单独调节曝光','保持模型与相机不变',.5,1.6,.02)}
+          ${toggle('photoBaseline','摄影检查基准','降低夸张毛孔、皮下红光和锐化；保留原皮肤贴图')}
           ${toggle('stopMotion','固定光照','暂停动态灯光和鼠标补光，便于比较')}
           ${toggle('removeGobo','移除图案投影','关闭脸部条纹 / 仿发丝投影，不动真实几何')}
         </div>
@@ -168,6 +187,7 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
     catch(_){announce('浏览器无法保存，请导出 JSON 备份');}
   }
   const recipes={
+    photo:{photoBaseline:true,haze:true,hazeAmount:1,clarity:true,clarityAmount:1,stopMotion:true,removeGobo:true},
     clear:{neutral:true,neutralAmount:1,shadows:true,shadowAmount:.65,haze:true,hazeAmount:1,clarity:true,clarityAmount:.9,stopMotion:true,removeGobo:true},
     portrait:{neutral:true,neutralAmount:.8,shadows:true,shadowAmount:.5,haze:true,hazeAmount:.8,clarity:true,clarityAmount:.6,stopMotion:true,removeGobo:true},
     inspect:{neutral:true,neutralAmount:1,shadows:true,shadowAmount:.7,haze:true,hazeAmount:1,clarity:true,clarityAmount:1,stopMotion:true,removeGobo:true,hideShelves:true,compactUI:true,hideLabels:true},
