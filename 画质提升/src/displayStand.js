@@ -12,7 +12,9 @@ export function createDisplayStand(skinMesh) {
   for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y > y0 && y < y1) { cx += pos.getX(i); cz += pos.getZ(i); n++; } }
   cx /= Math.max(n, 1); cz /= Math.max(n, 1);
   let r = 0;
-  for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y > y0 && y < y1) r = Math.max(r, Math.hypot(pos.getX(i) - cx, pos.getZ(i) - cz)); }
+  // 半径取顶面以下全部颈部顶点的最大值：颈部最下沿向后外扩，只量中段会让后颈从底座侧面穿出
+  for (let i = 0; i < pos.count; i++) { const y = pos.getY(i); if (y < minY + 0.026) r = Math.max(r, Math.hypot(pos.getX(i) - cx, pos.getZ(i) - cz)); }
+  r += 0.004;
   const top = minY + 0.024;
   const pts = [
     [0.0, minY - 0.16], [r * 2.2, minY - 0.16], [r * 2.2, minY - 0.152], [r * 2.05, minY - 0.146],

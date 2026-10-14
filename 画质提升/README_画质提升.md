@@ -42,3 +42,14 @@ node 画质提升/build.mjs
 node 画质提升/qa/qa_render.mjs /tmp/out "view=front" "mode=before&view=front"
 IMPORT=head.glb,albedo.jpg,normal.jpg node 画质提升/qa/qa_render.mjs /tmp/out "view=threequarter"
 ```
+
+
+---
+
+## 头发 · 真发丝（Stage 49 新增）
+
+- 面板「头发渲染」可选：**真发丝（发片→发丝转换，默认）** 或 **原版发片（对比用）**。「发丝密度」可选：流畅约 1.2 万根、标准约 3 万根、高精约 6 万根、极致约 10 万根。另有「发丝光泽」「逆光透射」两个滑杆。
+- URL 参数：`?hairmode=strand|card&density=low|mid|high|ultra`。
+- 新增发型：`hair_ponytail01`（低马尾 + 编发）。
+- 方法、与主项目的区别、坑与注意事项：见 **`HAIR_发丝方法说明.md`**。
+- 自检截图：`qa/screens_hair/`。

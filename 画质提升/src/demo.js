@@ -254,6 +254,7 @@ async function importExternal(fileList) {
   if (QA) startLoop();
 }
 window.__importExternal = importExternal;
+window.__pick = (nx, ny) => { const rc = new THREE.Raycaster(); rc.setFromCamera(new THREE.Vector2(nx, ny), camera); return rc.intersectObjects(scene.children, true).filter((h) => h.object.visible).slice(0, 4).map((h) => h.object.name + '|' + h.object.type + '|' + (h.object.material?.name || '') + '|' + h.distance.toFixed(3)); };
 
 // ---------- 模式切换 ----------
 async function applyMode() {

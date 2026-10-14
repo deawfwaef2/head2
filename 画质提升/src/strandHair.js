@@ -421,7 +421,7 @@ export function createStrandMaterial(headCenter, opts = {}) {
         vec3 Lp = L - T * sI, Vp = V - T * sR;
         float cosPhi = clamp(dot(Lp, Vp) * inversesqrt(max(dot(Lp, Lp) * dot(Vp, Vp), 1e-6)), -1.0, 1.0);
         float cosHalfPhi = sqrt(clamp(0.5 + 0.5 * cosPhi, 0.0, 1.0));
-        float bR = uBetaR, aR = uAlphaR;
+        float bR = uBetaR * (0.8 + 0.4 * fract(vRand * 7.31)), aR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.09;
         float MR = hairGauss(thH - aR, bR);
         float MTT = hairGauss(thH + aR * 0.5, bR * 0.5);
         float MTRT = hairGauss(thH + aR * 1.5, bR * 2.0);
@@ -430,7 +430,8 @@ export function createStrandMaterial(headCenter, opts = {}) {
         vec3 Tabs = pow(max(gHairBase, vec3(1e-4)), vec3(0.5 / cosD));
         vec3 NTT = (1.0 - f) * (1.0 - f) * Tabs * exp(-3.65 * cosPhi - 3.98);
         vec3 NTRT = (1.0 - f) * (1.0 - f) * f * Tabs * Tabs * exp(17.0 * cosPhi - 16.78);
-        vec3 spec = vec3(MR * NR * uGainR) + MTT * NTT * uGainTT + MTRT * NTRT * uGainTRT;
+        float sv = 0.55 + 0.9 * fract(vRand * 3.97);
+        vec3 spec = sv * vec3(MR * NR * uGainR) + MTT * NTT * uGainTT + MTRT * NTRT * uGainTRT;
         float kd = sqrt(max(0.0, 1.0 - sI * sI));
         float vol = clamp((dot(N, L) + 0.6) / 1.6, 0.0, 1.0);
         vec3 diff = BRDF_Lambert(material.diffuseColor) * kd * mix(0.18, 1.0, vol) * uGainD;

@@ -12,6 +12,7 @@ const HAIRS = [
   ['hair_bob01', '内扣短波波'],
   ['daz_hair_side_long', '侧分 · 长发'],
   ['daz_hair_curtain_wave', '八字刘海 · 微卷'],
+  ['hair_ponytail01', '低马尾'],
 ];
 const lines = [`export const HEAD_GLB = __b64('${fs.readFileSync(path.join(models, 'daz_asian_head_base.glb')).toString('base64')}');`];
 lines.push('export const HAIRS = [');
