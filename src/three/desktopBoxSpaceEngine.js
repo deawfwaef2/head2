@@ -243,6 +243,31 @@ export class DesktopBoxSpaceEngine {
     pet.pos.z = Math.max(bz.minZ, Math.min(bz.maxZ, pet.pos.z));
     pet.pos.x = Math.max(bz.minX, Math.min(bz.maxX, pet.pos.x));
     pet.pos.y = Math.max(bz.minY, Math.min(bz.maxY, pet.pos.y));
+
+    // Stage 41 Anti-Clipping Guard: Never allow a 3D shelf board to slice through a head's forehead/skull!
+    if (this.stagePlatforms && this.stagePlatforms.length > 0 && !pet.snappedStructureId) {
+      const baseOff = pet.node?.userData?.baseBottomOffset ?? -10.8;
+      const headBottomY = pet.pos.y + baseOff * scale;
+      const headTopY = pet.pos.y + 12.8 * scale;
+      for (const plat of this.stagePlatforms) {
+        if (plat.isMainFloor) continue;
+        const inX = pet.pos.x >= plat.minX - 5.5 && pet.pos.x <= plat.maxX + 5.5;
+        const inZ = pet.pos.z >= plat.minZ - 6.5 && pet.pos.z <= plat.maxZ + 6.5;
+        if (!inX || !inZ) continue;
+        const boardBottomY = plat.surfaceY - 2.4;
+        const boardTopY = plat.surfaceY + 0.6;
+        // If the shelf board intersects the head's vertical span [headBottomY + 1.5, headTopY]:
+        if (boardTopY > headBottomY + 1.5 && boardBottomY < headTopY) {
+          const restOnShelfY = plat.surfaceY - baseOff * scale;
+          if (restOnShelfY <= bz.maxY + 1.5) {
+            pet.pos.y = Math.min(bz.maxY, restOnShelfY);
+          } else {
+            // Push horizontally clear of the shelf edge toward center of desk
+            pet.pos.x = pet.pos.x < 0 ? Math.min(bz.maxX, plat.maxX + 7.0) : Math.max(bz.minX, plat.minX - 7.0);
+          }
+        }
+      }
+    }
   }
 
   clampStructureToBounds(struct) {
@@ -416,6 +441,7 @@ export class DesktopBoxSpaceEngine {
     if (!this.stagePlatforms || this.stagePlatforms.length === 0) return defaultFloorY;
 
     const currentBottomY = y + baseBottomOffset * scale;
+    const minHeadroom = 23.0 * scale;
     let bestSurfaceY = defaultFloorY;
     for (const plat of this.stagePlatforms) {
       if (plat.isMainFloor) {
@@ -423,7 +449,19 @@ export class DesktopBoxSpaceEngine {
         continue;
       }
       if (x >= plat.minX && x <= plat.maxX && z >= plat.minZ && z <= plat.maxZ) {
-        if (currentBottomY >= plat.surfaceY - 2.6) {
+        // Check that no other shelf board sits directly above this platform within minHeadroom
+        const hasLowCeiling = this.stagePlatforms.some(
+          (other) =>
+            other !== plat &&
+            !other.isMainFloor &&
+            x >= other.minX - 4.0 &&
+            x <= other.maxX + 4.0 &&
+            z >= other.minZ - 5.0 &&
+            z <= other.maxZ + 5.0 &&
+            other.surfaceY > plat.surfaceY + 2.0 &&
+            other.surfaceY - plat.surfaceY < minHeadroom
+        );
+        if (!hasLowCeiling && currentBottomY >= plat.surfaceY - 4.5) {
           if (plat.surfaceY > bestSurfaceY) {
             bestSurfaceY = plat.surfaceY;
           }
@@ -886,19 +924,21 @@ export class DesktopBoxSpaceEngine {
       let surfY = floorY;
 
       if (normId === 'study_sides') {
-        const shelfW = Math.max(22, boxW * 0.24);
-        const safeEdgeInset = Math.max(shelfW * 0.62, 22);
+        const shelfW = Math.max(21, Math.min(26, boxW * 0.20));
+        const safeEdgeInset = Math.max(shelfW * 0.60, 20);
         const leftX = baseB.minX + safeEdgeInset;
         const rightX = baseB.maxX - safeEdgeInset;
-        const midY = floorY + boxH * 0.21;
-        const highY = floorY + boxH * 0.41;
+        const innerLeftX = leftX + shelfW * 0.96;
+        const innerRightX = rightX - shelfW * 0.96;
+        const midY = floorY + boxH * 0.22;
+        const lowY = floorY + boxH * 0.08;
         const slots = [
-          { x: leftX, y: midY, z: -20 },
-          { x: rightX, y: midY, z: -20 },
-          { x: leftX, y: floorY, z: -15 },
-          { x: rightX, y: floorY, z: -15 },
-          { x: leftX, y: highY, z: -26 },
-          { x: rightX, y: highY, z: -26 },
+          { x: leftX, y: midY, z: -18 },
+          { x: rightX, y: midY, z: -18 },
+          { x: innerLeftX, y: lowY, z: -22 },
+          { x: innerRightX, y: lowY, z: -22 },
+          { x: -12, y: floorY, z: -14 },
+          { x: 12, y: floorY, z: -14 },
         ];
         const s = slots[idx % slots.length];
         tx = s.x;

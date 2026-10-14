@@ -822,3 +822,24 @@
 - Engine applyVisualCustomConfig wrappers keep original configs independently and compose optional neutral-light, shadow-lift, haze/blur reduction, exposure, static-light and gobo overrides. Original UI writes update the base, not the repair recipe. A/B original view, cancel-session, restore-original, apply-and-close supported.
 - Optional shelf visibility (not deletion/movement/physics rewrite), old-toolbar compaction, label hiding. Hidden shelves excluded from cursor picking. Separate versioned localStorage recipe + JSON import/export; no startup auto-application, no overwrite of collectible storage or original preset config.
 - Built offline HTML immediately (~29.64 MiB) with embedded module/CSS. Runtime/UI validation still pending at this checkpoint. Next steps: real browser regression, screenshot/mobile sizing, cancellation and original-config invariance.
+
+## Stage 41B: Desktop Screenshot Visual Defect Fixes & 35-Control 4K Ultra-HD Clarity Pipeline (`继续更多画质调节！而且你可以看看现在画面问题：`)
+- **Fixed all 5 root-cause visual defects diagnosed from `/home/user/uploads/image-1.png` (without touching `injectArtistHairColor` in `collectibleHeadAssembler.js`)**:
+  1. **Eliminated Shelf-Through-Head Geometry Clipping (`穿模`)**:
+     - Replaced vertically stacked shelves (`midY` + `highY` at identical `X` with only `17.6 cm` clearance vs `22.5 cm` head height) in `buildScreenSpaceStageGroup` (`src/three/specimenStageAndContainers.js`) with staggered open-headroom gallery consoles (`shelf_left_mid`, `shelf_right_mid`, `shelf_left_low`, `shelf_right_low`), giving every shelf `100%` unobstructed vertical headroom.
+     - Added active Shelf Board Anti-Clipping Guard (`minHeadroom = 23.0 * scale` ceiling check in `getSupportSurfaceY` + board slab repulsion in `clampPetToBounds`) in `src/three/desktopBoxSpaceEngine.js` and updated `DEFAULT_COLLECTIBLES` (`src/data/defaultCollectibles.js`) and `STORAGE_KEY` (`cervix3d-collectibles-stage41-master-v1`).
+  2. **Eliminated Left/Right Peripheral Head Blur & Lower-Right Green Bokeh Smudge**:
+     - Added `subjectKeepSharpMask` (`src/three/beautyPostChain.js`) to `uDepthBlur` and `uSwirlyBokeh` so heads placed on the left (`uv.x ~ 0.12`) and right (`uv.x ~ 0.88`) desktop shelves stay `100%` razor-sharp, and changed `uSoftFocus` to highlight-only Pro-Mist diffusion (`mistLuma > 0.64`) so midtone facial features and eyelashes are never smeared.
+     - Removed the bottom-right green blob in `uDappledBokeh` (`default: 0.0`) and relocated optional bokeh to upper-canopy warm golden highlights masked away from skin pixels.
+  3. **Fixed Glowing Grey-White Sclera, Binary Eyelash Band, & Baked UV Cheek Smudges (`scripts/upgrade_stage34_assets.py`, `src/three/collectibleHeadAssembler.js`, `public/models/daz_asian_head_base.glb`)**:
+     - Kept `Prim 2 (Cornea)` hidden (`visible = false`), disabled shadow casting on `Eye`/`Eyebrow`/`Eyelash`, softened `Eyelash` (`depthWrite: false`, `#282022`, `opacity: 0.86`), and upgraded `injectLifelikeEyeShader` (`cervix3d_lifelike_eye_v41`) with 3D orbital/upper-eyelid AO (`orbitalAO`), warm caruncle sclera, and Window Gobo / Chiaroscuro shadow attenuation (`eyeGoboAtten`) so eyes never glow white inside shadowed faces.
+     - Fixed Pillow `.quantize()` alpha-collapse bug in `scripts/upgrade_stage34_assets.py`: saved `Image 3 (Eyebrow, 105 alpha levels)`, `Image 4 (Eyelash, 120 alpha levels)`, and all 8 `realWebAssets.eyebrows` as un-quantized 32-bit `RGBA` with 8-bit feathered alpha (`distance_transform_edt`), and removed baked UV cheek mole smudges and dark eye rings from all 8 24-bit `RGB` skin textures.
+  4. **Added 7 New Real-Time 4K Ultra-HD Image Quality & Clarity Controls (35 Total Controls + `#btn-quick-ultra-crisp` + `ultra_4k_crystal_clear` Preset + `ultra_4k_zero_blur` Combo)**:
+     - `vc-supersample` (`1.0x–2.5x` Dynamic Super-Resolution DSR pixel-ratio scaling)
+     - `vc-cas-sharpen` (`uCasSharpen`, 5-tap AMD Contrast-Adaptive Sharpening)
+     - `vc-exposure` (`uExposure`, real-time EV exposure compensation)
+     - `vc-shadow-lift` (`uShadowLift`, shadow fill recovery for backlit faces/hair)
+     - `vc-specular-clarity` (`uSpecularClarity`, catchlight & lip/hair micro-specular enhancer)
+     - `vc-eye-clarity` (`uEyeClarity`, sclera AO balance & iris limbal definition)
+     - `vc-pore-relief-global` (`uPoreRelief`, global 3D dermis millimeter-scale micro-pore normal depth)
+

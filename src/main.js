@@ -120,55 +120,61 @@ const state = {
   visualCustomConfig: {
     presetId: 'cinema_85mm_portrait',
     hdrMode: 'golden_hour',
-    envIntensity: 0.18,
+    envIntensity: 0.36,
     windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.78,
+    windowGoboStrength: 0.45,
     dynamicLightMode: 'sunset_cloud_drift',
     dynamicLightSpeed: 1.0,
     dynamicLightAmp: 1.0,
-    chiaroscuro: 0.94,
-    tyndall: 0.74,
-    vintagePhoto: 0.34,
-    softFocus: 0.58,
-    depthBlur: 0.48,
-    chromatic: 0.16,
+    chiaroscuro: 0.66,
+    tyndall: 0.48,
+    vintagePhoto: 0.06,
+    softFocus: 0.16,
+    depthBlur: 0.04,
+    chromatic: 0.08,
     keyColor: '#ffe8c4',
     rimColor: '#ffd494',
     keyAzimuthDeg: 36,
-    keyElevationDeg: 24,
-    keyIntensity: 2.18,
-    fillIntensity: 0.14,
-    rimIntensity: 1.16,
-    hemiIntensity: 0.14,
-    upIntensity: 0.08,
-    exposure: 0.88,
-    sssIntensity: 0.96,
-    skinGloss: 0.16,
-    wetGloss: 0.16,
-    sharpen: 0.04,
-    contrast: 1.22,
+    keyElevationDeg: 26,
+    keyIntensity: 2.02,
+    fillIntensity: 0.42,
+    rimIntensity: 1.44,
+    hemiIntensity: 0.30,
+    upIntensity: 0.14,
+    exposure: 1.08,
+    supersample: 1.50,
+    casSharpen: 0.68,
+    shadowLift: 0.28,
+    specularClarity: 0.75,
+    eyeClarity: 0.92,
+    poreReliefGlobal: 1.15,
+    sssIntensity: 0.92,
+    skinGloss: 0.14,
+    wetGloss: 0.14,
+    sharpen: 0.18,
+    contrast: 1.14,
     saturation: 0.96,
-    warmth: 0.12,
-    vignette: 0.44,
-    filmGrain: 0.07,
-    bloomStrength: 0.11,
-    irisSparkle: 0.05,
-    halation: 0.54,
+    warmth: 0.06,
+    vignette: 0.26,
+    filmGrain: 0.05,
+    bloomStrength: 0.10,
+    irisSparkle: 0.10,
+    halation: 0.28,
     skinLumen: 0.0,
-    cursorTorch: 0.24,
-    sssBlur: 0.64,
-    microContrast: 0.42,
-    highlightRoll: 0.52,
-    shadowCrush: 0.58,
-    sunFlareVeil: 0.76,
-    dappledBokeh: 0.78,
-    anamorphicFlare: 0.24,
-    lightLeak: 0.22,
-    swirlyBokeh: 0.28,
+    cursorTorch: 0.28,
+    sssBlur: 0.22,
+    microContrast: 0.48,
+    highlightRoll: 0.42,
+    shadowCrush: 0.16,
+    sunFlareVeil: 0.22,
+    dappledBokeh: 0.0,
+    anamorphicFlare: 0.16,
+    lightLeak: 0.06,
+    swirlyBokeh: 0.0,
     wetLensDrop: 0.0,
-    lensDistortion: 0.12,
+    lensDistortion: 0.04,
     filmLutMode: 'portra_160_sun',
-    filmLutStrength: 0.68,
+    filmLutStrength: 0.48,
     postfxCombo: 'sunlit_portra_bokeh'
   },
   studioDraft: {
@@ -3345,6 +3351,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     syncSlider('vc-saturation', 'val-vc-saturation', vc.saturation, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-warmth', 'val-vc-warmth', vc.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
     syncSlider('vc-bloom', 'val-vc-bloom', vc.bloomStrength, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-supersample', 'val-vc-supersample', vc.supersample ?? 1.50, v => `${Number(v).toFixed(2)}x`);
+    syncSlider('vc-cas-sharpen', 'val-vc-cas-sharpen', vc.casSharpen ?? 0.68, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-exposure', 'val-vc-exposure', vc.exposure ?? 1.08, v => `${Number(v).toFixed(2)}x`);
+    syncSlider('vc-shadow-lift', 'val-vc-shadow-lift', vc.shadowLift ?? 0.28, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-specular-clarity', 'val-vc-specular-clarity', vc.specularClarity ?? 0.75, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-eye-clarity', 'val-vc-eye-clarity', vc.eyeClarity ?? 0.92, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-pore-relief-global', 'val-vc-pore-relief-global', vc.poreReliefGlobal ?? 1.15, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-sss-blur', 'val-vc-sss-blur', vc.sssBlur, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-micro-contrast', 'val-vc-micro-contrast', vc.microContrast, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-highlight-roll', 'val-vc-highlight-roll', vc.highlightRoll, v => `${Math.round(v * 100)}%`);
@@ -3373,6 +3386,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (selDyn && state.visualCustomConfig.dynamicLightMode) {
       selDyn.value = state.visualCustomConfig.dynamicLightMode;
     }
+    const btnUltraTop = document.getElementById('btn-quick-ultra-crisp');
+    if (btnUltraTop) {
+      const isUltra = (vc.depthBlur ?? 0.04) <= 0.06 && (vc.casSharpen ?? 0.68) >= 0.60;
+      btnUltraTop.textContent = isUltra ? '🔪 4K超清: 全屏零模糊' : '🌫️ 画质: 电影柔雾感';
+      btnUltraTop.classList.toggle('active-top', isUltra);
+    }
     const btnChiaroTop = document.getElementById('btn-quick-chiaroscuro');
     if (btnChiaroTop) {
       const gId = vc.windowGobo || 'hair_sun_slit';
@@ -3385,13 +3404,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         none: '🔦 柔光影: 影棚无影箱',
       };
       btnChiaroTop.textContent = goboTopLabels[gId] || '🌞 强光影: 开启';
-      btnChiaroTop.classList.toggle('active-top', gId !== 'none' && (vc.chiaroscuro ?? 0.94) > 0.55);
+      btnChiaroTop.classList.toggle('active-top', gId !== 'none' && (vc.chiaroscuro ?? 0.66) > 0.45);
     }
     const btnPostFxTop = document.getElementById('btn-quick-postfx');
     if (btnPostFxTop) {
       const cId = vc.postfxCombo || 'sunlit_portra_bokeh';
       const postfxTopLabels = {
-        sunlit_portra_bokeh: '🎞️ 后处理: Portra逆光散景',
+        ultra_4k_zero_blur: '🔪 后处理: 4K全屏零模糊',
+        sunlit_portra_bokeh: '🎞️ 后处理: Portra超清写真',
         kodak_2383_anamorphic: '🎬 后处理: 2383变形拉丝',
         cinestill_800t_halation: '🌃 后处理: 800T朱红旋焦',
         fuji_forest_lightleak: '🍃 后处理: 富士森系漏光',
@@ -3419,67 +3439,84 @@ window.addEventListener('DOMContentLoaded', async () => {
     studioEngine?.applyVisualCustomConfig(state.visualCustomConfig);
   };
 
-  // Stage 40 · 6 Master Post-Processing Combos (1-Click or Top-Bar Cycle)
+  // Stage 40/41 · 7 Master Post-Processing & Ultra-HD Clarity Combos (1-Click or Top-Bar Cycle)
   const POSTFX_MASTER_COMBOS = {
+    ultra_4k_zero_blur: {
+      postfxCombo: 'ultra_4k_zero_blur',
+      label: '🔪 4K 超清锐利零模糊 · 全屏两侧头模100%锐利 + AMD CAS 自适应锐化 + 暗部提亮',
+      filmLutMode: 'portra_160_sun', filmLutStrength: 0.36,
+      supersample: 1.75, casSharpen: 0.92, exposure: 1.12, shadowLift: 0.34, specularClarity: 0.95, eyeClarity: 1.08, poreReliefGlobal: 1.30,
+      sssBlur: 0.08, microContrast: 0.56, highlightRoll: 0.44, shadowCrush: 0.08,
+      sunFlareVeil: 0.08, dappledBokeh: 0.0, softFocus: 0.0, depthBlur: 0.0,
+      swirlyBokeh: 0.0, anamorphicFlare: 0.08, lightLeak: 0.0, wetLensDrop: 0.0,
+      tyndall: 0.32, halation: 0.16, vintagePhoto: 0.0, filmGrain: 0.02,
+      vignette: 0.20, chromatic: 0.03, lensDistortion: 0.0, contrast: 1.12, saturation: 0.98, warmth: 0.04, bloomStrength: 0.08,
+    },
     sunlit_portra_bokeh: {
       postfxCombo: 'sunlit_portra_bokeh',
-      label: '🌞 Portra 160 逆光暖金眩光 + 树影翠金散景 + 真皮次表面散射 (参考图同款)',
-      filmLutMode: 'portra_160_sun', filmLutStrength: 0.68,
-      sssBlur: 0.64, microContrast: 0.42, highlightRoll: 0.52, shadowCrush: 0.58,
-      sunFlareVeil: 0.76, dappledBokeh: 0.78, softFocus: 0.58, depthBlur: 0.48,
-      swirlyBokeh: 0.28, anamorphicFlare: 0.24, lightLeak: 0.22, wetLensDrop: 0.0,
-      tyndall: 0.74, halation: 0.54, vintagePhoto: 0.34, filmGrain: 0.07,
-      vignette: 0.44, chromatic: 0.16, lensDistortion: 0.12, contrast: 1.22, saturation: 0.96, warmth: 0.12, bloomStrength: 0.11,
+      label: '🌞 Portra 160 逆光超清写真 · 全屏清晰五官 + 高光柔雾 + 真皮次表面散射 (默认推荐)',
+      filmLutMode: 'portra_160_sun', filmLutStrength: 0.48,
+      supersample: 1.50, casSharpen: 0.68, exposure: 1.08, shadowLift: 0.28, specularClarity: 0.75, eyeClarity: 0.92, poreReliefGlobal: 1.15,
+      sssBlur: 0.22, microContrast: 0.48, highlightRoll: 0.42, shadowCrush: 0.16,
+      sunFlareVeil: 0.22, dappledBokeh: 0.0, softFocus: 0.16, depthBlur: 0.04,
+      swirlyBokeh: 0.0, anamorphicFlare: 0.16, lightLeak: 0.06, wetLensDrop: 0.0,
+      tyndall: 0.48, halation: 0.28, vintagePhoto: 0.06, filmGrain: 0.05,
+      vignette: 0.26, chromatic: 0.08, lensDistortion: 0.04, contrast: 1.14, saturation: 0.96, warmth: 0.06, bloomStrength: 0.10,
     },
     kodak_2383_anamorphic: {
       postfxCombo: 'kodak_2383_anamorphic',
-      label: '🎬 Kodak Vision3 2383 电影印片 + 变形宽银幕水平拉丝 + 深邃暗部',
-      filmLutMode: 'kodak_2383', filmLutStrength: 0.82,
-      sssBlur: 0.58, microContrast: 0.56, highlightRoll: 0.64, shadowCrush: 0.74,
-      sunFlareVeil: 0.52, dappledBokeh: 0.35, softFocus: 0.46, depthBlur: 0.54,
-      swirlyBokeh: 0.36, anamorphicFlare: 0.86, lightLeak: 0.18, wetLensDrop: 0.0,
-      tyndall: 0.68, halation: 0.62, vintagePhoto: 0.28, filmGrain: 0.09,
-      vignette: 0.52, chromatic: 0.22, lensDistortion: 0.18, contrast: 1.28, saturation: 0.94, warmth: 0.08, bloomStrength: 0.14,
+      label: '🎬 Kodak Vision3 2383 电影印片 + 变形宽银幕水平拉丝 + 锐利骨相',
+      filmLutMode: 'kodak_2383', filmLutStrength: 0.72,
+      supersample: 1.50, casSharpen: 0.72, exposure: 1.06, shadowLift: 0.26, specularClarity: 0.82, eyeClarity: 0.95, poreReliefGlobal: 1.20,
+      sssBlur: 0.24, microContrast: 0.56, highlightRoll: 0.54, shadowCrush: 0.28,
+      sunFlareVeil: 0.28, dappledBokeh: 0.0, softFocus: 0.18, depthBlur: 0.08,
+      swirlyBokeh: 0.12, anamorphicFlare: 0.78, lightLeak: 0.10, wetLensDrop: 0.0,
+      tyndall: 0.52, halation: 0.42, vintagePhoto: 0.12, filmGrain: 0.06,
+      vignette: 0.34, chromatic: 0.12, lensDistortion: 0.08, contrast: 1.18, saturation: 0.95, warmth: 0.06, bloomStrength: 0.12,
     },
     cinestill_800t_halation: {
       postfxCombo: 'cinestill_800t_halation',
-      label: '🌃 CineStill 800T 朱红卤化银光晕 + Petzval 经典旋焦散景',
-      filmLutMode: 'cinestill_800t', filmLutStrength: 0.78,
-      sssBlur: 0.62, microContrast: 0.48, highlightRoll: 0.58, shadowCrush: 0.66,
-      sunFlareVeil: 0.64, dappledBokeh: 0.42, softFocus: 0.54, depthBlur: 0.58,
-      swirlyBokeh: 0.88, anamorphicFlare: 0.54, lightLeak: 0.36, wetLensDrop: 0.0,
-      tyndall: 0.62, halation: 0.96, vintagePhoto: 0.24, filmGrain: 0.11,
-      vignette: 0.50, chromatic: 0.26, lensDistortion: 0.22, contrast: 1.24, saturation: 0.98, warmth: 0.04, bloomStrength: 0.15,
+      label: '🌃 CineStill 800T 朱红卤化银光晕 + 极边缘旋焦散景',
+      filmLutMode: 'cinestill_800t', filmLutStrength: 0.68,
+      supersample: 1.50, casSharpen: 0.66, exposure: 1.08, shadowLift: 0.30, specularClarity: 0.85, eyeClarity: 0.94, poreReliefGlobal: 1.15,
+      sssBlur: 0.26, microContrast: 0.48, highlightRoll: 0.48, shadowCrush: 0.24,
+      sunFlareVeil: 0.32, dappledBokeh: 0.0, softFocus: 0.22, depthBlur: 0.12,
+      swirlyBokeh: 0.45, anamorphicFlare: 0.48, lightLeak: 0.22, wetLensDrop: 0.0,
+      tyndall: 0.48, halation: 0.82, vintagePhoto: 0.10, filmGrain: 0.08,
+      vignette: 0.36, chromatic: 0.14, lensDistortion: 0.10, contrast: 1.16, saturation: 0.98, warmth: 0.04, bloomStrength: 0.13,
     },
     fuji_forest_lightleak: {
       postfxCombo: 'fuji_forest_lightleak',
-      label: '🍃 富士森系翠金树影散景 + 胶片暗盒暖红漏光呼吸',
-      filmLutMode: 'fuji_velvia_50', filmLutStrength: 0.74,
-      sssBlur: 0.68, microContrast: 0.38, highlightRoll: 0.56, shadowCrush: 0.52,
-      sunFlareVeil: 0.84, dappledBokeh: 1.15, softFocus: 0.62, depthBlur: 0.52,
-      swirlyBokeh: 0.42, anamorphicFlare: 0.20, lightLeak: 0.78, wetLensDrop: 0.0,
-      tyndall: 0.82, halation: 0.48, vintagePhoto: 0.30, filmGrain: 0.08,
-      vignette: 0.42, chromatic: 0.18, lensDistortion: 0.14, contrast: 1.20, saturation: 1.02, warmth: 0.10, bloomStrength: 0.12,
+      label: '🍃 富士森系暖金顶角光斑 + 胶片暗盒暖红漏光呼吸',
+      filmLutMode: 'fuji_velvia_50', filmLutStrength: 0.64,
+      supersample: 1.50, casSharpen: 0.65, exposure: 1.08, shadowLift: 0.28, specularClarity: 0.72, eyeClarity: 0.92, poreReliefGlobal: 1.12,
+      sssBlur: 0.28, microContrast: 0.42, highlightRoll: 0.46, shadowCrush: 0.20,
+      sunFlareVeil: 0.45, dappledBokeh: 0.55, softFocus: 0.20, depthBlur: 0.08,
+      swirlyBokeh: 0.15, anamorphicFlare: 0.16, lightLeak: 0.56, wetLensDrop: 0.0,
+      tyndall: 0.62, halation: 0.34, vintagePhoto: 0.12, filmGrain: 0.06,
+      vignette: 0.30, chromatic: 0.10, lensDistortion: 0.06, contrast: 1.14, saturation: 1.02, warmth: 0.08, bloomStrength: 0.11,
     },
     ilford_rembrandt_bw: {
       postfxCombo: 'ilford_rembrandt_bw',
       label: '🖤 Ilford HP5 铂金银盐高反差黑白 + 极致微反差骨相雕塑',
-      filmLutMode: 'ilford_hp5_bichrome', filmLutStrength: 0.94,
-      sssBlur: 0.48, microContrast: 0.78, highlightRoll: 0.48, shadowCrush: 0.82,
-      sunFlareVeil: 0.46, dappledBokeh: 0.30, softFocus: 0.42, depthBlur: 0.46,
-      swirlyBokeh: 0.34, anamorphicFlare: 0.18, lightLeak: 0.12, wetLensDrop: 0.0,
-      tyndall: 0.64, halation: 0.36, vintagePhoto: 0.42, filmGrain: 0.14,
-      vignette: 0.58, chromatic: 0.08, lensDistortion: 0.12, contrast: 1.34, saturation: 0.22, warmth: 0.06, bloomStrength: 0.09,
+      filmLutMode: 'ilford_hp5_bichrome', filmLutStrength: 0.92,
+      supersample: 1.50, casSharpen: 0.82, exposure: 1.06, shadowLift: 0.24, specularClarity: 0.88, eyeClarity: 1.00, poreReliefGlobal: 1.35,
+      sssBlur: 0.16, microContrast: 0.72, highlightRoll: 0.44, shadowCrush: 0.38,
+      sunFlareVeil: 0.22, dappledBokeh: 0.0, softFocus: 0.12, depthBlur: 0.06,
+      swirlyBokeh: 0.12, anamorphicFlare: 0.12, lightLeak: 0.06, wetLensDrop: 0.0,
+      tyndall: 0.48, halation: 0.24, vintagePhoto: 0.18, filmGrain: 0.10,
+      vignette: 0.42, chromatic: 0.05, lensDistortion: 0.06, contrast: 1.24, saturation: 0.22, warmth: 0.06, bloomStrength: 0.08,
     },
     rainy_dew_promist: {
       postfxCombo: 'rainy_dew_promist',
-      label: '💧 雨窗呼吸水雾微折射 + 电影黑柔镜漫射 + 丁达尔斜射光束',
-      filmLutMode: 'kodak_2383', filmLutStrength: 0.64,
-      sssBlur: 0.70, microContrast: 0.36, highlightRoll: 0.60, shadowCrush: 0.54,
-      sunFlareVeil: 0.58, dappledBokeh: 0.52, softFocus: 0.68, depthBlur: 0.54,
-      swirlyBokeh: 0.32, anamorphicFlare: 0.42, lightLeak: 0.16, wetLensDrop: 0.88,
-      tyndall: 0.86, halation: 0.52, vintagePhoto: 0.26, filmGrain: 0.07,
-      vignette: 0.46, chromatic: 0.18, lensDistortion: 0.14, contrast: 1.18, saturation: 0.94, warmth: 0.04, bloomStrength: 0.13,
+      label: '💧 雨窗呼吸水雾微折射 + 黑柔镜高光漫射 + 丁达尔斜射光束',
+      filmLutMode: 'kodak_2383', filmLutStrength: 0.56,
+      supersample: 1.50, casSharpen: 0.62, exposure: 1.08, shadowLift: 0.30, specularClarity: 0.78, eyeClarity: 0.92, poreReliefGlobal: 1.15,
+      sssBlur: 0.28, microContrast: 0.42, highlightRoll: 0.50, shadowCrush: 0.22,
+      sunFlareVeil: 0.32, dappledBokeh: 0.0, softFocus: 0.28, depthBlur: 0.08,
+      swirlyBokeh: 0.10, anamorphicFlare: 0.32, lightLeak: 0.08, wetLensDrop: 0.65,
+      tyndall: 0.68, halation: 0.36, vintagePhoto: 0.10, filmGrain: 0.05,
+      vignette: 0.32, chromatic: 0.10, lensDistortion: 0.06, contrast: 1.14, saturation: 0.95, warmth: 0.04, bloomStrength: 0.11,
     },
   };
 
@@ -3504,6 +3541,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     showToast('🔄 已恢复参考图默认盛夏逆光发丝+Portra160散景后处理配方');
   });
 
+  document.getElementById('btn-quick-ultra-crisp')?.addEventListener('click', () => {
+    const curCombo = state.visualCustomConfig.postfxCombo || 'sunlit_portra_bokeh';
+    const nextComboId = curCombo === 'ultra_4k_zero_blur' ? 'sunlit_portra_bokeh' : 'ultra_4k_zero_blur';
+    const cfg = POSTFX_MASTER_COMBOS[nextComboId];
+    document.querySelectorAll('[data-postfx-combo]').forEach(b => {
+      b.classList.toggle('active', b.dataset.postfxCombo === nextComboId);
+    });
+    applyVisualConfigAndSyncUI(cfg, false);
+    showToast(`🔪 已切换超清画质模式：${cfg.label}`);
+  });
+
   document.getElementById('btn-quick-postfx')?.addEventListener('click', () => {
     const keys = Object.keys(POSTFX_MASTER_COMBOS);
     const cur = state.visualCustomConfig.postfxCombo || 'sunlit_portra_bokeh';
@@ -3523,11 +3571,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   document.getElementById('btn-quick-chiaroscuro')?.addEventListener('click', () => {
     const cycleModes = [
-      { windowGobo: 'hair_sun_slit', windowGoboStrength: 0.78, chiaroscuro: 0.94, keyIntensity: 2.18, fillIntensity: 0.14, contrast: 1.22, label: '🌞 盛夏逆光发丝缕缕投影 + 10:1强明暗对比 (参考图同款)' },
-      { windowGobo: 'venetian_blinds', windowGoboStrength: 0.84, chiaroscuro: 0.98, keyIntensity: 2.26, fillIntensity: 0.12, contrast: 1.26, label: '🪟 书房百叶窗条纹切光 + 极致明暗分割' },
-      { windowGobo: 'tree_dappled', windowGoboStrength: 0.78, chiaroscuro: 0.90, keyIntensity: 2.10, fillIntensity: 0.16, contrast: 1.20, label: '🌿 窗外梧桐树影斑驳光斑 + 自然林间强光影' },
-      { windowGobo: 'rain_mullion', windowGoboStrength: 0.72, chiaroscuro: 0.86, keyIntensity: 1.98, fillIntensity: 0.18, contrast: 1.18, label: '🌧️ 雨夜十字窗框投影 + 伦勃朗明暗雕塑感' },
-      { windowGobo: 'none', windowGoboStrength: 0.0, chiaroscuro: 0.32, keyIntensity: 1.38, fillIntensity: 0.44, contrast: 1.06, label: '🔦 纯净影棚双柔光箱 (柔和均匀光影)' },
+      { windowGobo: 'hair_sun_slit', windowGoboStrength: 0.45, chiaroscuro: 0.66, keyIntensity: 2.02, fillIntensity: 0.42, contrast: 1.14, label: '🌞 盛夏逆光发丝缕缕投影 + 自然立体明暗对比 (推荐)' },
+      { windowGobo: 'venetian_blinds', windowGoboStrength: 0.56, chiaroscuro: 0.72, keyIntensity: 2.10, fillIntensity: 0.36, contrast: 1.16, label: '🪟 书房百叶窗条纹切光 + 电影明暗分割' },
+      { windowGobo: 'tree_dappled', windowGoboStrength: 0.50, chiaroscuro: 0.68, keyIntensity: 2.04, fillIntensity: 0.40, contrast: 1.14, label: '🌿 窗外梧桐树影斑驳光斑 + 自然林间光影' },
+      { windowGobo: 'rain_mullion', windowGoboStrength: 0.48, chiaroscuro: 0.64, keyIntensity: 1.96, fillIntensity: 0.42, contrast: 1.12, label: '🌧️ 雨夜十字窗框投影 + 伦勃朗明暗雕塑感' },
+      { windowGobo: 'none', windowGoboStrength: 0.0, chiaroscuro: 0.28, keyIntensity: 1.52, fillIntensity: 0.56, contrast: 1.06, label: '🔦 纯净影棚双柔光箱 (柔和均匀光影)' },
     ];
     const curGobo = state.visualCustomConfig.windowGobo || 'hair_sun_slit';
     const curIdx = cycleModes.findIndex(m => m.windowGobo === curGobo);
@@ -3588,6 +3636,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyVisualConfigAndSyncUI({ [key]: v }, false);
     });
   };
+  bindVcSlider('vc-supersample', 'val-vc-supersample', 'supersample', v => `${Number(v).toFixed(2)}x`);
+  bindVcSlider('vc-cas-sharpen', 'val-vc-cas-sharpen', 'casSharpen', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-exposure', 'val-vc-exposure', 'exposure', v => `${Number(v).toFixed(2)}x`);
+  bindVcSlider('vc-shadow-lift', 'val-vc-shadow-lift', 'shadowLift', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-specular-clarity', 'val-vc-specular-clarity', 'specularClarity', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-eye-clarity', 'val-vc-eye-clarity', 'eyeClarity', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-pore-relief-global', 'val-vc-pore-relief-global', 'poreReliefGlobal', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-dyn-speed', 'val-vc-dyn-speed', 'dynamicLightSpeed', v => `${Number(v).toFixed(2)}x`);
   bindVcSlider('vc-dyn-amp', 'val-vc-dyn-amp', 'dynamicLightAmp', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-cursor-torch', 'val-vc-cursor-torch', 'cursorTorch', v => `${Math.round(v * 100)}%`);

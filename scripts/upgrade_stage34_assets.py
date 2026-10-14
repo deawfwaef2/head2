@@ -47,13 +47,16 @@ d_left = np.hypot(xx_e - 150.5, yy_e - 358.1)
 d_right = np.hypot(xx_e - 361.0, yy_e - 152.7)
 d_nearest = np.minimum(d_left, d_right)
 
-# Clean porcelain-ivory sclera with subtle outer corner pinkness & fine capillary warmth
-sclera_t = np.clip((d_nearest - 54.0) / 72.0, 0.0, 1.0)
+# Clean warm-ivory sclera with anatomical upper/lower eyelid AO & outer canthus pinkness (NO stark white glow!)
+sclera_t = np.clip((d_nearest - 54.0) / 68.0, 0.0, 1.0)
+dy_nearest = np.where(d_left < d_right, yy_e - 358.1, yy_e - 152.7)
+# Top of eye in UV space is dy_nearest < 0 (upper eyelid casts shadow onto upper sclera!)
+lid_ao = np.clip(0.84 + 0.16 * np.clip((dy_nearest + 38.0) / 88.0, 0.0, 1.0), 0.72, 1.0)[..., None]
 sclera_rgb = np.stack([
-    238.0 - 12.0 * sclera_t - 10.0 * (sclera_t ** 2),
-    231.0 - 20.0 * sclera_t - 16.0 * (sclera_t ** 2),
-    227.0 - 24.0 * sclera_t - 18.0 * (sclera_t ** 2),
-], axis=-1)
+    218.0 - 16.0 * sclera_t - 12.0 * (sclera_t ** 2),
+    206.0 - 24.0 * sclera_t - 18.0 * (sclera_t ** 2),
+    201.0 - 28.0 * sclera_t - 20.0 * (sclera_t ** 2),
+], axis=-1) * lid_ao
 
 rng_eye = np.random.RandomState(42)
 f1_lut = gaussian_filter(rng_eye.randn(720).astype(np.float32), sigma=1.4, mode='wrap')
@@ -103,29 +106,43 @@ print(f"  Upgraded Image 2 (eye) with dual iris UV islands: {len(eye_out_bytes)/
 
 # ---------------------------------------------------------------------------
 # 1B. Upgrade Image 3 (Eyebrow), Image 4 (Eyelash), and 8 realWebAssets.eyebrows
+#     with True 8-Bit Feathered Alpha (NO 1-bit palette quantization!)
 # ---------------------------------------------------------------------------
 def upgrade_eyebrow_rgba(im_pil):
     arr = np.array(im_pil.convert('RGBA'), dtype=np.float32)
-    a_norm = arr[..., 3] / 255.0
-    a_boost = np.clip((a_norm ** 0.56) * 2.55, 0.0, 1.0)
+    mask = arr[..., 3] > 24.0
+    if np.any(mask):
+        dist_in = distance_transform_edt(mask).astype(np.float32)
+        # Reconstruct smooth 8-bit hair-strand feathering from core to edge
+        a_smooth = gaussian_filter(np.clip((dist_in - 0.15) / 1.75, 0.0, 1.0) ** 0.85, sigma=0.55)
+        a_final = np.clip(a_smooth * 0.88, 0.0, 0.92)
+    else:
+        a_final = np.clip(arr[..., 3] / 255.0, 0.0, 0.90)
     lum = (0.299 * arr[..., 0] + 0.587 * arr[..., 1] + 0.114 * arr[..., 2]) / 255.0
-    r_c = np.clip(20.0 + lum * 22.0, 14.0, 48.0)
-    g_c = np.clip(16.0 + lum * 18.0, 11.0, 40.0)
-    b_c = np.clip(16.0 + lum * 17.0, 11.0, 38.0)
-    out = np.stack([r_c, g_c, b_c, a_boost * 255.0], axis=-1).astype(np.uint8)
+    r_c = np.clip(28.0 + lum * 24.0, 22.0, 56.0)
+    g_c = np.clip(22.0 + lum * 20.0, 18.0, 46.0)
+    b_c = np.clip(21.0 + lum * 18.0, 17.0, 44.0)
+    out = np.stack([r_c, g_c, b_c, a_final * 255.0], axis=-1).astype(np.uint8)
     out = dilate_rgb_into_transparent(out, thresh=8)
-    return encode_png(Image.fromarray(out, mode='RGBA'), quantize_colors=128)
+    return encode_png(Image.fromarray(out, mode='RGBA'), quantize_colors=None)
 
 eb_main_bytes = upgrade_eyebrow_rgba(get_image_rgba(gltf['images'][3]['bufferView']))
 el_im = get_image_rgba(gltf['images'][4]['bufferView'])
 el_arr = np.array(el_im, dtype=np.float32)
-el_a = np.clip(((el_arr[..., 3] / 255.0) ** 0.58) * 2.35, 0.0, 1.0)
+el_mask = el_arr[..., 3] > 24.0
+if np.any(el_mask):
+    el_dist = distance_transform_edt(el_mask).astype(np.float32)
+    # Strip away the bloated 20px binary base halo and keep slender, tapered 8-bit lash strands!
+    el_a = gaussian_filter(np.clip((el_dist - 0.55) / 2.15, 0.0, 1.0) ** 1.05, sigma=0.48) * 0.82
+else:
+    el_a = np.clip((el_arr[..., 3] / 255.0) * 0.82, 0.0, 0.85)
 el_out = np.zeros_like(el_arr, dtype=np.uint8)
-el_out[..., 0] = 12
-el_out[..., 1] = 10
-el_out[..., 2] = 13
-el_out[..., 3] = (el_a * 255.0).astype(np.uint8)
-el_out_bytes = encode_png(Image.fromarray(el_out, mode='RGBA'), quantize_colors=64)
+el_out[..., 0] = 24
+el_out[..., 1] = 19
+el_out[..., 2] = 20
+el_out[..., 3] = np.clip(el_a * 255.0, 0.0, 255.0).astype(np.uint8)
+el_out_bytes = encode_png(Image.fromarray(el_out, mode='RGBA'), quantize_colors=None)
+print(f"  Upgraded Image 3 (eyebrow, 8-bit RGBA): {len(eb_main_bytes)/1024:.1f} KB, Image 4 (eyelash, 8-bit RGBA): {len(el_out_bytes)/1024:.1f} KB")
 
 eb_assets_bytes = {}
 for k, v in gltf['extras']['realWebAssets']['eyebrows'].items():
@@ -205,9 +222,10 @@ def prepare_sharp_photo_base(photo_im):
     hi_detail = photo_im - low10
     mid_sculpt = low10 - low32
     rejuvenated = low32 + mid_sculpt * (1.0 - 0.30 * age_zone) + hi_detail
-    mucosal = np.array([208.0, 152.0, 138.0], dtype=np.float32)
-    rejuvenated = rejuvenated * (1.0 - eye_hole_mask * 0.85) + mucosal * (eye_hole_mask * 0.85)
-    rejuvenated = rejuvenated * (1.0 - 0.24 * eyelid_def) + np.array([62.0, 38.0, 34.0], dtype=np.float32) * (0.24 * eyelid_def)
+    mucosal = np.array([214.0, 166.0, 154.0], dtype=np.float32)
+    rejuvenated = rejuvenated * (1.0 - eye_hole_mask * 0.78) + mucosal * (eye_hole_mask * 0.78)
+    # Subtle warm eyelid crease (NO heavy dark brown/black raccoon rings!)
+    rejuvenated = rejuvenated * (1.0 - 0.06 * eyelid_def) + np.array([156.0, 112.0, 104.0], dtype=np.float32) * (0.06 * eyelid_def)
     bg_clean = low32 * (1.0 - neck_rim) + photo_im * neck_rim
     return bg_clean * (1.0 - face_keep) + rejuvenated * face_keep
 
@@ -227,17 +245,17 @@ cheeks = np.clip(cheek_l + cheek_r, 0.0, 1.0)
 
 variant_recipes = {
     'cn_porcelain_ivory':    (sharp_asian_base,    [1.01, 1.01, 1.02], [2.0, 2.0, 4.0],  [196, 86, 94],  0.65, 0.18, None),
-    'cn_scholar_natural':    (sharp_asian_base,    [1.00, 1.00, 1.00], [0.0, 0.0, 1.0],  [188, 92, 96],  0.58, 0.14, 'fang_3moles'),
-    'kr_dewy_peach':         (sharp_asian_base,    [1.02, 1.00, 1.01], [3.0, 1.0, 2.0],  [212, 78, 92],  0.74, 0.28, 'chuxia_3moles'),
-    'kr_chaebol_cool':       (sharp_asian_base,    [0.99, 1.00, 1.03], [0.0, 2.0, 6.0],  [158, 54, 76],  0.78, 0.16, 'tear_left'),
-    'cn_jiangnan_jade':      (sharp_asian_base,    [1.01, 1.00, 0.99], [2.0, 1.0, -1.0], [192, 72, 78],  0.70, 0.20, 'under_right'),
-    'kr_firstlove_camellia': (sharp_asian_base,    [1.02, 0.99, 1.00], [3.0, 0.0, 2.0],  [208, 68, 82],  0.76, 0.30, 'nose_tip'),
-    'cn_intellectual_olive': (sharp_asian_base,    [0.98, 0.99, 0.99], [-2.0, 0.0, 0.0], [166, 78, 82],  0.64, 0.12, 'cheek_left'),
+    'cn_scholar_natural':    (sharp_asian_base,    [1.00, 1.00, 1.00], [0.0, 0.0, 1.0],  [188, 92, 96],  0.58, 0.14, None),
+    'kr_dewy_peach':         (sharp_asian_base,    [1.02, 1.00, 1.01], [3.0, 1.0, 2.0],  [212, 78, 92],  0.74, 0.28, None),
+    'kr_chaebol_cool':       (sharp_asian_base,    [0.99, 1.00, 1.03], [0.0, 2.0, 6.0],  [158, 54, 76],  0.78, 0.16, None),
+    'cn_jiangnan_jade':      (sharp_asian_base,    [1.01, 1.00, 0.99], [2.0, 1.0, -1.0], [192, 72, 78],  0.70, 0.20, None),
+    'kr_firstlove_camellia': (sharp_asian_base,    [1.02, 0.99, 1.00], [3.0, 0.0, 2.0],  [208, 68, 82],  0.76, 0.30, None),
+    'cn_intellectual_olive': (sharp_asian_base,    [0.98, 0.99, 0.99], [-2.0, 0.0, 0.0], [166, 78, 82],  0.64, 0.12, None),
     'eurasian_velvet_rose':  (sharp_eurasian_base, [1.00, 0.99, 1.00], [1.0, 0.0, 2.0],  [178, 72, 82],  0.72, 0.22, None),
 }
 
 skin_out_bytes = {}
-for vk, (base_im, mul_c, add_c, lip_rgb, lip_w, blush_w, mole_kind) in variant_recipes.items():
+for vk, (base_im, mul_c, add_c, lip_rgb, lip_w, blush_w, _mole_kind) in variant_recipes.items():
     img = base_im * np.array(mul_c, dtype=np.float32) + np.array(add_c, dtype=np.float32)
     blush_target = np.array([228.0, 132.0, 138.0], dtype=np.float32)
     img = img * (1.0 - cheeks * blush_w * 0.42) + blush_target * (cheeks * blush_w * 0.42)
@@ -246,24 +264,7 @@ for vk, (base_im, mul_c, add_c, lip_rgb, lip_w, blush_w, mole_kind) in variant_r
     img = img * (1.0 - lip_mask * lip_w) + lip_col * (lip_mask * lip_w)
     img = img * (1.0 - lip_inner * (lip_w * 0.65)) + inner_col * (lip_inner * (lip_w * 0.65))
 
-    if mole_kind in ('fang_3moles', 'chuxia_3moles'):
-        for mx, my in ((1810.5, 1134.5), (1820.5, 1154.5), (1850.5, 1170.5)):
-            m = np.exp(-(((xx_s - mx) ** 2 + (yy_s - my) ** 2) / (3.2 ** 2)))[..., None]
-            img = img * (1.0 - 0.72 * m) + np.array([42.0, 26.0, 22.0], dtype=np.float32) * (0.72 * m)
-    elif mole_kind == 'tear_left':
-        m = np.exp(-(((xx_s - 1772.0) ** 2 + (yy_s - 1164.0) ** 2) / (2.8 ** 2)))[..., None]
-        img = img * (1.0 - 0.78 * m) + np.array([36.0, 22.0, 20.0], dtype=np.float32) * (0.78 * m)
-    elif mole_kind == 'under_right':
-        m = np.exp(-(((xx_s - 1774.0) ** 2 + (yy_s - 975.0) ** 2) / (2.8 ** 2)))[..., None]
-        img = img * (1.0 - 0.75 * m) + np.array([40.0, 24.0, 22.0], dtype=np.float32) * (0.75 * m)
-    elif mole_kind == 'nose_tip':
-        m = np.exp(-(((xx_s - 1812.0) ** 2 + (yy_s - 1049.0) ** 2) / (2.6 ** 2)))[..., None]
-        img = img * (1.0 - 0.72 * m) + np.array([44.0, 28.0, 24.0], dtype=np.float32) * (0.72 * m)
-    elif mole_kind == 'cheek_left':
-        m = np.exp(-(((xx_s - 1818.0) ** 2 + (yy_s - 1142.0) ** 2) / (2.8 ** 2)))[..., None]
-        img = img * (1.0 - 0.74 * m) + np.array([40.0, 25.0, 22.0], dtype=np.float32) * (0.74 * m)
-
-    # Save as true 24-bit RGB PNG (ZERO 256-color posterization!)
+    # Save as true 24-bit RGB PNG (ZERO 256-color posterization & ZERO blurry UV mole blotches!)
     pil_v = Image.fromarray(np.clip(img, 0.0, 255.0).astype(np.uint8), mode='RGB')
     skin_out_bytes[vk] = encode_png(pil_v, quantize_colors=None)
     print(f"  Rebuilt 24-bit sharp skin {vk:22s}: {len(skin_out_bytes[vk])/1024:5.1f} KB")

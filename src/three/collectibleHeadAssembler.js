@@ -1522,7 +1522,14 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
     uIrisScale: { value: Number(initialEye.irisScale ?? 1.0) },
     uPupilScale: { value: Number(initialEye.pupilSize ?? 1.0) },
     uCatchlightStrength: { value: Number(initialEye.eyeCatchlight ?? 0.85) },
-    uScleraBrightness: { value: Number(initialEye.scleraBrightness ?? 1.0) },
+    uScleraBrightness: { value: Number(initialEye.scleraBrightness ?? 0.92) },
+    uEyeClarity: { value: Number(initialEye.eyeClarity ?? 0.85) },
+    uWindowGobo: { value: 0.0 },
+    uWindowGoboStrength: { value: 0.78 },
+    uWindowGoboScale: { value: 1.0 },
+    uWindowGoboSoftness: { value: 0.5 },
+    uWindowGoboPhase: { value: 0.0 },
+    uChiaroscuro: { value: 0.88 },
     uGazeOffset: {
       value: new THREE.Vector2(
         Number(initialEye.gazeYaw ?? 0) * 0.24,
@@ -1532,13 +1539,14 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
   };
   material.userData = material.userData || {};
   material.userData.eyeUniforms = eyeUniforms;
-  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v36';
+  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v41';
   material.onBeforeCompile = (shader) => {
     for (const [k, uObj] of Object.entries(eyeUniforms)) {
       shader.uniforms[k] = uObj;
     }
     shader.vertexShader = `
       varying vec3 vEyeLocalPos;
+      varying vec3 vEyeWorldPos;
       varying vec3 vEyeNormal;
     ` + shader.vertexShader;
     shader.vertexShader = shader.vertexShader.replace(
@@ -1546,6 +1554,7 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       `
       #include <begin_vertex>
       vEyeLocalPos = position;
+      vEyeWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
       vEyeNormal = normalize(normal);
       `
     );
@@ -1556,8 +1565,16 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       uniform float uPupilScale;
       uniform float uCatchlightStrength;
       uniform float uScleraBrightness;
+      uniform float uEyeClarity;
+      uniform float uWindowGobo;
+      uniform float uWindowGoboStrength;
+      uniform float uWindowGoboScale;
+      uniform float uWindowGoboSoftness;
+      uniform float uWindowGoboPhase;
+      uniform float uChiaroscuro;
       uniform vec2 uGazeOffset;
       varying vec3 vEyeLocalPos;
+      varying vec3 vEyeWorldPos;
       varying vec3 vEyeNormal;
     ` + shader.fragmentShader;
 
@@ -1574,17 +1591,24 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
         float pupilRadius = 0.34 * clamp(uPupilScale, 0.50, 1.65);
         float inPupil = 1.0 - smoothstep(pupilRadius - 0.05, pupilRadius + 0.05, rIris);
 
-        // Radial iris collagen crypt fibers & dark limbal ring
+        // Radial iris collagen crypt fibers & dark limbal ring (sharpened by uEyeClarity)
         float theta = atan(relXY.y, relXY.x);
+        float clarityBoost = clamp(uEyeClarity, 0.0, 1.6);
         float radialFibers = 0.5 + 0.5 * sin(theta * 36.0 + sin(rIris * 12.0) * 1.4) * cos(theta * 19.0 - 0.8);
-        float limbalRing = smoothstep(0.70, 0.96, rIris) * inIris;
-        vec3 customIris = uIrisColor * (0.72 + 0.56 * radialFibers) * (1.0 - 0.58 * limbalRing);
+        float collaretteRing = exp(-pow((rIris - 0.52) / 0.14, 2.0)) * clarityBoost * 0.32;
+        float limbalRing = smoothstep(0.68, 0.96, rIris) * inIris;
+        vec3 customIris = uIrisColor * (0.68 + (0.58 + 0.22 * clarityBoost) * radialFibers + collaretteRing)
+                        * (1.0 - (0.62 + 0.16 * clarityBoost) * limbalRing);
         float stromaMask = inIris * (1.0 - inPupil);
-        diffuseColor.rgb = mix(diffuseColor.rgb, customIris, clamp(stromaMask * uIrisColorMix, 0.0, 0.92));
+        diffuseColor.rgb = mix(diffuseColor.rgb, customIris, clamp(stromaMask * max(uIrisColorMix, 0.52), 0.0, 0.95));
         // Deep velvet-black pupil aperture
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.012, 0.016), inPupil * 0.92);
-        // Sclera brightness & subtle corner vascular warmth
-        diffuseColor.rgb *= mix(clamp(uScleraBrightness, 0.72, 1.28), 1.0, inIris);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.008, 0.008, 0.012), inPupil * 0.95);
+
+        // Natural warm moist sclera with inner/outer canthus caruncle vascular warmth (NO stark white glow!)
+        float scleraMask = 1.0 - inIris;
+        float cornerDist = smoothstep(0.92, 1.85, abs(relXY.x));
+        vec3 naturalSclera = mix(diffuseColor.rgb * vec3(0.84, 0.79, 0.77), vec3(0.68, 0.45, 0.43), cornerDist * 0.42);
+        diffuseColor.rgb = mix(diffuseColor.rgb, naturalSclera * clamp(uScleraBrightness, 0.65, 1.22), scleraMask);
       }
       `
     );
@@ -1602,22 +1626,54 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       float rIris = length(relXY);
       float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
 
-      // Upper eyelid soft ambient occlusion
-      float upperLidAO = smoothstep(0.0242, 0.0192, vEyeLocalPos.y);
-      reflectedLight.directDiffuse *= (0.74 + 0.26 * upperLidAO);
-      reflectedLight.indirectDiffuse *= (0.78 + 0.22 * upperLidAO);
+      // 1. 3D Orbital Cavity & Upper/Lower Eyelid Cast Shadow Ambient Occlusion
+      // Ensures sclera under the upper eyelid and at the eye corners never glows dead-white!
+      float upperLidAO = smoothstep(0.0238, 0.0174, vEyeLocalPos.y);
+      float lowerLidAO = smoothstep(0.0108, 0.0148, vEyeLocalPos.y);
+      float cornerAO = 1.0 - 0.36 * smoothstep(0.88, 1.85, abs(relXY.x));
+      float orbitalAO = clamp((0.46 + 0.54 * upperLidAO) * (0.76 + 0.24 * lowerLidAO) * cornerAO, 0.34, 1.0);
+
+      // 2. Coupling with Scene Window Gobo & Chiaroscuro Shadow Falloff
+      // Fixes the bug where faces in window shadow had glowing bright white eyeballs!
+      float eyeGoboAtten = 1.0;
+      if (uWindowGobo > 0.5 && uWindowGoboStrength > 0.01) {
+        float gScale = max(0.35, uWindowGoboScale);
+        float drift = uWindowGoboPhase;
+        vec2 gUV = vec2(
+          vEyeWorldPos.x * 0.055 * gScale + vEyeWorldPos.y * 0.022 * gScale + drift * 0.14,
+          vEyeWorldPos.y * 0.065 * gScale - vEyeWorldPos.z * 0.018 * gScale + sin(drift * 0.5) * 0.04
+        );
+        float gSoft = mix(0.04, 0.24, clamp(uWindowGoboSoftness, 0.0, 1.0));
+        float gLight = 1.0;
+        if (uWindowGobo < 1.5) {
+          float b = fract(gUV.y * 5.2 + gUV.x * 1.4);
+          gLight = smoothstep(0.30 - gSoft, 0.36 + gSoft, b) * (1.0 - smoothstep(0.76 - gSoft, 0.82 + gSoft, b));
+        } else if (uWindowGobo < 2.5) {
+          float gx = abs(fract(gUV.x * 1.8) - 0.5);
+          float gy = abs(fract(gUV.y * 1.6) - 0.5);
+          gLight = smoothstep(0.07 - gSoft * 0.35, 0.12 + gSoft * 0.45, min(gx, gy));
+        } else {
+          float slit = exp(-pow((fract(gUV.y * 1.2 + gUV.x * 0.65) - 0.48) / max(0.08, 0.14 + gSoft * 0.35), 2.0));
+          gLight = clamp(slit * 1.15, 0.0, 1.0);
+        }
+        eyeGoboAtten = mix(1.0, 0.26 + 0.74 * gLight, clamp(uWindowGoboStrength, 0.0, 1.0));
+      }
+
+      reflectedLight.directDiffuse *= orbitalAO * eyeGoboAtten;
+      reflectedLight.indirectDiffuse *= orbitalAO * mix(1.0, eyeGoboAtten, 0.72) * mix(0.88, 0.48, clamp(uChiaroscuro, 0.0, 1.0));
 
       // Lower iris warm caustic crescent (opposite top-right key light)
       float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.24, 2.0));
-      reflectedLight.directDiffuse += (uIrisColor * 0.65 + vec3(0.24, 0.14, 0.08)) * causticZone * inIris * 0.82;
+      reflectedLight.directDiffuse += (uIrisColor * 0.65 + vec3(0.24, 0.14, 0.08)) * causticZone * inIris * 0.78 * eyeGoboAtten;
 
-      // Crisp Pinpoint Studio Catchlights (NO milky ring wash across the iris!)
-      float uvCatch1 = exp(-(pow((relXY.x + 0.30) / 0.105, 2.0) + pow((relXY.y - 0.32) / 0.095, 2.0)));
-      float uvCatch2 = exp(-(pow((relXY.x - 0.32) / 0.055, 2.0) + pow((relXY.y + 0.28) / 0.055, 2.0)));
-      vec3 wetCatchlight = (vec3(2.15, 2.12, 2.08) * uvCatch1 + vec3(1.15, 1.18, 1.25) * uvCatch2)
-                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8);
-      reflectedLight.directSpecular = reflectedLight.directSpecular * 0.28 + wetCatchlight * upperLidAO;
-      reflectedLight.indirectSpecular *= 0.26;
+      // Crisp Pinpoint Studio Catchlights (NO milky ring wash across the iris or sclera!)
+      float uvCatch1 = exp(-(pow((relXY.x + 0.30) / 0.095, 2.0) + pow((relXY.y - 0.32) / 0.088, 2.0)));
+      float uvCatch2 = exp(-(pow((relXY.x - 0.32) / 0.052, 2.0) + pow((relXY.y + 0.28) / 0.052, 2.0)));
+      vec3 wetCatchlight = (vec3(2.25, 2.22, 2.18) * uvCatch1 + vec3(1.18, 1.20, 1.26) * uvCatch2)
+                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8) * (0.45 + 0.55 * eyeGoboAtten);
+      float specKeep = mix(0.10, 0.24, inIris) * orbitalAO * eyeGoboAtten;
+      reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight * upperLidAO;
+      reflectedLight.indirectSpecular *= specKeep;
       `
     );
   };
@@ -1807,20 +1863,22 @@ export async function buildCollectibleHeadNode(config = {}) {
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
+      child.castShadow = false;
+      child.receiveShadow = true;
       const eyeMap = child.material?.map || null;
       if (eyeMap) {
         eyeMap.colorSpace = THREE.SRGBColorSpace;
-        eyeMap.anisotropy = 8;
+        eyeMap.anisotropy = 16;
       }
       const eyeMat = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.05,
+        roughness: 0.08,
         metalness: 0.0,
-        clearcoat: 0.85,
-        clearcoatRoughness: 0.02,
-        specularIntensity: 0.85,
-        ior: 1.40,
-        envMapIntensity: 0.36,
+        clearcoat: 0.72,
+        clearcoatRoughness: 0.04,
+        specularIntensity: 0.65,
+        ior: 1.38,
+        envMapIntensity: 0.24,
       });
       injectLifelikeEyeShader(eyeMat, {
         irisColor: config.irisColor || materials.irisColor || '#3b271e',
@@ -1828,33 +1886,28 @@ export async function buildCollectibleHeadNode(config = {}) {
         irisScale: Number(config.irisScale ?? materials.irisScale ?? morphs.irisScale ?? 1.0),
         pupilSize: Number(config.pupilSize ?? materials.pupilSize ?? morphs.pupilSize ?? 1.0),
         eyeCatchlight: Number(config.eyeCatchlight ?? materials.eyeCatchlight ?? 0.85),
-        scleraBrightness: Number(config.scleraBrightness ?? materials.scleraBrightness ?? 1.0),
+        scleraBrightness: Number(config.scleraBrightness ?? materials.scleraBrightness ?? 0.92),
+        eyeClarity: Number(config.eyeClarity ?? materials.eyeClarity ?? 0.85),
         gazeYaw: Number(morphs.gazeYaw ?? 0),
         gazePitch: Number(morphs.gazePitch ?? 0),
       });
       child.material = eyeMat;
     } else if (matName === 'Cornea') {
-      child.material = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#ffffff'),
-        transparent: true,
-        opacity: 0.032,
-        roughness: 0.015,
-        metalness: 0.0,
-        clearcoat: 0.85,
-        clearcoatRoughness: 0.015,
-        specularIntensity: 0.65,
-        ior: 1.38,
-        envMapIntensity: 0.26,
-        depthWrite: false,
-      });
+      // Prim 2 (Cornea) outer shell must stay hidden so its clearcoat Fresnel reflection
+      // never washes a milky grey-white glare across the iris and sclera!
+      child.visible = false;
+      child.castShadow = false;
+      child.receiveShadow = false;
     } else if (matName === 'Eyebrow') {
+      child.castShadow = false;
+      child.receiveShadow = true;
       child.userData.isEyebrowMesh = true;
       const browSpec = EYEBROW_STYLE_TO_MH_ASSET[rootGroup.userData.eyebrowStyle || 'cn_scholar_natural'] || EYEBROW_STYLE_TO_MH_ASSET.cn_scholar_natural;
       const realBrowAsset = realWebAssetsCache?.eyebrows?.[browSpec.assetId] || realWebAssetsCache?.eyebrows?.eyebrow001;
       const browMap = realBrowAsset?.texture || child.material?.map || null;
       if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
       const browColHex = config.browColor || materials.browColor || '#ffffff';
-      const browOp = Number(config.browOpacity ?? materials.browOpacity ?? 0.94);
+      const browOp = Number(config.browOpacity ?? materials.browOpacity ?? 0.90);
       rootGroup.userData.browColor = browColHex;
       rootGroup.userData.browOpacity = browOp;
       child.material = new THREE.MeshStandardMaterial({
@@ -1862,30 +1915,37 @@ export async function buildCollectibleHeadNode(config = {}) {
         color: new THREE.Color(browColHex),
         transparent: true,
         opacity: browOp,
-        alphaTest: 0.015,
+        alphaTest: 0.02,
         alphaToCoverage: true,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.62,
-        envMapIntensity: 0.25,
+        roughness: 0.65,
+        envMapIntensity: 0.22,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {
+      child.castShadow = false;
+      child.receiveShadow = true;
       const lashMap = child.material?.map || null;
-      if (lashMap) lashMap.colorSpace = THREE.SRGBColorSpace;
+      if (lashMap) {
+        lashMap.colorSpace = THREE.SRGBColorSpace;
+        lashMap.anisotropy = 8;
+      }
       child.material = new THREE.MeshStandardMaterial({
         map: lashMap,
-        color: new THREE.Color('#ffffff'),
+        color: new THREE.Color('#282022'),
         transparent: true,
-        alphaTest: 0.015,
+        opacity: 0.86,
+        alphaTest: 0.04,
         alphaToCoverage: true,
+        depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.42,
-        envMapIntensity: 0.28,
+        roughness: 0.48,
+        envMapIntensity: 0.22,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
@@ -2092,6 +2152,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.pupilSize !== undefined) eu.uPupilScale.value = Number(m.pupilSize);
       if (m.eyeCatchlight !== undefined) eu.uCatchlightStrength.value = Number(m.eyeCatchlight);
       if (m.scleraBrightness !== undefined) eu.uScleraBrightness.value = Number(m.scleraBrightness);
+      if (m.eyeClarity !== undefined && eu.uEyeClarity) eu.uEyeClarity.value = Number(m.eyeClarity);
       if (m.gazeYaw !== undefined || m.gazePitch !== undefined) {
         eu.uGazeOffset.value.set(
           Number(m.gazeYaw ?? 0) * 0.24,

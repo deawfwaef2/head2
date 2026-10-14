@@ -428,18 +428,23 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
   };
 
   if (shelfLayout === 'study_side_rack') {
-    const shelfW = Math.max(22, boxW * 0.24);
-    const shelfD = 30;
-    const safeEdgeInset = Math.max(shelfW * 0.62, 22);
+    // Stage 41 Anti-Clipping Open-Headroom Staggered Gallery Layout:
+    // Every shelf & pedestal is horizontally staggered with 100% open vertical sky above it,
+    // so NO upper board can ever slice through a 24cm-tall head's forehead or hair!
+    const shelfW = Math.max(21, Math.min(26, boxW * 0.20));
+    const shelfD = 26;
+    const safeEdgeInset = Math.max(shelfW * 0.60, 20);
     const leftX = bounds.minX + safeEdgeInset;
     const rightX = bounds.maxX - safeEdgeInset;
-    const midY = floorSurfaceY + boxH * 0.21;
-    const highY = floorSurfaceY + boxH * 0.41;
+    const innerLeftX = leftX + shelfW * 0.96;
+    const innerRightX = rightX - shelfW * 0.96;
+    const midY = floorSurfaceY + boxH * 0.22;
+    const lowY = floorSurfaceY + boxH * 0.08;
 
-    addShelfPlatform('shelf_left_mid', '左侧伴学中层展架', leftX, midY, -20, shelfW, shelfD);
-    addShelfPlatform('shelf_right_mid', '右侧伴学中层展架', rightX, midY, -20, shelfW, shelfD);
-    addShelfPlatform('shelf_left_high', '左上伴学高层展架', leftX, highY, -26, shelfW * 0.92, shelfD);
-    addShelfPlatform('shelf_right_high', '右上伴学高层展架', rightX, highY, -26, shelfW * 0.92, shelfD);
+    addShelfPlatform('shelf_left_mid', '左翼无顶遮挡伴学高台', leftX, midY, -18, shelfW, shelfD, 1.8, false);
+    addShelfPlatform('shelf_right_mid', '右翼无顶遮挡伴学高台', rightX, midY, -18, shelfW, shelfD, 1.8, false);
+    addShelfPlatform('shelf_left_low', '左内错层博古矮座', innerLeftX, lowY, -22, shelfW * 0.88, shelfD * 0.88, 1.8, true);
+    addShelfPlatform('shelf_right_low', '右内错层博古矮座', innerRightX, lowY, -22, shelfW * 0.88, shelfD * 0.88, 1.8, true);
   } else if (shelfLayout === 'stepped_altar') {
     const centerY = floorSurfaceY + boxH * 0.24;
     const sideY = floorSurfaceY + boxH * 0.13;

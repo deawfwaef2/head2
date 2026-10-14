@@ -735,7 +735,7 @@ export const DEFAULT_COLLECTIBLES = [
     containerStyle: 'none',
     decorStyle: 'trophy_candles',
     summoned: true,
-    boxPosition: { x: 0, y: -10, z: -155 },
+    boxPosition: { x: -14, y: -2, z: -160 },
     fateRecord: {
       vitalityStatus: '享年19岁 · 音乐学院竖琴系首席校花 · 颈部C4完全离断',
       causeOfDeath: '跨年独奏会谢幕当晚，搭载她的保姆车在盘山公路坠崖，车窗钢化玻璃如断头台般瞬间削过她纤细的脖颈',
@@ -813,7 +813,7 @@ export const DEFAULT_COLLECTIBLES = [
     containerStyle: 'none',
     decorStyle: 'none',
     summoned: true,
-    boxPosition: { x: 34, y: -14, z: -175 },
+    boxPosition: { x: 34, y: 2, z: -175 },
     fateRecord: {
       vitalityStatus: '享年21岁 · 常春藤盟校满分毕业生 · 旋翼齐颈斩断',
       causeOfDeath: '瑞士阿尔卑斯山私人直升机滑雪途中遭遇狂风迫降，失控断裂的碳纤维旋翼残片直接掠过机舱，将她高昂的头颅瞬间斩落雪地',

@@ -57,27 +57,31 @@ export const BeautyGradeShader = {
     uChromatic: { value: 0.16 },
     uFilmGrain: { value: 0.07 },
     uTyndall: { value: 0.74 },
-    uVintagePhoto: { value: 0.34 },
+    uVintagePhoto: { value: 0.08 },
     uIrisSparkle: { value: 0.05 },
-    uHalation: { value: 0.54 },
+    uHalation: { value: 0.32 },
     uSkinLumen: { value: 0.0 },
-    uSssBlur: { value: 0.64 },
-    uMicroContrast: { value: 0.42 },
-    uHighlightRoll: { value: 0.52 },
-    uShadowCrush: { value: 0.58 },
-    uSunFlareVeil: { value: 0.76 },
-    uDappledBokeh: { value: 0.78 },
-    uAnamorphicFlare: { value: 0.24 },
-    uLightLeak: { value: 0.22 },
-    uSwirlyBokeh: { value: 0.28 },
+    uSssBlur: { value: 0.24 },
+    uMicroContrast: { value: 0.48 },
+    uHighlightRoll: { value: 0.42 },
+    uShadowCrush: { value: 0.18 },
+    uSunFlareVeil: { value: 0.22 },
+    uDappledBokeh: { value: 0.0 },
+    uAnamorphicFlare: { value: 0.16 },
+    uLightLeak: { value: 0.08 },
+    uSwirlyBokeh: { value: 0.0 },
     uWetLensDrop: { value: 0.0 },
-    uLensDistortion: { value: 0.12 },
+    uLensDistortion: { value: 0.04 },
     uFilmLutMode: { value: 1.0 },
-    uFilmLutStrength: { value: 0.68 },
+    uFilmLutStrength: { value: 0.48 },
+    uCasSharpen: { value: 0.68 },
+    uExposure: { value: 1.08 },
+    uShadowLift: { value: 0.28 },
+    uSpecularClarity: { value: 0.75 },
     uTyndallAngle: { value: -0.58 },
     uTyndallColor: { value: new THREE.Vector3(1.0, 0.91, 0.76) },
-    uTint: { value: new THREE.Vector3(1.06, 0.98, 0.89) },
-    uShadowTint: { value: new THREE.Vector3(0.065, 0.048, 0.028) },
+    uTint: { value: new THREE.Vector3(1.04, 0.99, 0.94) },
+    uShadowTint: { value: new THREE.Vector3(0.055, 0.042, 0.028) },
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -118,6 +122,10 @@ export const BeautyGradeShader = {
     uniform float uLensDistortion;
     uniform float uFilmLutMode;
     uniform float uFilmLutStrength;
+    uniform float uCasSharpen;
+    uniform float uExposure;
+    uniform float uShadowLift;
+    uniform float uSpecularClarity;
     uniform float uTyndallAngle;
     uniform vec3 uTyndallColor;
     uniform vec3 uTint;
@@ -243,81 +251,111 @@ export const BeautyGradeShader = {
       if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
       col = clamp(col, 0.0, 4.0);
 
+      // 0C. Stage 41 Real-Time Exposure Compensation & Non-Linear Shadow Fill Lift (uExposure + uShadowLift)
+      col *= clamp(uExposure, 0.40, 2.20);
+      if (uShadowLift > 0.005 && srcAlpha > 0.01) {
+        float lumInit = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        float liftZone = (1.0 - smoothstep(0.0, 0.46, lumInit)) * smoothstep(0.002, 0.035, lumInit);
+        col += (col * 0.92 + vec3(0.022, 0.018, 0.016)) * liftZone * clamp(uShadowLift, 0.0, 1.5);
+      }
+
       // 1. Adjustable Analog Film Highlight Shoulder Roll-Off (uHighlightRoll)
       // Preserves bright sunlit cheek glow while smoothly rolling off harsh digital clipping
       float shoulderKnee = mix(1.05, 0.72, clamp(uHighlightRoll, 0.0, 1.5) * 0.65);
       float shoulderStrength = 0.25 + clamp(uHighlightRoll, 0.0, 1.5) * 0.45;
       col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(shoulderKnee)) * shoulderStrength);
 
+      // Compute foreground skin & fine-edge subject protection mask so multi-head desktop shelves stay razor-sharp!
+      vec3 nTap = texture2D(tDiffuse, uv + vec2(0.0, texel.y)).rgb * clamp(uExposure, 0.40, 2.20);
+      vec3 sTap = texture2D(tDiffuse, uv - vec2(0.0, texel.y)).rgb * clamp(uExposure, 0.40, 2.20);
+      vec3 eTap = texture2D(tDiffuse, uv + vec2(texel.x, 0.0)).rgb * clamp(uExposure, 0.40, 2.20);
+      vec3 wTap = texture2D(tDiffuse, uv - vec2(texel.x, 0.0)).rgb * clamp(uExposure, 0.40, 2.20);
+      vec3 blur1 = 0.25 * (nTap + sTap + eTap + wTap);
+      float skinWarmMask = smoothstep(-0.015, 0.085, (col.r - col.g) + (col.g - col.b) * 0.65)
+                         * smoothstep(0.025, 0.20, dot(col, vec3(0.299, 0.587, 0.114)));
+      float fineEdgeMask = smoothstep(0.008, 0.045, length(col - blur1));
+      float subjectKeepSharpMask = clamp(max(skinWarmMask * 0.92, fineEdgeMask * 0.88), 0.0, 0.95);
+
       // 2. Screen-Space Subsurface Scattering (SSSSS) Red-Channel Dermal Diffusion (uSssBlur)
-      // Real human dermis scatters red light ~3x wider than green and ~5x wider than blue across shadow terminators!
-      if (uSssBlur > 0.005 && srcAlpha > 0.01) {
-        float skinWarmMask = smoothstep(-0.02, 0.09, (col.r - col.g) + (col.g - col.b) * 0.65)
-                           * smoothstep(0.03, 0.22, dot(col, vec3(0.299, 0.587, 0.114)));
-        if (skinWarmMask > 0.01) {
-          vec3 sssNear = sampleRingBlur(uv, texel * (1.6 + uSssBlur * 2.2));
-          vec3 sssWide = sampleRingBlur(uv, texel * (4.2 + uSssBlur * 4.8));
-          vec3 sssDiff = mix(sssNear, sssWide, 0.52);
-          float sssAmt = clamp(uSssBlur * skinWarmMask, 0.0, 1.0);
-          // Diffuse red strongly, green moderately, and keep blue/luminance pore detail crisp!
-          col.r = mix(col.r, sssDiff.r * 1.025, sssAmt * 0.68);
-          col.g = mix(col.g, sssDiff.g,         sssAmt * 0.30);
-          col.b = mix(col.b, sssDiff.b * 0.98,  sssAmt * 0.12);
-        }
+      // Real human dermis scatters red light wider across shadow terminators while keeping blue/luminance pore detail 100% crisp!
+      if (uSssBlur > 0.005 && srcAlpha > 0.01 && skinWarmMask > 0.01) {
+        vec3 sssNear = sampleRingBlur(uv, texel * (1.2 + uSssBlur * 1.6));
+        vec3 sssWide = sampleRingBlur(uv, texel * (2.8 + uSssBlur * 3.0));
+        vec3 sssDiff = mix(sssNear, sssWide, 0.45) * clamp(uExposure, 0.40, 2.20);
+        float sssAmt = clamp(uSssBlur * skinWarmMask * (1.0 - fineEdgeMask * 0.85), 0.0, 0.75);
+        float lumBeforeSss = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        col.r = mix(col.r, sssDiff.r * 1.02, sssAmt * 0.46);
+        col.g = mix(col.g, sssDiff.g,        sssAmt * 0.18);
+        col.b = mix(col.b, sssDiff.b * 0.99, sssAmt * 0.06);
+        // Preserve high-frequency pore & eyelash luminance!
+        float lumAfterSss = max(0.0001, dot(col, vec3(0.2126, 0.7152, 0.0722)));
+        col *= mix(1.0, lumBeforeSss / lumAfterSss, 0.65);
       }
 
       // 3. Local Micro-Contrast & Screen-Space Sculptural Clarity (uMicroContrast)
       // Enhances 3D depth of hair-strand cast shadows, eyelids, nose bridge & lip vermilion without harsh edge ringing
       if (uMicroContrast > 0.005 && srcAlpha > 0.01) {
-        vec3 localMean = sampleRingBlur(uv, texel * 4.4);
+        vec3 localMean = sampleRingBlur(uv, texel * 3.6) * clamp(uExposure, 0.40, 2.20);
         float lumCur = dot(col, vec3(0.2126, 0.7152, 0.0722));
         float lumMean = dot(localMean, vec3(0.2126, 0.7152, 0.0722));
-        float localDiff = clamp(lumCur - lumMean, -0.18, 0.18);
-        // Deepen micro-shadow valleys slightly more than highlights (screen-space contact AO effect)
-        float aoWeight = localDiff < 0.0 ? 1.35 : 0.75;
-        col = max(vec3(0.0), col + col * (localDiff * aoWeight * uMicroContrast * 1.15));
+        float localDiff = clamp(lumCur - lumMean, -0.16, 0.16);
+        float aoWeight = localDiff < 0.0 ? 1.18 : 0.82;
+        col = max(vec3(0.0), col + col * (localDiff * aoWeight * uMicroContrast * 1.05));
       }
 
-      // 4. Micro-Detail Unsharp Mask (uSharpen)
-      if (uSharpen > 0.01 && srcAlpha > 0.01) {
-        vec3 n = texture2D(tDiffuse, uv + vec2(0.0, texel.y)).rgb;
-        vec3 s = texture2D(tDiffuse, uv - vec2(0.0, texel.y)).rgb;
-        vec3 e = texture2D(tDiffuse, uv + vec2(texel.x, 0.0)).rgb;
-        vec3 w = texture2D(tDiffuse, uv - vec2(texel.x, 0.0)).rgb;
-        vec3 blur1 = 0.25 * (n + s + e + w);
-        vec3 detail = clamp(col - blur1, -0.09, 0.09);
-        col = clamp(col + detail * (uSharpen * 0.75), 0.0, 4.0);
+      // 4A. Stage 41 AMD FidelityFX CAS 5-Tap Contrast-Adaptive Sharpening (uCasSharpen) + Unsharp Mask (uSharpen)
+      if ((uCasSharpen > 0.005 || uSharpen > 0.005) && srcAlpha > 0.01) {
+        float casStrength = clamp(uCasSharpen + uSharpen * 0.45, 0.0, 1.65);
+        vec3 minRGB = min(min(min(nTap, sTap), min(eTap, wTap)), col);
+        vec3 maxRGB = max(max(max(nTap, sTap), max(eTap, wTap)), col);
+        vec3 amp = sqrt(clamp(min(minRGB, max(vec3(1.0) - maxRGB, vec3(0.0))) / max(maxRGB, vec3(0.0001)), 0.0, 1.0));
+        float peak = -1.0 / mix(8.0, 4.6, clamp(casStrength, 0.0, 1.5));
+        vec3 wCas = amp * peak;
+        vec3 casCol = clamp((col + (nTap + sTap + eTap + wTap) * wCas) / max(vec3(1.0) + 4.0 * wCas, vec3(0.15)), 0.0, 4.0);
+        col = mix(col, casCol, clamp(casStrength * 0.88, 0.0, 1.0));
       }
 
-      // 5. True Optical Soft-Focus Lens Diffusion & Silver-Halide Red-Orange Halation (uSoftFocus + uHalation)
+      // 4B. Stage 41 Pinpoint Specular & Catchlight Micro-Clarity (uSpecularClarity)
+      if (uSpecularClarity > 0.005 && srcAlpha > 0.01) {
+        float lumSpec = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        float hiSpec = smoothstep(0.48, 0.94, lumSpec) * clamp(length(col - blur1) * 5.2, 0.0, 1.0);
+        col += col * hiSpec * clamp(uSpecularClarity, 0.0, 1.6) * 0.36;
+      }
+
+      // 5. True Optical Highlight-Only Black Pro-Mist & Silver-Halide Halation (uSoftFocus + uHalation)
+      // NEVER blurs iris, eyelashes, eyebrows, or pores — ONLY blooms bright highlights into a creamy halo!
       if ((uSoftFocus > 0.001 || uHalation > 0.001) && srcAlpha > 0.005) {
-        vec3 mistNear = sampleRingBlur(uv, texel * (2.0 + uSoftFocus * 2.6));
-        vec3 mistWide = sampleRingBlur(uv, texel * (5.4 + (uSoftFocus + uHalation * 0.5) * 6.6));
+        vec3 mistNear = sampleRingBlur(uv, texel * (1.8 + uSoftFocus * 2.0)) * clamp(uExposure, 0.40, 2.20);
+        vec3 mistWide = sampleRingBlur(uv, texel * (4.8 + (uSoftFocus + uHalation * 0.5) * 5.2)) * clamp(uExposure, 0.40, 2.20);
         vec3 mistBlend = mix(mistNear, mistWide, 0.48);
-        float opticalBlurMix = clamp(uSoftFocus * 0.70, 0.0, 0.88);
-        vec3 softCol = mix(col, mistBlend, opticalBlurMix);
+        float mistLuma = dot(mistBlend, vec3(0.2126, 0.7152, 0.0722));
+        // Only blend soft mist on bright highlight zones (luma > 0.64), keeping midtones & dark details 100% razor-sharp!
+        float hiOnlyMask = smoothstep(0.64, 0.96, mistLuma) * (1.0 - fineEdgeMask * 0.75);
+        vec3 softCol = mix(col, mistBlend, clamp(uSoftFocus * 0.32 * hiOnlyMask, 0.0, 0.42));
         // Creamy warm golden-peach Pro-Mist highlight bloom
-        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.34)) * (uSoftFocus * 0.26) * vec3(1.09, 0.94, 0.79);
-        // Authentic CineStill / Kodak silver-halide red-orange anti-halation scatter around bright sunlit skin & hair edges
-        vec3 halationEdge = max(vec3(0.0), mistWide - col * 0.82 - vec3(0.24)) * (uHalation * 0.52) * vec3(1.24, 0.52, 0.22);
+        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.56)) * (uSoftFocus * 0.22) * vec3(1.08, 0.95, 0.82);
+        // Authentic CineStill / Kodak silver-halide red-orange anti-halation scatter around bright sunlit edges
+        vec3 halationEdge = max(vec3(0.0), mistWide - col * 0.86 - vec3(0.42)) * (uHalation * 0.38) * vec3(1.22, 0.50, 0.22);
         col = softCol + (hiGlow + halationEdge) * srcAlpha;
       }
 
-      // 6. 85mm f/1.2 Portrait Elliptical Bokeh DOF + Petzval Swirly Bokeh (uDepthBlur + uSwirlyBokeh)
+      // 6. Subject-Preserving Peripheral Bokeh DOF + Petzval Swirly Bokeh (uDepthBlur + uSwirlyBokeh)
+      // Protects all foreground heads across the entire desktop width (left, center & right shelves stay 100% sharp!)
       if ((uDepthBlur > 0.001 || uSwirlyBokeh > 0.001) && srcAlpha > 0.005) {
-        float bokehMask = smoothstep(0.15, 0.58, length((uv - vec2(0.48, 0.52)) * vec2(1.16, 0.96)));
+        float bgMask = 1.0 - subjectKeepSharpMask;
+        float bokehMask = smoothstep(0.42, 0.82, length((uv - vec2(0.50, 0.50)) * vec2(0.88, 1.08))) * bgMask;
         float blurAmt = clamp(bokehMask * uDepthBlur, 0.0, 1.0);
         if (blurAmt > 0.005) {
-          vec3 dofNear = sampleRingBlur(uv, texel * (3.6 + blurAmt * 7.2));
-          vec3 dofFar  = sampleRingBlur(uv, texel * (7.5 + blurAmt * 13.5));
-          vec3 dofSample = mix(dofNear, dofFar, 0.55);
-          col = mix(col, dofSample, clamp(blurAmt * 0.90, 0.0, 0.94));
+          vec3 dofNear = sampleRingBlur(uv, texel * (2.4 + blurAmt * 4.2)) * clamp(uExposure, 0.40, 2.20);
+          vec3 dofFar  = sampleRingBlur(uv, texel * (4.8 + blurAmt * 7.5)) * clamp(uExposure, 0.40, 2.20);
+          vec3 dofSample = mix(dofNear, dofFar, 0.50);
+          col = mix(col, dofSample, clamp(blurAmt * 0.72, 0.0, 0.78));
         }
-        // Classic Petzval / Helios-44 Swirly Tangential Bokeh on outer hair & silhouette periphery
-        float swirlMask = smoothstep(0.20, 0.62, radialDist) * clamp(uSwirlyBokeh, 0.0, 1.5);
+        // Classic Petzval / Helios-44 Swirly Tangential Bokeh on extreme background corners only
+        float swirlMask = smoothstep(0.44, 0.84, radialDist) * clamp(uSwirlyBokeh, 0.0, 1.5) * bgMask;
         if (swirlMask > 0.005) {
-          vec3 swirled = sampleSwirlyBokeh(uv, centerVec, texel, swirlMask);
-          col = mix(col, swirled, clamp(swirlMask * 0.78, 0.0, 0.90));
+          vec3 swirled = sampleSwirlyBokeh(uv, centerVec, texel, swirlMask) * clamp(uExposure, 0.40, 2.20);
+          col = mix(col, swirled, clamp(swirlMask * 0.65, 0.0, 0.75));
         }
       }
 
@@ -331,14 +369,14 @@ export const BeautyGradeShader = {
           vec2 sUv = clamp(uv + vec2(offsets[i] * texel.x * 2.2, 0.0), 0.002, 0.998);
           vec3 sCol = texture2D(tDiffuse, sUv).rgb;
           float sLum = dot(sCol, vec3(0.2126, 0.7152, 0.0722));
-          float hiPass = smoothstep(0.56, 0.98, sLum);
+          float hiPass = smoothstep(0.62, 0.98, sLum);
           anamSum += sCol * hiPass * (0.22 - abs(offsets[i]) * 0.007);
         }
         vec3 streakTint = mix(vec3(1.12, 0.88, 0.62), vec3(0.68, 0.88, 1.25), 0.35);
-        col += anamSum * streakTint * uAnamorphicFlare * 0.45 * srcAlpha;
+        col += anamSum * streakTint * uAnamorphicFlare * 0.38 * srcAlpha;
       }
 
-      // 8. Reference-Photo Sun-Flare Veil + Crepuscular God-Rays + Foreground Dappled Foliage Bokeh
+      // 8. Reference-Photo Sun-Flare Veil + Crepuscular God-Rays + Upper-Corner Warm Golden Bokeh
       vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.84, 0.92) : vec2(0.14, 0.90);
       if ((uTyndall > 0.001 || uSunFlareVeil > 0.001) && srcAlpha > 0.005) {
         vec2 delta = (lightOrigin - uv) * 0.30;
@@ -356,36 +394,33 @@ export const BeautyGradeShader = {
         }
         // Crepuscular Volumetric God-Ray Scatter (uTyndall)
         vec3 tyndallCol = mix(uTyndallColor, vec3(1.06, 0.88, 0.72), 0.45);
-        col += tyndallCol * (scatter * 0.22 * uTyndall * srcAlpha);
+        col += tyndallCol * (scatter * 0.20 * uTyndall * srcAlpha);
 
         // Upper-Corner Warm Peach-Gold Sun-Flare Veiling Glare & Optical Aperture Ghost Ring (uSunFlareVeil)
         if (uSunFlareVeil > 0.001) {
           float flareDist = length((uv - lightOrigin) * vec2(0.85, 0.95));
-          float sunVeil = pow(clamp(1.0 - flareDist * 0.92, 0.0, 1.0), 2.0);
-          // Subtle optical lens ghosting ring opposite along the diagonal axis
+          float sunVeil = pow(clamp(1.0 - flareDist * 1.15, 0.0, 1.0), 2.4);
           vec2 ghostCenter = mix(lightOrigin, vec2(0.5), 0.68);
           float ghostDist = length((uv - ghostCenter) * vec2(1.05, 0.95));
           float ghostRing = smoothstep(0.22, 0.16, abs(ghostDist - 0.18)) * smoothstep(0.38, 0.05, ghostDist);
-          vec3 flareAdd = tyndallCol * (sunVeil * 0.16 + ghostRing * 0.045 * vec3(1.12, 0.95, 0.74));
+          vec3 flareAdd = tyndallCol * (sunVeil * 0.12 + ghostRing * 0.032 * vec3(1.12, 0.95, 0.74));
           col += flareAdd * uSunFlareVeil * srcAlpha;
         }
       }
 
-      // 9. Foreground Dappled Foliage Shadow & Shimmering Emerald-Gold Bokeh Circles (uDappledBokeh)
+      // 9. Upper-Canopy Warm Golden Sunlight Bokeh Circles (uDappledBokeh)
+      // Fixed in Stage 41: ZERO muddy green blotches over lower-right desktop heads!
       if (uDappledBokeh > 0.001 && srcAlpha > 0.005) {
-        vec2 foliageCorner = vec2(1.0 - lightOrigin.x, 0.12);
-        float folDist = length((uv - foliageCorner) * vec2(0.92, 1.02));
-        float folZone = smoothstep(0.66, 0.10, folDist) * clamp(uDappledBokeh, 0.0, 1.5);
+        vec2 canopyCorner = vec2(1.0 - lightOrigin.x, 0.88);
+        float folDist = length((uv - canopyCorner) * vec2(0.92, 1.15));
+        float folZone = smoothstep(0.48, 0.08, folDist) * clamp(uDappledBokeh, 0.0, 1.5) * (1.0 - skinWarmMask * 0.92);
         if (folZone > 0.01) {
-          float drift = sin(uTime * 0.45) * 0.012;
-          float b1 = smoothstep(0.088, 0.014, length(uv - (foliageCorner + vec2(-0.11 + drift, 0.16))));
-          float b2 = smoothstep(0.068, 0.012, length(uv - (foliageCorner + vec2(-0.04 - drift, 0.25))));
-          float b3 = smoothstep(0.098, 0.018, length(uv - (foliageCorner + vec2(-0.17, 0.06 + drift))));
-          float b4 = smoothstep(0.055, 0.010, length(uv - (foliageCorner + vec2(-0.22 + drift, 0.21))));
-          float bokehDots = clamp(b1 + b2 * 0.88 + b3 * 0.78 + b4 * 0.65, 0.0, 1.35);
-          // Deep out-of-focus emerald foliage foreground silhouette + golden-green bokeh circles
-          col = mix(col, col * vec3(0.30, 0.45, 0.32), clamp(folZone * 0.56, 0.0, 0.82) * srcAlpha);
-          col += vec3(0.46, 0.62, 0.34) * bokehDots * folZone * 0.30 * srcAlpha;
+          float drift = sin(uTime * 0.45) * 0.010;
+          float b1 = smoothstep(0.058, 0.012, length(uv - (canopyCorner + vec2(-0.08 + drift, -0.06))));
+          float b2 = smoothstep(0.046, 0.010, length(uv - (canopyCorner + vec2(-0.03 - drift, -0.12))));
+          float b3 = smoothstep(0.064, 0.014, length(uv - (canopyCorner + vec2(-0.14, -0.04 + drift))));
+          float bokehDots = clamp(b1 + b2 * 0.85 + b3 * 0.72, 0.0, 1.25);
+          col += vec3(1.08, 0.88, 0.56) * bokehDots * folZone * 0.18 * srcAlpha;
         }
       }
 
@@ -618,6 +653,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
         u.uFilmLutMode.value = lutItem ? lutItem.modeInt : Number(params.filmLutMode) || 1.0;
       }
       if (params.filmLutStrength !== undefined) u.uFilmLutStrength.value = Number(params.filmLutStrength);
+      if (params.casSharpen !== undefined && u.uCasSharpen) u.uCasSharpen.value = Number(params.casSharpen);
+      if (params.exposure !== undefined && u.uExposure) u.uExposure.value = Number(params.exposure);
+      if (params.shadowLift !== undefined && u.uShadowLift) u.uShadowLift.value = Number(params.shadowLift);
+      if (params.specularClarity !== undefined && u.uSpecularClarity) u.uSpecularClarity.value = Number(params.specularClarity);
       if (params.tyndallAngle !== undefined) u.uTyndallAngle.value = Number(params.tyndallAngle);
       if (params.tyndallColor) {
         const tc = new THREE.Color(params.tyndallColor);

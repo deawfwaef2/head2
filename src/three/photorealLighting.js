@@ -51,91 +51,191 @@ export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
 }
 
 export const VISUAL_STYLE_PRESETS = {
+  ultra_4k_crystal_clear: {
+    id: 'ultra_4k_crystal_clear',
+    label: '🔪 4K 超清锐利零模糊光学大师 · 纤毫毕现毛孔与全屏清晰多头陈列 (画质党首推)',
+    desc: '全屏零景深模糊、AMD CAS自适应锐化、眼白眼睑自然AO、3D真皮毛孔微雕与暗部细节提亮',
+    hdrMode: 'softbox_portrait',
+    keyColor: '#fff5e8',
+    fillColor: '#889bb0',
+    rimColor: '#ffe0b5',
+    hemiSky: '#fff8ef',
+    hemiGround: '#1a1816',
+    keyIntensity: 1.92,
+    fillIntensity: 0.48,
+    rimIntensity: 1.38,
+    hemiIntensity: 0.34,
+    upIntensity: 0.16,
+    keyAzimuthDeg: -34,
+    keyElevationDeg: 28,
+    exposure: 1.10,
+    envIntensity: 0.42,
+    contrast: 1.12,
+    saturation: 0.98,
+    warmth: 0.04,
+    vignette: 0.22,
+    sharpen: 0.28,
+    casSharpen: 0.88,
+    shadowLift: 0.34,
+    specularClarity: 0.92,
+    eyeClarity: 1.05,
+    poreReliefGlobal: 1.30,
+    supersample: 1.75,
+    softFocus: 0.0,
+    depthBlur: 0.0,
+    chromatic: 0.04,
+    bloomStrength: 0.08,
+    filmGrain: 0.02,
+    tyndall: 0.32,
+    vintagePhoto: 0.0,
+    skinGloss: 0.16,
+    sssIntensity: 0.90,
+    sssBlur: 0.10,
+    microContrast: 0.56,
+    highlightRoll: 0.45,
+    shadowCrush: 0.10,
+    sunFlareVeil: 0.08,
+    dappledBokeh: 0.0,
+    anamorphicFlare: 0.10,
+    lightLeak: 0.0,
+    swirlyBokeh: 0.0,
+    wetLensDrop: 0.0,
+    lensDistortion: 0.0,
+    filmLutMode: 'portra_160_sun',
+    filmLutStrength: 0.38,
+    chiaroscuro: 0.58,
+    irisSparkle: 0.12,
+    halation: 0.18,
+    skinLumen: 0.0,
+    cursorTorch: 0.35,
+    windowGobo: 'hair_sun_slit',
+    windowGoboStrength: 0.38,
+    tint: [1.02, 0.995, 0.96],
+    shadowTint: [0.024, 0.022, 0.020],
+  },
   sunlit_hair_shadow_film: {
     id: 'sunlit_hair_shadow_film',
-    label: '🌞 盛夏逆光发丝投影 · 强明暗切割与奶油柔焦胶片 (参考图同款·首推)',
-    desc: '复刻参考照：脸颊缕缕发丝投影、前景树隙斜切强阳光、奶油漫射高光与暖绿散景光斑',
+    label: '🌞 盛夏逆光发丝投影 · 强明暗切割与超清胶片写真 (参考图同款·首推)',
+    desc: '复刻参考照：脸颊缕缕发丝投影、前景树隙斜切阳光、全屏清晰五官与柯达Portra暖调',
     hdrMode: 'golden_hour',
     keyColor: '#ffe4b8',
-    fillColor: '#4a5d4e',
+    fillColor: '#627468',
     rimColor: '#ffd28a',
     hemiSky: '#fff0d4',
-    hemiGround: '#141812',
-    keyIntensity: 2.15,
-    fillIntensity: 0.14,
-    rimIntensity: 1.55,
-    hemiIntensity: 0.14,
-    upIntensity: 0.06,
+    hemiGround: '#161a14',
+    keyIntensity: 2.04,
+    fillIntensity: 0.38,
+    rimIntensity: 1.48,
+    hemiIntensity: 0.28,
+    upIntensity: 0.12,
     keyAzimuthDeg: -38,
     keyElevationDeg: 26,
-    exposure: 0.88,
-    envIntensity: 0.24,
-    contrast: 1.22,
-    saturation: 0.94,
-    warmth: 0.09,
-    vignette: 0.42,
-    sharpen: 0.04,
-    softFocus: 0.66,
-    depthBlur: 0.54,
-    chromatic: 0.16,
-    bloomStrength: 0.14,
-    filmGrain: 0.10,
-    tyndall: 0.78,
-    vintagePhoto: 0.46,
-    skinGloss: 0.12,
-    sssIntensity: 0.98,
-    chiaroscuro: 0.96,
-    irisSparkle: 0.08,
-    halation: 0.52,
+    exposure: 1.06,
+    envIntensity: 0.34,
+    contrast: 1.14,
+    saturation: 0.96,
+    warmth: 0.06,
+    vignette: 0.28,
+    sharpen: 0.18,
+    casSharpen: 0.72,
+    shadowLift: 0.28,
+    specularClarity: 0.78,
+    eyeClarity: 0.95,
+    poreReliefGlobal: 1.18,
+    supersample: 1.5,
+    softFocus: 0.18,
+    depthBlur: 0.04,
+    chromatic: 0.08,
+    bloomStrength: 0.10,
+    filmGrain: 0.05,
+    tyndall: 0.52,
+    vintagePhoto: 0.08,
+    skinGloss: 0.14,
+    sssIntensity: 0.92,
+    sssBlur: 0.22,
+    microContrast: 0.48,
+    highlightRoll: 0.44,
+    shadowCrush: 0.16,
+    sunFlareVeil: 0.24,
+    dappledBokeh: 0.0,
+    anamorphicFlare: 0.16,
+    lightLeak: 0.08,
+    swirlyBokeh: 0.0,
+    wetLensDrop: 0.0,
+    lensDistortion: 0.04,
+    filmLutMode: 'portra_160_sun',
+    filmLutStrength: 0.48,
+    chiaroscuro: 0.68,
+    irisSparkle: 0.10,
+    halation: 0.28,
     skinLumen: 0.0,
-    cursorTorch: 0.22,
+    cursorTorch: 0.28,
     windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.82,
-    tint: [1.03, 0.99, 0.91],
-    shadowTint: [0.028, 0.036, 0.022],
+    windowGoboStrength: 0.46,
+    tint: [1.02, 0.99, 0.94],
+    shadowTint: [0.025, 0.030, 0.022],
   },
   cinema_85mm_portrait: {
     id: 'cinema_85mm_portrait',
-    label: '📸 85mm 逆光发丝强光影写真 · 奶油柔焦与树隙明暗切割 (默认首推)',
-    desc: '强明暗切割比(10:1)、脸颊缕缕发丝投影、奶油高光柔焦漫射与复古胶片层次',
+    label: '📸 85mm 逆光发丝强光影写真 · 超清五官与树隙明暗切割 (默认首推)',
+    desc: '自然明暗切割、脸颊缕缕发丝投影、全屏两侧头模100%锐利清晰、高光柔雾与胶片层次',
     hdrMode: 'golden_hour',
     keyColor: '#ffe6be',
-    fillColor: '#526458',
+    fillColor: '#66786c',
     rimColor: '#ffd494',
     hemiSky: '#fff2da',
-    hemiGround: '#151814',
-    keyIntensity: 2.08,
-    fillIntensity: 0.16,
-    rimIntensity: 1.48,
-    hemiIntensity: 0.15,
-    upIntensity: 0.08,
+    hemiGround: '#181b16',
+    keyIntensity: 2.02,
+    fillIntensity: 0.42,
+    rimIntensity: 1.44,
+    hemiIntensity: 0.30,
+    upIntensity: 0.14,
     keyAzimuthDeg: -36,
     keyElevationDeg: 26,
-    exposure: 0.88,
-    envIntensity: 0.25,
-    contrast: 1.20,
-    saturation: 0.94,
-    warmth: 0.08,
-    vignette: 0.40,
-    sharpen: 0.05,
-    softFocus: 0.64,
-    depthBlur: 0.52,
-    chromatic: 0.15,
-    bloomStrength: 0.13,
-    filmGrain: 0.09,
-    tyndall: 0.74,
-    vintagePhoto: 0.44,
-    skinGloss: 0.12,
-    sssIntensity: 0.96,
-    chiaroscuro: 0.94,
-    irisSparkle: 0.08,
-    halation: 0.48,
+    exposure: 1.08,
+    envIntensity: 0.36,
+    contrast: 1.14,
+    saturation: 0.96,
+    warmth: 0.06,
+    vignette: 0.26,
+    sharpen: 0.18,
+    casSharpen: 0.68,
+    shadowLift: 0.28,
+    specularClarity: 0.75,
+    eyeClarity: 0.92,
+    poreReliefGlobal: 1.15,
+    supersample: 1.5,
+    softFocus: 0.16,
+    depthBlur: 0.04,
+    chromatic: 0.08,
+    bloomStrength: 0.10,
+    filmGrain: 0.05,
+    tyndall: 0.48,
+    vintagePhoto: 0.06,
+    skinGloss: 0.14,
+    sssIntensity: 0.92,
+    sssBlur: 0.22,
+    microContrast: 0.48,
+    highlightRoll: 0.42,
+    shadowCrush: 0.16,
+    sunFlareVeil: 0.22,
+    dappledBokeh: 0.0,
+    anamorphicFlare: 0.16,
+    lightLeak: 0.06,
+    swirlyBokeh: 0.0,
+    wetLensDrop: 0.0,
+    lensDistortion: 0.04,
+    filmLutMode: 'portra_160_sun',
+    filmLutStrength: 0.48,
+    chiaroscuro: 0.66,
+    irisSparkle: 0.10,
+    halation: 0.28,
     skinLumen: 0.0,
-    cursorTorch: 0.24,
+    cursorTorch: 0.28,
     windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.78,
-    tint: [1.03, 0.99, 0.92],
-    shadowTint: [0.028, 0.035, 0.022],
+    windowGoboStrength: 0.45,
+    tint: [1.02, 0.99, 0.94],
+    shadowTint: [0.025, 0.030, 0.022],
   },
   korean_magazine_glow: {
     id: 'korean_magazine_glow',
@@ -1402,15 +1502,31 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity) * Math.max(0.10, 1.0 - chiaroscuro * 0.78);
   }
 
-  engine.renderer.toneMappingExposure = Number(m.exposure ?? basePreset.exposure);
-  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.25);
-  const effectiveEnv = baseEnv * Math.max(0.12, 1.04 - chiaroscuro * 0.72);
+  engine.renderer.toneMappingExposure = Number(m.exposure ?? basePreset.exposure ?? 1.08);
+  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.36);
+  const effectiveEnv = baseEnv * Math.max(0.24, 1.04 - chiaroscuro * 0.56);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
-  // Update skin subsurface scattering & natural anti-silicone dermis reflectance
+  // Stage 41 Dynamic Supersampling DSR (1.0x - 2.5x)
+  if (m.supersample !== undefined && !engine.softwareRenderer) {
+    const targetPR = Math.max(1.0, Math.min(2.5, Number(m.supersample) || 1.5));
+    if (Math.abs(engine.renderer.getPixelRatio() - targetPR) > 0.02) {
+      engine.renderer.setPixelRatio(targetPR);
+      const canvas = engine.renderer.domElement;
+      const cw = canvas?.clientWidth || window.innerWidth;
+      const ch = canvas?.clientHeight || window.innerHeight;
+      if (engine.beautyPost && typeof engine.beautyPost.syncSize === 'function') {
+        engine.beautyPost.syncSize(cw, ch, targetPR);
+      }
+    }
+  }
+
+  // Update skin subsurface scattering, global micro-pore relief & eye gobo/chiaroscuro/clarity coupling
   const skinGloss = Number(m.skinGloss ?? basePreset.skinGloss ?? 0.14);
   const sssIntensity = Number(m.sssIntensity ?? basePreset.sssIntensity ?? 0.88);
   const cursorTorch = Number(m.cursorTorch ?? basePreset.cursorTorch ?? 0.55);
+  const eyeClarityVal = Number(m.eyeClarity ?? basePreset.eyeClarity ?? 0.90);
+  const poreReliefGlobalVal = m.poreReliefGlobal !== undefined ? Number(m.poreReliefGlobal) : undefined;
   GLOBAL_CHIAROSCURO_UNIFORMS.uSssIntensity.value = sssIntensity;
   GLOBAL_CHIAROSCURO_UNIFORMS.uCursorTorchIntensity.value = cursorTorch;
 
@@ -1425,6 +1541,16 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       obj.material.clearcoatRoughness = 0.45;
       obj.material.specularIntensity = 0.24 + skinGloss * 0.26;
       obj.material.envMapIntensity = 0.34 + skinGloss * 0.28;
+      if (poreReliefGlobalVal !== undefined && obj.material.userData?.skinGradingUniforms?.uPoreRelief) {
+        obj.material.userData.skinGradingUniforms.uPoreRelief.value = poreReliefGlobalVal;
+      }
+    }
+    if (obj.material.userData?.eyeUniforms) {
+      const eu = obj.material.userData.eyeUniforms;
+      if (eu.uWindowGobo) eu.uWindowGobo.value = goboItem.modeInt;
+      if (eu.uWindowGoboStrength) eu.uWindowGoboStrength.value = goboStrength;
+      if (eu.uChiaroscuro) eu.uChiaroscuro.value = chiaroscuro;
+      if (eu.uEyeClarity) eu.uEyeClarity.value = eyeClarityVal;
     }
   });
 
@@ -1444,34 +1570,38 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
 
   if (engine.beautyPost && typeof engine.beautyPost.setGradeParams === 'function') {
     engine.beautyPost.setGradeParams({
-      bloomStrength: Number(m.bloomStrength ?? basePreset.bloomStrength ?? 0.11),
-      vignette: Number(m.vignette ?? basePreset.vignette),
-      saturation: Number(m.saturation ?? basePreset.saturation),
-      contrast: Number(m.contrast ?? basePreset.contrast),
-      warmth: Number(m.warmth ?? basePreset.warmth),
-      sharpen: Number(m.sharpen ?? basePreset.sharpen ?? 0.06),
-      softFocus: Number(m.softFocus ?? basePreset.softFocus ?? 0.58),
-      depthBlur: Number(m.depthBlur ?? basePreset.depthBlur ?? 0.48),
-      chromatic: Number(m.chromatic ?? basePreset.chromatic ?? 0.16),
-      filmGrain: Number(m.filmGrain ?? basePreset.filmGrain ?? 0.07),
+      bloomStrength: Number(m.bloomStrength ?? basePreset.bloomStrength ?? 0.10),
+      vignette: Number(m.vignette ?? basePreset.vignette ?? 0.26),
+      saturation: Number(m.saturation ?? basePreset.saturation ?? 0.96),
+      contrast: Number(m.contrast ?? basePreset.contrast ?? 1.14),
+      warmth: Number(m.warmth ?? basePreset.warmth ?? 0.06),
+      sharpen: Number(m.sharpen ?? basePreset.sharpen ?? 0.18),
+      casSharpen: Number(m.casSharpen ?? basePreset.casSharpen ?? 0.68),
+      exposure: Number(m.postExposure ?? m.exposure ?? basePreset.exposure ?? 1.08),
+      shadowLift: Number(m.shadowLift ?? basePreset.shadowLift ?? 0.28),
+      specularClarity: Number(m.specularClarity ?? basePreset.specularClarity ?? 0.75),
+      softFocus: Number(m.softFocus ?? basePreset.softFocus ?? 0.16),
+      depthBlur: Number(m.depthBlur ?? basePreset.depthBlur ?? 0.04),
+      chromatic: Number(m.chromatic ?? basePreset.chromatic ?? 0.08),
+      filmGrain: Number(m.filmGrain ?? basePreset.filmGrain ?? 0.05),
       tyndall: tyndallVal,
       vintagePhoto: vintagePhotoVal,
-      irisSparkle: Number(m.irisSparkle ?? basePreset.irisSparkle ?? 0.05),
-      halation: Number(m.halation ?? basePreset.halation ?? 0.54),
+      irisSparkle: Number(m.irisSparkle ?? basePreset.irisSparkle ?? 0.10),
+      halation: Number(m.halation ?? basePreset.halation ?? 0.28),
       skinLumen: Number(m.skinLumen ?? basePreset.skinLumen ?? 0.0),
-      sssBlur: Number(m.sssBlur ?? basePreset.sssBlur ?? 0.64),
-      microContrast: Number(m.microContrast ?? basePreset.microContrast ?? 0.42),
-      highlightRoll: Number(m.highlightRoll ?? basePreset.highlightRoll ?? 0.52),
-      shadowCrush: Number(m.shadowCrush ?? basePreset.shadowCrush ?? 0.58),
-      sunFlareVeil: Number(m.sunFlareVeil ?? basePreset.sunFlareVeil ?? 0.76),
-      dappledBokeh: Number(m.dappledBokeh ?? basePreset.dappledBokeh ?? 0.78),
-      anamorphicFlare: Number(m.anamorphicFlare ?? basePreset.anamorphicFlare ?? 0.24),
-      lightLeak: Number(m.lightLeak ?? basePreset.lightLeak ?? 0.22),
-      swirlyBokeh: Number(m.swirlyBokeh ?? basePreset.swirlyBokeh ?? 0.28),
+      sssBlur: Number(m.sssBlur ?? basePreset.sssBlur ?? 0.22),
+      microContrast: Number(m.microContrast ?? basePreset.microContrast ?? 0.48),
+      highlightRoll: Number(m.highlightRoll ?? basePreset.highlightRoll ?? 0.42),
+      shadowCrush: Number(m.shadowCrush ?? basePreset.shadowCrush ?? 0.16),
+      sunFlareVeil: Number(m.sunFlareVeil ?? basePreset.sunFlareVeil ?? 0.22),
+      dappledBokeh: Number(m.dappledBokeh ?? basePreset.dappledBokeh ?? 0.0),
+      anamorphicFlare: Number(m.anamorphicFlare ?? basePreset.anamorphicFlare ?? 0.16),
+      lightLeak: Number(m.lightLeak ?? basePreset.lightLeak ?? 0.06),
+      swirlyBokeh: Number(m.swirlyBokeh ?? basePreset.swirlyBokeh ?? 0.0),
       wetLensDrop: Number(m.wetLensDrop ?? basePreset.wetLensDrop ?? 0.0),
-      lensDistortion: Number(m.lensDistortion ?? basePreset.lensDistortion ?? 0.12),
+      lensDistortion: Number(m.lensDistortion ?? basePreset.lensDistortion ?? 0.04),
       filmLutMode: m.filmLutMode ?? basePreset.filmLutMode ?? 'portra_160_sun',
-      filmLutStrength: Number(m.filmLutStrength ?? basePreset.filmLutStrength ?? 0.68),
+      filmLutStrength: Number(m.filmLutStrength ?? basePreset.filmLutStrength ?? 0.48),
       tyndallAngle: tyndallAngleRad,
       tyndallColor: keyHex,
       tint: m.tint || basePreset.tint,
@@ -1604,6 +1734,11 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
 
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir.value.copy(rig.key.position).normalize();
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboPhase.value = goboPhase;
+  engine.scene.traverse((obj) => {
+    if (obj.isMesh && obj.material?.userData?.eyeUniforms?.uWindowGoboPhase) {
+      obj.material.userData.eyeUniforms.uWindowGoboPhase.value = goboPhase;
+    }
+  });
 
   // Update Tyndall ray direction & breathing intensity
   const tyndallAngleRad = -THREE.MathUtils.clamp(curAzDeg / 58.0, -0.82, 0.82);
