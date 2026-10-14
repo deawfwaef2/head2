@@ -824,7 +824,25 @@
         <!-- 4-Zone Modular Hair Quick Assembler -->
         <div style="margin-top:8px;padding:8px;background:rgba(28,18,40,0.65);border:1px solid rgba(244,114,182,0.32);border-radius:8px;">
           <div style="font-size:12px;font-weight:700;color:#f9a8d4;margin-bottom:6px;">
-            ✂️ 4区完全模块化发型独立拼装 (颅顶发缝 + 前额刘海 + 两侧鬓角 + 后脑尾饰)：
+            ✂️ 大师级真发丝转换引擎 (Card-to-Strand v2) & 4区模块化发型拼装：
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;padding:6px;background:rgba(16,185,129,0.12);border:1px solid rgba(52,211,153,0.35);border-radius:6px;">
+            <div>
+              <label style="font-size:11px;color:#6ee7b7;font-weight:700;">✨ 发丝渲染模式 (Card-to-Strand)</label>
+              <select id="vcd-master-hair-mode">
+                <option value="strand" selected>✨ 真发丝模式 (发片→数万根3D发丝·Marschner三瓣)</option>
+                <option value="card">⬜ 原版发片模式 (对比用)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#6ee7b7;font-weight:700;">🧬 真发丝密度档位 (XGen平行标架插值)</label>
+              <select id="vcd-master-hair-density">
+                <option value="low">流畅 (约 2.0 万根真发丝)</option>
+                <option value="mid" selected>标准 (约 4.5 万根真发丝·默认推荐)</option>
+                <option value="high">高精 (约 8.5 万根真发丝)</option>
+                <option value="ultra">极致 (约 14 万根真发丝·需独显)</option>
+              </select>
+            </div>
           </div>
           <div class="field-row" style="margin-bottom:6px;">
             <label>💇‍♀️ 基底发型主体模型 (28款精修模型·已全面清除下颌黑块与白三角伪影)</label>

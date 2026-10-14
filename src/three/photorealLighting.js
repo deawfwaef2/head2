@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { buildStudioEnvironment, LIGHT_PRESETS } from './masterQuality/studioLighting.js';
 
 /**
  * Stage 23 · 大师级实时光影·画风色调·材质微距定制管线
@@ -803,7 +804,7 @@ const pmremEnvCache = new WeakMap();
 
 export function applyBaseRendererSettings(renderer, exposure = 0.90) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMapping = THREE.NeutralToneMapping || THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = exposure;
   const soft = isSoftwareRenderer(renderer);
   renderer.shadowMap.enabled = !soft;
@@ -818,7 +819,7 @@ export function requestShadowUpdate(renderer) {
   }
 }
 
-export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMode = 'softbox_portrait') {
+export function ensureSceneEnvironment(renderer, scene, intensity = 0.48, hdrMode = 'softbox_portrait') {
   let envMapByMode = pmremEnvCache.get(renderer);
   if (!envMapByMode) {
     envMapByMode = new Map();
@@ -827,85 +828,18 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMod
   const modeKey = hdrMode || 'softbox_portrait';
   let envTex = envMapByMode.get(modeKey);
   if (!envTex && typeof renderer.compile === 'function' && !isSoftwareRenderer(renderer)) {
-    const pmrem = new THREE.PMREMGenerator(renderer);
-    // Build a high-contrast dark-velvet studio HDR light dome instead of a flat white box so HDR sculpts facial topography!
-    const domeScene = new THREE.Scene();
-
-    const modePalettes = {
-      softbox_portrait: {
-        bg: new THREE.Color(0.018, 0.018, 0.024),
-        warmBox: new THREE.Color(3.8, 3.3, 2.9),
-        coolBox: new THREE.Color(0.42, 0.48, 0.62),
-        rimStrip: new THREE.Color(4.4, 4.6, 5.2),
-        bounceBox: new THREE.Color(0.32, 0.28, 0.26),
-      },
-      golden_hour: {
-        bg: new THREE.Color(0.016, 0.010, 0.006),
-        warmBox: new THREE.Color(5.4, 3.2, 1.5),
-        coolBox: new THREE.Color(0.28, 0.24, 0.20),
-        rimStrip: new THREE.Color(5.8, 3.8, 1.6),
-        bounceBox: new THREE.Color(0.26, 0.18, 0.12),
-      },
-      rainy_window: {
-        bg: new THREE.Color(0.012, 0.020, 0.036),
-        warmBox: new THREE.Color(3.2, 3.8, 4.8),
-        coolBox: new THREE.Color(0.38, 0.52, 0.74),
-        rimStrip: new THREE.Color(4.2, 5.4, 6.4),
-        bounceBox: new THREE.Color(0.28, 0.36, 0.52),
-      },
-      museum_velvet: {
-        bg: new THREE.Color(0.012, 0.008, 0.016),
-        warmBox: new THREE.Color(4.2, 3.0, 2.0),
-        coolBox: new THREE.Color(0.26, 0.22, 0.34),
-        rimStrip: new THREE.Color(4.8, 3.6, 2.4),
-        bounceBox: new THREE.Color(0.22, 0.18, 0.22),
-      },
+    const modeToStudioPreset = {
+      softbox_portrait: LIGHT_PRESETS.softbox,
+      golden_hour: LIGHT_PRESETS.window,
+      rainy_window: LIGHT_PRESETS.overcast,
+      museum_velvet: LIGHT_PRESETS.rembrandt,
+      softbox: LIGHT_PRESETS.softbox,
+      window: LIGHT_PRESETS.window,
+      rembrandt: LIGHT_PRESETS.rembrandt,
+      overcast: LIGHT_PRESETS.overcast,
     };
-    const pal = modePalettes[modeKey] || modePalettes.softbox_portrait;
-    domeScene.background = pal.bg;
-
-    // Key Octabox Softbox Panel (top-right-front — natural portrait key without blinding central ring glare)
-    const warmBox = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.4, 3.0),
-      new THREE.MeshBasicMaterial({ color: pal.warmBox, side: THREE.DoubleSide })
-    );
-    warmBox.position.set(3.2, 2.4, 3.2);
-    warmBox.lookAt(0, 0, 0);
-    domeScene.add(warmBox);
-
-    // Fill Softbox Panel (left-front)
-    const coolBox = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.6, 3.0),
-      new THREE.MeshBasicMaterial({ color: pal.coolBox, side: THREE.DoubleSide })
-    );
-    coolBox.position.set(-3.6, 1.4, 2.6);
-    coolBox.lookAt(0, 0, 0);
-    domeScene.add(coolBox);
-
-    // High-Contrast Rim Strip Softbox (top-left-back) for cheek & jawline HDR rim sculpting
-    const rimStrip = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.8, 4.6),
-      new THREE.MeshBasicMaterial({ color: pal.rimStrip, side: THREE.DoubleSide })
-    );
-    rimStrip.position.set(-2.8, 2.8, -3.4);
-    rimStrip.lookAt(0, 0, 0);
-    domeScene.add(rimStrip);
-
-    // Subtle Lower Chin Reflector Bounce Card
-    const bounceCard = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.6, 2.8),
-      new THREE.MeshBasicMaterial({ color: pal.bounceBox, side: THREE.DoubleSide })
-    );
-    bounceCard.position.set(0.0, -2.8, 2.4);
-    bounceCard.lookAt(0, 0, 0);
-    domeScene.add(bounceCard);
-
-    envTex = pmrem.fromScene(domeScene, 0.04).texture;
-    domeScene.traverse((o) => {
-      if (o.geometry) o.geometry.dispose();
-      if (o.material) o.material.dispose();
-    });
-    pmrem.dispose();
+    const studioPreset = modeToStudioPreset[modeKey] || LIGHT_PRESETS.softbox;
+    envTex = buildStudioEnvironment(renderer, studioPreset);
     envMapByMode.set(modeKey, envTex);
   }
   scene.environment = envTex;
@@ -1021,9 +955,14 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       vCervixWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
     );
 
+    const preintegratedLightsPars = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
+      'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
+      'reflectedLight.directDiffuse += directLight.color * BRDF_Lambert( material.diffuseColor ) * skinPreintegratedDiffuse( geometryNormal, directLight.direction );'
+    );
+
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_physical_pars_fragment>',
-      `#include <lights_physical_pars_fragment>
+      `
       uniform float uSssIntensity;
       uniform float uChiaroscuro;
       uniform float uWindowGoboMode;
@@ -1081,6 +1020,23 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       float vWetFluidSpecMask;
       float vBloodSpecMask;
       float vFluidHeight;
+      float gSkinCurv = 0.35;
+
+      // Stage 56 · Master Pre-Integrated Curvature-Adaptive Subsurface Scattering & Penner Split-Channel Normal (画质提升/src/skinMaterial.js)
+      vec3 skinPreintegratedDiffuse(vec3 Nd, vec3 L) {
+        vec3 Ns = normalize(vNormal);
+        float ndlR = dot(normalize(mix(Nd, Ns, 0.8)), L);
+        float ndlG = dot(normalize(mix(Nd, Ns, 0.4)), L);
+        float ndlB = dot(Nd, L);
+        float scatterAmt = clamp(uSssIntensity * clamp(uCharSssDepth, 0.2, 1.4), 0.0, 1.5);
+        vec3 w = mix(vec3(0.16, 0.055, 0.03), vec3(0.62, 0.26, 0.15), gSkinCurv) * scatterAmt;
+        vec3 nl = clamp((vec3(ndlR, ndlG, ndlB) + w) / ((1.0 + w) * (1.0 + w)), 0.0, 1.0);
+        nl = smoothstep(0.0, 1.0, nl) * 0.35 + nl * 0.65;
+        float band = exp(-pow((ndlR + 0.05) / max(0.18, 0.36 * gSkinCurv), 2.0)) * (1.0 - smoothstep(0.1, 0.55, ndlB));
+        vec3 sssTint = mix(vec3(0.88, 0.26, 0.18), uCharSssColor, 0.35);
+        return nl + sssTint * band * 0.07 * scatterAmt;
+      }
+      ` + preintegratedLightsPars + `
 
       float dermisHash21(vec2 p) {
         p = fract(p * vec2(234.56, 789.12));
@@ -1765,6 +1721,8 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       '#include <normal_fragment_maps>',
       `#include <normal_fragment_maps>
       {
+        vec3 snCurv = normalize(vNormal);
+        gSkinCurv = clamp(length(fwidth(snCurv)) / max(length(fwidth(vViewPosition)), 1e-6) * 0.011, 0.0, 1.0);
         float faceRegion = smoothstep(-0.065, -0.025, vCervixLocalPos.y) * smoothstep(-0.01, 0.055, vCervixLocalPos.z);
         float poreVal = compute3DPoreField(vCervixLocalPos);
         float lipCreaseLocal = 0.5;
@@ -1805,42 +1763,35 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       float winEnv = computeWindowBeamEnvelope(vCervixWorldPos, vCervixLocalPos, uWindowLightDir);
       float fragNdl = dot(normal, viewWinL);
 
-      // Stage 46 · Photographic Studio Softbox Shading & Neutral-Cool Venous Shadow Balance (Zero Silicone Orange Burn!)
+      // Stage 56 · Photographic Studio Softbox Shading & Neutral-Cool Venous Shadow Balance
       float litNdl = smoothstep(-0.42, 0.54, fragNdl);
       float sunMask = clamp(litNdl * winEnv, 0.0, 1.0);
       float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.0);
-      float shadowContrast = clamp(chiaroscuroStrength * 0.28 + uWindowGoboStrength * 0.16, 0.0, 0.48);
+      float shadowContrast = clamp(chiaroscuroStrength * 0.24 + uWindowGoboStrength * 0.14, 0.0, 0.44);
 
-      float directScale = mix(1.0, mix(0.72, 1.06, pow(sunMask, 0.85)), shadowContrast);
-      float indirectScale = mix(1.0, mix(0.82, 1.02, smoothstep(0.0, 0.85, sunMask)), shadowContrast * 0.52);
+      float directScale = mix(1.0, mix(0.76, 1.04, pow(sunMask, 0.85)), shadowContrast);
+      float indirectScale = mix(1.0, mix(0.84, 1.02, smoothstep(0.0, 0.85, sunMask)), shadowContrast * 0.48);
 
-      // In shadow zones, real human skin desaturates slightly toward neutral-cool taupe/olive (NEVER orange-brick!)
-      vec3 shadowChromaBalance = mix(vec3(0.94, 0.96, 0.99), vec3(1.00, 1.00, 0.99), sunMask);
+      // In shadow zones, real human skin desaturates slightly toward neutral-cool taupe/olive
+      vec3 shadowChromaBalance = mix(vec3(0.95, 0.96, 0.99), vec3(1.00, 1.00, 0.99), sunMask);
       reflectedLight.directDiffuse *= directScale * shadowChromaBalance;
       reflectedLight.indirectDiffuse *= indirectScale * shadowChromaBalance;
 
-      // Delicate Energy-Conserving Rose-Ivory Subsurface Penumbra across Terminator (4.5% max)
-      float penumbraFringe = 4.0 * sunMask * (1.0 - sunMask);
-      vec3 dermalPenumbra = diffuseColor.rgb * mix(vec3(1.02, 0.86, 0.82), uCharSssColor, 0.24) * pow(penumbraFringe, 1.35) * 0.048 * uSssIntensity * clamp(uCharSssDepth, 0.0, 1.4);
-      reflectedLight.directDiffuse += dermalPenumbra;
-
-      // Natural Velvet-Matte Human Skin Micro-Specular (eliminates plastic/silicone cheek glare!)
+      // Dual-Lobe Skin Specular + Sebum Clearcoat Preservation (matching 画质提升/src/skinMaterial.js)
       float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
       float fresnelSheen = pow(1.0 - ndotv, 3.6);
-      float poreSpecMask = clamp(0.42 + 0.68 * pow(vDermisPoreCavity, 1.35), 0.35, 1.05);
-      // Limit subtle dewy micro-specular strictly to nasal bridge/tip, tear-trough rim, and malar peak
+      float poreSpecMask = clamp(0.55 + 0.50 * pow(vDermisPoreCavity, 1.25), 0.48, 1.05);
       float bonyHighlightZone = max(
         exp(-pow(vCervixLocalPos.x / 0.011, 2.0)) * smoothstep(0.082, 0.112, vCervixLocalPos.z),
         exp(-pow((abs(vCervixLocalPos.x) - 0.032) / 0.015, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.004) / 0.012, 2.0)) * smoothstep(0.072, 0.092, vCervixLocalPos.z) * 0.65
       );
-      float specLobeScale = clamp(uSpecularLobe * 1.15, 0.12, 1.35);
+      float specLobeScale = clamp(uSpecularLobe * 1.35, 0.35, 1.45);
       float oilBoost = bonyHighlightZone * clamp(uTZoneOiliness * 0.85, 0.0, 1.1);
-      // Lower lip cushion has natural mucosal moisture; upper lip is slightly more satin
       float lowerLipWet = vLipVermilionMask * smoothstep(-0.0365, -0.0410, vCervixLocalPos.y);
       float lipSpecBoost = (vLipVermilionMask * 0.45 + lowerLipWet * 0.65) * clamp(uLipGloss, 0.0, 1.2);
       float fluidSpecTotal = clamp(max(vWetFluidSpecMask * 1.65, vBloodSpecMask * 1.85), 0.0, 2.2);
-      reflectedLight.directSpecular *= (0.12 + (0.24 + 0.26 * oilBoost) * sunMask * specLobeScale + lipSpecBoost + fluidSpecTotal) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
-      reflectedLight.indirectSpecular *= (0.10 + (0.18 + 0.20 * oilBoost) * sunMask * specLobeScale + 0.10 * fresnelSheen * sunMask + lipSpecBoost * 0.65 + fluidSpecTotal * 0.85) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
+      reflectedLight.directSpecular *= (0.58 + (0.28 + 0.26 * oilBoost) * sunMask * specLobeScale + lipSpecBoost + fluidSpecTotal) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
+      reflectedLight.indirectSpecular *= (0.54 + (0.24 + 0.22 * oilBoost) * sunMask * specLobeScale + 0.10 * fresnelSheen * sunMask + lipSpecBoost * 0.65 + fluidSpecTotal * 0.85) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
 
       // Razor-Sharp Liquid Clearcoat Glint on Wet Tears & Fresh Blood (ior=1.49 mirror catchlights!)
       if (fluidSpecTotal > 0.02) {

@@ -32,7 +32,10 @@ import {
   setHeadSkinVariant,
   setHeadEyebrowStyle,
   getHeadBlendStateFromGroup,
-  applyHeadMorphsToGroup
+  applyHeadMorphsToGroup,
+  setMasterHairConfig,
+  getMasterHairConfig,
+  MASTER_HAIR_DENSITIES
 } from './three/collectibleHeadAssembler.js';
 import {
   VISUAL_STYLE_PRESETS,
@@ -4894,6 +4897,29 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyEyePatchToTargetPets({ [key]: v });
     });
   }
+
+  // Stage 56 · Master Card-to-Strand v2 Hair Mode & Density Controls
+  const applyMasterHairPatch = async (patch) => {
+    const nextCfg = setMasterHairConfig(patch);
+    const hairPatch = { hairRenderMode: nextCfg.mode, strandDensity: nextCfg.density };
+    if (studioEngine?.headNode) {
+      await updateHairDesignOnGroup(studioEngine.headNode, hairPatch);
+      studioEngine.wakeRender(1.8, true);
+    }
+    if (desktopEngine?.rebuildAllPetsHair) {
+      await desktopEngine.rebuildAllPetsHair(hairPatch);
+    }
+    const modeLabel = nextCfg.mode === 'strand'
+      ? `✨ 真发丝模式 (${MASTER_HAIR_DENSITIES[nextCfg.density]?.label || nextCfg.density})`
+      : '⬜ 原版发片模式';
+    showToast(`💇‍♀️ 已切换发丝渲染管线：${modeLabel}`);
+  };
+  document.getElementById('vcd-master-hair-mode')?.addEventListener('change', (e) => {
+    applyMasterHairPatch({ mode: e.target.value });
+  });
+  document.getElementById('vcd-master-hair-density')?.addEventListener('change', (e) => {
+    applyMasterHairPatch({ density: e.target.value });
+  });
 
   // Base hairstyle switching inside Quick Drawer
   document.getElementById('vcd-hair-style')?.addEventListener('change', async (e) => {

@@ -6,7 +6,8 @@ import {
   attachSpecimenContainerAndDecor,
   updateHeadLifeAnimation,
   triggerCollectibleBlink,
-  disposeHeadNode
+  disposeHeadNode,
+  updateMasterStrandHairPxScale
 } from './collectibleHeadAssembler.js';
 import { soundEngine } from '../audio/tactileSoundEngine.js';
 import {
@@ -1019,6 +1020,21 @@ export class DesktopBoxSpaceEngine {
     this.onPetStateUpdate(this.getSummonedList());
   }
 
+  async rebuildAllPetsHair(patch = {}) {
+    const jobs = [];
+    for (const pet of this.pets.values()) {
+      if (!pet.node) continue;
+      jobs.push(attachRealHairModel(pet.node, {
+        ...pet.collectible,
+        ...patch,
+        groomLod: 'desktop',
+        groomSoftware: this.softwareRenderer,
+      }));
+    }
+    await Promise.all(jobs);
+    this.wakeRender(2.0, true);
+  }
+
   getSummonedList() {
     return Array.from(this.pets.values()).map(p => {
       const snappedStruct = p.snappedStructureId ? this.structures.get(p.snappedStructureId) : null;
@@ -2029,6 +2045,8 @@ export class DesktopBoxSpaceEngine {
       requestShadowUpdate(this.renderer);
       this.needsShadowRefresh = false;
     }
+
+    updateMasterStrandHairPxScale(this.scene, this.renderer, this.camera);
 
     if (this.beautyPost && this.beautyPost.enabled && !this.softwareRenderer) {
       this.beautyPost.render();

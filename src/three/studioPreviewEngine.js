@@ -6,7 +6,8 @@ import {
   updateCollectibleMaterialsLive,
   updateHeadLifeAnimation,
   triggerCollectibleBlink,
-  disposeHeadNode
+  disposeHeadNode,
+  updateMasterStrandHairPxScale
 } from './collectibleHeadAssembler.js';
 import {
   applyBaseRendererSettings,
@@ -352,6 +353,7 @@ export class StudioPreviewEngine {
       requestShadowUpdate(this.renderer);
       this.needsShadowRefresh = false;
     }
+    updateMasterStrandHairPxScale(this.scene, this.renderer, this.camera);
     if (this.beautyPost && this.beautyPost.enabled && !this.softwareRenderer) {
       this.beautyPost.render();
     } else {
