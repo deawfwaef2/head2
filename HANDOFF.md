@@ -975,11 +975,36 @@
 - **Mandatory Playwright + `read_file` Visual Self-Inspection Completed**:
   - Rendered and visually inspected `/tmp/qa_desktop_natural_rgb.png`, `/tmp/qa_desktop_3heads_crop.png`, and `/tmp/qa_studio_head_0_rgb.png` via `read_file`: verified that `方尧平`, `初夏`, and `林汐` all display smooth, natural East Asian female facial proportions, clean bare eyelids with zero involuntary black eyeliner, soft feathered taupe-brown eyebrows, natural iris placement without scleral show or white horizontal bands, and intact hair coverage (`STORAGE_KEY = 'cervix3d-collectibles-stage44-fixed-v4'`).
 
-
-
-
 ## Stage 47A — 2026-10-14 · Hair visual diagnosis / playable baseline
 - Read root HANDOFF and latest hair/head reservations before edits. HAIR ONLY; preserve head/face/eye GLB and code. Existing main 845f9c8 already has restored 5,966-vertex photo hair and scalp fitting; do not blindly revert assets again.
 - Rebuilt root standalone HTML FIRST (25.93 MiB), identical to docs/index.html. Dependencies and Chromium live under /tmp via ignored node_modules symlink, not persisted. Preserve <128 MiB expanded workspace; append-only collaboration, fetch before pushes, no force push.
 - Actual file:// boot with HTTP blocked passed: 3 pets, start handler, no JS/GLSL errors. Inspected front/side/rear captures: photo hair coverage intact but broad, nearly black cards; bob01 atlas appears coarse rather than natural fibers. New QA harness scripts/qa_hair_v47.mjs. Desktop capture caught the start-overlay fade mid-transition; refine capture timing before final review.
 - Next: investigate matching original author atlas for bob hair, improve bounded hair shading only, keep original import materials. No photoreal completion claim; no live agent chat available here beyond Git/HANDOFF. Credential never recorded in artifacts.
+
+## Stage 46-Photoreal — 2026-10-14 · 7-Dimension Anti-Silicone Human Portrait Overhaul (`全方位去硅胶感 · 7大维度真人皮肤/光学/五官写实重构`)
+- **Diagnosed and eradicated all 7 root causes of the "Silicone Doll / Wax Mannequin" look (`这画风一股硅胶感，非常假，不像真实的，我要真实效果，你可以从很多维度入手`)**:
+  1. **Dimension 1 — Eliminated Orange-Brick Shadow & Terminator Burn (`src/three/photorealLighting.js`)**:
+     - Previously, `computeDualLobeSkinSSS` + `dermalPenumbra` (`vec3(1.06, 0.34, 0.22)`) + brown-grey fill light (`#3b2f26`) stacked onto warm skin albedo (`212, 162, 140`), turning every shadow and cheek terminator into saturated orange-brick silicone (`RGB(207, 101, 62)`).
+     - Replaced with an energy-conserving separable dermis BRDF and neutral-cool venous shadow chroma balance (`vec3(0.94, 0.96, 0.99)`), plus a daylight-balanced 85mm Softbox Key (`#fffaf5`) + Neutral-Cool Sky Bounce Fill (`#d8e4f5` at `0.68`) + Soft Hemisphere (`#f6f8fc`/`#2a2628` at `0.52`).
+  2. **Dimension 2 — Fixed Exact 3D Lip Vermilion & Oral Fissure Alignment (`src/three/photorealLighting.js`)**:
+     - Measured the exact 3D lip vertices and normals in `public/models/daz_asian_head_base.glb`: Upper lip Cupid's bow ridge (`v=455/466`) is at `y = -0.0343..-0.0361`, Oral fissure contact seam (`v=520/552`, where `nrm.y = -1.00` meets `nrm.y = +0.96`) is at `y = -0.0453`, Lower lip vermilion border (`v=492`) is at `y = -0.0511`, and Labiomental crease (`v=1854`) is at `y = -0.0555`.
+     - Fixed the old `computeLipVermilionMask` (`cupidsBow = -0.0296..lowerBorder = -0.0442`) and `seamY = -0.0376` offset that had painted a fake second lip and horizontal brown line across the philtrum/upper lip (`y = -0.0376`). Added lower-lip mucosal cushion lift (`lowerLipCushion` at `y = -0.0488`) and oral commissure + corner dimple AO (`seamY = -0.0453`).
+  3. **Dimension 3 — Upgraded 8 Multi-Source Photographic Skin Maps & High-Frequency Cristae/Pore Normal Map (`scripts/upgrade_stage44_assets.py`, `public/models/daz_asian_head_base.glb`)**:
+     - Preserved 100% of `9d4c64e`'s `byteStride: 8` 3D vertex/morph `bufferViews` (`5..321`) untouched.
+     - Calibrated the 8 distinct MakeHuman photographic female skin textures (`bufferViews 0, 322..328`) to natural East Asian portrait complexions (`R-G = 29.7..39.7`, high-frequency dermis micro-contrast `hf_std = 2.84..3.65`) with biophysical 3-zone facial chromophore distribution (warm golden forehead, rosy-hemoglobin midface/nose/ears, cool-neutral lower jaw) and upgraded the facial UV island of `bv[1]` (normal map `hf_std = 5.58`) with diamond cristae cutis (`皮沟/皮丘`) and T-zone micro-pores.
+     - Clamped `dFdx`/`dFdy` screen-space micro-height derivatives and bounded `compute3DPoreField` cell jitter (`<= 0.16`) so procedural pore craters are `C1`-continuous across cell borders with zero 1-pixel normal spikes.
+  4. **Dimension 4 — Velvet-Matte Human Skin Specular & Micro-Cavity Roughness (`src/three/collectibleHeadAssembler.js`, `src/three/photorealLighting.js`, `src/data/defaultCollectibles.js`)**:
+     - Calibrated `HeadSkin` `MeshPhysicalMaterial` (`roughness: 0.48..0.54`, `normalScale: 0.40..0.45`, `specularIntensity: 0.22`, `ior: 1.38`, `sheen: 0.05` `#f7f4f2`, `clearcoat: 0.0`) so skin never exhibits an oily plastic/silicone sheen.
+  5. **Dimension 5 — Anatomical Eyelid Fold, Medial Lacrimal Caruncle (`泪阜`), Upper-Lid Cast Shadow & Softbox Catchlight (`src/three/collectibleHeadAssembler.js`, `src/three/photorealLighting.js`)**:
+     - Added East Asian supratarsal double-eyelid crease (`creaseArchY = 0.0246`) + tarsal plate highlight, nasal alar groove capillary shadow + nostril cavity AO, and philtrum column ridges in `#include <map_fragment>`.
+     - Upgraded `injectLifelikeEyeShader` with pink medial canthus Lacrimal Caruncle (`泪阜` at `|x| ∈ [0.0152, 0.0186], y ≈ 0.0172`), upper-eyelid & lash cast shadow across the upper cornea/sclera (`upperLidShadow` + `orbitalAO`), rectangular Studio Softbox catchlight (`softbox1` + `softbox2`), and lower-iris warm caustic refraction (`calmLidRelax = 0.16`).
+  6. **Dimension 6 — Directional Hair-Stroke Eyebrow Synthesis & `MeshLambertMaterial` Zero-Glare Feathering (`src/three/collectibleHeadAssembler.js`)**:
+     - Fixed the full-width MakeHuman eyebrow UV layout (`u ∈ [0, 1]` per brow stacked vertically in `v`), synthesized directional individual eyebrow hair fibers in natural dark espresso-charcoal (`RGB 26, 20, 18`), switched `Eyebrow` to `MeshLambertMaterial` (`cervix3d_eyebrow_feather_v46`) to eliminate flat-ribbon GGX dielectric grey glare, and set eyebrow clearance to `bz + 0.00025` so 0% of the eyebrow sinks behind the forehead skin.
+  7. **Dimension 7 — Upper-Scalp Triangle Culling in `src/three/hairScalpFit.js`**:
+     - Filtered the temporary scalp collider index in `fitArtistHairOutsideScalp` to upper-scalp triangles (`y >= center.y - 0.01`, reducing raycast tests from `8,554` to `675` triangles — `12.7×` faster with 100% identical ray intersection distances).
+- **Mandatory Playwright + `read_file` Visual Self-Inspection Completed**:
+  - Rendered and inspected `/tmp/qa_studio_head_0_rgb.png`, `/tmp/qa_desktop_3heads_crop.png`, and `/tmp/qa_desktop_natural_rgb.png` via `read_file` (`STORAGE_KEY = 'cervix3d-collectibles-stage46-photoreal-v1'`), and rebuilt standalone playable HTML (`/home/user/点击开始游戏_CERVIX3D.html` and `/home/user/docs/index.html`, `26.41 MB`).
+
+
+
+

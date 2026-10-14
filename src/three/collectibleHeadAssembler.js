@@ -305,7 +305,7 @@ const PRESET_MORPH_BIASES = {
  * Zero `browDown` so eyebrows never scowl or press down into the upper eyelids!
  */
 const EYEBROW_STYLE_TO_MH_ASSET = {
-  cn_scholar_natural:  { assetId: 'eyebrow012', browDown: 0.0, browUp: 0.08 },
+  cn_scholar_natural:  { assetId: 'eyebrow002', browDown: 0.0, browUp: 0.08 },
   kr_straight_mist:    { assetId: 'eyebrow001', browDown: 0.0, browUp: 0.10 },
   kr_idol_arch:        { assetId: 'eyebrow010', browDown: 0.0, browUp: 0.16 },
   cn_willow_classical: { assetId: 'eyebrow002', browDown: 0.0, browUp: 0.12 },
@@ -380,20 +380,41 @@ async function ensureRealWebAssetsLoaded(glbBuffer) {
           if (!isOpaque && typeof document !== 'undefined') {
             try {
               const c = document.createElement('canvas');
-              c.width = img.width || 256;
-              c.height = img.height || 256;
+              c.width = Math.min(256, img.width || 256);
+              c.height = Math.min(256, img.height || 256);
               const ctx = c.getContext('2d');
-              ctx.drawImage(img, 0, 0, c.width, c.height);
-              const imgData = ctx.getImageData(0, 0, c.width, c.height);
+              const w = c.width;
+              const h = c.height;
+              ctx.drawImage(img, 0, 0, w, h);
+              const imgData = ctx.getImageData(0, 0, w, h);
               const d = imgData.data;
-              for (let i = 0; i < d.length; i += 4) {
-                const aNorm = d[i + 3] / 255.0;
-                // Lift near-black MakeHuman eyebrow pixels to natural soft charcoal-taupe
-                // and feather alpha so eyebrows never render as heavy pitch-black blocks!
-                d[i]     = Math.min(255, Math.round(92 + d[i] * 0.45));
-                d[i + 1] = Math.min(255, Math.round(74 + d[i + 1] * 0.42));
-                d[i + 2] = Math.min(255, Math.round(68 + d[i + 2] * 0.40));
-                d[i + 3] = Math.min(220, Math.round(Math.pow(aNorm, 1.35) * 185));
+              for (let py = 0; py < h; py++) {
+                // In MakeHuman eyebrow textures, top half (py < h*0.52) is right brow (inner at u~0.14 -> outer at u~0.90)
+                // and bottom half (py >= h*0.52) is left brow (inner at u~0.90 -> outer at u~0.04).
+                // Each brow spans full width u in [0, 1] — NEVER wrap at w/2!
+                const isBottomBrow = py >= (h * 0.52);
+                for (let px = 0; px < w; px++) {
+                  const i = (py * w + px) * 4;
+                  const aNorm = d[i + 3] / 255.0;
+                  if (aNorm < 0.01) {
+                    d[i + 3] = 0;
+                    continue;
+                  }
+                  const uFull = px / Math.max(1, w - 1);
+                  const uFromInner = isBottomBrow ? (1.0 - uFull) : uFull;
+                  const endFeather = Math.sin(Math.min(1.0, Math.max(0.0, uFull)) * Math.PI);
+                  const angle = (isBottomBrow ? -1.0 : 1.0) * (0.42 + 0.45 * (1.0 - uFromInner));
+                  const sCoord = px * Math.sin(angle) + py * Math.cos(angle);
+                  const strand1 = 0.5 + 0.5 * Math.sin(sCoord * 1.55 + Math.sin(px * 0.20) * 1.4);
+                  const strand2 = 0.5 + 0.5 * Math.cos(sCoord * 2.75 - py * 0.24);
+                  const hairFiber = 0.58 + 0.42 * (0.65 * strand1 + 0.35 * strand2);
+                  const shade = 0.72 + 0.38 * strand1;
+                  d[i]     = Math.min(255, Math.round((26 + d[i] * 0.14) * shade));
+                  d[i + 1] = Math.min(255, Math.round((20 + d[i + 1] * 0.12) * shade));
+                  d[i + 2] = Math.min(255, Math.round((18 + d[i + 2] * 0.11) * shade));
+                  const finalAlpha = Math.pow(aNorm, 0.78) * hairFiber * (0.55 + 0.45 * Math.pow(endFeather, 0.45));
+                  d[i + 3] = Math.min(248, Math.round(finalAlpha * 245));
+                }
               }
               ctx.putImageData(imgData, 0, 0);
               texSource = c;
@@ -467,7 +488,7 @@ function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natu
         child.material.alphaTest = 0.0;
         child.material.alphaToCoverage = false;
         child.material.transparent = true;
-        child.material.opacity = Math.min(0.88, Number(rootGroup.userData.browOpacity ?? 0.78));
+        child.material.opacity = Math.min(0.95, Number(rootGroup.userData.browOpacity ?? 0.90));
         if (rootGroup.userData.browColor) {
           child.material.color.set(rootGroup.userData.browColor);
         }
@@ -484,8 +505,8 @@ function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natu
           const archShift = (Math.abs(bx) - 0.030) * browTilt * 0.14;
           out[i] = bx;
           out[i + 1] = centerY + (by - centerY) * browThick + browH * 0.0042 + archShift;
-          // Snuggle -0.65mm closer to the brow ridge so eyebrows never float like a sticker
-          out[i + 2] = bz - 0.00065;
+          // Keep +0.25mm above the brow ridge so 0% of the eyebrow sinks behind HeadSkinMesh!
+          out[i + 2] = bz + 0.00025;
         }
         child.geometry.attributes.position.needsUpdate = true;
         child.geometry.computeVertexNormals();
@@ -884,7 +905,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const jawSideVal = Math.max(0, Math.min(0.85, Number(m.jawSide ?? 0)));
   const tongueOutVal = Math.max(0, Math.min(0.85, Number(m.tongueOut ?? 0)));
   const eyeRollUpVal = Math.max(0, Math.min(0.85, Number(m.eyeRollUp ?? 0)));
-  const calmLidRelax = exprId === 'dead_calm' ? 0.08 : 0.0;
+  const calmLidRelax = exprId === 'dead_calm' ? 0.16 : 0.0;
   const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? calmLidRelax) + Math.max(0, -eyelidOpen * 0.72) + Math.max(0, -eyeApertureVal * 0.65)));
   const eyeWideVal = Math.max(0, Math.min(0.65, Number(m.eyeWide ?? 0) + Math.max(0, eyelidOpen * 0.65) + Math.max(0, eyeApertureVal * 0.55)));
 
@@ -1757,44 +1778,47 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       #include <map_fragment>
       {
         float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
-        vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0186) + uGazeOffset * 0.0045;
-        vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0065 * clamp(uIrisScale, 0.65, 1.42));
+        vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0184) + uGazeOffset * 0.0045;
+        vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0063 * clamp(uIrisScale, 0.65, 1.42));
         float rIris = length(relXY);
         float inIris = 1.0 - smoothstep(0.88, 1.03, rIris);
-        float pupilRadius = 0.34 * clamp(uPupilScale, 0.45, 1.65);
-        float inPupil = 1.0 - smoothstep(pupilRadius - 0.05, pupilRadius + 0.05, rIris);
+        float pupilRadius = 0.33 * clamp(uPupilScale, 0.45, 1.65);
+        float inPupil = 1.0 - smoothstep(pupilRadius - 0.045, pupilRadius + 0.045, rIris);
 
         // Multi-layered radial iris collagen crypt fibers, warm collarette ring & limbal ring
         float theta = atan(relXY.y, relXY.x);
         float clarityBoost = clamp(uEyeClarity, 0.0, 1.6);
-        float radialFibers = 0.5 + 0.5 * sin(theta * 36.0 + sin(rIris * 12.0) * 1.4) * cos(theta * 19.0 - 0.8);
-        float fineCrypts = 0.5 + 0.5 * cos(theta * 58.0 - rIris * 9.0);
-        float collaretteRing = exp(-pow((rIris - 0.48) / 0.14, 2.0)) * (0.28 + 0.22 * clarityBoost);
-        float limbalMask = smoothstep(0.66, 0.97, rIris) * inIris;
-        float limbalDarken = clamp(uLimbalRing, 0.0, 1.2) * (0.68 + 0.14 * clarityBoost) * limbalMask;
+        float radialFibers = 0.5 + 0.5 * sin(theta * 38.0 + sin(rIris * 13.0) * 1.3) * cos(theta * 21.0 - 0.8);
+        float fineCrypts = 0.5 + 0.5 * cos(theta * 62.0 - rIris * 9.5);
+        float collaretteRing = exp(-pow((rIris - 0.46) / 0.13, 2.0)) * (0.24 + 0.18 * clarityBoost);
+        float limbalMask = smoothstep(0.64, 0.98, rIris) * inIris;
+        float limbalDarken = clamp(uLimbalRing, 0.0, 1.2) * (0.72 + 0.14 * clarityBoost) * limbalMask;
 
-        vec3 baseStroma = uIrisColor * clamp(uIrisBrightness, 0.45, 1.85);
-        vec3 warmCollarette = mix(baseStroma, baseStroma * vec3(1.32, 1.12, 0.82) + vec3(0.08, 0.05, 0.02), 0.65);
-        vec3 customIris = (baseStroma * (0.62 + (0.56 + 0.20 * clarityBoost) * radialFibers + 0.16 * fineCrypts) + warmCollarette * collaretteRing)
+        vec3 baseStroma = uIrisColor * clamp(uIrisBrightness, 0.45, 1.75);
+        vec3 warmCollarette = mix(baseStroma, baseStroma * vec3(1.26, 1.10, 0.86) + vec3(0.06, 0.04, 0.02), 0.58);
+        vec3 customIris = (baseStroma * (0.58 + (0.54 + 0.18 * clarityBoost) * radialFibers + 0.15 * fineCrypts) + warmCollarette * collaretteRing)
                         * (1.0 - limbalDarken);
         float stromaMask = inIris * (1.0 - inPupil);
-        float effMix = clamp(max(uIrisColorMix, 0.86), 0.0, 0.98);
+        float effMix = clamp(max(uIrisColorMix, 0.88), 0.0, 0.98);
         diffuseColor.rgb = mix(diffuseColor.rgb, customIris, clamp(stromaMask * effMix, 0.0, 0.97));
         // Deep velvet-black pupil aperture
-        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.008, 0.008, 0.012), inPupil * 0.96);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.006, 0.006, 0.010), inPupil * 0.97);
 
-        // Clean physiological moist sclera + customizable branching episcleral micro-capillaries
+        // Clean physiological moist sclera + Medial Canthus Lacrimal Caruncle (内眼角湿润泪阜)
         float scleraMask = 1.0 - inIris;
-        float cornerDist = smoothstep(0.92, 1.85, abs(relXY.x));
-        vec3 cleanScleraBase = mix(vec3(0.89, 0.85, 0.83), max(diffuseColor.rgb, vec3(0.82, 0.78, 0.76)), 0.18);
-        vec3 naturalSclera = mix(cleanScleraBase, vec3(0.76, 0.56, 0.54), cornerDist * 0.28);
+        float axEye = abs(vEyeLocalPos.x);
+        float medialCaruncle = (1.0 - smoothstep(0.0152, 0.0186, axEye)) * exp(-pow((vEyeLocalPos.y - 0.0172) / 0.0032, 2.0));
+        float lateralCorner = smoothstep(0.0365, 0.0425, axEye);
+        vec3 cleanScleraBase = vec3(0.86, 0.84, 0.83);
+        vec3 naturalSclera = mix(cleanScleraBase, vec3(0.76, 0.64, 0.63), lateralCorner * 0.35);
+        naturalSclera = mix(naturalSclera, vec3(0.78, 0.48, 0.50), clamp(medialCaruncle * 0.82, 0.0, 0.85));
         if (uScleraVeinIntensity > 0.01) {
           float veinAngle = theta * 14.0 + sin(rIris * 6.5) * 2.2;
           float veinBranch = smoothstep(0.92, 0.995, abs(sin(veinAngle) * cos(theta * 7.0 + rIris * 4.0)));
-          float veinMask = veinBranch * smoothstep(1.05, 1.65, rIris) * clamp(uScleraVeinIntensity, 0.0, 1.2);
-          naturalSclera = mix(naturalSclera, vec3(0.68, 0.22, 0.24), clamp(veinMask * 0.55, 0.0, 0.48));
+          float veinMask = veinBranch * smoothstep(1.08, 1.65, rIris) * clamp(uScleraVeinIntensity, 0.0, 1.2);
+          naturalSclera = mix(naturalSclera, vec3(0.68, 0.30, 0.32), clamp(veinMask * 0.42, 0.0, 0.40));
         }
-        diffuseColor.rgb = mix(diffuseColor.rgb, naturalSclera * clamp(uScleraBrightness, 0.62, 1.28), scleraMask);
+        diffuseColor.rgb = mix(diffuseColor.rgb, naturalSclera * clamp(uScleraBrightness, 0.62, 1.24), scleraMask);
       }
       `
     );
@@ -1807,16 +1831,16 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       vec3 nEye = normalize(normal);
 
       float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
-      vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0186) + uGazeOffset * 0.0045;
-      vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0065 * clamp(uIrisScale, 0.65, 1.42));
+      vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0184) + uGazeOffset * 0.0045;
+      vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0063 * clamp(uIrisScale, 0.65, 1.42));
       float rIris = length(relXY);
       float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
 
-      // 1. Soft Physiological Eyelid Ambient Occlusion (NEVER creates a dark eyeliner band across the open eye!)
-      float upperLidAO = smoothstep(0.0252, 0.0205, vEyeLocalPos.y);
-      float lowerLidAO = smoothstep(0.0112, 0.0142, vEyeLocalPos.y);
-      float cornerAO = 1.0 - 0.16 * smoothstep(1.05, 1.95, abs(relXY.x));
-      float orbitalAO = clamp((0.80 + 0.20 * upperLidAO) * (0.90 + 0.10 * lowerLidAO) * cornerAO, 0.72, 1.0);
+      // 1. Realistic Upper Eyelid & Lash Cast Shadow (makes eyeball sit deeply inside the orbital socket!)
+      float upperLidShadow = smoothstep(0.0226, 0.0176, vEyeLocalPos.y);
+      float lowerLidAO = smoothstep(0.0114, 0.0138, vEyeLocalPos.y);
+      float cornerAO = 1.0 - 0.22 * smoothstep(1.05, 1.90, abs(relXY.x));
+      float orbitalAO = clamp((0.58 + 0.42 * upperLidShadow) * (0.86 + 0.14 * lowerLidAO) * cornerAO, 0.52, 1.0);
 
       // 2. Coupling with Scene Window Gobo & Chiaroscuro Shadow Falloff
       float eyeGoboAtten = 1.0;
@@ -1840,24 +1864,25 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
           float slit = exp(-pow((fract(gUV.y * 1.2 + gUV.x * 0.65) - 0.48) / max(0.08, 0.14 + gSoft * 0.35), 2.0));
           gLight = clamp(slit * 1.15, 0.0, 1.0);
         }
-        eyeGoboAtten = mix(1.0, 0.26 + 0.74 * gLight, clamp(uWindowGoboStrength, 0.0, 1.0));
+        eyeGoboAtten = mix(1.0, 0.32 + 0.68 * gLight, clamp(uWindowGoboStrength, 0.0, 1.0));
       }
 
       reflectedLight.directDiffuse *= orbitalAO * eyeGoboAtten;
-      reflectedLight.indirectDiffuse *= orbitalAO * mix(1.0, eyeGoboAtten, 0.72) * mix(0.92, 0.56, clamp(uChiaroscuro, 0.0, 1.0));
+      reflectedLight.indirectDiffuse *= orbitalAO * mix(1.0, eyeGoboAtten, 0.72) * mix(0.92, 0.64, clamp(uChiaroscuro, 0.0, 1.0));
 
-      // Lower iris warm caustic crescent (opposite top-right key light)
-      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.24, 2.0));
-      reflectedLight.directDiffuse += (uIrisColor * clamp(uIrisBrightness, 0.5, 1.7) * 0.72 + vec3(0.24, 0.14, 0.08)) * causticZone * inIris * 0.82 * eyeGoboAtten;
+      // Lower iris warm caustic refraction (concave iris dish illuminated opposite the top-left key light)
+      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.30, 0.0, 1.0) * exp(-pow((rIris - 0.56) / 0.22, 2.0));
+      reflectedLight.directDiffuse += (uIrisColor * clamp(uIrisBrightness, 0.5, 1.6) * 0.62 + vec3(0.18, 0.11, 0.07)) * causticZone * inIris * 0.72 * eyeGoboAtten;
 
-      // Crisp Pinpoint Studio Catchlights (uCorneaWetness) — zero artificial horizontal lower stripe!
+      // Studio Softbox Window Catchlight + Subtle Caruncle Moisture Pinpoint
       float wetFactor = clamp(uCorneaWetness, 0.2, 1.5);
-      float uvCatch1 = exp(-(pow((relXY.x + 0.28) / 0.088, 2.0) + pow((relXY.y - 0.28) / 0.082, 2.0)));
-      float uvCatch2 = exp(-(pow((relXY.x - 0.30) / 0.048, 2.0) + pow((relXY.y + 0.26) / 0.048, 2.0)));
-      vec3 wetCatchlight = (vec3(2.15, 2.12, 2.08) * uvCatch1 + vec3(1.08, 1.10, 1.16) * uvCatch2)
-                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8) * wetFactor * (0.45 + 0.55 * eyeGoboAtten);
-      float specKeep = mix(0.08, 0.24, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
-      reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight * upperLidAO;
+      vec2 sb1 = (relXY - vec2(-0.26, 0.24)) / vec2(0.11, 0.085);
+      float softbox1 = exp(-pow(max(abs(sb1.x), abs(sb1.y)), 2.6)) * smoothstep(0.0228, 0.0192, vEyeLocalPos.y);
+      float softbox2 = exp(-(pow((relXY.x - 0.28) / 0.045, 2.0) + pow((relXY.y + 0.24) / 0.042, 2.0))) * 0.42;
+      vec3 wetCatchlight = (vec3(1.85, 1.84, 1.82) * softbox1 + vec3(0.95, 0.98, 1.04) * softbox2)
+                         * inIris * clamp(uCatchlightStrength, 0.0, 1.6) * wetFactor * (0.45 + 0.55 * eyeGoboAtten);
+      float specKeep = mix(0.06, 0.20, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
+      reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight;
       reflectedLight.indirectSpecular *= specKeep;
       `
     );
@@ -1983,8 +2008,8 @@ export async function buildCollectibleHeadNode(config = {}) {
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
       }
-      const initRough = Math.max(0.20, Math.min(0.88, Number(config.skinRoughness ?? materials.skinRoughness ?? morphs.skinRoughness ?? 0.38)));
-      const initNormScale = Math.max(0.0, Math.min(1.6, Number(config.normalMapStrength ?? materials.normalMapStrength ?? morphs.normalMapStrength ?? 0.26)));
+      const initRough = Math.max(0.28, Math.min(0.88, Number(config.skinRoughness ?? materials.skinRoughness ?? morphs.skinRoughness ?? 0.54)));
+      const initNormScale = Math.max(0.0, Math.min(1.6, Number(config.normalMapStrength ?? materials.normalMapStrength ?? morphs.normalMapStrength ?? 0.42)));
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
@@ -1993,15 +2018,15 @@ export async function buildCollectibleHeadNode(config = {}) {
         color: new THREE.Color('#ffffff'),
         roughness: initRough,
         metalness: 0.0,
-        sheen: 0.22,
-        sheenRoughness: 0.72,
-        sheenColor: new THREE.Color('#ffddd4'),
+        sheen: 0.05,
+        sheenRoughness: 0.82,
+        sheenColor: new THREE.Color('#f7f4f2'),
         clearcoat: 0.0,
-        clearcoatRoughness: 0.48,
-        specularIntensity: 0.28,
-        specularColor: new THREE.Color('#fff9f6'),
-        ior: 1.40,
-        envMapIntensity: 0.36,
+        clearcoatRoughness: 0.55,
+        specularIntensity: 0.22,
+        specularColor: new THREE.Color('#faf8f6'),
+        ior: 1.38,
+        envMapIntensity: 0.28,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -2113,24 +2138,43 @@ export async function buildCollectibleHeadNode(config = {}) {
       const browMap = realBrowAsset?.texture || child.material?.map || null;
       if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
       const browColHex = config.browColor || materials.browColor || '#ffffff';
-      const browOp = Number(config.browOpacity ?? materials.browOpacity ?? 0.90);
+      const browOp = Number(config.browOpacity ?? materials.browOpacity ?? 0.92);
       rootGroup.userData.browColor = browColHex;
       rootGroup.userData.browOpacity = browOp;
-      child.material = new THREE.MeshStandardMaterial({
+      const browMat = new THREE.MeshLambertMaterial({
         map: browMap,
         color: new THREE.Color(browColHex),
         transparent: true,
-        opacity: Math.min(0.88, browOp * 0.80),
+        opacity: Math.min(0.95, browOp * 0.92),
         alphaTest: 0.0,
         alphaToCoverage: false,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.65,
-        envMapIntensity: 0.22,
+        envMapIntensity: 0.05,
         side: THREE.DoubleSide,
       });
+      // Feather inner brow head (|x|=0.009..0.0175) & outer brow tail (|x|=0.047..0.055) in 3D space
+      // so the eyebrow NEVER has a rectangular UV cut-off!
+      browMat.onBeforeCompile = (shader) => {
+        shader.vertexShader = 'varying vec3 vBrowLocalPos;\n' + shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          '#include <begin_vertex>\nvBrowLocalPos = position;'
+        );
+        shader.fragmentShader = 'varying vec3 vBrowLocalPos;\n' + shader.fragmentShader.replace(
+          '#include <map_fragment>',
+          `#include <map_fragment>
+          {
+            float axB = abs(vBrowLocalPos.x);
+            float innerFeather = smoothstep(0.0092, 0.0178, axB);
+            float outerFeather = 1.0 - smoothstep(0.0465, 0.0548, axB);
+            diffuseColor.a *= innerFeather * outerFeather;
+          }`
+        );
+      };
+      browMat.customProgramCacheKey = () => 'cervix3d_eyebrow_feather_v46';
+      child.material = browMat;
     } else if (matName === 'Eyelash') {
       child.castShadow = false;
       child.receiveShadow = true;
@@ -2202,8 +2246,8 @@ export async function buildCollectibleHeadNode(config = {}) {
     modelContainer.add(fitImportedHead(gltf.scene));
   }
 
-  await attachRealHairModel(rootGroup, config);
   applyHeadMorphsToGroup(rootGroup, morphs);
+  await attachRealHairModel(rootGroup, config);
   attachSpecimenContainerAndDecor(rootGroup, config);
 
   const gimbalGroup = buildGimbalOverlayGroup();
