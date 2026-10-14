@@ -34,14 +34,14 @@ export const DYNAMIC_LIGHT_MODES = [
 ];
 
 export const GLOBAL_CHIAROSCURO_UNIFORMS = {
-  uSssIntensity: { value: 0.96 },
-  uChiaroscuro: { value: 0.94 },
-  uWindowGoboMode: { value: 5.0 },
-  uWindowGoboStrength: { value: 0.78 },
+  uSssIntensity: { value: 0.92 },
+  uChiaroscuro: { value: 0.36 },
+  uWindowGoboMode: { value: 0.0 },
+  uWindowGoboStrength: { value: 0.18 },
   uWindowGoboPhase: { value: 0.0 },
-  uWindowLightDir: { value: new THREE.Vector3(0.58, 0.42, 0.70).normalize() },
+  uWindowLightDir: { value: new THREE.Vector3(0.52, 0.44, 0.73).normalize() },
   uCursorLightDir: { value: new THREE.Vector3(0.18, 0.28, 0.94).normalize() },
-  uCursorTorchIntensity: { value: 0.24 },
+  uCursorTorchIntensity: { value: 0.28 },
 };
 
 export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
@@ -51,6 +51,68 @@ export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
 }
 
 export const VISUAL_STYLE_PRESETS = {
+  dlss5_neural_photoreal: {
+    id: 'dlss5_neural_photoreal',
+    label: '🧠 DLSS-5 神经渲染微距真皮重构 · 真实毛孔高光遮蔽与3波长次表面散射 (Stage 43 默认首推)',
+    desc: '参考 NVIDIA DLSS 5 神经材质重构：分区解剖微米毛孔、双瓣皮脂微腔高光遮蔽、红绿蓝三波长真皮透射与零伪影85mm光学人像',
+    hdrMode: 'softbox_portrait',
+    keyColor: '#fff6ee',
+    fillColor: '#9ab0cc',
+    rimColor: '#ffe8cc',
+    hemiSky: '#fffaf4',
+    hemiGround: '#1e1a18',
+    keyIntensity: 1.84,
+    fillIntensity: 0.64,
+    rimIntensity: 1.32,
+    hemiIntensity: 0.46,
+    upIntensity: 0.24,
+    keyAzimuthDeg: -28,
+    keyElevationDeg: 26,
+    exposure: 1.04,
+    envIntensity: 0.56,
+    contrast: 1.07,
+    saturation: 0.99,
+    warmth: 0.02,
+    vignette: 0.18,
+    sharpen: 0.24,
+    casSharpen: 0.78,
+    shadowLift: 0.36,
+    specularClarity: 0.88,
+    eyeClarity: 1.08,
+    poreReliefGlobal: 1.15,
+    supersample: 1.75,
+    softFocus: 0.04,
+    depthBlur: 0.0,
+    chromatic: 0.03,
+    bloomStrength: 0.06,
+    filmGrain: 0.02,
+    tyndall: 0.22,
+    vintagePhoto: 0.0,
+    skinGloss: 0.24,
+    sssIntensity: 0.94,
+    sssBlur: 0.14,
+    microContrast: 0.42,
+    highlightRoll: 0.48,
+    shadowCrush: 0.04,
+    sunFlareVeil: 0.04,
+    dappledBokeh: 0.0,
+    anamorphicFlare: 0.06,
+    lightLeak: 0.0,
+    swirlyBokeh: 0.0,
+    wetLensDrop: 0.0,
+    lensDistortion: 0.0,
+    filmLutMode: 'portra_160_sun',
+    filmLutStrength: 0.22,
+    chiaroscuro: 0.34,
+    irisSparkle: 0.24,
+    halation: 0.12,
+    skinLumen: 0.18,
+    cursorTorch: 0.32,
+    windowGobo: 'none',
+    windowGoboStrength: 0.12,
+    tint: [1.01, 1.00, 0.99],
+    shadowTint: [0.020, 0.018, 0.022],
+  },
   ultra_4k_crystal_clear: {
     id: 'ultra_4k_crystal_clear',
     label: '🔪 4K 超清锐利零模糊光学大师 · 纤毫毕现毛孔与全屏清晰多头陈列 (画质党首推)',
@@ -61,181 +123,181 @@ export const VISUAL_STYLE_PRESETS = {
     rimColor: '#ffe0b5',
     hemiSky: '#fff8ef',
     hemiGround: '#1a1816',
-    keyIntensity: 1.92,
-    fillIntensity: 0.48,
-    rimIntensity: 1.38,
-    hemiIntensity: 0.34,
-    upIntensity: 0.16,
-    keyAzimuthDeg: -34,
+    keyIntensity: 1.88,
+    fillIntensity: 0.58,
+    rimIntensity: 1.36,
+    hemiIntensity: 0.42,
+    upIntensity: 0.22,
+    keyAzimuthDeg: -30,
     keyElevationDeg: 28,
-    exposure: 1.10,
-    envIntensity: 0.42,
-    contrast: 1.12,
+    exposure: 1.06,
+    envIntensity: 0.50,
+    contrast: 1.09,
     saturation: 0.98,
-    warmth: 0.04,
-    vignette: 0.22,
-    sharpen: 0.28,
-    casSharpen: 0.88,
-    shadowLift: 0.34,
-    specularClarity: 0.92,
+    warmth: 0.03,
+    vignette: 0.20,
+    sharpen: 0.26,
+    casSharpen: 0.84,
+    shadowLift: 0.36,
+    specularClarity: 0.90,
     eyeClarity: 1.05,
-    poreReliefGlobal: 1.30,
+    poreReliefGlobal: 1.22,
     supersample: 1.75,
     softFocus: 0.0,
     depthBlur: 0.0,
-    chromatic: 0.04,
-    bloomStrength: 0.08,
+    chromatic: 0.03,
+    bloomStrength: 0.06,
     filmGrain: 0.02,
-    tyndall: 0.32,
+    tyndall: 0.24,
     vintagePhoto: 0.0,
-    skinGloss: 0.16,
-    sssIntensity: 0.90,
+    skinGloss: 0.22,
+    sssIntensity: 0.92,
     sssBlur: 0.10,
-    microContrast: 0.56,
-    highlightRoll: 0.45,
-    shadowCrush: 0.10,
-    sunFlareVeil: 0.08,
+    microContrast: 0.46,
+    highlightRoll: 0.46,
+    shadowCrush: 0.06,
+    sunFlareVeil: 0.04,
     dappledBokeh: 0.0,
-    anamorphicFlare: 0.10,
+    anamorphicFlare: 0.08,
     lightLeak: 0.0,
     swirlyBokeh: 0.0,
     wetLensDrop: 0.0,
     lensDistortion: 0.0,
     filmLutMode: 'portra_160_sun',
-    filmLutStrength: 0.38,
-    chiaroscuro: 0.58,
-    irisSparkle: 0.12,
-    halation: 0.18,
-    skinLumen: 0.0,
+    filmLutStrength: 0.28,
+    chiaroscuro: 0.38,
+    irisSparkle: 0.18,
+    halation: 0.14,
+    skinLumen: 0.12,
     cursorTorch: 0.35,
-    windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.38,
-    tint: [1.02, 0.995, 0.96],
-    shadowTint: [0.024, 0.022, 0.020],
+    windowGobo: 'none',
+    windowGoboStrength: 0.16,
+    tint: [1.01, 0.998, 0.98],
+    shadowTint: [0.022, 0.020, 0.020],
   },
   sunlit_hair_shadow_film: {
     id: 'sunlit_hair_shadow_film',
-    label: '🌞 盛夏逆光发丝投影 · 强明暗切割与超清胶片写真 (参考图同款·首推)',
-    desc: '复刻参考照：脸颊缕缕发丝投影、前景树隙斜切阳光、全屏清晰五官与柯达Portra暖调',
+    label: '🌞 盛夏逆光发丝投影 · 暖金树隙柔光与超清胶片写真',
+    desc: '自然树隙斜切暖阳、柔和发丝微影、全屏清晰五官与柯达Portra暖调',
     hdrMode: 'golden_hour',
-    keyColor: '#ffe4b8',
-    fillColor: '#627468',
-    rimColor: '#ffd28a',
-    hemiSky: '#fff0d4',
-    hemiGround: '#161a14',
-    keyIntensity: 2.04,
-    fillIntensity: 0.38,
-    rimIntensity: 1.48,
-    hemiIntensity: 0.28,
-    upIntensity: 0.12,
-    keyAzimuthDeg: -38,
+    keyColor: '#ffe8c4',
+    fillColor: '#7c8e9e',
+    rimColor: '#ffd699',
+    hemiSky: '#fff2dc',
+    hemiGround: '#1a1c18',
+    keyIntensity: 1.92,
+    fillIntensity: 0.52,
+    rimIntensity: 1.42,
+    hemiIntensity: 0.38,
+    upIntensity: 0.18,
+    keyAzimuthDeg: -34,
     keyElevationDeg: 26,
-    exposure: 1.06,
-    envIntensity: 0.34,
-    contrast: 1.14,
-    saturation: 0.96,
-    warmth: 0.06,
-    vignette: 0.28,
-    sharpen: 0.18,
+    exposure: 1.04,
+    envIntensity: 0.46,
+    contrast: 1.10,
+    saturation: 0.97,
+    warmth: 0.05,
+    vignette: 0.24,
+    sharpen: 0.20,
     casSharpen: 0.72,
-    shadowLift: 0.28,
+    shadowLift: 0.32,
     specularClarity: 0.78,
-    eyeClarity: 0.95,
-    poreReliefGlobal: 1.18,
+    eyeClarity: 0.96,
+    poreReliefGlobal: 1.15,
     supersample: 1.5,
-    softFocus: 0.18,
-    depthBlur: 0.04,
-    chromatic: 0.08,
-    bloomStrength: 0.10,
-    filmGrain: 0.05,
-    tyndall: 0.52,
-    vintagePhoto: 0.08,
-    skinGloss: 0.14,
+    softFocus: 0.10,
+    depthBlur: 0.0,
+    chromatic: 0.06,
+    bloomStrength: 0.08,
+    filmGrain: 0.04,
+    tyndall: 0.38,
+    vintagePhoto: 0.04,
+    skinGloss: 0.20,
     sssIntensity: 0.92,
-    sssBlur: 0.22,
-    microContrast: 0.48,
-    highlightRoll: 0.44,
-    shadowCrush: 0.16,
-    sunFlareVeil: 0.24,
+    sssBlur: 0.16,
+    microContrast: 0.42,
+    highlightRoll: 0.45,
+    shadowCrush: 0.08,
+    sunFlareVeil: 0.14,
     dappledBokeh: 0.0,
-    anamorphicFlare: 0.16,
-    lightLeak: 0.08,
+    anamorphicFlare: 0.12,
+    lightLeak: 0.04,
     swirlyBokeh: 0.0,
     wetLensDrop: 0.0,
-    lensDistortion: 0.04,
+    lensDistortion: 0.02,
     filmLutMode: 'portra_160_sun',
-    filmLutStrength: 0.48,
-    chiaroscuro: 0.68,
-    irisSparkle: 0.10,
-    halation: 0.28,
-    skinLumen: 0.0,
+    filmLutStrength: 0.36,
+    chiaroscuro: 0.46,
+    irisSparkle: 0.16,
+    halation: 0.20,
+    skinLumen: 0.10,
     cursorTorch: 0.28,
-    windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.46,
-    tint: [1.02, 0.99, 0.94],
-    shadowTint: [0.025, 0.030, 0.022],
+    windowGobo: 'tree_dappled',
+    windowGoboStrength: 0.28,
+    tint: [1.02, 0.995, 0.96],
+    shadowTint: [0.022, 0.024, 0.020],
   },
   cinema_85mm_portrait: {
     id: 'cinema_85mm_portrait',
-    label: '📸 85mm 逆光发丝强光影写真 · 超清五官与树隙明暗切割 (默认首推)',
-    desc: '自然明暗切割、脸颊缕缕发丝投影、全屏两侧头模100%锐利清晰、高光柔雾与胶片层次',
-    hdrMode: 'golden_hour',
-    keyColor: '#ffe6be',
-    fillColor: '#66786c',
-    rimColor: '#ffd494',
-    hemiSky: '#fff2da',
-    hemiGround: '#181b16',
-    keyIntensity: 2.02,
-    fillIntensity: 0.42,
-    rimIntensity: 1.44,
-    hemiIntensity: 0.30,
-    upIntensity: 0.14,
-    keyAzimuthDeg: -36,
+    label: '📸 85mm 影棚光学微单人像 · DLSS-5 神经真皮散射与清透眼神光 (推荐)',
+    desc: '85mm f/1.4 定焦微单光学质感、三波长真皮次表面散射、双瓣毛孔微高光与全屏100%锐利五官',
+    hdrMode: 'softbox_portrait',
+    keyColor: '#fff5eb',
+    fillColor: '#92a8c4',
+    rimColor: '#ffe4bc',
+    hemiSky: '#fff8f0',
+    hemiGround: '#1c1917',
+    keyIntensity: 1.86,
+    fillIntensity: 0.60,
+    rimIntensity: 1.34,
+    hemiIntensity: 0.44,
+    upIntensity: 0.22,
+    keyAzimuthDeg: -30,
     keyElevationDeg: 26,
-    exposure: 1.08,
-    envIntensity: 0.36,
-    contrast: 1.14,
-    saturation: 0.96,
-    warmth: 0.06,
-    vignette: 0.26,
-    sharpen: 0.18,
-    casSharpen: 0.68,
-    shadowLift: 0.28,
-    specularClarity: 0.75,
-    eyeClarity: 0.92,
+    exposure: 1.05,
+    envIntensity: 0.52,
+    contrast: 1.08,
+    saturation: 0.98,
+    warmth: 0.03,
+    vignette: 0.20,
+    sharpen: 0.22,
+    casSharpen: 0.74,
+    shadowLift: 0.34,
+    specularClarity: 0.84,
+    eyeClarity: 1.04,
     poreReliefGlobal: 1.15,
-    supersample: 1.5,
-    softFocus: 0.16,
-    depthBlur: 0.04,
-    chromatic: 0.08,
-    bloomStrength: 0.10,
-    filmGrain: 0.05,
-    tyndall: 0.48,
-    vintagePhoto: 0.06,
-    skinGloss: 0.14,
-    sssIntensity: 0.92,
-    sssBlur: 0.22,
-    microContrast: 0.48,
-    highlightRoll: 0.42,
-    shadowCrush: 0.16,
-    sunFlareVeil: 0.22,
+    supersample: 1.65,
+    softFocus: 0.06,
+    depthBlur: 0.0,
+    chromatic: 0.04,
+    bloomStrength: 0.07,
+    filmGrain: 0.03,
+    tyndall: 0.26,
+    vintagePhoto: 0.02,
+    skinGloss: 0.22,
+    sssIntensity: 0.94,
+    sssBlur: 0.16,
+    microContrast: 0.42,
+    highlightRoll: 0.46,
+    shadowCrush: 0.06,
+    sunFlareVeil: 0.06,
     dappledBokeh: 0.0,
-    anamorphicFlare: 0.16,
-    lightLeak: 0.06,
+    anamorphicFlare: 0.08,
+    lightLeak: 0.0,
     swirlyBokeh: 0.0,
     wetLensDrop: 0.0,
-    lensDistortion: 0.04,
+    lensDistortion: 0.0,
     filmLutMode: 'portra_160_sun',
-    filmLutStrength: 0.48,
-    chiaroscuro: 0.66,
-    irisSparkle: 0.10,
-    halation: 0.28,
-    skinLumen: 0.0,
-    cursorTorch: 0.28,
-    windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.45,
-    tint: [1.02, 0.99, 0.94],
-    shadowTint: [0.025, 0.030, 0.022],
+    filmLutStrength: 0.26,
+    chiaroscuro: 0.36,
+    irisSparkle: 0.22,
+    halation: 0.14,
+    skinLumen: 0.16,
+    cursorTorch: 0.30,
+    windowGobo: 'none',
+    windowGoboStrength: 0.14,
+    tint: [1.01, 0.998, 0.98],
+    shadowTint: [0.020, 0.020, 0.022],
   },
   korean_magazine_glow: {
     id: 'korean_magazine_glow',
@@ -993,17 +1055,29 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         );
       }
 
-      // 3D Millimeter-Space Cellular Sebaceous Pore & Langer's Rhomboid Crease Field
+      // Stage 43 · DLSS-5-Inspired Anatomical Zone-Specific Cellular Pore & Langer's Rhomboid Micro-Field
+      // Uses per-specimen phase offset so every head has unique micro-geometry!
       float compute3DPoreField(vec3 localPos) {
-        vec2 mm = vec2(atan(localPos.x, max(0.02, localPos.z + 0.02)) * 92.0, localPos.y * 920.0);
-        vec2 cell = floor(mm * 3.8);
-        vec2 fracP = fract(mm * 3.8) - 0.5;
+        vec2 charSeed = vec2(
+          dot(uSkinToneTint, vec3(19.7, 37.3, 53.1)) + uSkinWarmthShift * 41.0,
+          dot(uBlushColor, vec3(23.1, 47.9, 13.7)) + uSkinBrightness * 29.0
+        );
+        vec2 mm = vec2(atan(localPos.x, max(0.02, localPos.z + 0.02)) * 96.0, localPos.y * 960.0) + fract(charSeed) * 14.0;
+        // Anatomical zone pore-density scaling: finer crisp pores on nasal tip & medial cheek, ultra-fine on eyelids/forehead
+        float tZonePore = max(
+          exp(-pow(localPos.x / 0.028, 2.0)) * exp(-pow((localPos.y + 0.004) / 0.018, 2.0)),
+          exp(-pow(localPos.x / 0.042, 2.0)) * smoothstep(0.025, 0.055, localPos.y) * 0.65
+        );
+        float freqScale = mix(3.4, 4.4, tZonePore);
+        vec2 cell = floor(mm * freqScale);
+        vec2 fracP = fract(mm * freqScale) - 0.5;
         vec2 jitter = vec2(dermisHash21(cell) - 0.5, dermisHash21(cell + 17.3) - 0.5) * 0.48;
         float dPore = length(fracP - jitter);
-        float poreCrater = smoothstep(0.11, 0.34, dPore);
-        float langerA = dermisNoise2D(vec2(mm.x * 2.4 + mm.y * 1.7, mm.y * 2.4 - mm.x * 1.7));
-        float langerB = dermisNoise2D(vec2(mm.x * 5.2 - mm.y * 3.4, mm.y * 5.2 + mm.x * 3.4));
-        return clamp(poreCrater * 0.58 + (0.62 * langerA + 0.38 * langerB) * 0.42, 0.0, 1.0);
+        float poreCrater = smoothstep(0.10, 0.34, dPore);
+        float langerA = dermisNoise2D(vec2(mm.x * 2.5 + mm.y * 1.8, mm.y * 2.5 - mm.x * 1.8));
+        float langerB = dermisNoise2D(vec2(mm.x * 5.4 - mm.y * 3.5, mm.y * 5.4 + mm.x * 3.5));
+        float zoneWeight = 0.58 + 0.42 * tZonePore;
+        return clamp(mix(0.55, poreCrater * 0.58 + (0.62 * langerA + 0.38 * langerB) * 0.42, zoneWeight), 0.0, 1.0);
       }
 
       // Smooth 3D Lip Vermilion Mask & Vertical Lip Crease Relief
@@ -1021,83 +1095,57 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         return mask;
       }
 
+      // World-Space Architectural Window Gobo (NEVER stamps identical local-space shadow masks onto every head!)
       float computeWindowBeamEnvelope(vec3 worldPos, vec3 localPos, vec3 lightDir) {
         if (uWindowGoboMode < 0.5 || uWindowGoboStrength <= 0.001) return 1.0;
         vec3 L = normalize(lightDir);
         vec3 rightAx = normalize(cross(vec3(0.0, 1.0, 0.0), L) + vec3(1e-4, 0.0, 0.0));
         vec3 upAx = normalize(cross(L, rightAx));
-        vec2 p = vec2(dot(worldPos, rightAx), dot(worldPos, upAx));
-        vec2 faceCm = localPos.xy * 100.0;
+        vec2 wp = vec2(dot(worldPos, rightAx), dot(worldPos, upAx)) * 0.24;
         float ph = uWindowGoboPhase;
-        float sunSide = L.x >= 0.0 ? 1.0 : -1.0;
-
-        // Multi-Harmonic Wispy Hair-Strand Cast Shadows across Sunlit Temple, Eye & Cheek (复刻参考图脸颊缕缕发丝投影)
-        float cheekStrandZone = smoothstep(-4.4, -1.8, faceCm.y)
-                              * (1.0 - smoothstep(3.2, 5.2, faceCm.y))
-                              * smoothstep(0.032, 0.068, localPos.z)
-                              * smoothstep(-2.4, 1.6, faceCm.x * sunSide + 0.8);
-        float curveBend = (faceCm.y - 2.6) * (faceCm.y - 2.6) * 0.11;
-        float sCoord = (faceCm.x * sunSide - faceCm.y * 0.44 + curveBend) * 9.6 + sin(ph * 0.65) * 1.6;
-        float wispLock = smoothstep(-0.34, 0.46, sin(sCoord * 0.38 + cos(faceCm.y * 0.82 - ph * 0.4) * 0.78));
-        float fineStrandA = smoothstep(-0.56, 0.34, sin(sCoord * 1.18 + sin(faceCm.y * 1.38) * 0.62));
-        float fineStrandB = smoothstep(-0.62, 0.30, cos(sCoord * 2.10 - faceCm.y * 0.88 + ph * 0.52));
-        float hairStrandShadow = mix(
-          1.0,
-          0.10 + 0.90 * (0.45 * wispLock + 0.35 * fineStrandA + 0.20 * fineStrandB),
-          cheekStrandZone * 0.94
-        );
 
         float pattern = 1.0;
         if (uWindowGoboMode < 1.5) {
-          // 1. Rainy Mullion Window Lattice at True Facial Scale + Raindrop Caustics
-          float mx = smoothstep(-0.55, 0.35, cos((faceCm.x + sin(ph * 0.6) * 1.4) * 0.68));
-          float my = smoothstep(-0.55, 0.35, cos((faceCm.y + cos(ph * 0.5) * 1.1) * 0.68));
-          float rainRipple = 0.82 + 0.18 * sin(faceCm.x * 1.8 + faceCm.y * 2.2 - ph * 1.8);
-          pattern = (0.10 + 0.90 * mx * my) * rainRipple * mix(1.0, hairStrandShadow, 0.55);
+          float mx = smoothstep(-0.55, 0.35, cos((wp.x + sin(ph * 0.6) * 0.8) * 0.68));
+          float my = smoothstep(-0.55, 0.35, cos((wp.y + cos(ph * 0.5) * 0.6) * 0.68));
+          pattern = 0.58 + 0.42 * mx * my;
         } else if (uWindowGoboMode < 2.5) {
-          // 2. Venetian Blinds Slats slicing across eyes & cheeks (High-Contrast Film Noir / Wong Kar-wai)
-          float slat = smoothstep(-0.28, 0.32, cos((faceCm.y * 1.85 + faceCm.x * 0.42 * sunSide) + sin(ph * 0.6) * 1.5));
-          pattern = (0.06 + 0.94 * slat) * mix(1.0, hairStrandShadow, 0.50);
+          float slat = smoothstep(-0.32, 0.36, cos((wp.y * 1.65 + wp.x * 0.35) + sin(ph * 0.6) * 1.1));
+          pattern = 0.54 + 0.46 * slat;
         } else if (uWindowGoboMode < 3.5) {
-          // 3. Gothic Diamond Stained-Glass Lattice across face
-          float d1 = smoothstep(-0.45, 0.38, cos((faceCm.x + faceCm.y) * 0.72 + sin(ph * 0.5) * 0.9));
-          float d2 = smoothstep(-0.45, 0.38, cos((faceCm.x - faceCm.y) * 0.72 - cos(ph * 0.5) * 0.9));
-          pattern = (0.08 + 0.92 * d1 * d2) * mix(1.0, hairStrandShadow, 0.45);
-        } else if (uWindowGoboMode < 4.5) {
-          // 4. Swaying Sycamore Tree Dappled Sunlight + Wispy Hair Shadows
-          float leaf1 = sin(faceCm.x * 0.78 + ph * 0.9) * cos(faceCm.y * 0.84 - ph * 0.75);
-          float leaf2 = sin((faceCm.x - faceCm.y) * 0.62 - ph * 0.6) * cos((faceCm.x + faceCm.y) * 0.55 + ph * 0.95);
-          float dappled = smoothstep(-0.22, 0.34, 0.55 * leaf1 + 0.45 * leaf2);
-          pattern = (0.08 + 0.92 * dappled) * mix(1.0, hairStrandShadow, 0.82);
+          float d1 = smoothstep(-0.45, 0.38, cos((wp.x + wp.y) * 0.72 + sin(ph * 0.5) * 0.7));
+          float d2 = smoothstep(-0.45, 0.38, cos((wp.x - wp.y) * 0.72 - cos(ph * 0.5) * 0.7));
+          pattern = 0.56 + 0.44 * d1 * d2;
         } else {
-          // 5. Reference Photo Mode (hair_sun_slit): Diagonal Sunbeam Slit + Forehead/Jaw Foliage Cut Shadow + Cheek Hair-Strand Shadows!
-          float diagCoord = faceCm.x * (-0.52 * sunSide) + faceCm.y * 0.85 + sin(ph * 0.38) * 0.65;
-          float upperForeheadCut = 1.0 - smoothstep(1.35, 3.10, diagCoord + 0.45 * sin(faceCm.x * 0.65 + ph * 0.3));
-          float lowerJawCut = smoothstep(-4.8, -2.0, faceCm.y + faceCm.x * 0.28 * sunSide + cos(ph * 0.32) * 0.42);
-          float sideFoliageCut = smoothstep(-4.2, -0.4, faceCm.x * sunSide + faceCm.y * 0.36 + sin(faceCm.y * 0.75 - ph * 0.45) * 0.65);
-          float sunSlit = upperForeheadCut * lowerJawCut * (0.10 + 0.90 * sideFoliageCut);
-          pattern = clamp(0.05 + 0.95 * sunSlit * hairStrandShadow, 0.05, 1.0);
+          float leaf1 = sin(wp.x * 0.78 + ph * 0.7) * cos(wp.y * 0.84 - ph * 0.6);
+          float leaf2 = sin((wp.x - wp.y) * 0.58 - ph * 0.5) * cos((wp.x + wp.y) * 0.52 + ph * 0.8);
+          float dappled = smoothstep(-0.28, 0.36, 0.55 * leaf1 + 0.45 * leaf2);
+          pattern = 0.58 + 0.42 * dappled;
         }
-        return mix(1.0, pattern, clamp(uWindowGoboStrength, 0.0, 1.0));
+        return mix(1.0, pattern, clamp(uWindowGoboStrength * 0.72, 0.0, 0.82));
       }
 
+      // Stage 43 · Pre-Integrated 3-Wavelength Subsurface Scattering (Red 630nm / Green 530nm / Blue 460nm)
       vec3 computeDualLobeSkinSSS(vec3 fragNormal, vec3 lightDir, vec3 lightColor, vec3 viewDir, vec3 localPos) {
         float ndl = dot(fragNormal, lightDir);
-        float penumbra = smoothstep(-0.62, 0.18, ndl) * (1.0 - smoothstep(0.08, 0.62, ndl));
-        vec3 deepDermis = vec3(0.96, 0.36, 0.30) * penumbra * 0.28;
-        float softWrap = clamp((ndl + 0.52) / 1.52, 0.0, 1.0) * (1.0 - smoothstep(0.22, 0.78, ndl));
-        vec3 chromaticWrap = vec3(0.095, 0.058, 0.048) * softWrap;
+        // Wavelength-dependent wrap scattering: Red penetrates widest, Green medium, Blue narrowest
+        float wrapR = smoothstep(-0.68, 0.42, ndl) * (1.0 - smoothstep(0.12, 0.78, ndl));
+        float wrapG = smoothstep(-0.38, 0.36, ndl) * (1.0 - smoothstep(0.08, 0.65, ndl));
+        float wrapB = smoothstep(-0.18, 0.28, ndl) * (1.0 - smoothstep(0.04, 0.52, ndl));
+        vec3 triWaveSSS = vec3(wrapR * 0.34, wrapG * 0.14, wrapB * 0.075);
+
+        // Thin-tissue back-translucency across nasal alae, ear helix & lips
         float thinTissueMask = max(
-          smoothstep(0.058, 0.078, abs(localPos.x)) * smoothstep(-0.028, 0.025, localPos.y),
-          smoothstep(0.080, 0.095, localPos.z) * smoothstep(-0.022, 0.008, localPos.y)
+          smoothstep(0.056, 0.078, abs(localPos.x)) * smoothstep(-0.028, 0.025, localPos.y),
+          smoothstep(0.080, 0.096, localPos.z) * smoothstep(-0.024, 0.010, localPos.y)
         );
-        float backTrans = pow(clamp(dot(-viewDir, lightDir) + 0.25, 0.0, 1.0), 2.2) * thinTissueMask;
-        vec3 rubyTrans = vec3(1.05, 0.26, 0.18) * backTrans * 0.26;
-        return (deepDermis + chromaticWrap + rubyTrans) * lightColor * uSssIntensity;
+        float backTrans = pow(clamp(dot(-viewDir, lightDir) + 0.28, 0.0, 1.0), 2.0) * thinTissueMask;
+        vec3 rubyTrans = vec3(0.88, 0.24, 0.16) * backTrans * 0.24;
+        return (triWaveSSS + rubyTrans) * lightColor * uSssIntensity;
       }`
     );
 
-    // Stage 36 · Real-Time Facial Color, Makeup, Lip Vermilion, Freckle, Beauty-Mark & Photo Projection Grading
+    // Stage 43 · Real-Time Facial Color, Makeup, Lip Vermilion, Freckle, Beauty-Mark & Photo Projection Grading
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `#include <map_fragment>
@@ -1118,20 +1166,25 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           if (projUV.x > 0.02 && projUV.x < 0.98 && projUV.y > 0.02 && projUV.y < 0.98) {
             vec4 photoSample = texture2D(uPhotoProjMap, projUV);
             vec3 photoLinear = pow(max(photoSample.rgb, vec3(0.001)), vec3(2.2));
+            // Normalize photo albedo to match base dermis luminance while transferring authentic facial detail
+            float baseLum = max(0.08, dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)));
+            float photoLum = max(0.08, dot(photoLinear, vec3(0.299, 0.587, 0.114)));
+            vec3 relitPhoto = mix(photoLinear, photoLinear * clamp(baseLum / photoLum, 0.72, 1.38), 0.55);
             float ovalDist = length((p.xy - vec2(0.0, -0.001)) / vec2(0.054, 0.058));
             float ovalFeather = (1.0 - smoothstep(0.68, 1.04, ovalDist)) * smoothstep(0.035, 0.068, p.z) * eyeHoleMask;
-            diffuseColor.rgb = mix(diffuseColor.rgb, photoLinear, clamp(ovalFeather * uPhotoProjStrength, 0.0, 0.95));
+            diffuseColor.rgb = mix(diffuseColor.rgb, relitPhoto, clamp(ovalFeather * uPhotoProjStrength, 0.0, 0.95));
           }
         }
 
         // 1. Base Skin Tone Tint, Warmth Shift & Brightness
         vec3 skinCol = diffuseColor.rgb * uSkinToneTint * uSkinBrightness;
-        skinCol.r *= (1.0 + uSkinWarmthShift * 0.10 + uSkinRosiness * 0.055);
-        skinCol.g *= (1.0 + uSkinWarmthShift * 0.02 - uSkinRosiness * 0.015);
-        skinCol.b *= (1.0 - uSkinWarmthShift * 0.10 - uSkinRosiness * 0.025);
+        skinCol.r *= (1.0 + uSkinWarmthShift * 0.12 + uSkinRosiness * 0.065);
+        skinCol.g *= (1.0 + uSkinWarmthShift * 0.025 - uSkinRosiness * 0.015);
+        skinCol.b *= (1.0 - uSkinWarmthShift * 0.12 - uSkinRosiness * 0.030);
 
-        // 2. Micro-Chromophore Melanin & Hemoglobin Mottling (eliminates flat CG color fill!)
-        vec2 mmCoord = vec2(p.x * 340.0, p.y * 340.0 + p.z * 180.0);
+        // 2. Per-Specimen Chromophore Melanin & Hemoglobin Mottling (unique per character!)
+        vec2 charOffset = vec2(dot(uSkinToneTint, vec3(41.2, 17.8, 29.4)), uSkinWarmthShift * 83.0 + uSkinRosiness * 57.0);
+        vec2 mmCoord = vec2(p.x * 340.0, p.y * 340.0 + p.z * 180.0) + charOffset;
         float hemoNoise = dermisNoise2D(mmCoord * 1.3) - 0.5;
         float melaNoise = dermisNoise2D(mmCoord * 2.9 + 11.7) - 0.5;
         float faceFrontMask = smoothstep(0.02, 0.075, p.z);
@@ -1171,7 +1224,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         // 7. Natural Freckles across Nasal Bridge & Upper Cheeks
         if (uFreckleStrength > 0.01) {
           float freckleZone = exp(-pow(p.x / 0.046, 2.0)) * exp(-pow((p.y + 0.003) / 0.015, 2.0)) * smoothstep(0.068, 0.092, p.z) * (1.0 - lipMask);
-          vec2 fGrid = p.xy * 1150.0;
+          vec2 fGrid = p.xy * 1150.0 + charOffset * 0.5;
           vec2 fCell = floor(fGrid);
           vec2 fFrac = fract(fGrid) - 0.5;
           vec2 fJit = vec2(dermisHash21(fCell) - 0.5, dermisHash21(fCell + 9.1) - 0.5) * 0.55;
@@ -1235,7 +1288,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         vec3 r2 = cross( normal, dPosDx );
         float det = dot( dPosDx, r1 );
         if ( abs( det ) > 1e-6 ) {
-          float reliefAmp = 0.0115 * clamp(uPoreRelief, 0.0, 2.2) * (0.35 + 0.65 * faceRegion);
+          float reliefAmp = 0.0108 * clamp(uPoreRelief, 0.0, 2.2) * (0.35 + 0.65 * faceRegion);
           vec3 surfGrad = sign( det ) * ( dHdx * r1 + dHdy * r2 );
           normal = normalize( normal - ( reliefAmp / max( abs( det ), 1e-4 ) ) * surfGrad );
         }
@@ -1250,40 +1303,39 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       float winEnv = computeWindowBeamEnvelope(vCervixWorldPos, vCervixLocalPos, uWindowLightDir);
       float fragNdl = dot(normal, viewWinL);
 
-      // Stage 38 · High-Contrast Sun-Slit & Hair-Strand Chiaroscuro (复刻参考图：强明暗切割对比 + 发丝投影 + 交界线暖橘红真皮透光)
-      float litNdl = smoothstep(-0.24, 0.42, fragNdl);
+      // Stage 43 · DLSS-5-Inspired Natural Dermis Illumination & Pre-Integrated Subsurface Scattering
+      float litNdl = smoothstep(-0.38, 0.52, fragNdl);
       float sunMask = clamp(litNdl * winEnv, 0.0, 1.0);
-      float litTerm = sunMask;
-      float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.5);
-      float shadowContrast = clamp(chiaroscuroStrength * 0.78 + uWindowGoboStrength * 0.35, 0.0, 1.25);
+      float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.4);
+      float shadowContrast = clamp(chiaroscuroStrength * 0.42 + uWindowGoboStrength * 0.22, 0.0, 0.78);
 
-      // Sunlit patches glow with warm golden-ivory radiance; shadow zones & hair-strand shadows drop into deep velvety film shadow!
-      float directScale = mix(1.0, mix(0.06, 1.48, pow(sunMask, 0.86)), clamp(shadowContrast, 0.0, 1.0));
-      float indirectScale = mix(1.0, mix(0.14, 1.06, smoothstep(0.0, 0.85, sunMask)), clamp(shadowContrast * 0.92, 0.0, 0.96));
+      // Natural physiological shadow depth (keeps shadows clean, translucent, and never muddy/black!)
+      float directScale = mix(1.0, mix(0.54, 1.18, pow(sunMask, 0.88)), shadowContrast);
+      float indirectScale = mix(1.0, mix(0.66, 1.04, smoothstep(0.0, 0.85, sunMask)), shadowContrast * 0.68);
 
-      reflectedLight.directDiffuse *= directScale * mix(vec3(0.80, 0.64, 0.50), vec3(1.09, 0.99, 0.88), sunMask);
+      reflectedLight.directDiffuse *= directScale * mix(vec3(0.95, 0.86, 0.82), vec3(1.03, 1.00, 0.97), sunMask);
       reflectedLight.indirectDiffuse *= indirectScale;
 
-      // Deep Cinematic Warm-Olive / Espresso-Amber Film Shadow Toning (eliminates flat grey CG ambient)
-      vec3 warmSubsurfaceShadow = vec3(0.78, 0.68, 0.54);
+      // Translucent Rose-Ivory Subsurface Ambient in Shadow Zones (eliminates dead grey CG shadow!)
+      vec3 warmSubsurfaceShadow = vec3(0.96, 0.88, 0.85);
       reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse * warmSubsurfaceShadow, reflectedLight.indirectDiffuse, sunMask);
 
-      // Subsurface Blood-Glow Penumbra Fringe right along every Sun-Slit & Hair-Strand Shadow Border!
+      // Soft Dermal Subsurface Penumbra Scatter across Shadow Terminator (Red 630nm / Green 530nm / Blue 460nm)
       float penumbraFringe = 4.0 * sunMask * (1.0 - sunMask);
-      vec3 bloodTerminatorGlow = diffuseColor.rgb * vec3(1.26, 0.44, 0.22) * pow(penumbraFringe, 1.15) * 0.44 * uSssIntensity * clamp(shadowContrast, 0.2, 1.2);
-      reflectedLight.directDiffuse += bloodTerminatorGlow;
+      vec3 dermalPenumbra = diffuseColor.rgb * vec3(1.08, 0.58, 0.46) * pow(penumbraFringe, 1.25) * 0.18 * uSssIntensity;
+      reflectedLight.directDiffuse += dermalPenumbra;
 
-      // Anti-Silicone Micro-Pore Specular Cavity Masking + Dedicated Wet Lip Gloss
+      // DLSS-5 Dual-Lobe Sebaceous Micro-Cavity Specular Occlusion + Wet Lip Gloss
       float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
-      float fresnelSheen = pow(1.0 - ndotv, 2.8);
-      float poreSpecMask = clamp(0.32 + 0.88 * vDermisPoreCavity, 0.26, 1.12);
+      float fresnelSheen = pow(1.0 - ndotv, 3.0);
+      float poreSpecMask = clamp(0.28 + 0.92 * pow(vDermisPoreCavity, 1.25), 0.24, 1.15);
       float tZoneMask = max(
         exp(-pow(vCervixLocalPos.x / 0.015, 2.0)) * smoothstep(0.075, 0.105, vCervixLocalPos.z),
         exp(-pow((abs(vCervixLocalPos.x) - 0.035) / 0.020, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.002) / 0.016, 2.0)) * smoothstep(0.068, 0.092, vCervixLocalPos.z)
       );
       float lipSpecBoost = vLipVermilionMask * clamp(uLipGloss, 0.0, 1.5) * 1.45;
-      reflectedLight.directSpecular *= (0.18 + 0.62 * sunMask + 0.22 * tZoneMask * sunMask + lipSpecBoost) * poreSpecMask;
-      reflectedLight.indirectSpecular *= (0.16 + 0.45 * sunMask + 0.20 * fresnelSheen * sunMask + lipSpecBoost * 0.85) * poreSpecMask;
+      reflectedLight.directSpecular *= (0.22 + 0.54 * sunMask + 0.24 * tZoneMask * sunMask + lipSpecBoost) * poreSpecMask;
+      reflectedLight.indirectSpecular *= (0.18 + 0.42 * sunMask + 0.18 * fresnelSheen * sunMask + lipSpecBoost * 0.85) * poreSpecMask;
 
       // Interactive Mouse-Following Studio Beauty Torch
       if (uCursorTorchIntensity > 0.01) {
@@ -1291,13 +1343,13 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         vec3 curH = normalize(curL + viewDir);
         float curNdl = max(0.0, dot(normal, curL));
         float curSpec = pow(max(0.0, dot(normal, curH)), 42.0) * (0.35 + 0.45 * tZoneMask + lipSpecBoost) * poreSpecMask;
-        reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.97, 0.95) * curNdl * 0.08 * uCursorTorchIntensity;
-        reflectedLight.directSpecular += vec3(1.04, 0.99, 0.96) * curSpec * 0.18 * uCursorTorchIntensity;
+        reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.98, 0.96) * curNdl * 0.07 * uCursorTorchIntensity;
+        reflectedLight.directSpecular += vec3(1.03, 0.99, 0.97) * curSpec * 0.16 * uCursorTorchIntensity;
       }
 
       // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour
       float vellusRim = pow(1.0 - ndotv, 3.4) * smoothstep(-0.25, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
-      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.08, 0.95, 0.84) * vellusRim * (0.08 + 0.16 * sunMask);
+      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.06, 0.97, 0.90) * vellusRim * (0.06 + 0.12 * sunMask);
 
       #if ( NUM_DIR_LIGHTS > 0 )
         vec3 sssAccum = vec3(0.0);
@@ -1306,11 +1358,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           sssAccum += computeDualLobeSkinSSS( normal, directionalLights[ i ].direction, directionalLights[ i ].color, viewDir, vCervixLocalPos );
         }
         #pragma unroll_loop_end
-        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.35 + 0.65 * winEnv) * 0.36;
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.45 + 0.55 * winEnv) * 0.42;
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v38';
+  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v43';
 }
 
 /**
@@ -1543,9 +1595,13 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       obj.material.envMapIntensity = 0.34 + skinGloss * 0.28;
       const poreUniform = obj.material.userData?.skinGradingUniforms?.uPoreRelief;
       if (poreUniform) {
-        // An optional visual override must not stick after its config is removed.
+        // An optional visual override must not stick after its config is removed,
+        // while preserving per-specimen relative pore scale.
         obj.material.userData.baseVisualPoreRelief ??= poreUniform.value;
-        poreUniform.value = poreReliefGlobalVal ?? obj.material.userData.baseVisualPoreRelief;
+        const basePore = obj.material.userData.baseVisualPoreRelief;
+        poreUniform.value = poreReliefGlobalVal !== undefined
+          ? Math.min(1.0, basePore * (poreReliefGlobalVal / 0.56))
+          : basePore;
       }
     }
     if (obj.material.userData?.eyeUniforms) {

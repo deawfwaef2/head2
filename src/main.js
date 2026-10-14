@@ -4,6 +4,7 @@ import {
   DAZ_TUTORIAL_STEPS,
   REAL_HAIR_CATALOG,
   SKIN_MATERIAL_CATALOG,
+  HAIR_TOP_CROWN_CATALOG,
   HAIR_FRONT_BANGS_CATALOG,
   HAIR_SIDE_LOCKS_CATALOG,
   HAIR_BACK_ATTACHMENT_CATALOG,
@@ -49,7 +50,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage36-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage43-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -67,6 +68,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage36-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage35-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage30-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage28-master-v1') ||
@@ -113,40 +115,42 @@ const state = {
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
   placardsEnabled: true,
+  placardOffsets: {},
+  vcdTargetPetId: 'selected',
   pinnedDossierPetId: null,
   pureScreenMode: false,
   petStripExpanded: false,
-  activeStripPetId: 'spec-fang-yaoping-001',
+  activeStripPetId: 'SPEC-2026-FYP',
   visualCustomConfig: {
-    presetId: 'cinema_85mm_portrait',
-    hdrMode: 'golden_hour',
-    envIntensity: 0.36,
-    windowGobo: 'hair_sun_slit',
-    windowGoboStrength: 0.45,
+    presetId: 'dlss5_neural_photoreal',
+    hdrMode: 'softbox_portrait',
+    envIntensity: 0.56,
+    windowGobo: 'none',
+    windowGoboStrength: 0.12,
     dynamicLightMode: 'sunset_cloud_drift',
     dynamicLightSpeed: 1.0,
     dynamicLightAmp: 1.0,
-    chiaroscuro: 0.66,
-    tyndall: 0.48,
-    vintagePhoto: 0.06,
-    softFocus: 0.16,
-    depthBlur: 0.04,
-    chromatic: 0.08,
-    keyColor: '#ffe8c4',
-    rimColor: '#ffd494',
-    keyAzimuthDeg: 36,
+    chiaroscuro: 0.34,
+    tyndall: 0.22,
+    vintagePhoto: 0.0,
+    softFocus: 0.04,
+    depthBlur: 0.0,
+    chromatic: 0.03,
+    keyColor: '#fff6ee',
+    rimColor: '#ffe8cc',
+    keyAzimuthDeg: -28,
     keyElevationDeg: 26,
-    keyIntensity: 2.02,
-    fillIntensity: 0.42,
-    rimIntensity: 1.44,
-    hemiIntensity: 0.30,
-    upIntensity: 0.14,
-    exposure: 1.08,
-    supersample: 1.50,
-    casSharpen: 0.68,
-    shadowLift: 0.28,
-    specularClarity: 0.75,
-    eyeClarity: 0.92,
+    keyIntensity: 1.84,
+    fillIntensity: 0.64,
+    rimIntensity: 1.32,
+    hemiIntensity: 0.46,
+    upIntensity: 0.24,
+    exposure: 1.04,
+    supersample: 1.75,
+    casSharpen: 0.78,
+    shadowLift: 0.36,
+    specularClarity: 0.88,
+    eyeClarity: 1.08,
     poreReliefGlobal: 1.15,
     sssIntensity: 0.92,
     skinGloss: 0.14,
@@ -640,34 +644,53 @@ function renderSpecimenPlacards(placardsList = []) {
     if (!col) continue;
     activeIds.add(item.id);
 
-    // Clamp placard position inside screen bounds and avoid overlapping the software window when open & docked right
+    // Apply user custom drag offset (if moved) & clamp inside screen bounds
+    const userOff = state.placardOffsets?.[item.id] || { dx: 0, dy: 0 };
+    const hasCustomOffset = Math.abs(userOff.dx) > 1 || Math.abs(userOff.dy) > 1;
     let maxRight = winW - cardHalfW - 12;
     const swWin = document.getElementById('software-window');
-    if (swWin && !state.windowHidden && swWin.classList.contains('window-dock-right') && !document.body.classList.contains('pure-screen-mode')) {
+    if (!hasCustomOffset && swWin && !state.windowHidden && swWin.classList.contains('window-dock-right') && !document.body.classList.contains('pure-screen-mode')) {
       const rect = swWin.getBoundingClientRect();
       if (rect.width > 80 && item.anchorX < rect.left) {
         maxRight = Math.min(maxRight, rect.left - cardHalfW - 10);
       }
     }
-    const cx = Math.max(cardHalfW + 12, Math.min(maxRight, item.cardX));
-    const cy = Math.max(66, Math.min(winH - cardHalfH - 44, item.cardY));
+    const cx = Math.max(cardHalfW + 12, Math.min(maxRight, item.cardX + userOff.dx));
+    const cy = Math.max(54, Math.min(winH - cardHalfH - 28, item.cardY + userOff.dy));
 
-    // Brass Callout Leader Line from 3D Neck Cut (anchorX, anchorY) -> Elbow -> Placard Edge
-    const attachX = cx >= item.anchorX ? cx - cardHalfW + 4 : cx + cardHalfW - 4;
-    const attachY = cy;
-    const elbowX = item.anchorX + (attachX - item.anchorX) * 0.42;
-    const elbowY = attachY;
-    const strokeCol = item.isHovered ? 'rgba(251, 191, 36, 0.96)' : 'rgba(217, 179, 130, 0.72)';
-    const glowCol = item.isHovered ? 'rgba(245, 158, 11, 0.42)' : 'rgba(15, 12, 10, 0.55)';
+    // Dynamic 4-Edge Brass Callout Leader Line from 3D Neck Cut (anchorX, anchorY) -> Elbow -> Nearest Card Edge
+    const dxCard = cx - item.anchorX;
+    const dyCard = cy - item.anchorY;
+    let attachX = cx;
+    let attachY = cy;
+    let elbowX = item.anchorX;
+    let elbowY = item.anchorY;
+    if (Math.abs(dyCard) > Math.abs(dxCard) * 0.68 && Math.abs(dyCard) > cardHalfH + 10) {
+      // Attach to Top or Bottom edge of placard
+      attachX = Math.max(cx - cardHalfW + 18, Math.min(cx + cardHalfW - 18, item.anchorX + dxCard * 0.25));
+      attachY = dyCard > 0 ? cy - cardHalfH + 3 : cy + cardHalfH - 3;
+      elbowX = attachX;
+      elbowY = item.anchorY + (attachY - item.anchorY) * 0.52;
+    } else {
+      // Attach to Left or Right edge of placard
+      attachX = dxCard >= 0 ? cx - cardHalfW + 4 : cx + cardHalfW - 4;
+      attachY = Math.max(cy - cardHalfH + 10, Math.min(cy + cardHalfH - 10, cy));
+      elbowX = item.anchorX + (attachX - item.anchorX) * 0.45;
+      elbowY = attachY;
+    }
+
+    const isSelectedPet = state.activeStripPetId === item.id;
+    const strokeCol = (item.isHovered || isSelectedPet) ? 'rgba(251, 191, 36, 0.96)' : 'rgba(217, 179, 130, 0.76)';
+    const glowCol = (item.isHovered || isSelectedPet) ? 'rgba(245, 158, 11, 0.44)' : 'rgba(15, 12, 10, 0.55)';
 
     svgParts.push(`
       <g>
         <polyline points="${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${elbowX.toFixed(1)},${elbowY.toFixed(1)} ${attachX.toFixed(1)},${attachY.toFixed(1)}"
           fill="none" stroke="${glowCol}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
         <polyline points="${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${elbowX.toFixed(1)},${elbowY.toFixed(1)} ${attachX.toFixed(1)},${attachY.toFixed(1)}"
-          fill="none" stroke="${strokeCol}" stroke-width="1.35" stroke-dasharray="${item.isHovered ? 'none' : '4 2.5'}" stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.4" fill="#fde68a" stroke="#451a03" stroke-width="1.2" />
-        <circle cx="${attachX.toFixed(1)}" cy="${attachY.toFixed(1)}" r="2.6" fill="#d9b382" />
+          fill="none" stroke="${strokeCol}" stroke-width="1.4" stroke-dasharray="${(item.isHovered || isSelectedPet) ? 'none' : '4 2.5'}" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.5" fill="#fde68a" stroke="#451a03" stroke-width="1.2" />
+        <circle cx="${attachX.toFixed(1)}" cy="${attachY.toFixed(1)}" r="2.7" fill="#d9b382" />
       </g>
     `);
 
@@ -677,26 +700,28 @@ function renderSpecimenPlacards(placardsList = []) {
     const roleShort = col.name.includes('·') ? col.name.split('·')[1].trim().slice(0, 9) : (col.grade || '特级标本').slice(0, 8);
     const briefIdentity = col.fateRecord?.vitalityStatus || col.subtitle || '19岁青春巅峰标本';
     const cutShort = (col.anatomyOptions?.cutLevel || 'C4齐根断面').split('(')[0].trim();
-    const stateLabel = item.containerLabel ? `🏛️${item.containerLabel}` : `🩸${cutShort.slice(0, 9)}`;
+    const stateLabel = item.containerLabel ? `🏛️${item.containerLabel}` : `🩸${cutShort.slice(0, 8)}`;
 
     if (!cardEl) {
       cardEl = document.createElement('div');
       cardEl.className = 'specimen-placard-card';
       cardEl.dataset.placardPetId = item.id;
+      cardEl.title = '✥ 按住鼠标左键可自由拖拽移动此连接标牌 · 双击标牌自动归位';
       cardEl.innerHTML = `
         <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/收起「${shortName}」生前大图与完整断头档案">
-          <img src="${photoSrc}" alt="${shortName}生前照片" />
+          <img src="${photoSrc}" alt="${shortName}生前照片" draggable="false" />
           <span class="placard-photo-badge">生前照</span>
         </div>
         <div class="placard-info-col">
           <div class="placard-top-row">
-            <span class="placard-name" title="${col.name}">${shortName} · ${roleShort}</span>
+            <span class="placard-name" title="${col.name}">✥ ${shortName} · ${roleShort}</span>
             <span class="placard-depth-tag" data-placard-z>Z:${item.zMm}mm</span>
           </div>
           <div class="placard-brief-line" data-placard-brief title="${briefIdentity}">${briefIdentity}</div>
           <div class="placard-sub-line">
             <span class="placard-cut-tag" data-placard-cut>${stateLabel}</span>
             <div class="placard-actions">
+              <button type="button" class="placard-mini-btn" data-placard-reset="${item.id}" title="将标牌恢复至默认连接位置" style="display:none;">↺</button>
               <button type="button" class="placard-mini-btn" data-placard-rot="${item.id}" title="切换360°旋转把玩">360°</button>
               <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开/收起完整档案卡">详档</button>
             </div>
@@ -705,6 +730,7 @@ function renderSpecimenPlacards(placardsList = []) {
       `;
       cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
         btn.addEventListener('click', (ev) => {
+          if (cardEl.dataset.justDragged === '1') return;
           ev.stopPropagation();
           togglePinnedDossierForPet(item.id);
         });
@@ -716,6 +742,63 @@ function renderSpecimenPlacards(placardsList = []) {
           renderVaultGrid();
         }
       });
+      cardEl.querySelector('[data-placard-reset]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        delete state.placardOffsets[item.id];
+        if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+      });
+
+      // Stage 43 · Free Pointer Dragging & Double-Click Reset for Connected Specimen Placards
+      cardEl.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0) return;
+        if (ev.target.closest('button')) return;
+        ev.stopPropagation();
+        state.activeStripPetId = item.id;
+        if (typeof window.__syncVcdSelectedPetUI === 'function') {
+          window.__syncVcdSelectedPetUI(item.id);
+        }
+        const curOff = state.placardOffsets[item.id] || { dx: 0, dy: 0 };
+        const startX = ev.clientX;
+        const startY = ev.clientY;
+        const startDx = curOff.dx;
+        const startDy = curOff.dy;
+        let moved = false;
+        cardEl.setPointerCapture(ev.pointerId);
+        cardEl.classList.add('is-dragging');
+
+        const onMove = (mev) => {
+          const dX = mev.clientX - startX;
+          const dY = mev.clientY - startY;
+          if (Math.hypot(dX, dY) > 3) moved = true;
+          state.placardOffsets[item.id] = { dx: startDx + dX, dy: startDy + dY };
+          if (desktopEngine) {
+            renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+          }
+        };
+        const onUp = (uev) => {
+          cardEl.releasePointerCapture(uev.pointerId);
+          cardEl.classList.remove('is-dragging');
+          cardEl.removeEventListener('pointermove', onMove);
+          cardEl.removeEventListener('pointerup', onUp);
+          cardEl.removeEventListener('pointercancel', onUp);
+          if (moved) {
+            cardEl.dataset.justDragged = '1';
+            setTimeout(() => { delete cardEl.dataset.justDragged; }, 160);
+          }
+        };
+        cardEl.addEventListener('pointermove', onMove);
+        cardEl.addEventListener('pointerup', onUp);
+        cardEl.addEventListener('pointercancel', onUp);
+      });
+
+      cardEl.addEventListener('dblclick', (ev) => {
+        if (ev.target.closest('button')) return;
+        ev.stopPropagation();
+        delete state.placardOffsets[item.id];
+        if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+        showToast(`🏷️ 已将「${shortName}」连接标牌归位至默认锚点`);
+      });
+
       cardsEl.appendChild(cardEl);
     } else {
       const zEl = cardEl.querySelector('[data-placard-z]');
@@ -726,7 +809,9 @@ function renderSpecimenPlacards(placardsList = []) {
       if (rotBtn) rotBtn.textContent = item.isRotationMode ? '🔄转中' : '360°';
     }
 
-    cardEl.classList.toggle('is-hovered', Boolean(item.isHovered));
+    const resetBtn = cardEl.querySelector('[data-placard-reset]');
+    if (resetBtn) resetBtn.style.display = hasCustomOffset ? 'inline-block' : 'none';
+    cardEl.classList.toggle('is-hovered', Boolean(item.isHovered || isSelectedPet));
     cardEl.style.left = `${cx.toFixed(1)}px`;
     cardEl.style.top = `${cy.toFixed(1)}px`;
   }
@@ -1853,7 +1938,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     const vcdEl = document.getElementById('visual-customizer-drawer');
     if (vcdEl && !vcdEl.classList.contains('hidden')) {
-      if (target === desktopCanvas || target.closest('#specimen-placards-layer')) {
+      if (target === desktopCanvas) {
         vcdEl.classList.add('hidden');
       }
     }
@@ -2502,6 +2587,25 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  const getTargetDesktopPetsList = () => {
+    if (!desktopEngine || desktopEngine.pets.size === 0) return [];
+    const targetMode = state.vcdTargetPetId || 'selected';
+    if (targetMode === 'all') return Array.from(desktopEngine.pets.values());
+    if (targetMode !== 'selected' && desktopEngine.pets.has(targetMode)) {
+      return [desktopEngine.pets.get(targetMode)];
+    }
+    if (desktopEngine.hoveredPetId && desktopEngine.pets.has(desktopEngine.hoveredPetId)) {
+      return [desktopEngine.pets.get(desktopEngine.hoveredPetId)];
+    }
+    if (state.activeStripPetId && desktopEngine.pets.has(state.activeStripPetId)) {
+      return [desktopEngine.pets.get(state.activeStripPetId)];
+    }
+    if (state.studioDraft?.id && desktopEngine.pets.has(state.studioDraft.id)) {
+      return [desktopEngine.pets.get(state.studioDraft.id)];
+    }
+    return [Array.from(desktopEngine.pets.values())[0]];
+  };
+
   const bindMorphSlider = (id, valId, key, unit = '') => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2517,6 +2621,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
       }
       studioEngine.updateMorphsFast(state.studioDraft.morphs);
+      // Also update the active desktop pet(s) in real time!
+      for (const pet of getTargetDesktopPetsList()) {
+        const headGroup = pet?.node || pet?.headNode;
+        if (headGroup) {
+          headGroup.userData.morphs = {
+            ...(headGroup.userData.morphs || {}),
+            ...(pet.collectible?.morphs || {}),
+            [key]: v,
+          };
+          applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
+          if (pet.collectible) {
+            pet.collectible.morphs = { ...headGroup.userData.morphs };
+          }
+        }
+      }
+      if (desktopEngine) desktopEngine.wakeRender(1.5, true);
     });
   };
 
@@ -2535,42 +2655,52 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindMorphSlider('morph-hair-off-z', 'val-morph-hair-off-z', 'hairOffsetZ');
   bindMorphSlider('morph-hair-scale', 'val-morph-hair-scale', 'hairScale', '%');
 
-  // Stage 36: Full-Range 19-Axis Facial & Cranial Shape Sliders
+  // Stage 43: Full-Range 23-Axis Facial, Eye Size/Shape & Cranial Sliders
   const SHAPE_MORPH_SLIDERS = [
-    ['morph-jaw', 'val-morph-jaw', 'jawVLine'],
-    ['morph-chin', 'val-morph-chin', 'chinLength'],
-    ['morph-cheek', 'val-morph-cheek', 'cheekSoftness'],
-    ['morph-nose', 'val-morph-nose', 'noseBridge'],
-    ['morph-nose-width', 'val-morph-nose-width', 'noseWidth'],
-    ['morph-eye', 'val-morph-eye', 'eyeAlmond'],
-    ['morph-eye-tilt', 'val-morph-eye-tilt', 'eyeTilt'],
-    ['morph-eyelid-open', 'val-morph-eyelid-open', 'eyelidOpen'],
-    ['morph-brow-height', 'val-morph-brow-height', 'browHeight'],
-    ['morph-brow-tilt', 'val-morph-brow-tilt', 'browTilt'],
-    ['morph-brow-thick', 'val-morph-brow-thick', 'browThickness'],
-    ['morph-lip', 'val-morph-lip', 'lipFullness'],
-    ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile'],
-    ['morph-forehead', 'val-morph-forehead', 'foreheadHeight'],
-    ['morph-ear', 'val-morph-ear', 'earSize'],
-    ['morph-head-width', 'val-morph-head-width', 'headWidth'],
-    ['morph-head-length', 'val-morph-head-length', 'headLength'],
-    ['morph-gaze-yaw', 'val-morph-gaze-yaw', 'gazeYaw'],
-    ['morph-gaze-pitch', 'val-morph-gaze-pitch', 'gazePitch'],
+    ['morph-eye-size', 'val-morph-eye-size', 'eyeSize', ''],
+    ['morph-eye', 'val-morph-eye', 'eyeAlmond', ''],
+    ['morph-eyelid-open', 'val-morph-eyelid-open', 'eyelidOpen', ''],
+    ['morph-eye-tilt', 'val-morph-eye-tilt', 'eyeTilt', ''],
+    ['morph-eye-spacing', 'val-morph-eye-spacing', 'eyeSpacing', ''],
+    ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
+    ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
+    ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
+    ['morph-chin', 'val-morph-chin', 'chinLength', ''],
+    ['morph-cheek', 'val-morph-cheek', 'cheekSoftness', ''],
+    ['morph-nose', 'val-morph-nose', 'noseBridge', ''],
+    ['morph-nose-width', 'val-morph-nose-width', 'noseWidth', ''],
+    ['morph-brow-height', 'val-morph-brow-height', 'browHeight', ''],
+    ['morph-brow-tilt', 'val-morph-brow-tilt', 'browTilt', ''],
+    ['morph-brow-thick', 'val-morph-brow-thick', 'browThickness', '%'],
+    ['morph-lip', 'val-morph-lip', 'lipFullness', ''],
+    ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
+    ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
+    ['morph-ear', 'val-morph-ear', 'earSize', ''],
+    ['morph-head-width', 'val-morph-head-width', 'headWidth', ''],
+    ['morph-head-length', 'val-morph-head-length', 'headLength', ''],
+    ['morph-gaze-yaw', 'val-morph-gaze-yaw', 'gazeYaw', ''],
+    ['morph-gaze-pitch', 'val-morph-gaze-pitch', 'gazePitch', ''],
   ];
-  for (const [sId, vId, mKey] of SHAPE_MORPH_SLIDERS) {
-    bindMorphSlider(sId, vId, mKey);
+  for (const [sId, vId, mKey, unit] of SHAPE_MORPH_SLIDERS) {
+    bindMorphSlider(sId, vId, mKey, unit || '');
   }
 
   document.getElementById('btn-reset-shape-morphs')?.addEventListener('click', () => {
-    for (const [sId, vId, mKey] of SHAPE_MORPH_SLIDERS) {
-      state.studioDraft.morphs[mKey] = 0.0;
+    for (const [sId, vId, mKey, unit] of SHAPE_MORPH_SLIDERS) {
+      const defVal = (mKey === 'irisScale' || mKey === 'pupilSize' || mKey === 'browThickness') ? 1.0 : 0.0;
+      state.studioDraft.morphs[mKey] = defVal;
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = '0';
-      if (vEl) vEl.textContent = '+0.00';
+      if (sEl) sEl.value = String(defVal);
+      if (vEl) vEl.textContent = unit === '%' ? '100%' : '+0.00';
     }
     studioEngine.updateMorphsFast(state.studioDraft.morphs);
-    showToast('↺ 已将全部 19 项面部骨相与五官形状滑杆归零');
+    for (const pet of getTargetDesktopPetsList()) {
+      const headGroup = pet?.node || pet?.headNode;
+      if (headGroup) applyHeadMorphsToGroup(headGroup, state.studioDraft.morphs);
+    }
+    if (desktopEngine) desktopEngine.wakeRender(1.5, true);
+    showToast('↺ 已将全部 23 项眼睛大小/眼型与面部骨相滑杆归零');
   });
 
   bindMorphSlider('morph-cut-height', 'val-cut-height', 'cutHeightOffset', 'cm');
@@ -2628,12 +2758,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customHairType = ext;
     state.studioDraft.customHairName = file.name;
     // Don't silently mix a previous preset's ponytail/bangs into an imported groom.
-    for (const [key, value] of Object.entries({ frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' })) {
+    for (const [key, value] of Object.entries({ topCrown: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' })) {
       state.studioDraft[key] = value;
       state.studioDraft.morphs[key] = value;
       state.studioDraft.morphs[`${key}Style`] = value;
     }
-    for (const [id, value] of [['sel-hair-bangs','default'],['sel-hair-sidelocks','default'],['sel-hair-back','none']]) {
+    for (const [id, value] of [['sel-hair-top-crown','default'],['sel-hair-bangs','default'],['sel-hair-sidelocks','default'],['sel-hair-back','none']]) {
       const element = document.getElementById(id); if (element) element.value = value;
     }
     await refreshStudio3DModel();
@@ -2644,7 +2774,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================================================
-  // STAGE 36: 0ms GPU LIVE COLOR, MAKEUP, SKIN DERMIS, EYE & PHOTO PROJECTION
+  // STAGE 43: 0ms GPU LIVE COLOR, MAKEUP, SKIN DERMIS, EYE & PHOTO PROJECTION
   // ==========================================================================
   const applyLiveMaterialPatch = (patch = {}) => {
     Object.assign(state.studioDraft, patch);
@@ -2652,13 +2782,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (studioEngine) {
       studioEngine.updateMaterialsFast(patch);
     }
-    // Also sync to the selected desktop pet in the 3D Box Space if active
-    const pet = desktopEngine?.pets?.get(state.studioDraft.id) || desktopEngine?.pets?.values()?.next()?.value;
-    const headGroup = pet?.node || pet?.headNode;
-    if (headGroup) {
-      updateCollectibleMaterialsLive(headGroup, patch);
-      desktopEngine.wakeRender(1.5, true);
+    // Sync to the target desktop pet(s) in the 3D Box Space
+    for (const pet of getTargetDesktopPetsList()) {
+      const headGroup = pet?.node || pet?.headNode;
+      if (headGroup) {
+        updateCollectibleMaterialsLive(headGroup, patch);
+        if (pet.collectible) {
+          Object.assign(pet.collectible, patch);
+          pet.collectible.morphs = { ...(pet.collectible.morphs || {}), ...patch };
+        }
+      }
     }
+    if (desktopEngine) desktopEngine.wakeRender(1.5, true);
   };
 
   for (const [id, key] of [
@@ -2675,7 +2810,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       const hex = e.target.value;
       const patch = { [key]: hex };
       // If user picks a custom lip/blush/eyeshadow/iris color, ensure its strength is visible!
-      if (key === 'lipColor' && Number(state.studioDraft.lipStrength ?? 0.65) < 0.25) {
+      if (key === 'irisColor') {
+        patch.irisMix = Math.max(0.88, Number(state.studioDraft.irisMix ?? 0.88));
+        const vcdIris = document.getElementById('vcd-iris-color');
+        if (vcdIris) vcdIris.value = hex;
+      } else if (key === 'lipColor' && Number(state.studioDraft.lipStrength ?? 0.65) < 0.25) {
         patch.lipStrength = 0.65;
         const sl = document.getElementById('slider-lip-strength');
         const vl = document.getElementById('val-lip-strength');
@@ -2703,6 +2842,19 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyLiveMaterialPatch(patch);
     });
   }
+
+  document.querySelectorAll('[data-studio-iris]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const hex = btn.dataset.studioIris;
+      if (!hex) return;
+      const colIris = document.getElementById('col-iris');
+      if (colIris) colIris.value = hex;
+      const vcdIris = document.getElementById('vcd-iris-color');
+      if (vcdIris) vcdIris.value = hex;
+      applyLiveMaterialPatch({ irisColor: hex, irisMix: 0.90 });
+      showToast(`👁️ 已切换虹膜瞳色：${btn.textContent.trim()} (${hex})`);
+    });
+  });
 
   const bindLiveMaterialSlider = (id, valId, key, fmt = 'pct') => {
     const el = document.getElementById(id);
@@ -2732,10 +2884,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindLiveMaterialSlider('slider-lip-strength', 'val-lip-strength', 'lipStrength', 'pct');
   bindLiveMaterialSlider('slider-lip-gloss', 'val-lip-gloss', 'lipGloss', 'pct');
   bindLiveMaterialSlider('slider-iris-mix', 'val-iris-mix', 'irisMix', 'pct');
+  bindLiveMaterialSlider('slider-iris-brightness', 'val-iris-brightness', 'irisBrightness', 'pct');
+  bindLiveMaterialSlider('slider-limbal-ring', 'val-limbal-ring', 'limbalRing', 'pct');
+  bindLiveMaterialSlider('slider-sclera-brightness', 'val-sclera-brightness', 'scleraBrightness', 'pct');
   bindLiveMaterialSlider('slider-brow-opacity', 'val-brow-opacity', 'browOpacity', 'pct');
   bindLiveMaterialSlider('slider-hair-highlight', 'val-hair-highlight', 'hairHighlightStrength', 'pct');
 
-  // Stage 36: Anti-Silicone Dermis, Eye Optics & 3D Photo Projection Sliders
+  // Stage 43: Anti-Silicone Dermis, Eye Optics & 3D Photo Projection Sliders
   bindLiveMaterialSlider('slider-pore-relief', 'val-pore-relief', 'poreRelief', 'pct');
   bindLiveMaterialSlider('slider-skin-roughness', 'val-skin-roughness', 'skinRoughness', 'dec');
   bindLiveMaterialSlider('slider-skin-mottle', 'val-skin-mottle', 'skinMottle', 'pct');
@@ -2745,6 +2900,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindLiveMaterialSlider('slider-iris-scale', 'val-iris-scale', 'irisScale', 'pct');
   bindLiveMaterialSlider('slider-pupil-size', 'val-pupil-size', 'pupilSize', 'pct');
   bindLiveMaterialSlider('slider-eye-catchlight', 'val-eye-catchlight', 'eyeCatchlight', 'pct');
+  bindLiveMaterialSlider('slider-eyelash-density', 'val-eyelash-density', 'eyelashDensity', 'pct');
   bindLiveMaterialSlider('slider-photo-proj', 'val-photo-proj', 'photoBlend', 'pct');
   bindLiveMaterialSlider('slider-photo-proj-scale', 'val-photo-proj-scale', 'photoProjScale', 'pct');
   bindLiveMaterialSlider('slider-photo-proj-x', 'val-photo-proj-x', 'photoProjOffsetX', 'signed');
@@ -3757,14 +3913,222 @@ window.addEventListener('DOMContentLoaded', async () => {
     showToast('🔄 已恢复默认书桌层架、摆件与收纳建筑！');
   });
 
-  // Stage 30: Quick Desktop Active Head Skin Material, Face Archetype, Multi-Head Blender & Eyebrow Style Switcher
+  // Stage 43: Quick Desktop Active Head Skin Material, Eye Size/Color, 4-Zone Modular Hair & Multi-Head Blender
   const getTargetDesktopPet = () => {
-    if (!desktopEngine || desktopEngine.pets.size === 0) return null;
-    if (desktopEngine.hoveredPetId && desktopEngine.pets.has(desktopEngine.hoveredPetId)) {
-      return desktopEngine.pets.get(desktopEngine.hoveredPetId);
-    }
-    return Array.from(desktopEngine.pets.values())[0];
+    const list = getTargetDesktopPetsList();
+    return list[0] || null;
   };
+
+  const syncVcdSelectedPetUI = (explicitPetId = null) => {
+    if (!desktopEngine || desktopEngine.pets.size === 0) return;
+    if (explicitPetId && desktopEngine.pets.has(explicitPetId)) {
+      state.activeStripPetId = explicitPetId;
+      const selEl = document.getElementById('vcd-target-pet-select');
+      if (selEl && selEl.value !== 'all') {
+        if ([...selEl.options].some(o => o.value === explicitPetId)) {
+          selEl.value = explicitPetId;
+          state.vcdTargetPetId = explicitPetId;
+        }
+      }
+    }
+    const pet = getTargetDesktopPet();
+    if (!pet || !pet.collectible) return;
+    const col = pet.collectible;
+    const m = { ...(col.morphs || {}), ...(pet.node?.userData?.morphs || {}) };
+    const badgeEl = document.getElementById('vcd-selected-pet-badge');
+    if (badgeEl) {
+      badgeEl.textContent = state.vcdTargetPetId === 'all'
+        ? `当前操作：全部在屏角色 (${desktopEngine.pets.size}尊)`
+        : `当前选中：${col.name.split('·')[0].trim()}`;
+    }
+    const skinEl = document.getElementById('vcd-skin-variant');
+    if (skinEl && col.skinVariant) skinEl.value = col.skinVariant;
+    const vcdSkinOld = document.getElementById('vcd-sel-skin-variant');
+    if (vcdSkinOld && col.skinVariant) vcdSkinOld.value = col.skinVariant;
+
+    const irisHex = col.irisColor || m.irisColor || '#3b2316';
+    const irisEl = document.getElementById('vcd-iris-color');
+    if (irisEl) irisEl.value = irisHex;
+
+    const setSliderUI = (sId, vId, val, fmt = 'signed') => {
+      const s = document.getElementById(sId);
+      const v = document.getElementById(vId);
+      const num = Number(val ?? 0);
+      if (s) s.value = String(num);
+      if (v) {
+        if (fmt === 'pct') v.textContent = `${Math.round(num * 100)}%`;
+        else v.textContent = `${num >= 0 ? '+' : ''}${num.toFixed(2)}`;
+      }
+    };
+    setSliderUI('vcd-eye-size', 'val-vcd-eye-size', m.eyeSize ?? col.eyeSize ?? 0.0, 'signed');
+    setSliderUI('vcd-eye-almond', 'val-vcd-eye-almond', m.eyeAlmond ?? 0.0, 'signed');
+    setSliderUI('vcd-eye-aperture', 'val-vcd-eye-aperture', m.eyeAperture ?? m.eyelidOpen ?? 0.0, 'signed');
+    setSliderUI('vcd-eye-tilt', 'val-vcd-eye-tilt', m.eyeTilt ?? 0.0, 'signed');
+    setSliderUI('vcd-eye-spacing', 'val-vcd-eye-spacing', m.eyeSpacing ?? 0.0, 'signed');
+    setSliderUI('vcd-iris-scale', 'val-vcd-iris-scale', m.irisScale ?? col.irisScale ?? 1.0, 'pct');
+    setSliderUI('vcd-pupil-size', 'val-vcd-pupil-size', m.pupilSize ?? col.pupilSize ?? 1.0, 'pct');
+    setSliderUI('vcd-iris-brightness', 'val-vcd-iris-brightness', m.irisBrightness ?? col.irisBrightness ?? 1.15, 'pct');
+    setSliderUI('vcd-limbal-ring', 'val-vcd-limbal-ring', m.limbalRing ?? col.limbalRing ?? 1.0, 'pct');
+    setSliderUI('vcd-sclera-brightness', 'val-vcd-sclera-brightness', m.scleraBrightness ?? col.scleraBrightness ?? 1.08, 'pct');
+
+    const hs = document.getElementById('vcd-hair-style');
+    if (hs && col.hairStyle) hs.value = col.hairStyle;
+    const ht = document.getElementById('vcd-hair-top');
+    if (ht) ht.value = col.topCrown || m.topCrown || 'default';
+    const hb = document.getElementById('vcd-hair-bangs');
+    if (hb) hb.value = col.frontBangs || m.frontBangs || 'default';
+    const hsl = document.getElementById('vcd-hair-sidelocks');
+    if (hsl) hsl.value = col.sideLocks || m.sideLocks || 'default';
+    const hbk = document.getElementById('vcd-hair-back');
+    if (hbk) hbk.value = col.backAttachment || m.backAttachment || 'none';
+  };
+  window.__syncVcdSelectedPetUI = syncVcdSelectedPetUI;
+
+  document.getElementById('vcd-target-pet-select')?.addEventListener('change', (e) => {
+    state.vcdTargetPetId = e.target.value;
+    if (e.target.value !== 'selected' && e.target.value !== 'all') {
+      state.activeStripPetId = e.target.value;
+    }
+    syncVcdSelectedPetUI();
+    if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+  });
+
+  const applySkinVariantToTargetPets = (skinId) => {
+    const skMeta = SKIN_MATERIAL_CATALOG.find(x => x.id === skinId);
+    const pets = getTargetDesktopPetsList();
+    if (!pets.length) return;
+    for (const pet of pets) {
+      const headGroup = pet.node || pet.headNode;
+      if (headGroup) {
+        if (skMeta?.skinTone) headGroup.userData.skinTone = skMeta.skinTone;
+        setHeadSkinVariant(headGroup, skinId);
+      }
+      pet.collectible.skinVariant = skinId;
+      if (skMeta?.skinTone) pet.collectible.skinTone = skMeta.skinTone;
+      pet.collectible.morphs = { ...(pet.collectible.morphs || {}), skinVariant: skinId };
+      const col = state.collectibles.find(c => c.id === pet.id);
+      if (col) {
+        col.skinVariant = skinId;
+        if (skMeta?.skinTone) col.skinTone = skMeta.skinTone;
+        col.morphs = { ...(col.morphs || {}), skinVariant: skinId };
+      }
+    }
+    persistCollectibles();
+    const s1 = document.getElementById('vcd-skin-variant');
+    const s2 = document.getElementById('vcd-sel-skin-variant');
+    if (s1) s1.value = skinId;
+    if (s2) s2.value = skinId;
+    desktopEngine.wakeRender(1.5, true);
+    desktopEngine.emitPetsChange();
+    const firstName = pets.length > 1 ? `全部 ${pets.length} 尊角色` : pets[0].collectible.name.split('·')[0].trim();
+    showToast(`🎨 已将「${firstName}」真皮贴图切换为：${skMeta ? skMeta.label : skinId}`);
+  };
+
+  document.getElementById('vcd-skin-variant')?.addEventListener('change', (e) => applySkinVariantToTargetPets(e.target.value));
+  document.getElementById('vcd-sel-skin-variant')?.addEventListener('change', (e) => applySkinVariantToTargetPets(e.target.value));
+
+  // Wire Quick Drawer Eye Color, Swatches & 10 Eye Size/Shape/Optics Sliders
+  const applyEyePatchToTargetPets = (patch = {}) => {
+    for (const pet of getTargetDesktopPetsList()) {
+      const headGroup = pet.node || pet.headNode;
+      if (!headGroup) continue;
+      headGroup.userData.morphs = {
+        ...(headGroup.userData.morphs || {}),
+        ...(pet.collectible?.morphs || {}),
+        ...patch,
+      };
+      if (patch.eyelidOpen !== undefined && patch.eyeAperture === undefined) {
+        headGroup.userData.morphs.eyeAperture = patch.eyelidOpen;
+      }
+      if (patch.eyeAperture !== undefined && patch.eyelidOpen === undefined) {
+        headGroup.userData.morphs.eyelidOpen = patch.eyeAperture;
+      }
+      applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
+      updateCollectibleMaterialsLive(headGroup, patch);
+      if (pet.collectible) {
+        Object.assign(pet.collectible, patch);
+        pet.collectible.morphs = { ...headGroup.userData.morphs };
+        const col = state.collectibles.find(c => c.id === pet.id);
+        if (col) {
+          Object.assign(col, patch);
+          col.morphs = { ...headGroup.userData.morphs };
+        }
+      }
+    }
+    if (studioEngine) {
+      Object.assign(state.studioDraft, patch);
+      Object.assign(state.studioDraft.morphs, patch);
+      studioEngine.updateMorphsFast(state.studioDraft.morphs);
+      studioEngine.updateMaterialsFast(patch);
+    }
+    if (desktopEngine) desktopEngine.wakeRender(1.5, true);
+  };
+
+  document.getElementById('vcd-iris-color')?.addEventListener('input', (e) => {
+    const hex = e.target.value;
+    const colIris = document.getElementById('col-iris');
+    if (colIris) colIris.value = hex;
+    applyEyePatchToTargetPets({ irisColor: hex, irisMix: 0.90 });
+  });
+  document.querySelectorAll('[data-vcd-iris]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const hex = btn.dataset.vcdIris;
+      if (!hex) return;
+      const vcdIris = document.getElementById('vcd-iris-color');
+      if (vcdIris) vcdIris.value = hex;
+      const colIris = document.getElementById('col-iris');
+      if (colIris) colIris.value = hex;
+      applyEyePatchToTargetPets({ irisColor: hex, irisMix: 0.92 });
+      showToast(`👁️ 已切换高透虹膜瞳色：${btn.textContent.trim()} (${hex})`);
+    });
+  });
+
+  for (const [sId, vId, key, fmt] of [
+    ['vcd-eye-size', 'val-vcd-eye-size', 'eyeSize', 'signed'],
+    ['vcd-eye-almond', 'val-vcd-eye-almond', 'eyeAlmond', 'signed'],
+    ['vcd-eye-aperture', 'val-vcd-eye-aperture', 'eyeAperture', 'signed'],
+    ['vcd-eye-tilt', 'val-vcd-eye-tilt', 'eyeTilt', 'signed'],
+    ['vcd-eye-spacing', 'val-vcd-eye-spacing', 'eyeSpacing', 'signed'],
+    ['vcd-iris-scale', 'val-vcd-iris-scale', 'irisScale', 'pct'],
+    ['vcd-pupil-size', 'val-vcd-pupil-size', 'pupilSize', 'pct'],
+    ['vcd-iris-brightness', 'val-vcd-iris-brightness', 'irisBrightness', 'pct'],
+    ['vcd-limbal-ring', 'val-vcd-limbal-ring', 'limbalRing', 'pct'],
+    ['vcd-sclera-brightness', 'val-vcd-sclera-brightness', 'scleraBrightness', 'pct'],
+  ]) {
+    document.getElementById(sId)?.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      const valEl = document.getElementById(vId);
+      if (valEl) {
+        valEl.textContent = fmt === 'pct' ? `${Math.round(v * 100)}%` : `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
+      }
+      applyEyePatchToTargetPets({ [key]: v });
+    });
+  }
+
+  // Base hairstyle switching inside Quick Drawer
+  document.getElementById('vcd-hair-style')?.addEventListener('change', async (e) => {
+    const newHairStyle = e.target.value;
+    const pets = getTargetDesktopPetsList();
+    for (const pet of pets) {
+      if (!pet?.collectible) continue;
+      pet.collectible.hairStyle = newHairStyle;
+      const col = state.collectibles.find(c => c.id === pet.id);
+      if (col) col.hairStyle = newHairStyle;
+      const savedPos = pet.pos ? pet.pos.clone() : null;
+      await desktopEngine.summonCollectible(pet.collectible);
+      const updatedPet = desktopEngine.pets.get(pet.id);
+      if (updatedPet && savedPos) {
+        updatedPet.pos.copy(savedPos);
+        updatedPet.targetPos.copy(savedPos);
+        updatedPet.node.position.copy(savedPos);
+      }
+    }
+    persistCollectibles();
+    desktopEngine.wakeRender(1.5, true);
+    const hp = REAL_HAIR_CATALOG.find(x => x.id === newHairStyle);
+    showToast(`💇‍♀️ 已切换完整主发型基底：${hp ? hp.label : newHairStyle}`);
+  });
+
   const syncVcdHeadBlendSliders = (headGroup) => {
     if (!headGroup) return;
     const blendState = getHeadBlendStateFromGroup(headGroup);
@@ -3776,30 +4140,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
     });
   };
-  document.getElementById('vcd-sel-skin-variant')?.addEventListener('change', (e) => {
-    const skinId = e.target.value;
-    const pet = getTargetDesktopPet();
-    if (!pet) return;
-    const headGroup = pet.node || pet.headNode;
-    const skMeta = SKIN_MATERIAL_CATALOG.find(x => x.id === skinId);
-    if (headGroup) {
-      if (skMeta?.skinTone) headGroup.userData.skinTone = skMeta.skinTone;
-      setHeadSkinVariant(headGroup, skinId);
-    }
-    pet.collectible.skinVariant = skinId;
-    if (skMeta?.skinTone) pet.collectible.skinTone = skMeta.skinTone;
-    pet.collectible.morphs = { ...(pet.collectible.morphs || {}), skinVariant: skinId };
-    const col = state.collectibles.find(c => c.id === pet.id);
-    if (col) {
-      col.skinVariant = skinId;
-      if (skMeta?.skinTone) col.skinTone = skMeta.skinTone;
-      col.morphs = { ...(col.morphs || {}), skinVariant: skinId };
-      persistCollectibles();
-    }
-    desktopEngine.wakeRender(1.5, true);
-    desktopEngine.emitPetsChange();
-    showToast(`🎨 已将「${pet.collectible.name.split('·')[0].trim()}」皮肤切换为：${skMeta ? skMeta.label : skinId}`);
-  });
   document.getElementById('vcd-sel-face-archetype')?.addEventListener('change', (e) => {
     const faceId = e.target.value;
     const pet = getTargetDesktopPet();
@@ -3915,26 +4255,32 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // ==========================================================================
-  // STAGE 35: MODULAR CUSTOM HAIR DESIGNER CONTROLS (Studio + Quick Drawer)
+  // STAGE 43: 4-ZONE MODULAR HAIR DESIGNER CONTROLS (Studio + Quick Drawer)
   // ==========================================================================
   const syncHairDesignControlsUI = (patch = {}) => {
+    if (patch.topCrown !== undefined) {
+      for (const id of ['sel-hair-top-crown', 'vcd-hair-top']) {
+        const el = document.getElementById(id);
+        if (el) el.value = patch.topCrown;
+      }
+    }
     if (patch.frontBangs !== undefined) {
-      const s1 = document.getElementById('sel-hair-bangs');
-      const s2 = document.getElementById('vcd-sel-hair-bangs');
-      if (s1) s1.value = patch.frontBangs;
-      if (s2) s2.value = patch.frontBangs;
+      for (const id of ['sel-hair-bangs', 'vcd-sel-hair-bangs', 'vcd-hair-bangs']) {
+        const el = document.getElementById(id);
+        if (el) el.value = patch.frontBangs;
+      }
     }
     if (patch.sideLocks !== undefined) {
-      const s1 = document.getElementById('sel-hair-sidelocks');
-      const s2 = document.getElementById('vcd-sel-hair-sidelocks');
-      if (s1) s1.value = patch.sideLocks;
-      if (s2) s2.value = patch.sideLocks;
+      for (const id of ['sel-hair-sidelocks', 'vcd-sel-hair-sidelocks', 'vcd-hair-sidelocks']) {
+        const el = document.getElementById(id);
+        if (el) el.value = patch.sideLocks;
+      }
     }
     if (patch.backAttachment !== undefined) {
-      const s1 = document.getElementById('sel-hair-back');
-      const s2 = document.getElementById('vcd-sel-hair-back');
-      if (s1) s1.value = patch.backAttachment;
-      if (s2) s2.value = patch.backAttachment;
+      for (const id of ['sel-hair-back', 'vcd-sel-hair-back', 'vcd-hair-back']) {
+        const el = document.getElementById(id);
+        if (el) el.value = patch.backAttachment;
+      }
     }
     if (patch.hairDyePreset !== undefined) {
       const s1 = document.getElementById('sel-hair-dye');
@@ -3984,20 +4330,23 @@ window.addEventListener('DOMContentLoaded', async () => {
       studioEngine.wakeRender(1.5, true);
     }
 
-    const pet = getTargetDesktopPet();
-    const headGroup = pet?.node || pet?.headNode;
-    if (headGroup) {
-      updateHairDesignOnGroup(headGroup, patch);
-      if (pet.collectible) {
-        Object.assign(pet.collectible, patch);
-        pet.collectible.morphs = { ...(pet.collectible.morphs || {}), ...patch };
-        const col = state.collectibles.find(c => c.id === pet.id);
-        if (col) {
-          Object.assign(col, patch);
-          col.morphs = { ...(col.morphs || {}), ...patch };
-          persistCollectibles();
+    for (const pet of getTargetDesktopPetsList()) {
+      const headGroup = pet?.node || pet?.headNode;
+      if (headGroup) {
+        updateHairDesignOnGroup(headGroup, patch);
+        if (pet.collectible) {
+          Object.assign(pet.collectible, patch);
+          pet.collectible.morphs = { ...(pet.collectible.morphs || {}), ...patch };
+          const col = state.collectibles.find(c => c.id === pet.id);
+          if (col) {
+            Object.assign(col, patch);
+            col.morphs = { ...(col.morphs || {}), ...patch };
+          }
         }
       }
+    }
+    persistCollectibles();
+    if (desktopEngine) {
       desktopEngine.wakeRender(1.5, true);
       desktopEngine.emitPetsChange();
     }
@@ -4005,25 +4354,32 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (toastMsg) showToast(toastMsg);
   };
 
-  for (const selId of ['sel-hair-bangs', 'vcd-sel-hair-bangs']) {
+  for (const selId of ['sel-hair-top-crown', 'vcd-hair-top']) {
+    document.getElementById(selId)?.addEventListener('change', (e) => {
+      const topId = e.target.value;
+      const tp = HAIR_TOP_CROWN_CATALOG.find(x => x.id === topId);
+      applyModularHairDesignPatch({ topCrown: topId }, `👑 已拼装顶冠/发缝基底模块：${tp ? tp.label : topId}`);
+    });
+  }
+  for (const selId of ['sel-hair-bangs', 'vcd-sel-hair-bangs', 'vcd-hair-bangs']) {
     document.getElementById(selId)?.addEventListener('change', (e) => {
       const bangsId = e.target.value;
       const bg = HAIR_FRONT_BANGS_CATALOG.find(x => x.id === bangsId);
       applyModularHairDesignPatch({ frontBangs: bangsId }, `✂️ 已拼装前额刘海模块：${bg ? bg.label : bangsId}`);
     });
   }
-  for (const selId of ['sel-hair-sidelocks', 'vcd-sel-hair-sidelocks']) {
+  for (const selId of ['sel-hair-sidelocks', 'vcd-sel-hair-sidelocks', 'vcd-hair-sidelocks']) {
     document.getElementById(selId)?.addEventListener('change', (e) => {
       const sideId = e.target.value;
       const sl = HAIR_SIDE_LOCKS_CATALOG.find(x => x.id === sideId);
       applyModularHairDesignPatch({ sideLocks: sideId }, `🎀 已拼装两侧鬓角模块：${sl ? sl.label : sideId}`);
     });
   }
-  for (const selId of ['sel-hair-back', 'vcd-sel-hair-back']) {
+  for (const selId of ['sel-hair-back', 'vcd-sel-hair-back', 'vcd-hair-back']) {
     document.getElementById(selId)?.addEventListener('change', (e) => {
       const backId = e.target.value;
       const bk = HAIR_BACK_ATTACHMENT_CATALOG.find(x => x.id === backId);
-      applyModularHairDesignPatch({ backAttachment: backId }, `🍡 已拼装后脑发饰组件：${bk ? bk.label : backId}`);
+      applyModularHairDesignPatch({ backAttachment: backId }, `🍡 已拼装后发/马尾/盘发模块：${bk ? bk.label : backId}`);
     });
   }
   for (const selId of ['sel-hair-dye', 'vcd-sel-hair-dye']) {
@@ -4058,7 +4414,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   // One-click Hair Design Combination Presets
   const HAIR_COMBO_PRESETS = {
     photo_scholar: {
-      label: '📸 照片同款轻盈空气碎刘海 + 耳畔碎发 + 青春高束发',
+      label: '📸 照片同款轻盈空气碎刘海 + 右耳露出/左耳碎发 + 高束马尾',
+      topCrown: 'close_natural',
       frontBangs: 'wispy_air',
       sideLocks: 'photo_wisp',
       backAttachment: 'high_ponytail',
@@ -4070,6 +4427,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     },
     hime_twinbuns: {
       label: '🎀 日系漫画齐刘海 + 公主切双鬓 + 元气双丸子发髻',
+      topCrown: 'center_part',
       frontBangs: 'hime_blunt',
       sideLocks: 'hime_cheek',
       backAttachment: 'twin_buns',
@@ -4080,10 +4438,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       hairWispyFeather: 0.35,
     },
     curtain_ombre: {
-      label: '✨ 韩系八字修颜长刘海 + 法式龙须卷 + 冷茶青棕渐变挑染',
+      label: '✨ 韩系八字修颜长刘海 + 法式龙须卷 + 披肩长波浪',
+      topCrown: 'high_cranial',
       frontBangs: 'curtain_part',
       sideLocks: 'wavy_tendril',
-      backAttachment: 'none',
+      backAttachment: 'draped_wave_back',
       hairDyePreset: 'cold_tea_ash',
       hairColor: '#181514',
       hairTipColor: '#4a3a2e',
@@ -4092,6 +4451,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     },
     classical_chignon: {
       label: '🎻 温柔斜分刘海 + 耳畔垂缕 + 古典温婉低盘发髻',
+      topCrown: 'side_part_left',
       frontBangs: 'side_swept',
       sideLocks: 'photo_wisp',
       backAttachment: 'low_chignon',
@@ -4103,6 +4463,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     },
     bare_ponytail: {
       label: '🌊 露额清爽无刘海 + 挽耳后 + 青春高扎马尾',
+      topCrown: 'slick_ponytail_crown',
       frontBangs: 'forehead_bare',
       sideLocks: 'tucked_ear',
       backAttachment: 'high_ponytail',
@@ -4269,8 +4630,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }, 1000);
 
-  // Stage 35: Boot into clean 85mm Studio Dual-Softbox HDR Portrait lighting (no dark muddy shadows on face!)
-  applyVisualConfigAndSyncUI({ presetId: 'cinema_85mm_portrait' }, true);
+  // Stage 43: Boot into DLSS-5 Neural Photorealistic Reconstruction preset
+  applyVisualConfigAndSyncUI({ presetId: 'dlss5_neural_photoreal' }, true);
+  syncVcdSelectedPetUI('SPEC-2026-FYP');
   renderPlacedStructuresList(desktopEngine.getPlacedStructuresList());
 
   // Arrange initial pets into the Study Companion shelf formation after initial load

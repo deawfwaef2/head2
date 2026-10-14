@@ -252,13 +252,192 @@
     </div>
 
     <div class="vcd-body">
+      <!-- 0. Stage 43 · Direct Selected Desktop Specimen Inspector: Eye Size/Color, Non-Repetitive Skin & 4-Zone Modular Hair -->
+      <div class="vcd-section" id="vcd-selected-pet-inspector" style="border:1px solid rgba(56,189,248,0.45);background:linear-gradient(145deg, rgba(12,24,44,0.88), rgba(26,18,42,0.82));">
+        <div class="vcd-sec-title" style="color:#7dd3fc;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+          <span>👁️💇‍♀️ 0. 当前桌面标本 · 眼睛大小/瞳色/8款异质真皮/4区完全模块化发型直调</span>
+          <span style="font-size:11px;color:#fde68a;font-weight:500;">💡 桌面连接标牌现已支持鼠标直接拖拽移动（双击标牌归位）</span>
+        </div>
+
+        <div class="field-row" style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <label>🎯 选择要实时调整的桌面头颅标本</label>
+            <select id="vcd-target-pet-select">
+              <option value="selected">🎯 当前选中标本 (点击桌面头模或标牌切换)</option>
+              <option value="SPEC-2026-FYP">📸 方尧平 · SPEC-2026-FYP (照片同款束发)</option>
+              <option value="SPEC-2026-000">🍑 初夏 · SPEC-2026-000 (波波短发内扣)</option>
+              <option value="SPEC-2026-001">❄️ 林汐 · SPEC-2026-001 (露额高贵盘发)</option>
+              <option value="all">🌐 同步应用到桌面全部在屏标本</option>
+            </select>
+          </div>
+          <div>
+            <label>🎨 8款真摄影异质皮肤材质 (告别千篇一律)</label>
+            <select id="vcd-skin-variant">
+              <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 (方尧平·右颊三颗星痣)</option>
+              <option value="kr_dewy_peach">🍑 韩系水光蜜桃肌 (初夏·粉白奶油卧蚕肌)</option>
+              <option value="kr_chaebol_cool">✨ 财阀千金冷白肌 (林汐·清冷瓷白梅子唇)</option>
+              <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 (零瑕净肌花瓣唇)</option>
+              <option value="cn_jiangnan_jade">🌙 江南古典羊脂玉肌 (温婉点绛唇)</option>
+              <option value="kr_firstlove_camellia">💖 韩系初恋雪瓷肌 (桃花腮红山茶唇)</option>
+              <option value="cn_intellectual_olive">❄️ 清冷高智象牙肌 (骨相修容干枯玫瑰)</option>
+              <option value="eurasian_velvet_rose">🌍 欧亚混血丝绒奶油肌 (深邃暖调裸玫瑰)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Eye Color Swatches + Picker -->
+        <div style="margin-top:8px;padding:8px;background:rgba(15,23,42,0.65);border:1px solid rgba(125,211,252,0.28);border-radius:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+            <span style="font-size:12px;font-weight:700;color:#bae6fd;">👁️ 眼睛大小 · 眼型弧度 · 虹膜瞳色 · 美瞳直径全维实时调节：</span>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#e2e8f0;">
+              自定义瞳色:
+              <input type="color" id="vcd-iris-color" value="#32221a" style="width:30px;height:22px;border:none;background:none;cursor:pointer;" />
+            </label>
+          </div>
+          <div class="vcd-preset-grid" id="vcd-iris-swatches" style="grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;">
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#32221a">🖤 深邃黑茶</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#68452c">🤎 琥珀浅棕</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#8a5e3b">🍯 蜜糖暖金</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#3e5c76">🌊 冰川灰蓝</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#4a6b5d">🍃 冷翠森绿</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#685278">🔮 微醺紫晶</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#7a4048">🍷 辰砂酒红</button>
+            <button type="button" class="vcd-preset-btn" data-iris-hex="#1a1618">🌑 极夜黑曜</button>
+          </div>
+          <div class="vcd-sliders">
+            <div class="slider-row">
+              <span>👁️ 眼睛整体大小缩放 (Eye Overall Size · 小鹿眼 ↔ 细长眼)</span>
+              <input type="range" id="vcd-eye-size" min="-1.40" max="1.40" step="0.04" value="0.10" />
+              <span id="val-vcd-eye-size">+0.10</span>
+            </div>
+            <div class="slider-row">
+              <span>↔️ 眼裂横向宽窄微调 (Eye Almond Width · 圆眼 ↔ 丹凤长眼)</span>
+              <input type="range" id="vcd-eye-almond" min="-1.40" max="1.40" step="0.04" value="0.08" />
+              <span id="val-vcd-eye-almond">+0.08</span>
+            </div>
+            <div class="slider-row">
+              <span>↕️ 眼睑上下开合度 (Vertical Aperture · 半阖微醺 ↔ 圆睁灵动)</span>
+              <input type="range" id="vcd-eye-aperture" min="-1.20" max="1.20" step="0.04" value="0.06" />
+              <span id="val-vcd-eye-aperture">+0.06</span>
+            </div>
+            <div class="slider-row">
+              <span>✨ 眼尾上挑/下垂弧度 (Canthal Tilt · 无辜狗狗眼 ↔ 狐狸吊梢眼)</span>
+              <input type="range" id="vcd-eye-tilt" min="-1.20" max="1.20" step="0.04" value="0.04" />
+              <span id="val-vcd-eye-tilt">+0.04</span>
+            </div>
+            <div class="slider-row">
+              <span>📏 眼距宽窄微调 (Inter-Eye Spacing · 紧凑聚焦 ↔ 宽距幼态)</span>
+              <input type="range" id="vcd-eye-spacing" min="-1.00" max="1.00" step="0.04" value="0.00" />
+              <span id="val-vcd-eye-spacing">+0.00</span>
+            </div>
+            <div class="slider-row">
+              <span>🔮 虹膜/美瞳直径缩放 (Iris Diameter · 露出干净眼白 ↔ 扩瞳美瞳)</span>
+              <input type="range" id="vcd-iris-scale" min="0.68" max="1.38" step="0.02" value="1.00" />
+              <span id="val-vcd-iris-scale">100%</span>
+            </div>
+            <div class="slider-row">
+              <span>⚫ 瞳孔收缩/散大比例 (Pupil Size · 针尖强光瞳 ↔ 散大深瞳)</span>
+              <input type="range" id="vcd-pupil-size" min="0.50" max="1.60" step="0.04" value="1.00" />
+              <span id="val-vcd-pupil-size">100%</span>
+            </div>
+            <div class="slider-row">
+              <span>☀️ 虹膜纤维通透亮度 (Iris Brightness · 琉璃透亮虹膜)</span>
+              <input type="range" id="vcd-iris-brightness" min="0.50" max="1.75" step="0.04" value="1.05" />
+              <span id="val-vcd-iris-brightness">105%</span>
+            </div>
+            <div class="slider-row">
+              <span>⭕ 美瞳外圈暗环深度 (Limbal Ring · 清纯深邃黑环)</span>
+              <input type="range" id="vcd-limbal-ring" min="0.00" max="1.15" step="0.04" value="0.72" />
+              <span id="val-vcd-limbal-ring">72%</span>
+            </div>
+            <div class="slider-row">
+              <span>⚪ 眼白清澈瓷白度 (Sclera Clarity · 润泽瓷白度)</span>
+              <input type="range" id="vcd-sclera-brightness" min="0.65" max="1.25" step="0.03" value="0.96" />
+              <span id="val-vcd-sclera-brightness">96%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-Zone Modular Hair Quick Assembler -->
+        <div style="margin-top:8px;padding:8px;background:rgba(28,18,40,0.65);border:1px solid rgba(244,114,182,0.32);border-radius:8px;">
+          <div style="font-size:12px;font-weight:700;color:#f9a8d4;margin-bottom:6px;">
+            ✂️ 4区完全模块化发型独立拼装 (颅顶发缝 + 前额刘海 + 两侧鬓角 + 后脑尾饰)：
+          </div>
+          <div class="field-row" style="margin-bottom:6px;">
+            <label>💇‍♀️ 基底发型主体模型 (28款精修模型·已全面清除下颌黑块与白三角伪影)</label>
+            <select id="vcd-hair-style">
+              <option value="hair_user_photo">📸 【方尧平照片同款】轻盈碎刘海+右耳露耳贴头皮束发马尾</option>
+              <option value="hair_bob01">🍑 【初夏同款】空气刘海内扣短波波头 (Toigo Feathered Bob)</option>
+              <option value="daz_hair_low_chignon">❄️ 【林汐同款】财阀千金露额中分温婉低盘发髻 (Low Chignon)</option>
+              <option value="hair_long01">🌊 东方高颅顶八字刘海柔顺黑长直 (Elvs Daisy Long)</option>
+              <option value="daz_hair_hime">🎀 国风清冷齐刘海姬发式公主切 (Cortu Straight Hime)</option>
+              <option value="daz_hair_curtain_wave">✨ 港风高颅顶八字刘海蓬松大波浪 (Curtain Wave)</option>
+              <option value="daz_hair_korean_bob">🍃 韩系氧气感C字内扣锁骨短发 (Korean Bob)</option>
+              <option value="daz_hair_sport_ponytail">🏃‍♀️ 青春高扎活力运动马尾 (Sport Ponytail)</option>
+              <option value="daz_hair_twin_buns">🍡 元气甜酷高颅顶双丸子头 (Twin Buns)</option>
+              <option value="daz_hair_twin_braids">🌿 学院风清纯双麻花垂辫 (Twin Braids)</option>
+              <option value="hair_braid01">🎻 新中式侧分高定古典盘发 (Classical Updo)</option>
+              <option value="none">💀 无发解剖态 (完整展露头颅与颈部横切面)</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div>
+              <label style="font-size:11px;color:#fbcfe8;">① 颅顶与发缝模块 (Crown)</label>
+              <select id="vcd-hair-top">
+                <option value="default">💇‍♀️ 基底原配颅顶</option>
+                <option value="photo_sleek_crown">📸 照片同款紧致贴头皮束发顶</option>
+                <option value="fluffy_high_crown">☁️ 韩系头包脸蓬松高颅顶</option>
+                <option value="center_part_crown">✨ 清冷八字中分颅顶</option>
+                <option value="side_part_crown">🍃 温婉三七大偏分颅顶</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#fbcfe8;">② 前额刘海模块 (Front Bangs)</label>
+              <select id="vcd-hair-bangs">
+                <option value="wispy_air">🌸 照片同款轻盈空气碎刘海</option>
+                <option value="default">💇‍♀️ 保留基底原配刘海</option>
+                <option value="curtain_part">✨ 韩系八字中分修颜长刘海</option>
+                <option value="hime_blunt">🎀 日系漫画感齐眉平刘海</option>
+                <option value="side_swept">🍃 温柔斜分微卷修饰刘海</option>
+                <option value="choppy_micro">⚡ 二次元眉上精灵碎刘海</option>
+                <option value="forehead_bare">💎 清爽露额无刘海 (手术级剔除前刘海)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#fbcfe8;">③ 两侧鬓角模块 (Side Locks)</label>
+              <select id="vcd-hair-sidelocks">
+                <option value="photo_wisp">📸 照片同款左鬓单缕垂丝(右耳露耳)</option>
+                <option value="default">💇‍♀️ 保留基底原配鬓角</option>
+                <option value="both_wisps">🌸 双侧对称耳前碎发垂缕</option>
+                <option value="hime_cheek">🎎 公主切贴颊双鬓齐下颌发束</option>
+                <option value="wavy_tendril">🌊 法式微卷龙须修饰鬓发</option>
+                <option value="tucked_ear">👂 双侧清爽挽耳后露双耳</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;color:#fbcfe8;">④ 后脑尾饰模块 (Back Hair)</label>
+              <select id="vcd-hair-back">
+                <option value="high_ponytail">🎀 照片同款青春高扎束发马尾</option>
+                <option value="low_ponytail">🌿 温婉知性低扎束发马尾</option>
+                <option value="low_chignon">🎻 古典名媛低盘发髻</option>
+                <option value="twin_buns">🍡 元气高颅顶双丸子头</option>
+                <option value="twin_braids">📚 学院风清纯双麻花垂辫</option>
+                <option value="cropped_nape">✂️ 清爽短发收拢后颈 (剔除披肩后发)</option>
+                <option value="none">💇‍♀️ 保留基底原配后发</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 1. Art Style, HDR Environment, Optical Blur/DOF & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🎬 1. 16套电影色调 · 4K全屏超清零模糊 · 强明暗发丝投影 · 35项光学与画质精调</div>
+        <div class="vcd-sec-title">🎬 1. 17套电影色调 · DLSS-5神经微距真皮重构 · 35项光学与画质精调</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
-          <button class="vcd-preset-btn" data-style-preset="ultra_4k_crystal_clear">🔪 4K超清零模糊光学大师(画质首推)</button>
-          <button class="vcd-preset-btn active" data-style-preset="cinema_85mm_portrait">🌞 盛夏逆光发丝超清写真(默认首推)</button>
-          <button class="vcd-preset-btn" data-style-preset="sunlit_hair_shadow_film">🎞️ 极致斜切强明暗发丝胶片</button>
+          <button class="vcd-preset-btn active" data-style-preset="dlss5_neural_photoreal">🧠 DLSS-5 神经渲染微距真皮(Stage43首推)</button>
+          <button class="vcd-preset-btn" data-style-preset="ultra_4k_crystal_clear">🔪 4K超清零模糊光学大师</button>
+          <button class="vcd-preset-btn" data-style-preset="cinema_85mm_portrait">📸 85mm 影棚光学微单人像</button>
+          <button class="vcd-preset-btn" data-style-preset="sunlit_hair_shadow_film">🌞 盛夏暖金树隙胶片写真</button>
           <button class="vcd-preset-btn" data-style-preset="korean_magazine_glow">✨ 韩系水光画报</button>
           <button class="vcd-preset-btn" data-style-preset="dreamy_promist_soft">☁️ 黑柔镜奶油柔焦</button>
           <button class="vcd-preset-btn" data-style-preset="kodak_portra_400">📷 柯达Portra400胶卷</button>
@@ -1196,13 +1375,48 @@
               </div>
             </div>
 
-            <!-- SUB-TAB 2: 18-AXIS FULL-RANGE CRANIOFACIAL & FEATURE SHAPE FINE-TUNING -->
+            <!-- SUB-TAB 2: 22-AXIS FULL-RANGE CRANIOFACIAL, EYE SIZE/SHAPE & FEATURE FINE-TUNING -->
             <div class="card-block studio-subtab-panel" data-subtab-panel="shape">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <h3 style="margin:0;">📐 模块 2：18轴全量程五官与头骨形状微调 (解锁100%幅度对齐原照)</h3>
+                <h3 style="margin:0;">📐 模块 2：22轴全量程眼睛大小/眼型与头骨形状微调 (解锁100%幅度对齐原照)</h3>
                 <button type="button" id="btn-reset-shape-morphs" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置五官形状</button>
               </div>
               <div class="control-group compact">
+                <div class="slider-row">
+                  <span>👁️ 眼睛整体大小缩放 (Eye Overall Size · 细窄眼(-) ↔ 小鹿大眼(+))</span>
+                  <input type="range" id="morph-eye-size" min="-1.40" max="1.40" step="0.02" value="0.08" />
+                  <span id="val-morph-eye-size">+0.08</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 杏眼横向放大(+) ↔ 细长丹凤眼(-)</span>
+                  <input type="range" id="morph-eye" min="-1.40" max="1.40" step="0.02" value="0.08" />
+                  <span id="val-morph-eye">+0.08</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 眼睑上下开合度 · 半阖微醺(-) ↔ 圆睁灵动(+)</span>
+                  <input type="range" id="morph-eyelid-open" min="-1.20" max="1.20" step="0.02" value="0.00" />
+                  <span id="val-morph-eyelid-open">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 眼尾上挑狐狸眼(+) ↔ 无辜下垂狗狗眼(-)</span>
+                  <input type="range" id="morph-eye-tilt" min="-1.20" max="1.20" step="0.02" value="0.04" />
+                  <span id="val-morph-eye-tilt">+0.04</span>
+                </div>
+                <div class="slider-row">
+                  <span>↔️ 眼距宽窄微调 · 紧凑聚焦(-) ↔ 宽距幼态(+)</span>
+                  <input type="range" id="morph-eye-spacing" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-eye-spacing">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>🔮 虹膜/美瞳直径大小缩放 (Iris Diameter · 68%–138%)</span>
+                  <input type="range" id="morph-iris-scale" min="0.68" max="1.38" step="0.02" value="1.00" />
+                  <span id="val-morph-iris-scale">100%</span>
+                </div>
+                <div class="slider-row">
+                  <span>⚫ 瞳孔收缩/散大比例 (Pupil Dilation · 50%–160%)</span>
+                  <input type="range" id="morph-pupil-size" min="0.50" max="1.60" step="0.02" value="1.00" />
+                  <span id="val-morph-pupil-size">100%</span>
+                </div>
                 <div class="slider-row">
                   <span>📐 下颌V脸收窄(+) ↔ 方颌骨感(-)</span>
                   <input type="range" id="morph-jaw" min="-1.00" max="1.00" step="0.02" value="0.04" />
@@ -1227,21 +1441,6 @@
                   <span>👃 鼻翼宽窄微调 · 秀气收窄(-) ↔ 宽鼻翼(+)</span>
                   <input type="range" id="morph-nose-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-nose-width">+0.00</span>
-                </div>
-                <div class="slider-row">
-                  <span>👁️ 杏眼放大灵动(+) ↔ 细长丹凤(-)</span>
-                  <input type="range" id="morph-eye" min="-1.00" max="1.00" step="0.02" value="0.08" />
-                  <span id="val-morph-eye">+0.08</span>
-                </div>
-                <div class="slider-row">
-                  <span>👁️ 眼尾上挑狐狸眼(+) ↔ 无辜下垂狗狗眼(-)</span>
-                  <input type="range" id="morph-eye-tilt" min="-1.00" max="1.00" step="0.02" value="0.04" />
-                  <span id="val-morph-eye-tilt">+0.04</span>
-                </div>
-                <div class="slider-row">
-                  <span>👁️ 眼睑开合度 · 半阖微醺(-) ↔ 圆睁(+)</span>
-                  <input type="range" id="morph-eyelid-open" min="-1.00" max="1.00" step="0.02" value="0.00" />
-                  <span id="val-morph-eyelid-open">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>✒️ 眉眼间距高低微调 · 压眉(-) ↔ 挑高(+)</span>
@@ -1304,7 +1503,7 @@
             <!-- SUB-TAB 3: REAL-TIME COLOR & MAKEUP GRADING STUDIO -->
             <div class="card-block studio-subtab-panel" data-subtab-panel="color">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <h3 style="margin:0;">🎨 模块 3：全维度颜色与妆容实时微调 (0ms GPU即时显色)</h3>
+                <h3 style="margin:0;">🎨 模块 3：全维度眼睛瞳色 · 肤色 · 妆容实时微调 (0ms GPU即时显色)</h3>
                 <button type="button" id="btn-reset-color-tuning" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置配色</button>
               </div>
               <div class="control-group compact">
@@ -1318,6 +1517,18 @@
                   <label>🖤 主体发色 <input type="color" id="col-hair" value="#121216" /></label>
                   <label>🎨 发梢渐变 <input type="color" id="col-hair-tip" value="#4a3528" /></label>
                   <label>⚡ 挑染高光 <input type="color" id="col-hair-highlight" value="#9e6b52" /></label>
+                </div>
+
+                <div class="preset-photo-row" id="studio-iris-swatches" style="margin-bottom:8px;flex-wrap:wrap;gap:4px;">
+                  <span>8款瞳色秒切:</span>
+                  <button type="button" class="chip-btn" data-studio-iris="#32221a">🖤 深邃黑茶</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#68452c">🤎 琥珀浅棕</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#8a5e3b">🍯 蜜糖暖金</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#3e5c76">🌊 冰川灰蓝</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#4a6b5d">🍃 冷翠森绿</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#685278">🔮 微醺紫晶</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#7a4048">🍷 辰砂酒红</button>
+                  <button type="button" class="chip-btn" data-studio-iris="#1a1618">🌑 极夜黑曜</button>
                 </div>
 
                 <div class="slider-row">
@@ -1357,8 +1568,23 @@
                 </div>
                 <div class="slider-row">
                   <span>👁️ 虹膜美瞳染色覆盖浓度</span>
-                  <input type="range" id="slider-iris-mix" min="0.00" max="1.00" step="0.05" value="0.42" />
-                  <span id="val-iris-mix">42%</span>
+                  <input type="range" id="slider-iris-mix" min="0.00" max="1.00" step="0.05" value="0.88" />
+                  <span id="val-iris-mix">88%</span>
+                </div>
+                <div class="slider-row">
+                  <span>☀️ 虹膜纤维通透亮度 (Iris Brightness)</span>
+                  <input type="range" id="slider-iris-brightness" min="0.50" max="1.75" step="0.05" value="1.05" />
+                  <span id="val-iris-brightness">105%</span>
+                </div>
+                <div class="slider-row">
+                  <span>⭕ 美瞳外圈暗环深度 (Limbal Ring)</span>
+                  <input type="range" id="slider-limbal-ring" min="0.00" max="1.15" step="0.05" value="0.72" />
+                  <span id="val-limbal-ring">72%</span>
+                </div>
+                <div class="slider-row">
+                  <span>⚪ 眼白清澈瓷白度 (Sclera Clarity)</span>
+                  <input type="range" id="slider-sclera-brightness" min="0.65" max="1.25" step="0.03" value="0.96" />
+                  <span id="val-sclera-brightness">96%</span>
                 </div>
                 <div class="slider-row">
                   <span>✒️ 3D眉毛显色浓淡透明度</span>
@@ -1373,7 +1599,7 @@
               <h3>🖼️ 模块 4：贴图与真实肤质微调 · 去硅胶感3D毛孔 · 照片直接投射</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>🎨 8款无皱纹年轻亚洲/中式/韩系/混血少女真摄影皮肤材质</label>
+                  <label>🎨 8款多源真摄影异质亚洲/韩系/混血少女皮肤材质 (彻底告别千篇一律)</label>
                   <select id="sel-skin-variant">
                     <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 · 19岁女状元方尧平右颊三颗痣原生肌</option>
                     <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 · 零皱纹清透无瑕少女原皮与花瓣唇</option>
@@ -1461,7 +1687,7 @@
                     <label>✦ 面部特征美人痣 / 泪痣位置切换</label>
                     <select id="sel-beauty-mark">
                       <option value="0" selected>默认跟随基底皮肤贴图</option>
-                      <option value="1">① 右颊三颗状元星痣 (方尧平/初夏特征)</option>
+                      <option value="1">① 右颊三颗状元星痣 (方尧平特征)</option>
                       <option value="2">② 左眼尾清冷泪痣 (林汐特征)</option>
                       <option value="3">③ 右眼下卧蚕泪痣 (苏晚特征)</option>
                       <option value="4">④ 鼻梁正中俏皮美人痣 (千雪特征)</option>
@@ -1469,19 +1695,24 @@
                     </select>
                   </div>
                   <div class="slider-row">
-                    <span>👁️ 虹膜美瞳直径大小缩放 (Iris Scale)</span>
-                    <input type="range" id="slider-iris-scale" min="0.78" max="1.28" step="0.02" value="1.00" />
+                    <span>👁️ 虹膜美瞳直径大小缩放 (Iris Scale · 68%–138%)</span>
+                    <input type="range" id="slider-iris-scale" min="0.68" max="1.38" step="0.02" value="1.00" />
                     <span id="val-iris-scale">100%</span>
                   </div>
                   <div class="slider-row">
                     <span>⚫ 瞳孔收缩/散大比例 (Pupil Dilation)</span>
-                    <input type="range" id="slider-pupil-size" min="0.55" max="1.55" step="0.05" value="1.00" />
+                    <input type="range" id="slider-pupil-size" min="0.50" max="1.60" step="0.05" value="1.00" />
                     <span id="val-pupil-size">100%</span>
                   </div>
                   <div class="slider-row">
                     <span>✨ 双点眼神光清澈亮度 (无白环雾化)</span>
                     <input type="range" id="slider-eye-catchlight" min="0.00" max="1.60" step="0.05" value="0.85" />
                     <span id="val-eye-catchlight">85%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🪶 睫毛浓密纤长度 (Eyelash Density)</span>
+                    <input type="range" id="slider-eyelash-density" min="0.15" max="1.25" step="0.05" value="0.85" />
+                    <span id="val-eyelash-density">85%</span>
                   </div>
                 </div>
 
@@ -1514,15 +1745,16 @@
 
             <!-- SUB-TAB 5: 28 MASTER ARTIST 3D HAIRSTYLES + MODULAR CUSTOM HAIR DESIGNER -->
             <div class="card-block studio-subtab-panel" data-subtab-panel="hair">
-              <h3>💇‍♀️ 模块 5：自由组合发型工坊 · 28款真发丝 + 模块拼装 + 12轴发丝微调</h3>
+              <h3>💇‍♀️ 模块 5：自由组合发型工坊 · 28款真发丝 + 4区完全模块拼装 + 12轴发丝微调</h3>
               <div class="control-group compact">
                 <div class="field-row">
-                  <label>① 选择基底 3D 发型（28 款 MakeHuman 大师精雕真发丝 · 双侧严密包覆耳鬓无空隙）</label>
+                  <label>① 选择基底 3D 发型（28 款 MakeHuman 大师精雕真发丝 · 已全面清除下颌黑块与白三角伪影）</label>
                   <select id="sel-hair-style">
-                    <option value="hair_user_photo" selected>【照片同款】状元方尧平/初夏同款 · 轻盈碎刘海自然披肩黑长发束发 (零露头皮)</option>
+                    <option value="hair_user_photo" selected>【方尧平照片同款】轻盈碎刘海+右耳露耳贴头皮束发马尾</option>
+                    <option value="hair_bob01">【初夏同款】空气刘海内扣短波波 (Toigo Feathered Bob)</option>
+                    <option value="daz_hair_low_chignon">【林汐同款】财阀千金露额中分温婉低盘发髻 (Low Chignon)</option>
                     <option value="hair_long01">【直发长发】东方高颅顶八字刘海柔顺黑长直 (Elvs Daisy Long)</option>
                     <option value="daz_hair_air_bangs_long">【直发长发】清透空气刘海披肩中长发 (Toigo Extended Lob)</option>
-                    <option value="hair_bob01">【短发波波】空气刘海内扣短波波 (Toigo Feathered Bob)</option>
                     <option value="hair_braid01">【古典盘发】新中式温婉侧分斜刘海高定盘发 (Elvs 50s Classical Updo)</option>
                     <option value="daz_hair_hime">【直发长发】国风清冷齐刘海姬发式公主切 (Cortu Straight Hime)</option>
                     <option value="daz_hair_curtain_wave">【卷发波浪】港风高颅顶八字刘海蓬松大波浪 (Elvs 80s Curtain Wave)</option>
@@ -1572,7 +1804,7 @@
                 <!-- Modular Hair Assembly Studio Block -->
                 <div style="background:linear-gradient(135deg, rgba(19, 28, 49, 0.78), rgba(38, 22, 46, 0.62));border:1px solid rgba(244, 114, 182, 0.36);border-radius:10px;padding:10px;margin-bottom:8px;">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-                    <span style="font-size:12px;font-weight:700;color:#f9a8d4;">✂️ ② 模块化自由拼装发型工坊 (任意混搭前额刘海 + 两侧鬓发 + 后脑马尾/盘发 + 渐变挑染)</span>
+                    <span style="font-size:12px;font-weight:700;color:#f9a8d4;">✂️ ② 4区完全模块化手术级拼装发型工坊 (独立拆换：颅顶发缝 + 前额刘海 + 两侧鬓角 + 后脑尾饰)</span>
                   </div>
                   <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
                     <button type="button" class="chip-btn active" data-hair-combo="photo_scholar">📸 照片同款碎刘海高束发</button>
@@ -1583,50 +1815,64 @@
                   </div>
                   <div class="two-col-inputs" style="margin-bottom:6px;">
                     <div>
-                      <label>✂️ 前额刘海自由拼装</label>
+                      <label>👑 模块① 颅顶与发缝 (Crown)</label>
+                      <select id="sel-hair-top-crown">
+                        <option value="photo_sleek_crown" selected>📸 照片同款紧致贴头皮束发顶</option>
+                        <option value="default">💇‍♀️ 保留基底原配颅顶</option>
+                        <option value="fluffy_high_crown">☁️ 韩系头包脸蓬松高颅顶</option>
+                        <option value="center_part_crown">✨ 清冷八字中分颅顶</option>
+                        <option value="side_part_crown">🍃 温婉三七大偏分颅顶</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>✂️ 模块② 前额刘海 (Front Bangs)</label>
                       <select id="sel-hair-bangs">
                         <option value="wispy_air" selected>🌸 照片同款轻盈空气碎刘海</option>
                         <option value="default">💇‍♀️ 保留基底发型原配刘海</option>
                         <option value="curtain_part">✨ 韩系八字中分修颜长刘海</option>
                         <option value="hime_blunt">🎀 日系漫画感齐眉平刘海</option>
                         <option value="side_swept">🍃 温柔斜分微卷修饰刘海</option>
+                        <option value="choppy_micro">⚡ 二次元眉上精灵碎刘海</option>
                         <option value="forehead_bare">💎 露额清爽无刘海 (掀起前额)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label>🎀 两侧鬓角修饰模块</label>
-                      <select id="sel-hair-sidelocks">
-                        <option value="photo_wisp" selected>🌸 照片同款耳畔碎发垂缕</option>
-                        <option value="default">💇‍♀️ 保留基底发型原配鬓角</option>
-                        <option value="hime_cheek">🎎 公主切贴颊双鬓长发束</option>
-                        <option value="wavy_tendril">🌊 法式微卷龙须修饰鬓发</option>
-                        <option value="tucked_ear">👂 清爽挽耳后露耳廓</option>
                       </select>
                     </div>
                   </div>
                   <div class="two-col-inputs" style="margin-bottom:6px;">
                     <div>
-                      <label>🍡 后脑束发/马尾/盘发组件</label>
-                      <select id="sel-hair-back">
-                        <option value="high_ponytail" selected>🎀 照片同款青春高扎束发马尾</option>
-                        <option value="none">🚫 无附加后发 (纯享基底发型)</option>
-                        <option value="low_chignon">🎻 温婉低盘发髻 (古典名媛)</option>
-                        <option value="twin_buns">🍡 元气高颅顶双丸子发髻</option>
-                        <option value="twin_braids">🌿 学院风清纯双麻花垂辫</option>
+                      <label>🎀 模块③ 两侧鬓角 (Side Locks)</label>
+                      <select id="sel-hair-sidelocks">
+                        <option value="photo_wisp" selected>🌸 照片同款左耳垂缕(右耳露耳)</option>
+                        <option value="default">💇‍♀️ 保留基底发型原配鬓角</option>
+                        <option value="both_wisps">🌸 双侧对称耳前碎发垂缕</option>
+                        <option value="hime_cheek">🎎 公主切贴颊双鬓长发束</option>
+                        <option value="wavy_tendril">🌊 法式微卷龙须修饰鬓发</option>
+                        <option value="tucked_ear">👂 清爽挽耳后露双耳廓</option>
                       </select>
                     </div>
                     <div>
-                      <label>🎨 双色渐变挑染配方</label>
-                      <select id="sel-hair-dye">
-                        <option value="natural_ebony" selected>🖤 原生乌木真黑发 (无挑染)</option>
-                        <option value="cold_tea_ash">🍵 冷茶青棕渐变染</option>
-                        <option value="caramel_mocha">☕ 焦糖摩卡暖棕染</option>
-                        <option value="sakura_rose_ombre">🌸 樱粉雾紫挂耳挑染</option>
-                        <option value="cyber_ice_blue">❄️ 极光冰蓝发尾挑染</option>
-                        <option value="crimson_velvet">🍷 黑丝绒暗红微醺染</option>
-                        <option value="moonlight_silver">🌙 月光白金渐变银发</option>
+                      <label>🍡 模块④ 后脑尾饰 (Back Hair)</label>
+                      <select id="sel-hair-back">
+                        <option value="high_ponytail" selected>🎀 照片同款青春高扎束发马尾</option>
+                        <option value="low_ponytail">🌿 温婉知性低扎束发马尾</option>
+                        <option value="none">🚫 保留基底原配后发</option>
+                        <option value="low_chignon">🎻 温婉低盘发髻 (古典名媛)</option>
+                        <option value="twin_buns">🍡 元气高颅顶双丸子发髻</option>
+                        <option value="twin_braids">🌿 学院风清纯双麻花垂辫</option>
+                        <option value="cropped_nape">✂️ 清爽短发收拢后颈</option>
                       </select>
                     </div>
+                  </div>
+                  <div class="field-row" style="margin-bottom:6px;">
+                    <label>🎨 双色渐变挑染配方</label>
+                    <select id="sel-hair-dye">
+                      <option value="natural_ebony" selected>🖤 原生乌木真黑发 (无挑染)</option>
+                      <option value="cold_tea_ash">🍵 冷茶青棕渐变染</option>
+                      <option value="caramel_mocha">☕ 焦糖摩卡暖棕染</option>
+                      <option value="sakura_rose_ombre">🌸 樱粉雾紫挂耳挑染</option>
+                      <option value="cyber_ice_blue">❄️ 极光冰蓝发尾挑染</option>
+                      <option value="crimson_velvet">🍷 黑丝绒暗红微醺染</option>
+                      <option value="moonlight_silver">🌙 月光白金渐变银发</option>
+                    </select>
                   </div>
                   <div class="slider-row">
                     <span>🌬️ 刘海与鬓角空气感碎发羽化度</span>
