@@ -2266,12 +2266,3 @@ body.pure-screen-mode #pet-hover-dossier {
 
 
 
-
-/* Stage 45 visual-QA fix: long control columns must not stretch the 3D canvas
-   beyond the visible window. Atlas stays below; no controls or data removed. */
-.studio-col-center { min-width: 0; align-self: start; position: sticky; top: 0; }
-.studio-col-center .viewport-card { height: auto; }
-.studio-col-center .studio-canvas-wrap {
-  flex: none; min-height: 280px; height: clamp(280px, calc(100dvh - 350px), 560px);
-}
-.studio-col-center .cam-preset-btns { flex-wrap: wrap; }

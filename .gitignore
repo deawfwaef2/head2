@@ -11,6 +11,3 @@ uploads/
 # Provided separately in the workspace; avoid double-storing large .blend in local Git.
 public/grooms/*.blend
 public/grooms/*.blend1
-
-# Dependency directory can be a temporary symlink in constrained environments.
-node_modules

@@ -1,11 +1,10 @@
 import { VISUAL_STYLE_PRESETS } from '../three/photorealLighting.js';
 import './visualRepair.css';
-import { STYLE_MODULES, STYLE_DEFAULTS, composeStyleModules, migratePhotographyRecipe } from './styleModules.js';
 
 // Independent, opt-in correction layer. Never write the original config/store.
 export const REPAIR_KEY = 'cervix3d-visual-repair-v1';
 export const DEFAULT_REPAIR = Object.freeze({
-  ...STYLE_DEFAULTS, enabled: false, neutral: false, neutralAmount: 1,
+  enabled: false, neutral: false, neutralAmount: 1,
   shadows: false, shadowAmount: .55, haze: false, hazeAmount: 1,
   clarity: false, clarityAmount: 1, exposureOn: false, exposure: 1,
   stopMotion: false, removeGobo: false, hideShelves: false,
@@ -15,7 +14,6 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 export function sanitizeRepair(value = {}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('方案格式不正确');
-  value = migratePhotographyRecipe(value);
   const result = { ...DEFAULT_REPAIR };
   for (const key of Object.keys(result)) {
     if (typeof result[key] === 'boolean') result[key] = value[key] === true;
@@ -33,8 +31,23 @@ const FX_DEFAULTS = { bloomStrength:.11, halation:.54, tyndall:.36, sunFlareVeil
 export function buildRepairConfig(original, options) {
   const source = { ...(VISUAL_STYLE_PRESETS[original.presetId] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait), ...original };
   const out = { ...original };
-  const modules = composeStyleModules(source, options);
-  Object.assign(source, modules); Object.assign(out, modules);
+  if (options.photoBaseline) {
+    // A reversible, neutral inspection baseline, not a promise of photorealism.
+    const photo = {
+      hdrMode:'softbox_portrait', keyColor:'#fffaf5', fillColor:'#e0e7ef',
+      rimColor:'#f3f5ff', hemiSky:'#ffffff', hemiGround:'#27292d',
+      keyIntensity:1.55, fillIntensity:0.72, rimIntensity:1.10,
+      hemiIntensity:0.34, upIntensity:0.12, envIntensity:0.30,
+      keyAzimuthDeg:-38, keyElevationDeg:30, exposure:1.0,
+      contrast:1.02, saturation:1, warmth:0, vignette:0.10,
+      sharpen:0, casSharpen:0.12, microContrast:0, shadowCrush:0,
+      shadowLift:0.06, specularClarity:0, filmLutStrength:0, vintagePhoto:0,
+      highlightRoll:0.18, skinGloss:0.18, sssIntensity:0.28,
+      poreReliefGlobal:0.32, eyeClarity:0.85, chiaroscuro:0.24,
+      irisSparkle:0, skinLumen:0, tint:[1,1,1], shadowTint:[0,0,0],
+    };
+    Object.assign(source,photo); Object.assign(out,photo);
+  }
   const number = (key, fallback) => Number.isFinite(Number(source[key])) ? Number(source[key]) : fallback;
   if (options.neutral) {
     const t=options.neutralAmount;
@@ -62,7 +75,7 @@ export function buildRepairConfig(original, options) {
 export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
   let options={...DEFAULT_REPAIR}, compare=false, opened=false, session=null, raf=0;
   let stored=null;
-  try { const record=JSON.parse(localStorage.getItem(REPAIR_KEY)||'null');if(record?.version===1) stored={name:String(record.name||'我的方案').slice(0,40),options:sanitizeRepair(record.options)}; } catch (error) { console.warn('画风方案读取失败：', error.message); }
+  try { const record=JSON.parse(localStorage.getItem(REPAIR_KEY)||'null');if(record?.version===1) stored={name:String(record.name||'我的方案').slice(0,40),options:sanitizeRepair(record.options)}; } catch (_) {}
   const adapters=[];
   const hidden=new Map();
   const isActive=()=>options.enabled&&!compare;
@@ -98,41 +111,35 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
   desktop.onStructuresUpdate=function(...args) {originalStructures.apply(this,args);sceneVisibility();};
   function flush() {if(raf)cancelAnimationFrame(raf);raf=0;for(const a of adapters)applyAdapter(a);sceneVisibility();sync();}
   function request() {if(!raf)raf=requestAnimationFrame(flush);sync();}
-  function change(patch) {options=sanitizeRepair({...options,...migratePhotographyRecipe(patch)});compare=false;request();}
+  function change(patch) {options=sanitizeRepair({...options,...patch});compare=false;request();}
 
   const host=document.createElement('div');host.id='visual-repair-root';
   const slider=(flag,key,title,note,min=0,max=1,step=.05)=>`<section class="vr-option"><label class="vr-option-label"><span><strong>${title}</strong><small>${note}</small></span><input type="checkbox" data-vr="${flag}" aria-label="${title}"><i aria-hidden="true"></i></label><div class="vr-range"><input type="range" data-vr="${key}" aria-label="${title}强度" min="${min}" max="${max}" step="${step}"><output data-output="${key}"></output></div></section>`;
-  const moduleControls=tab=>STYLE_MODULES.filter(m=>m.tab===tab).map(m=>slider(m.flag,m.amount,m.title,m.note)).join('');
   const toggle=(key,title,note)=>`<section class="vr-option"><label class="vr-option-label"><span><strong>${title}</strong><small>${note}</small></span><input type="checkbox" data-vr="${key}" aria-label="${title}"><i aria-hidden="true"></i></label></section>`;
   host.innerHTML=`
-    <div class="vr-mini" hidden><span class="vr-dot"></span><button data-action="open">画风调制器</button><span class="vr-divider"></span><button data-action="manager">工坊</button><button data-action="expand" title="恢复旧工具条">展开工具</button></div>
+    <div class="vr-mini" hidden><span class="vr-dot"></span><button data-action="open">画面修复器</button><span class="vr-divider"></span><button data-action="manager">工坊</button><button data-action="expand" title="恢复旧工具条">展开工具</button></div>
     <aside id="vr-panel" class="vr-panel" hidden role="dialog" aria-modal="false" aria-labelledby="vr-title">
-      <header class="vr-header"><div><span class="vr-eyebrow">STYLE MODULATOR / 02</span><h2 id="vr-title">画风调制器</h2><p>模块独立开关 · 不覆盖原预设</p></div><div class="vr-header-actions"><button data-action="dock" title="切换左 / 右停靠" aria-label="切换停靠侧">⇄</button><button data-action="cancel" title="取消本次调整并关闭" aria-label="关闭修复器">×</button></div></header>
-      <div class="vr-modebar"><label><input type="checkbox" data-vr="enabled">启用调制层</label><button id="vr-compare" data-action="compare" aria-pressed="false">A / 查看原画面</button></div>
+      <header class="vr-header"><div><span class="vr-eyebrow">VISUAL REPAIR / 01</span><h2 id="vr-title">画面修复器</h2><p>独立调整，不覆盖原预设。</p></div><div class="vr-header-actions"><button data-action="dock" title="切换左 / 右停靠" aria-label="切换停靠侧">⇄</button><button data-action="cancel" title="取消本次调整并关闭" aria-label="关闭修复器">×</button></div></header>
+      <div class="vr-modebar"><label><input type="checkbox" data-vr="enabled">启用修复层</label><button id="vr-compare" data-action="compare" aria-pressed="false">A / 查看原画面</button></div>
       <div class="vr-status" role="status" aria-live="polite"><span class="vr-dot"></span><span id="vr-state-text">原画面 · 未改动</span></div>
       <div class="vr-scroll">
         <div class="vr-section-heading"><h3>从一个方向开始</h3><span>点击预览 · 可撤销</span></div>
         <div class="vr-recipes">
-          <button data-recipe="photo"><span class="vr-swatch vr-swatch-clear"></span><strong>自然摄影</strong><small>中性布光 / 减轻油亮</small></button>
+          <button data-recipe="photo"><span class="vr-swatch vr-swatch-clear"></span><strong>摄影基准</strong><small>中性布光 / 克制毛孔</small></button>
           <button data-recipe="clear"><span class="vr-swatch vr-swatch-clear"></span><strong>清晰中性</strong><small>减暖黄 / 减雾光</small></button>
           <button data-recipe="portrait"><span class="vr-swatch vr-swatch-soft"></span><strong>柔和肖像</strong><small>补暗部 / 留柔焦</small></button>
           <button data-recipe="inspect"><span class="vr-swatch vr-swatch-inspect"></span><strong>模型检查</strong><small>静态光 / 无遮挡</small></button>
         </div>
-        <nav class="vr-tabs" aria-label="修复分类"><button data-tab="light" aria-pressed="true">光照</button><button data-tab="skin" aria-pressed="false">肤质</button><button data-tab="lens" aria-pressed="false">镜头</button><button data-tab="scene" aria-pressed="false">界面</button></nav>
+        <nav class="vr-tabs" aria-label="修复分类"><button data-tab="light" aria-pressed="true">光照</button><button data-tab="lens" aria-pressed="false">清晰度</button><button data-tab="scene" aria-pressed="false">遮挡与界面</button></nav>
         <div data-tabpanel="light">
-          ${moduleControls('light')}
           ${slider('neutral','neutralAmount','减轻暖黄色偏','中和灯色、胶片染色；不改皮肤贴图')}
           ${slider('shadows','shadowAmount','抬起暗部层次','增加补光，减轻头发与眼窝的死黑')}
           ${slider('exposureOn','exposure','单独调节曝光','保持模型与相机不变',.5,1.6,.02)}
+          ${toggle('photoBaseline','摄影检查基准','降低夸张毛孔、皮下红光和锐化；保留原皮肤贴图')}
           ${toggle('stopMotion','固定光照','暂停动态灯光和鼠标补光，便于比较')}
           ${toggle('removeGobo','移除图案投影','关闭脸部条纹 / 仿发丝投影，不动真实几何')}
         </div>
-        <div data-tabpanel="skin" hidden>
-          ${moduleControls('skin')}
-          <p class="vr-note">仅调材质响应，不捏脸、不磨皮、不替换贴图。眼睑贴合、眉毛和发片轮廓仍需高质量原始资产。</p>
-        </div>
         <div data-tabpanel="lens" hidden>
-          ${moduleControls('lens')}
           ${slider('haze','hazeAmount','减轻泛光与眩光','降低辉光、漏光、光晕、雾滴与装饰散景')}
           ${slider('clarity','clarityAmount','减轻模糊','降低柔焦、边缘模糊、色散和颗粒')}
           <p class="vr-note" id="vr-post-note">这些选项调节现有后处理，不会自动打开后处理或提升画质档位。</p>
@@ -144,12 +151,12 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
           <p class="vr-note">隐藏不是重新排布。拖动、碰撞与保存的建筑位置保持原样。</p>
         </div>
         <details class="vr-library"><summary>我的方案 <span id="vr-saved-name">尚未保存</span></summary><div class="vr-library-body"><label>方案名称<input id="vr-recipe-name" type="text" maxlength="40" value="我的画面修复" autocomplete="off"></label><div class="vr-file-actions"><button data-action="save">保存方案</button><button data-action="load">载入方案</button><button data-action="export">导出 JSON</button><button data-action="import">导入 JSON</button><input id="vr-import" type="file" accept=".json,application/json" hidden></div><p class="vr-note">方案单独保存。下次启动不自动开启；旧画面、藏品与模型不会被覆盖。</p></div></details>
-        <p class="vr-footnote">WebGL 实时材质调节，不是 NVIDIA DLSS、神经重建或离线路径追踪。调制不能修复模型轮廓与眼睑拓扑。</p>
+        <p class="vr-footnote">调节不能重建发丝或改变模型精度。先消除遮挡与滤镜，再判断资产质量。</p>
       </div>
       <footer class="vr-footer"><button data-action="reset">恢复原画面</button><button data-action="cancel">取消本次</button><button class="vr-primary" data-action="apply">应用并收起</button></footer>
     </aside>`;
   document.body.append(host);
-  const launch=document.createElement('button');launch.id='btn-visual-repair';launch.className='overlay-btn';launch.textContent='◐ 画风调制器';launch.title='可选、可撤销；不覆盖原画面';launch.setAttribute('aria-controls','vr-panel');launch.setAttribute('aria-expanded','false');
+  const launch=document.createElement('button');launch.id='btn-visual-repair';launch.className='overlay-btn';launch.textContent='◐ 画面修复器';launch.title='可选、可撤销；不覆盖原画面';launch.setAttribute('aria-controls','vr-panel');launch.setAttribute('aria-expanded','false');
   document.querySelector('#desktop-overlay-bar .overlay-actions')?.prepend(launch);
   const panel=host.querySelector('#vr-panel');
   const announce=message=>{host.querySelector('#vr-state-text').textContent=message;};
@@ -159,13 +166,13 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
   launch.addEventListener('click',()=>opened?close(true):open());
   function sync() {
     const count=Object.keys(DEFAULT_REPAIR).filter(k=>k!=='enabled'&&typeof DEFAULT_REPAIR[k]==='boolean'&&options[k]).length;
-    host.querySelector('#vr-state-text').textContent=compare?'A · 正在查看原画面':!options.enabled?'原画面 · 调制层未启用':`B · 调制预览 · ${count} 项调整`;
+    host.querySelector('#vr-state-text').textContent=compare?'A · 正在查看原画面':!options.enabled?'原画面 · 修复层未启用':`B · 修复预览 · ${count} 项调整`;
     panel.dataset.active=String(isActive());
     host.querySelector('#vr-compare').disabled=!options.enabled;
     host.querySelector('#vr-compare').setAttribute('aria-pressed',String(compare));
-    host.querySelector('#vr-compare').textContent=compare?'B / 返回调制预览':'A / 查看原画面';
+    host.querySelector('#vr-compare').textContent=compare?'B / 返回修复预览':'A / 查看原画面';
     for(const input of host.querySelectorAll('[data-vr]')) {
-      const key=input.dataset.vr;if(input.type==='checkbox')input.checked=options[key];else {input.value=options[key];const flag=STYLE_MODULES.find(m=>m.amount===key)?.flag || {neutralAmount:'neutral',shadowAmount:'shadows',hazeAmount:'haze',clarityAmount:'clarity',exposure:'exposureOn'}[key];input.disabled=!options[flag];host.querySelector(`[data-output="${key}"]`).textContent=key==='exposure'?options[key].toFixed(2):Math.round(options[key]*100)+'%';}
+      const key=input.dataset.vr;if(input.type==='checkbox')input.checked=options[key];else {input.value=options[key];const flag={neutralAmount:'neutral',shadowAmount:'shadows',hazeAmount:'haze',clarityAmount:'clarity',exposure:'exposureOn'}[key];input.disabled=!options[flag];host.querySelector(`[data-output="${key}"]`).textContent=key==='exposure'?options[key].toFixed(2):Math.round(options[key]*100)+'%';}
     }
     host.querySelector('.vr-mini').hidden=!(isActive()&&options.compactUI);
     host.querySelector('#vr-saved-name').textContent=stored?stored.name:'尚未保存';
@@ -180,12 +187,12 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
     catch(_){announce('浏览器无法保存，请导出 JSON 备份');}
   }
   const recipes={
-    photo:{photoLighting:true,photoTone:true,skinResponse:true,microDetail:true,skinMatte:true,haze:true,hazeAmount:1,clarity:true,clarityAmount:1,stopMotion:true,removeGobo:true},
+    photo:{photoBaseline:true,haze:true,hazeAmount:1,clarity:true,clarityAmount:1,stopMotion:true,removeGobo:true},
     clear:{neutral:true,neutralAmount:1,shadows:true,shadowAmount:.65,haze:true,hazeAmount:1,clarity:true,clarityAmount:.9,stopMotion:true,removeGobo:true},
     portrait:{neutral:true,neutralAmount:.8,shadows:true,shadowAmount:.5,haze:true,hazeAmount:.8,clarity:true,clarityAmount:.6,stopMotion:true,removeGobo:true},
     inspect:{neutral:true,neutralAmount:1,shadows:true,shadowAmount:.7,haze:true,hazeAmount:1,clarity:true,clarityAmount:1,stopMotion:true,removeGobo:true,hideShelves:true,compactUI:true,hideLabels:true},
   };
-  host.addEventListener('input',event=>{const key=event.target.dataset.vr;if(!key)return;change({[key]:event.target.type==='checkbox'?event.target.checked:Number(event.target.value)});});
+  host.addEventListener('input',event=>{const key=event.target.dataset.vr;if(!key)return;change({[key]:event.target.type==='checkbox'?event.target.checked:Number(event.target.value),...(key==='enabled'?{}:{enabled:true})});});
   host.addEventListener('click',event=>{
     const button=event.target.closest('button');if(!button)return;
     if(button.dataset.tab){host.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));host.querySelectorAll('[data-tabpanel]').forEach(p=>p.hidden=p.dataset.tabpanel!==button.dataset.tab);return;}
@@ -193,12 +200,12 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
     switch(button.dataset.action){
       case 'open':open();break;
       case 'cancel':close(true);break;
-      case 'apply':close();notify('画风调制已应用；可随时关闭恢复原设置。');break;
+      case 'apply':close();notify('画面修复层已应用；可随时关闭恢复原设置。');break;
       case 'compare':compare=!compare;request();break;
       case 'dock':panel.classList.toggle('vr-left');break;
       case 'reset':change({...DEFAULT_REPAIR});break;
       case 'save':save();break;
-      case 'load':if(stored){change(stored.options);host.querySelector('#vr-recipe-name').value=stored.name;}break;
+      case 'load':if(stored){change({...stored.options,enabled:true});host.querySelector('#vr-recipe-name').value=stored.name;}break;
       case 'manager':document.getElementById('btn-toggle-window')?.click();break;
       case 'expand':change({compactUI:false});break;
       case 'import':host.querySelector('#vr-import').click();break;
@@ -207,7 +214,7 @@ export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
   });
   host.querySelector('#vr-import').addEventListener('change',async event=>{
     const file=event.target.files?.[0];if(!file)return;
-    try {if(file.size>65536)throw new Error('方案文件过大');const data=JSON.parse(await file.text());if(data.version!==1||!data.options)throw new Error('不支持的方案版本');const imported=sanitizeRepair(data.options);host.querySelector('#vr-recipe-name').value=String(data.name||'导入方案').slice(0,40);change(imported);announce('已导入为预览 · 应用前可取消');}
+    try {if(file.size>65536)throw new Error('方案文件过大');const data=JSON.parse(await file.text());if(data.version!==1||!data.options)throw new Error('不支持的方案版本');const imported=sanitizeRepair(data.options);host.querySelector('#vr-recipe-name').value=String(data.name||'导入方案').slice(0,40);change({...imported,enabled:true});announce('已导入为预览 · 应用前可取消');}
     catch(error){announce(`导入失败：${error.message}`);}finally{event.target.value='';}
   });
   window.addEventListener('keydown',event=>{if(event.key==='Escape'&&opened){close(true);event.stopImmediatePropagation();}},true);

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
 import { refineArtistHairCards } from './hairCardSubdivision.js';
-import { fitArtistHairOutsideScalp } from './hairScalpFit.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
@@ -139,6 +138,49 @@ function parseGlbBuffer(buffer) {
   });
 }
 
+let _builtinHeadTemplatePromise = null;
+async function getBuiltinHeadSceneClone(buf) {
+  if (!_builtinHeadTemplatePromise) {
+    _builtinHeadTemplatePromise = parseGlbBuffer(buf).then((gltf) => {
+      gltf.scene.traverse((c) => {
+        if (!c.isMesh) return;
+        if (c.geometry) {
+          c.geometry.userData = c.geometry.userData || {};
+          c.geometry.userData.sharedBuiltinGeo = true;
+        }
+        const mats = Array.isArray(c.material) ? c.material : [c.material];
+        for (const m of mats) {
+          if (!m) continue;
+          for (const v of Object.values(m)) {
+            if (v?.isTexture) {
+              v.userData = v.userData || {};
+              v.userData.sharedSkinMicro = true;
+            }
+          }
+        }
+      });
+      return gltf;
+    });
+  }
+  const templateGltf = await _builtinHeadTemplatePromise;
+  const clonedScene = templateGltf.scene.clone(true);
+  clonedScene.traverse((c) => {
+    if (!c.isMesh) return;
+    if (c.morphTargetInfluences) {
+      c.morphTargetInfluences = [...c.morphTargetInfluences];
+    }
+    if (c.morphTargetDictionary) {
+      c.morphTargetDictionary = { ...c.morphTargetDictionary };
+    }
+    const matName = c.material?.name || c.name;
+    if (c.name === 'Eyebrows' || matName === 'Eyebrow') {
+      c.geometry = c.geometry.clone();
+      c.geometry.userData = { ...(c.geometry.userData || {}), sharedBuiltinGeo: false };
+    }
+  });
+  return { scene: clonedScene };
+}
+
 function textureDimensions(texture) {
   const image = texture?.image || texture?.source?.data;
   return {
@@ -244,17 +286,17 @@ function fitImportedHead(scene) {
 }
 
 const PRESET_MORPH_BIASES = {
-  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: -0.18, chinLength: -0.08, cheekSoftness: 0.32, noseBridge: 0.04, noseWidth: 0.08, eyeSize: 0.18, eyeAperture: 0.14, eyeAlmond: 0.12, eyeTilt: 0.02, eyeSpacing: 0.02, lipFullness: 0.10, mouthSmile: 0.18 },
-  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.32, chinLength: -0.34, cheekSoftness: 0.62, noseBridge: -0.14, noseWidth: 0.04, eyeSize: 0.64, eyeAperture: 0.42, eyeAlmond: -0.28, eyeTilt: -0.24, eyeSpacing: 0.08, lipFullness: 0.38, mouthSmile: 0.12 },
-  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.32, chinLength: -0.34, cheekSoftness: 0.62, noseBridge: -0.14, noseWidth: 0.04, eyeSize: 0.64, eyeAperture: 0.42, eyeAlmond: -0.28, eyeTilt: -0.24, eyeSpacing: 0.08, lipFullness: 0.38, mouthSmile: 0.12 },
-  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.68, chinLength: 0.24, cheekSoftness: -0.36, noseBridge: 0.46, noseWidth: -0.28, eyeSize: 0.06, eyeAperture: -0.06, eyeAlmond: 0.56, eyeTilt: 0.52, eyeSpacing: -0.06, lipFullness: -0.12, mouthSmile: -0.06 },
-  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.68, chinLength: 0.24, cheekSoftness: -0.36, noseBridge: 0.46, noseWidth: -0.28, eyeSize: 0.06, eyeAperture: -0.06, eyeAlmond: 0.56, eyeTilt: 0.52, eyeSpacing: -0.06, lipFullness: -0.12, mouthSmile: -0.06 },
-  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.34, chinLength: 0.14, cheekSoftness: 0.12, noseBridge: 0.22, noseWidth: -0.18, eyeSize: 0.24, eyeAperture: 0.10, eyeAlmond: 0.28, eyeTilt: 0.12, eyeSpacing: 0.04, lipFullness: 0.16, mouthSmile: 0.04 },
-  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.34, chinLength: 0.14, cheekSoftness: 0.12, noseBridge: 0.22, noseWidth: -0.18, eyeSize: 0.24, eyeAperture: 0.10, eyeAlmond: 0.28, eyeTilt: 0.12, eyeSpacing: 0.04, lipFullness: 0.16, mouthSmile: 0.04 },
-  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.46, chinLength: -0.12, cheekSoftness: 0.38, noseBridge: 0.18, noseWidth: -0.14, eyeSize: 0.48, eyeAperture: 0.28, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.02, lipFullness: 0.28, mouthSmile: 0.0 },
-  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.46, chinLength: -0.12, cheekSoftness: 0.38, noseBridge: 0.18, noseWidth: -0.14, eyeSize: 0.48, eyeAperture: 0.28, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.02, lipFullness: 0.28, mouthSmile: 0.0 },
-  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.42, chinLength: 0.28, cheekSoftness: -0.42, noseBridge: 0.52, noseWidth: -0.22, eyeSize: 0.14, eyeAperture: 0.04, eyeAlmond: 0.44, eyeTilt: 0.28, eyeSpacing: -0.04, lipFullness: 0.18, mouthSmile: 0.22 },
-  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.42, chinLength: 0.28, cheekSoftness: -0.42, noseBridge: 0.52, noseWidth: -0.22, eyeSize: 0.14, eyeAperture: 0.04, eyeAlmond: 0.44, eyeTilt: 0.28, eyeSpacing: -0.04, lipFullness: 0.18, mouthSmile: 0.22 },
+  fangyaoping:      { faceArchetype: 'cn_oval_scholar', eyebrowStyle: 'cn_scholar_natural', skinVariant: 'cn_scholar_natural', jawVLine: -0.08, chinLength: -0.04, cheekSoftness: 0.16, noseBridge: 0.04, noseWidth: 0.04, eyeSize: 0.12, eyeAperture: 0.0, eyeAlmond: 0.08, eyeTilt: -0.04, eyeSpacing: 0.0, lipFullness: 0.08, mouthSmile: 0.06 },
+  user_photo:       { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.22, chinLength: -0.18, cheekSoftness: 0.28, noseBridge: -0.08, noseWidth: 0.04, eyeSize: 0.28, eyeAperture: 0.0, eyeAlmond: -0.12, eyeTilt: -0.16, eyeSpacing: 0.04, lipFullness: 0.24, mouthSmile: 0.08 },
+  chuxia:           { faceArchetype: 'cn_round_babyface', eyebrowStyle: 'kr_straight_mist', skinVariant: 'kr_dewy_peach', jawVLine: -0.22, chinLength: -0.18, cheekSoftness: 0.28, noseBridge: -0.08, noseWidth: 0.04, eyeSize: 0.28, eyeAperture: 0.0, eyeAlmond: -0.12, eyeTilt: -0.16, eyeSpacing: 0.04, lipFullness: 0.24, mouthSmile: 0.08 },
+  female_realistic: { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.28, chinLength: 0.14, cheekSoftness: -0.18, noseBridge: 0.24, noseWidth: -0.14, eyeSize: -0.06, eyeAperture: 0.0, eyeAlmond: 0.26, eyeTilt: 0.26, eyeSpacing: -0.02, lipFullness: -0.08, mouthSmile: -0.04 },
+  linxi:            { faceArchetype: 'kr_idol_vline', eyebrowStyle: 'kr_idol_arch', skinVariant: 'kr_chaebol_cool', jawVLine: 0.28, chinLength: 0.14, cheekSoftness: -0.18, noseBridge: 0.24, noseWidth: -0.14, eyeSize: -0.06, eyeAperture: 0.0, eyeAlmond: 0.26, eyeTilt: 0.26, eyeSpacing: -0.02, lipFullness: -0.08, mouthSmile: -0.04 },
+  female_2:         { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.18, chinLength: 0.08, cheekSoftness: 0.08, noseBridge: 0.14, noseWidth: -0.10, eyeSize: 0.14, eyeAperture: 0.0, eyeAlmond: 0.18, eyeTilt: 0.08, eyeSpacing: 0.02, lipFullness: 0.12, mouthSmile: 0.04 },
+  suwan:            { faceArchetype: 'cn_classical_melon', eyebrowStyle: 'cn_willow_classical', skinVariant: 'cn_jiangnan_jade', jawVLine: 0.18, chinLength: 0.08, cheekSoftness: 0.08, noseBridge: 0.14, noseWidth: -0.10, eyeSize: 0.14, eyeAperture: 0.0, eyeAlmond: 0.18, eyeTilt: 0.08, eyeSpacing: 0.02, lipFullness: 0.12, mouthSmile: 0.04 },
+  female_3:         { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.22, chinLength: -0.08, cheekSoftness: 0.22, noseBridge: 0.10, noseWidth: -0.08, eyeSize: 0.24, eyeAperture: 0.0, eyeAlmond: 0.06, eyeTilt: -0.10, eyeSpacing: 0.02, lipFullness: 0.18, mouthSmile: 0.04 },
+  qianxue:          { faceArchetype: 'kr_sweet_heart', eyebrowStyle: 'kr_sweet_droop', skinVariant: 'kr_firstlove_camellia', jawVLine: 0.22, chinLength: -0.08, cheekSoftness: 0.22, noseBridge: 0.10, noseWidth: -0.08, eyeSize: 0.24, eyeAperture: 0.0, eyeAlmond: 0.06, eyeTilt: -0.10, eyeSpacing: 0.02, lipFullness: 0.18, mouthSmile: 0.04 },
+  female_gentle:    { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.20, chinLength: 0.16, cheekSoftness: -0.20, noseBridge: 0.26, noseWidth: -0.12, eyeSize: 0.06, eyeAperture: 0.0, eyeAlmond: 0.22, eyeTilt: 0.18, eyeSpacing: -0.02, lipFullness: 0.10, mouthSmile: 0.08 },
+  shenzhiwei:       { faceArchetype: 'cn_cold_royal', eyebrowStyle: 'cn_cold_sword', skinVariant: 'cn_intellectual_olive', jawVLine: 0.20, chinLength: 0.16, cheekSoftness: -0.20, noseBridge: 0.26, noseWidth: -0.12, eyeSize: 0.06, eyeAperture: 0.0, eyeAlmond: 0.22, eyeTilt: 0.18, eyeSpacing: -0.02, lipFullness: 0.10, mouthSmile: 0.08 },
 };
 
 /**
@@ -262,18 +304,19 @@ const PRESET_MORPH_BIASES = {
  * Zero `browDown` so eyebrows never scowl or press down into the upper eyelids!
  */
 const EYEBROW_STYLE_TO_MH_ASSET = {
-  cn_scholar_natural:  { assetId: 'eyebrow012', browDown: 0.0, browUp: 0.12 },
-  kr_straight_mist:    { assetId: 'eyebrow001', browDown: 0.0, browUp: 0.15 },
-  kr_idol_arch:        { assetId: 'eyebrow010', browDown: 0.0, browUp: 0.22 },
-  cn_willow_classical: { assetId: 'eyebrow002', browDown: 0.0, browUp: 0.18 },
-  kr_sweet_droop:      { assetId: 'eyebrow004', browDown: 0.0, browUp: 0.10 },
-  cn_cold_sword:       { assetId: 'eyebrow003', browDown: 0.0, browUp: 0.28 },
-  kr_wild_feathered:   { assetId: 'eyebrow005', browDown: 0.0, browUp: 0.16 },
-  cn_tang_moth:        { assetId: 'eyebrow008', browDown: 0.0, browUp: 0.12 },
+  cn_scholar_natural:  { assetId: 'eyebrow012', browDown: 0.0, browUp: 0.08 },
+  kr_straight_mist:    { assetId: 'eyebrow001', browDown: 0.0, browUp: 0.10 },
+  kr_idol_arch:        { assetId: 'eyebrow010', browDown: 0.0, browUp: 0.16 },
+  cn_willow_classical: { assetId: 'eyebrow002', browDown: 0.0, browUp: 0.12 },
+  kr_sweet_droop:      { assetId: 'eyebrow004', browDown: 0.0, browUp: 0.06 },
+  cn_cold_sword:       { assetId: 'eyebrow003', browDown: 0.0, browUp: 0.18 },
+  kr_wild_feathered:   { assetId: 'eyebrow005', browDown: 0.0, browUp: 0.12 },
+  cn_tang_moth:        { assetId: 'eyebrow008', browDown: 0.0, browUp: 0.08 },
 };
 
 /**
- * Stage 44 · Orthogonalized 7-Channel Craniofacial Target Weights per Archetype
+ * Stage 44 · Clean Zero-Distortion Default Archetype Weights
+ * Follows standing user rule: "模型各种预设默认不要混合，混合很多脸看上去违和怪异不好看"
  */
 const PURE_ZERO_BLEND = {
   blend_asian_youth: 0.0,
@@ -286,16 +329,16 @@ const PURE_ZERO_BLEND = {
 };
 
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
-  cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.38, blend_cn_scholar: 0.42 } },
-  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.30, blend_cn_baby: 0.72 } },
-  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.72, blend_cn_melon: 0.25 } },
-  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.22, blend_cn_melon: 0.68 } },
-  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.22, blend_kr_vline: 0.62 } },
-  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.74, blend_kr_vline: 0.22 } },
-  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.55 } },
-  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.32, blend_kr_vline: 0.48 } },
-  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.52, blend_cn_baby: 0.36 } },
-  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.78, blend_cn_royal: 0.22 } },
+  cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND } },
+  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.18 } },
+  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.22 } },
+  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.20 } },
+  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.16 } },
+  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.18 } },
+  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.20 } },
+  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.18 } },
+  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.18 } },
+  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.25 } },
 };
 
 let realWebAssetsPromise = null;
@@ -332,7 +375,30 @@ async function ensureRealWebAssetsLoaded(glbBuffer) {
         const img = new Image();
         img.onload = () => {
           URL.revokeObjectURL(url);
-          const tex = new THREE.Texture(img);
+          let texSource = img;
+          if (!isOpaque && typeof document !== 'undefined') {
+            try {
+              const c = document.createElement('canvas');
+              c.width = img.width || 256;
+              c.height = img.height || 256;
+              const ctx = c.getContext('2d');
+              ctx.drawImage(img, 0, 0, c.width, c.height);
+              const imgData = ctx.getImageData(0, 0, c.width, c.height);
+              const d = imgData.data;
+              for (let i = 0; i < d.length; i += 4) {
+                const aNorm = d[i + 3] / 255.0;
+                // Lift near-black MakeHuman eyebrow pixels to natural soft charcoal-taupe
+                // and feather alpha so eyebrows never render as heavy pitch-black blocks!
+                d[i]     = Math.min(255, Math.round(92 + d[i] * 0.45));
+                d[i + 1] = Math.min(255, Math.round(74 + d[i + 1] * 0.42));
+                d[i + 2] = Math.min(255, Math.round(68 + d[i + 2] * 0.40));
+                d[i + 3] = Math.min(220, Math.round(Math.pow(aNorm, 1.35) * 185));
+              }
+              ctx.putImageData(imgData, 0, 0);
+              texSource = c;
+            } catch (_) {}
+          }
+          const tex = new THREE.Texture(texSource);
           tex.flipY = false;
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = 16;
@@ -397,9 +463,10 @@ function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natu
       child.userData.isEyebrowMesh = true;
       if (asset.texture && child.material) {
         child.material.map = asset.texture;
-        child.material.alphaTest = 0.015;
+        child.material.alphaTest = 0.0;
+        child.material.alphaToCoverage = false;
         child.material.transparent = true;
-        child.material.opacity = Math.min(1.0, Number(rootGroup.userData.browOpacity ?? 0.92));
+        child.material.opacity = Math.min(0.88, Number(rootGroup.userData.browOpacity ?? 0.78));
         if (rootGroup.userData.browColor) {
           child.material.color.set(rootGroup.userData.browColor);
         }
@@ -677,7 +744,6 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       out[i3 + 2] = z;
     }
 
-    if (child.material?.userData?.builtInHair) fitArtistHairOutsideScalp(geo, rootGroup.getObjectByName('HeadSkinMesh'));
     posAttr.needsUpdate = true;
     // CRITICAL RULE: NEVER call raw geo.computeVertexNormals() on UV-split hair cards!
     // Raw computeVertexNormals() creates flat faceted triangles across UV seams (causing white triangle glare).
@@ -786,11 +852,11 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   // Stage 43: Full-range [-1.5, +1.5] facial, cranial & 14-parameter eye shape/optics fine-tuning
   const clampHarmony = (val, maxAbs = 1.35) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
 
-  const jawV = clampHarmony(m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine));
-  const chin = clampHarmony(m.chinLength ?? bias.chinLength);
+  const jawV = clampHarmony((m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine)) + 0.24);
+  const chin = clampHarmony((m.chinLength ?? bias.chinLength) - 0.08);
   const cheek = clampHarmony(m.cheekSoftness ?? m.cheekboneFullness ?? bias.cheekSoftness);
   const nose = clampHarmony(m.noseBridge ?? m.noseBridgeHeight ?? bias.noseBridge);
-  const noseW = clampHarmony(m.noseWidth ?? (-nose * 0.35));
+  const noseW = clampHarmony((m.noseWidth ?? (-nose * 0.35)) - 0.24);
   // Keep eyeSize and eyeAlmond independent so eyeSize is NEVER shadowed when eyeAlmond === 0!
   const eyeSizeVal = clampHarmony(m.eyeSize ?? 0.0, 1.5);
   const eyeApertureVal = clampHarmony(m.eyeAperture ?? 0.0, 1.5);
@@ -800,7 +866,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const eyeSpacingVal = clampHarmony(m.eyeSpacing ?? 0.0, 1.2);
   const eyelidOpen = clampHarmony(m.eyelidOpen ?? 0, 1.5);
   const browH = clampHarmony(m.browHeight ?? 0);
-  const lip = clampHarmony(m.lipFullness ?? bias.lipFullness, 0.95);
+  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14, 0.95);
   const mouthSmile = clampHarmony(m.mouthSmile ?? 0, 0.95);
   const forehead = clampHarmony(m.foreheadHeight ?? 0, 0.95);
   const ear = clampHarmony(m.earSize ?? 0, 0.95);
@@ -816,37 +882,38 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const jawSideVal = Math.max(0, Math.min(0.85, Number(m.jawSide ?? 0)));
   const tongueOutVal = Math.max(0, Math.min(0.85, Number(m.tongueOut ?? 0)));
   const eyeRollUpVal = Math.max(0, Math.min(0.85, Number(m.eyeRollUp ?? 0)));
-  const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? 0) + Math.max(0, -eyelidOpen * 0.72) + Math.max(0, -eyeApertureVal * 0.72)));
-  const eyeWideVal = Math.max(0, Math.min(1.35, Number(m.eyeWide ?? 0) + Math.max(0, eyelidOpen * 0.78) + Math.max(0, eyeApertureVal * 0.92) + Math.max(0, eyeSizeVal * 0.42)));
+  const calmLidRelax = exprId === 'dead_calm' ? 0.08 : 0.0;
+  const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? calmLidRelax) + Math.max(0, -eyelidOpen * 0.72) + Math.max(0, -eyeApertureVal * 0.65)));
+  const eyeWideVal = Math.max(0, Math.min(0.65, Number(m.eyeWide ?? 0) + Math.max(0, eyelidOpen * 0.65) + Math.max(0, eyeApertureVal * 0.55)));
 
   const targetWeights = {
     // 7 Distinct DAZ-Style Complete 3D Head Models + 2 Brow Bone Channels (encoded in int16 * 32767.0)
-    mh_head_asian_youth: wAsianYouth * 1.05,
-    mh_head_oval:        wCnScholar * 1.15,
-    mh_head_round:       wCnBaby * 1.15,
-    mh_head_heart:       wKrVline * 1.15,
-    mh_head_melon:       wCnMelon * 1.15,
-    mh_head_diamond:     wCnRoyal * 1.15,
-    mh_head_eurasian:    wEurasian * 1.25,
-    mh_brow_down:        Math.max(0, Number(browSpec.browDown ?? 0) + Math.max(0, -browH * 0.85)),
-    mh_brow_up:          Math.max(0, Number(browSpec.browUp ?? 0) + Math.max(0, browH * 0.85)),
-    // Official MakeHuman Base `.target` Sliders (full range unlocked)
-    face_jaw_width_decr: jawV > 0 ? jawV * 0.92 : 0,
-    face_jaw_width_incr: jawV < 0 ? -jawV * 0.92 : 0,
-    face_chin_incr: chin > 0 ? chin * 0.92 : 0,
-    face_chin_decr: chin < 0 ? -chin * 0.92 : 0,
-    face_cheekbones_incr: cheek > 0 ? cheek * 0.92 : 0,
-    face_cheekbones_decr: cheek < 0 ? -cheek * 0.92 : 0,
-    face_nose_height_incr: nose > 0 ? nose * 0.92 : 0,
-    face_nose_height_decr: nose < 0 ? -nose * 0.92 : 0,
-    face_nose_width_incr: noseW > 0 ? noseW * 0.88 : 0,
-    face_nose_width_decr: noseW < 0 ? -noseW * 0.88 : 0,
-    face_eye_size_incr: eye > 0 ? eye * 1.08 : 0,
-    face_eye_size_decr: eye < 0 ? -eye * 1.08 : 0,
-    face_eye_tilt_incr: eyeTilt > 0 ? eyeTilt * 0.95 : 0,
-    face_eye_tilt_decr: eyeTilt < 0 ? -eyeTilt * 0.95 : 0,
-    face_lips_incr: lip > 0 ? lip * 0.78 : 0,
-    face_lips_decr: lip < 0 ? -lip * 0.78 : 0,
+    mh_head_asian_youth: wAsianYouth * 0.65,
+    mh_head_oval:        wCnScholar * 0.55,
+    mh_head_round:       wCnBaby * 0.52,
+    mh_head_heart:       wKrVline * 0.58,
+    mh_head_melon:       wCnMelon * 0.58,
+    mh_head_diamond:     wCnRoyal * 0.52,
+    mh_head_eurasian:    wEurasian * 0.65,
+    mh_brow_down:        Math.max(0, Number(browSpec.browDown ?? 0) + Math.max(0, -browH * 0.75)),
+    mh_brow_up:          Math.max(0, Number(browSpec.browUp ?? 0) + Math.max(0, browH * 0.75)),
+    // Official MakeHuman Base `.target` Sliders (harmonious range)
+    face_jaw_width_decr: jawV > 0 ? jawV * 0.85 : 0,
+    face_jaw_width_incr: jawV < 0 ? -jawV * 0.85 : 0,
+    face_chin_incr: chin > 0 ? chin * 0.85 : 0,
+    face_chin_decr: chin < 0 ? -chin * 0.85 : 0,
+    face_cheekbones_incr: cheek > 0 ? cheek * 0.85 : 0,
+    face_cheekbones_decr: cheek < 0 ? -cheek * 0.85 : 0,
+    face_nose_height_incr: nose > 0 ? nose * 0.85 : 0,
+    face_nose_height_decr: nose < 0 ? -nose * 0.85 : 0,
+    face_nose_width_incr: noseW > 0 ? noseW * 0.82 : 0,
+    face_nose_width_decr: noseW < 0 ? -noseW * 0.82 : 0,
+    face_eye_size_incr: eye > 0 ? eye * 0.78 : 0,
+    face_eye_size_decr: eye < 0 ? -eye * 0.78 : 0,
+    face_eye_tilt_incr: eyeTilt > 0 ? eyeTilt * 0.85 : 0,
+    face_eye_tilt_decr: eyeTilt < 0 ? -eyeTilt * 0.85 : 0,
+    face_lips_incr: lip > 0 ? lip * 0.72 : 0,
+    face_lips_decr: lip < 0 ? -lip * 0.72 : 0,
     face_mouth_width_decr: 0,
     face_mouth_width_incr: 0,
     face_forehead_incr: forehead > 0 ? forehead * 0.82 : 0,
@@ -1021,7 +1088,7 @@ export function disposeHeadNode(node) {
   const geometries = new Set(), materials = new Set(), textures = new Set();
   node.traverse(child => {
     if (!child.isMesh) return;
-    if (child.geometry) geometries.add(child.geometry);
+    if (child.geometry && !child.geometry.userData?.sharedBuiltinGeo) geometries.add(child.geometry);
     for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
       if (!material) continue;
       materials.add(material);
@@ -1292,7 +1359,6 @@ async function loadModularDonorMeshes(donorSpec) {
         const m = new THREE.Mesh(subGeo, child.material);
         m.name = `Modular_${donorSpec.style}`;
         m.userData.isModularPart = true;
-        m.userData.hairSourceStyle = donorSpec.style;
         meshes.push(m);
       }
     });
@@ -1369,9 +1435,9 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     });
 
     // Stage 43 · 4-Zone Surgical Modular Hair Assembly (Crown / Front Bangs / Side Locks / Back Attachment)
-    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || (MODULAR_BANGS_DONORS[frontBangsStyle] && MODULAR_BANGS_DONORS[frontBangsStyle].style !== resolvedStyle));
-    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || (MODULAR_SIDELOCKS_DONORS[sideLocksStyle] && MODULAR_SIDELOCKS_DONORS[sideLocksStyle].style !== resolvedStyle));
-    const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || (MODULAR_BACK_DONORS[backAttachmentStyle] && MODULAR_BACK_DONORS[backAttachmentStyle].style !== resolvedStyle));
+    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle);
+    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || MODULAR_SIDELOCKS_DONORS[sideLocksStyle]?.style !== resolvedStyle);
+    const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || MODULAR_BACK_DONORS[backAttachmentStyle]?.style !== resolvedStyle);
 
     const bangsDonor = (frontBangsStyle !== 'default' && frontBangsStyle !== 'forehead_bare' && MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle)
       ? MODULAR_BANGS_DONORS[frontBangsStyle]
@@ -1383,17 +1449,11 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       ? MODULAR_BACK_DONORS[backAttachmentStyle]
       : null;
 
-    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
-      loadModularDonorMeshes(bangsDonor),
-      loadModularDonorMeshes(sideDonor),
-      loadModularDonorMeshes(backDonor),
-    ]);
-
     if (stripFrontBangs || stripSideLocks || stripBackDrape) {
       loadedScene.traverse((child) => {
         if (!child.isMesh || !child.geometry?.attributes?.position) return;
         let geo = child.geometry;
-        if (stripFrontBangs && (frontBangsStyle === 'forehead_bare' || bangsMeshes.length)) {
+        if (stripFrontBangs) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => z > 0.048 && y > 0.012 && y < 0.086 && Math.abs(x) < 0.056,
@@ -1401,7 +1461,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           );
           if (trimmed) geo = trimmed;
         }
-        if (stripSideLocks && (sideLocksStyle === 'tucked_ear' || sideMeshes.length)) {
+        if (stripSideLocks) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => Math.abs(x) > 0.046 && z > 0.002 && z < 0.068 && y > -0.058 && y < 0.042,
@@ -1409,7 +1469,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           );
           if (trimmed) geo = trimmed;
         }
-        if (stripBackDrape && (backAttachmentStyle === 'cropped_nape' || backMeshes.length)) {
+        if (stripBackDrape) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => z < -0.018 && y < 0.025,
@@ -1421,6 +1481,11 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       });
     }
 
+    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
+      loadModularDonorMeshes(bangsDonor),
+      loadModularDonorMeshes(sideDonor),
+      loadModularDonorMeshes(backDonor),
+    ]);
     for (const m of [...bangsMeshes, ...sideMeshes, ...backMeshes]) {
       loadedScene.add(m);
     }
@@ -1459,7 +1524,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         totalVerts += g.attributes.position.count;
         totalTris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
       }
-      if (!customAsset) updateArtistHairFlow(g, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
+      if (!customAsset) updateArtistHairFlow(g, resolvedStyle === 'daz_hair_asym_short');
       const configureMaterial = original => {
         // Imported GLBs retain artist PBR textures, material slots and alpha modes.
         // Never turn an imported multi-material groom into one black material.
@@ -1486,7 +1551,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         });
         material.userData.builtInHair = true;
         configureHairSheen(material, sheenIntensity);
-        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short' });
+        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: resolvedStyle === 'daz_hair_asym_short' });
         return material;
       };
       child.material = Array.isArray(child.material)
@@ -1688,8 +1753,8 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       #include <map_fragment>
       {
         float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
-        vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0179) + uGazeOffset * 0.0045;
-        vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0061 * clamp(uIrisScale, 0.65, 1.42));
+        vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0186) + uGazeOffset * 0.0045;
+        vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0065 * clamp(uIrisScale, 0.65, 1.42));
         float rIris = length(relXY);
         float inIris = 1.0 - smoothstep(0.88, 1.03, rIris);
         float pupilRadius = 0.34 * clamp(uPupilScale, 0.45, 1.65);
@@ -1738,13 +1803,13 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       vec3 nEye = normalize(normal);
 
       float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
-      vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0179) + uGazeOffset * 0.0045;
-      vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0061 * clamp(uIrisScale, 0.65, 1.42));
+      vec2 eyeCenter = vec2(eyeSide * (0.0285 + uEyeSpacing * 0.0024), 0.0186) + uGazeOffset * 0.0045;
+      vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0065 * clamp(uIrisScale, 0.65, 1.42));
       float rIris = length(relXY);
       float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
 
       // 1. Soft Physiological Eyelid Ambient Occlusion (NEVER creates a dark eyeliner band across the open eye!)
-      float upperLidAO = smoothstep(0.0245, 0.0198, vEyeLocalPos.y);
+      float upperLidAO = smoothstep(0.0252, 0.0205, vEyeLocalPos.y);
       float lowerLidAO = smoothstep(0.0112, 0.0142, vEyeLocalPos.y);
       float cornerAO = 1.0 - 0.16 * smoothstep(1.05, 1.95, abs(relXY.x));
       float orbitalAO = clamp((0.80 + 0.20 * upperLidAO) * (0.90 + 0.10 * lowerLidAO) * cornerAO, 0.72, 1.0);
@@ -1781,15 +1846,13 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.24, 2.0));
       reflectedLight.directDiffuse += (uIrisColor * clamp(uIrisBrightness, 0.5, 1.7) * 0.72 + vec3(0.24, 0.14, 0.08)) * causticZone * inIris * 0.82 * eyeGoboAtten;
 
-      // Crisp Pinpoint Studio Catchlights & Tear-Film Meniscus Specular (uCorneaWetness)
+      // Crisp Pinpoint Studio Catchlights (uCorneaWetness) — zero artificial horizontal lower stripe!
       float wetFactor = clamp(uCorneaWetness, 0.2, 1.5);
-      float uvCatch1 = exp(-(pow((relXY.x + 0.30) / 0.095, 2.0) + pow((relXY.y - 0.32) / 0.088, 2.0)));
-      float uvCatch2 = exp(-(pow((relXY.x - 0.32) / 0.052, 2.0) + pow((relXY.y + 0.28) / 0.052, 2.0)));
-      float meniscusBand = exp(-pow((vEyeLocalPos.y - 0.0144) / 0.00055, 2.0)) * (1.0 - smoothstep(0.95, 1.45, abs(relXY.x)));
-      vec3 wetCatchlight = (vec3(2.25, 2.22, 2.18) * uvCatch1 + vec3(1.18, 1.20, 1.26) * uvCatch2)
-                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8) * wetFactor * (0.45 + 0.55 * eyeGoboAtten)
-                         + vec3(0.65, 0.62, 0.60) * meniscusBand * wetFactor * 0.42;
-      float specKeep = mix(0.10, 0.26, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
+      float uvCatch1 = exp(-(pow((relXY.x + 0.28) / 0.088, 2.0) + pow((relXY.y - 0.28) / 0.082, 2.0)));
+      float uvCatch2 = exp(-(pow((relXY.x - 0.30) / 0.048, 2.0) + pow((relXY.y + 0.26) / 0.048, 2.0)));
+      vec3 wetCatchlight = (vec3(2.15, 2.12, 2.08) * uvCatch1 + vec3(1.08, 1.10, 1.16) * uvCatch2)
+                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8) * wetFactor * (0.45 + 0.55 * eyeGoboAtten);
+      float specKeep = mix(0.08, 0.24, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
       reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight * upperLidAO;
       reflectedLight.indirectSpecular *= specKeep;
       `
@@ -2053,9 +2116,9 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: browMap,
         color: new THREE.Color(browColHex),
         transparent: true,
-        opacity: browOp,
-        alphaTest: 0.02,
-        alphaToCoverage: true,
+        opacity: Math.min(0.88, browOp * 0.80),
+        alphaTest: 0.0,
+        alphaToCoverage: false,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
@@ -2257,13 +2320,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.skinBrightness !== undefined) u.uSkinBrightness.value = Number(m.skinBrightness);
       if (m.skinRosiness !== undefined) u.uSkinRosiness.value = Number(m.skinRosiness);
       if (m.poreScale !== undefined && u.uPoreScale) u.uPoreScale.value = Number(m.poreScale);
-      if (m.poreRelief !== undefined) {
-        // Character edits update the base, not the temporary modulated result.
-        const basePore = Number(m.poreRelief);
-        mat.userData.baseVisualPoreRelief = basePore;
-        const factor = mat.userData.visualPoreFactor;
-        u.uPoreRelief.value = factor !== undefined ? Math.min(1, basePore * factor) : basePore;
-      }
+      if (m.poreRelief !== undefined) u.uPoreRelief.value = Number(m.poreRelief);
       if (m.tZoneOiliness !== undefined && u.uTZoneOiliness) u.uTZoneOiliness.value = Number(m.tZoneOiliness);
       if (m.specularLobe !== undefined && u.uSpecularLobe) u.uSpecularLobe.value = Number(m.specularLobe);
       if (m.charSssDepth !== undefined && u.uCharSssDepth) u.uCharSssDepth.value = Number(m.charSssDepth);
@@ -2277,7 +2334,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
 
       if (m.skinRoughness !== undefined) {
         const rVal = Math.max(0.18, Math.min(0.88, Number(m.skinRoughness)));
-        mat.roughness = THREE.MathUtils.lerp(rVal, Math.max(rVal, 0.54), mat.userData.visualMatteAmount || 0);
+        mat.roughness = rVal;
         mat.userData.customSkinRoughness = rVal;
       }
       if (m.normalMapStrength !== undefined && mat.normalScale) {

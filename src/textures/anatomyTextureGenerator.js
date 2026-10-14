@@ -535,8 +535,14 @@ export function renderAnatomyCrossSectionToCanvas(canvas, options = {}) {
   }
 }
 
+const _anatomyTexCache = new Map();
+
 export function createAnatomyTextures(options = {}) {
-  const size = 1024;
+  const cacheKey = `${options.skinColor || '#ffe9df'}_${Number(options.vascularContrast ?? 1.25).toFixed(2)}_${Boolean(options.showLabels)}`;
+  if (_anatomyTexCache.has(cacheKey)) {
+    return _anatomyTexCache.get(cacheKey);
+  }
+  const size = 512;
   const colorCanvas = document.createElement('canvas');
   colorCanvas.width = size;
   colorCanvas.height = size;
@@ -565,13 +571,17 @@ export function createAnatomyTextures(options = {}) {
   const colorTex = new THREE.CanvasTexture(colorCanvas);
   colorTex.colorSpace = THREE.SRGBColorSpace;
   colorTex.anisotropy = 8;
+  colorTex.userData = { sharedSkinMicro: true };
   colorTex.needsUpdate = true;
 
   const bumpTex = new THREE.CanvasTexture(bumpCanvas);
   bumpTex.anisotropy = 4;
+  bumpTex.userData = { sharedSkinMicro: true };
   bumpTex.needsUpdate = true;
 
-  return { colorTex, bumpTex, colorCanvas };
+  const entry = { colorTex, bumpTex, colorCanvas };
+  _anatomyTexCache.set(cacheKey, entry);
+  return entry;
 }
 
 
