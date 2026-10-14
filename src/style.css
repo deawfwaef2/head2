@@ -2075,8 +2075,8 @@ input[type="text"]:focus, select:focus, textarea:focus {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 228px;
+  gap: 7px;
+  width: 256px;
   padding: 5px 8px;
   border-radius: 9px;
   background: linear-gradient(145deg, rgba(16, 13, 10, 0.88), rgba(26, 20, 15, 0.84));
@@ -2275,3 +2275,11 @@ body.pure-screen-mode #pet-hover-dossier {
   flex: none; min-height: 280px; height: clamp(280px, calc(100dvh - 350px), 560px);
 }
 .studio-col-center .cam-preset-btns { flex-wrap: wrap; }
+
+#victor-puzzle-hub-modal.hidden,
+#heartbeat-anticheat-banner.hidden,
+#specimen-provocation-banner.hidden,
+.hub-tab-pane.hidden {
+  display: none !important;
+}
+

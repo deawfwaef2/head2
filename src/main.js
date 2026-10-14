@@ -49,6 +49,18 @@ import { samplePhotoColors } from './textures/skinTextureGenerator.js';
 import { soundEngine } from './audio/tactileSoundEngine.js';
 import { keepPrivateModel, isPrivateModel } from './data/privateModelStore.js';
 import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
+import {
+  PUZZLE_SKILL_SLOTS,
+  PUZZLE_SKILL_CATALOG,
+  DEFAULT_HEAD_PUZZLE_LOADOUTS,
+  SURVIVOR_VICTORY_DECLARATIONS,
+  SPECIMEN_IDLE_TAUNTS,
+  SPECIMEN_DOMINATION_ACTIONS,
+  BLOOD_WAGER_TIERS,
+  analyzeNotebookAntiCheat,
+  generateBoothPuzzleKey,
+  generateMonthlySettlementHash
+} from './data/puzzleSkillEngine.js';
 
 // ============================================================================
 // APPLICATION STATE
@@ -749,6 +761,7 @@ function renderSpecimenPlacards(placardsList = []) {
     const briefIdentity = col.fateRecord?.vitalityStatus || col.subtitle || '19岁青春巅峰标本';
     const cutShort = (col.anatomyOptions?.cutLevel || 'C4齐根断面').split('(')[0].trim();
     const stateLabel = item.containerLabel ? `🏛️${item.containerLabel}` : `🩸${cutShort.slice(0, 8)}`;
+    const skillBtnLabel = getPlacardPuzzleButtonLabel(item.id);
 
     if (!cardEl) {
       cardEl = document.createElement('div');
@@ -769,6 +782,7 @@ function renderSpecimenPlacards(placardsList = []) {
           <div class="placard-sub-line">
             <span class="placard-cut-tag" data-placard-cut>${stateLabel}</span>
             <div class="placard-actions">
+              <button type="button" class="placard-mini-btn" data-placard-skill="${item.id}" title="触发「${shortName}」绑定的拼图特殊技能与月度总分触发器" style="background:rgba(245,158,11,0.28);border-color:rgba(251,191,36,0.75);color:#fef08a;font-weight:800;">${skillBtnLabel}</button>
               <button type="button" class="placard-mini-btn" data-placard-reset="${item.id}" title="将标牌恢复至默认连接位置" style="display:none;">↺</button>
               <button type="button" class="placard-mini-btn" data-placard-rot="${item.id}" title="切换360°旋转把玩">360°</button>
               <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开/收起完整档案卡">详档</button>
@@ -776,6 +790,10 @@ function renderSpecimenPlacards(placardsList = []) {
           </div>
         </div>
       `;
+      cardEl.querySelector('[data-placard-skill]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        triggerHeadPuzzleSkill(item.id, 'placard');
+      });
       cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
         btn.addEventListener('click', (ev) => {
           if (cardEl.dataset.justDragged === '1') return;
@@ -855,6 +873,8 @@ function renderSpecimenPlacards(placardsList = []) {
       if (cutEl) cutEl.textContent = stateLabel;
       const rotBtn = cardEl.querySelector('[data-placard-rot]');
       if (rotBtn) rotBtn.textContent = item.isRotationMode ? '🔄转中' : '360°';
+      const skillBtn = cardEl.querySelector('[data-placard-skill]');
+      if (skillBtn) skillBtn.textContent = skillBtnLabel;
     }
 
     const resetBtn = cardEl.querySelector('[data-placard-reset]');
@@ -955,8 +975,156 @@ function renderPlacedStructuresList(list = []) {
 }
 
 // ============================================================================
-// STAGE 24: CHARACTER-BOUND STUDY FUNCTION EXECUTOR ("功能和角色绑定，辅助学习加强学习动力")
+// STAGE 52: PUZZLE-SKILL ENGINE, MONTHLY SCORE POOL & ANTI-CHEAT RUNTIME
 // ============================================================================
+const PUZZLE_SCORE_STORAGE_KEY = 'cervix3d-puzzle-monthly-score-v52';
+function loadPuzzleScoreState() {
+  const defaultState = {
+    yearMonth: '2026-10',
+    monthlyFocusScore: 480,
+    monthlyNotebookScore: 420,
+    monthlyVictorScore: 380,
+    dailyScore: 1280,
+    heartbeatPassedCount: 2,
+    heartbeatFailedCount: 0,
+    totalValidNotebookChars: 210,
+    lastNotebookEntropy: 4.46,
+    subscriberCount: 200,
+    hardcoreWipeEnabled: true,
+    loadouts: JSON.parse(JSON.stringify(DEFAULT_HEAD_PUZZLE_LOADOUTS)),
+    auditLogs: [
+      '• [10-14 09:30] 初夏笔记审计：高等数学泰勒展开推导 · 210有效字 · 香农熵4.46(S级) · +420 PTS',
+      '• [10-14 10:15] 方尧平专注巡检：连续专注 16 分钟 + 2次活人巡检通过 · +480 PTS'
+    ],
+  };
+  try {
+    const raw = JSON.parse(localStorage.getItem(PUZZLE_SCORE_STORAGE_KEY) || 'null');
+    if (raw && typeof raw === 'object') {
+      return {
+        ...defaultState,
+        ...raw,
+        loadouts: { ...defaultState.loadouts, ...(raw.loadouts || {}) },
+      };
+    }
+  } catch (_) {}
+  return defaultState;
+}
+
+const puzzleState = loadPuzzleScoreState();
+function savePuzzleScoreState() {
+  try {
+    localStorage.setItem(PUZZLE_SCORE_STORAGE_KEY, JSON.stringify(puzzleState));
+  } catch (_) {}
+}
+
+const puzzleRuntime = {
+  focusRunning: false,
+  focusSessionSec: 0,
+  focusSessionPendingPts: 0,
+  nextHeartbeatInSec: 45,
+  hbActive: false,
+  hbCountdownSec: 25,
+  pastedCharsInDraft: 0,
+  keystrokeTimestamps: [],
+  keystrokeIntervals: [],
+  victorBuffUntilMs: 0,
+  bountyRunning: false,
+  bountyRemainingSec: 15 * 60,
+  declIdx: 0,
+};
+
+function getHeadLoadout(collectibleId) {
+  if (!puzzleState.loadouts[collectibleId]) {
+    puzzleState.loadouts[collectibleId] = {
+      activeTrigger: collectibleId === 'SPEC-2026-000' ? 'PZ-B1' : (collectibleId === 'SPEC-2026-001' ? 'PZ-C1' : 'PZ-A1'),
+      passiveBuff: collectibleId === 'SPEC-2026-000' ? 'PZ-P2' : (collectibleId === 'SPEC-2026-001' ? 'PZ-P3' : 'PZ-P1'),
+      anticheatGuard: collectibleId === 'SPEC-2026-000' ? 'PZ-G2' : (collectibleId === 'SPEC-2026-001' ? 'PZ-G3' : 'PZ-G1'),
+    };
+  }
+  return puzzleState.loadouts[collectibleId];
+}
+
+function getPlacardPuzzleButtonLabel(collectibleId) {
+  if (puzzleRuntime.hbActive) {
+    return '🚨点我巡检!';
+  }
+  const loadout = getHeadLoadout(collectibleId);
+  if (loadout.activeTrigger === 'PZ-A1') {
+    if (puzzleRuntime.focusRunning) {
+      const m = String(Math.floor(puzzleRuntime.focusSessionSec / 60)).padStart(2, '0');
+      const s = String(puzzleRuntime.focusSessionSec % 60).padStart(2, '0');
+      return `⏱️${m}:${s}·结算`;
+    }
+    return '⏱️点头专注';
+  }
+  if (loadout.activeTrigger === 'PZ-B1') {
+    return '✍️笔记计分';
+  }
+  return '⚡胜者汲取';
+}
+
+function getActivePuzzleMultiplier() {
+  let mult = 1.35; // 状元基础连击环
+  if (Date.now() < puzzleRuntime.victorBuffUntilMs) {
+    mult *= 1.40; // 胜者肾上腺素加成
+  }
+  if (puzzleRuntime.focusRunning && puzzleRuntime.focusSessionSec >= 300) {
+    mult *= Math.min(1.6, 1 + Math.floor(puzzleRuntime.focusSessionSec / 300) * 0.15);
+  }
+  return Number(mult.toFixed(2));
+}
+
+function getMonthlyTotalScore() {
+  return Math.round(
+    (puzzleState.monthlyFocusScore || 0) +
+    (puzzleState.monthlyNotebookScore || 0) +
+    (puzzleState.monthlyVictorScore || 0)
+  );
+}
+
+// ============================================================================
+// STAGE 24 & 52: CHARACTER-BOUND STUDY & PUZZLE SKILL EXECUTOR
+// ============================================================================
+function triggerHeadPuzzleSkill(collectibleId, source = 'placard') {
+  // 1. If Anti-AFK Heartbeat Check is flashing, clicking ANY head or placard immediately passes the check!
+  if (puzzleRuntime.hbActive) {
+    if (typeof window.__confirmPuzzleHeartbeatCheck === 'function') {
+      window.__confirmPuzzleHeartbeatCheck(collectibleId);
+    }
+    return;
+  }
+
+  const loadout = getHeadLoadout(collectibleId);
+  if (loadout.activeTrigger === 'PZ-A1') {
+    // 专注计时器：点头直接开启/暂停结算专注计时！
+    if (typeof window.__togglePuzzleFocusTimer === 'function') {
+      window.__togglePuzzleFocusTimer(source);
+    }
+    return;
+  }
+
+  if (source === 'head-click') {
+    // 平时直接单击其他头仅切换 360 旋转，不强行弹窗遮挡视线；点标牌按钮才打开对应工作台
+    return;
+  }
+
+  if (loadout.activeTrigger === 'PZ-B1') {
+    if (typeof window.__openPuzzleHubTab === 'function') {
+      window.__openPuzzleHubTab('notebook');
+    }
+    return;
+  }
+
+  if (loadout.activeTrigger === 'PZ-C1') {
+    if (typeof window.__triggerVictorSiphonAction === 'function') {
+      window.__triggerVictorSiphonAction();
+    }
+    if (typeof window.__openPuzzleHubTab === 'function') {
+      window.__openPuzzleHubTab('victor');
+    }
+  }
+}
+
 function executeCharacterStudyRole(collectibleId) {
   const col = state.collectibles.find(c => c.id === collectibleId);
   if (!col) return;
@@ -967,20 +1135,6 @@ function executeCharacterStudyRole(collectibleId) {
   state.studyEnergyPoints += burst;
   state.activeRoleBuffMultiplier = roleMeta.buffMultiplier || 1.5;
 
-  if (roleMeta.id === 'gaokao_pomodoro') {
-    state.pomodoroRunning = true;
-    state.pomodoroRemainingSec = 25 * 60;
-  } else if (roleMeta.id === 'memory_anchor') {
-    const anchorTargets = [
-      '📖 封印目标：25分钟内彻底攻克当前核心章节与高频错题！',
-      '📖 封印目标：全神贯注背诵并默写今日核心考点，绝不走神！',
-      '📖 封印目标：吸纳状元与才女气运，今日刷题正确率突破 90%！'
-    ];
-    const nextGoal = anchorTargets[Math.floor(Math.random() * anchorTargets.length)];
-    col.studyGoalNote = `${col.name.split('·')[0].trim()}伴读誓言：${nextGoal}`;
-    persistCollectibles();
-  }
-
   const energyValEl = document.getElementById('triumph-energy-val');
   const barFillEl = document.getElementById('triumph-bar-fill');
   const quoteEl = document.getElementById('triumph-quote-text');
@@ -990,8 +1144,7 @@ function executeCharacterStudyRole(collectibleId) {
     quoteEl.textContent = `【${col.name.split('·')[0].trim()} · ${roleMeta.shortLabel}】${roleMeta.triggerMsg}`;
   }
 
-  soundEngine.playSummon(true);
-  showToast(`${roleMeta.triggerMsg} (+${burst} PTS)`);
+  triggerHeadPuzzleSkill(collectibleId, 'vault');
 }
 
 // ============================================================================
@@ -1982,6 +2135,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     onHoverChange: updateHoverDossierHUD,
     onStructureSelect: updateStructureFloatingHUD,
     onPlacardsUpdate: renderSpecimenPlacards,
+    onHeadClick: (petId) => triggerHeadPuzzleSkill(petId, 'head-click'),
     onPetStateUpdate: (list) => {
       renderActivePetsStrip(list);
       renderVaultGrid();
@@ -5044,8 +5198,701 @@ window.addEventListener('DOMContentLoaded', async () => {
     executeCharacterStudyRole('SPEC-2026-FYP');
   });
 
-  // Live 1-second Study Companion Timer & Energy Accumulation (zero GPU overhead)
+  // ==========================================================================
+  // STAGE 52: VICTOR DOPAMINE, MONTHLY SCORE POOL & PUZZLE-SKILL HUB WIRING
+  // ==========================================================================
+  const puzzleHubModal = document.getElementById('victor-puzzle-hub-modal');
+  const hbBanner = document.getElementById('heartbeat-anticheat-banner');
+  const topMonthlyScoreEl = document.getElementById('top-monthly-score-val');
+  const hubMonthlyTotalEl = document.getElementById('hub-monthly-total-pts');
+  const hubScoreBreakdownEl = document.getElementById('hub-score-breakdown');
+  const hubDailyTotalEl = document.getElementById('hub-daily-total-pts');
+  const hubDailyRankEl = document.getElementById('hub-daily-rank-text');
+  const hubActiveMultEl = document.getElementById('hub-active-mult-val');
+  const hubActiveBuffDescEl = document.getElementById('hub-active-buff-desc');
+  const hubDividendEstEl = document.getElementById('hub-dividend-est');
+  const hubPoolSummaryEl = document.getElementById('hub-pool-summary');
+
+  const SIMULATED_RIVALS = [
+    { name: '🏆 #1 夜雨解剖师·K (已购7头全拼图)', basePts: 4280, tag: '日均专注 4.2h' },
+    { name: '🥈 #2 怀集刷题机器 (方尧平+初夏双核)', basePts: 3150, tag: '笔记熵 4.62 S级' },
+    { name: '🥉 #3 琴房守夜人 (初夏竖琴心流)', basePts: 1960, tag: '活人巡检 18/18' },
+    { name: '🎖️ #5 匿名医学生·C4 (林汐斩首悬赏)', basePts: 1120, tag: '斩首任务 9 连胜' },
+    { name: '💤 #19 挂机被清零的倒霉蛋 (超时未点)', basePts: 0, tag: '💀 巡检超时已扣光本月分' },
+  ];
+
+  function refreshPuzzleHubUI() {
+    const focusPts = Math.round(puzzleState.monthlyFocusScore || 0);
+    const notePts = Math.round(puzzleState.monthlyNotebookScore || 0);
+    const victorPts = Math.round(puzzleState.monthlyVictorScore || 0);
+    const totalPts = getMonthlyTotalScore();
+    const mult = getActivePuzzleMultiplier();
+
+    if (topMonthlyScoreEl) topMonthlyScoreEl.textContent = totalPts.toLocaleString();
+    if (hubMonthlyTotalEl) hubMonthlyTotalEl.textContent = `${totalPts.toLocaleString()} PTS`;
+    if (hubScoreBreakdownEl) {
+      hubScoreBreakdownEl.textContent = `专注:${focusPts} · 笔记:${notePts} · 胜者:${victorPts}`;
+    }
+    if (hubDailyTotalEl) hubDailyTotalEl.textContent = `${totalPts.toLocaleString()} PTS`;
+    if (hubActiveMultEl) hubActiveMultEl.textContent = `×${mult.toFixed(2)}`;
+
+    const victorBuffSec = Math.max(0, Math.ceil((puzzleRuntime.victorBuffUntilMs - Date.now()) / 1000));
+    if (hubActiveBuffDescEl) {
+      hubActiveBuffDescEl.textContent = victorBuffSec > 0
+        ? `🔥 胜者亢奋(${Math.ceil(victorBuffSec / 60)}m) · 巡检通过 ${puzzleState.heartbeatPassedCount} 次`
+        : `状元连击环生效中 · 巡检通过 ${puzzleState.heartbeatPassedCount} 次`;
+    }
+
+    // Prize Pool Dividend calculation (Monthly Fee ¥50: Creator keeps ¥30, Pool gets ¥20/sub)
+    const subCount = Math.max(10, Number(puzzleState.subscriberCount || 200));
+    const creatorProfit = subCount * 30;
+    const totalPoolRmb = subCount * 20;
+    const allRivalPts = SIMULATED_RIVALS.reduce((s, r) => s + r.basePts, 0) + Math.max(1, subCount - 6) * 420;
+    const myShare = totalPts / Math.max(1, allRivalPts + totalPts);
+    // Top active grinders get weighted pool bonus
+    const myDividendRmb = Math.min(totalPoolRmb * 0.35, totalPoolRmb * myShare * 3.8);
+    const roiPct = Math.round((myDividendRmb / 50) * 100);
+
+    if (hubDividendEstEl) hubDividendEstEl.textContent = `¥ ${myDividendRmb.toFixed(2)}`;
+    if (hubPoolSummaryEl) {
+      hubPoolSummaryEl.textContent = `总池 ¥${totalPoolRmb.toLocaleString()} (50元月费回本 ${roiPct}%)`;
+    }
+
+    const poolEconEl = document.getElementById('pool-economy-summary');
+    if (poolEconEl) {
+      const netGain = myDividendRmb - 50;
+      poolEconEl.innerHTML = `
+        <div>👑 <strong>创作者（你）月初稳赚净抽成：</strong><span style="color:#4ade80;font-weight:800;">¥ ${creatorProfit.toLocaleString()}.00</span>（${subCount}人 × ¥30 旱涝保收）</div>
+        <div>🏦 <strong>本月玩家瓜分资产总池：</strong><span style="color:#38bdf8;font-weight:800;">¥ ${totalPoolRmb.toLocaleString()}.00</span>（${subCount}人 × ¥20 实打实激励池）</div>
+        <div>🔥 <strong>当前玩家积分权重预计分红：</strong><span style="color:#fef08a;font-weight:800;">¥ ${myDividendRmb.toFixed(2)}</span>（扣除50元月费后<strong>${netGain >= 0 ? `净赚 +¥${netGain.toFixed(2)}` : `还差 ¥${Math.abs(netGain).toFixed(2)} 回本`}</strong>）</div>
+      `;
+    }
+
+    // Update Leaderboard rows
+    const combinedBoard = [
+      ...SIMULATED_RIVALS,
+      { name: '👑 【你 · 活人支配者】', basePts: totalPts, tag: `巡检 ${puzzleState.heartbeatPassedCount}次 · 有效字 ${puzzleState.totalValidNotebookChars}`, isMe: true },
+    ].sort((a, b) => b.basePts - a.basePts);
+
+    const myRankIdx = combinedBoard.findIndex(r => r.isMe);
+    if (hubDailyRankEl) {
+      if (myRankIdx === 0) {
+        hubDailyRankEl.textContent = '👑 当前排位：全服第 #1 名（独占鳌头！）';
+      } else {
+        const diff = combinedBoard[myRankIdx - 1].basePts - totalPts;
+        hubDailyRankEl.textContent = `当前排位：#${myRankIdx + 1} (距上一名仅差 ${diff} 分)`;
+      }
+    }
+
+    const lbRowsEl = document.getElementById('hub-leaderboard-rows');
+    if (lbRowsEl) {
+      lbRowsEl.innerHTML = combinedBoard.map((item, idx) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-radius:8px;background:${item.isMe ? 'rgba(245,158,11,0.22)' : 'rgba(0,0,0,0.4)'};border:1px solid ${item.isMe ? '#fbbf24' : 'rgba(255,255,255,0.08)'};">
+          <div>
+            <strong style="color:${item.isMe ? '#fef08a' : '#f1f5f9'};font-size:12px;">${item.name}</strong>
+            <span style="font-size:10.5px;color:#94a3b8;margin-left:6px;">${item.tag}</span>
+          </div>
+          <strong style="font-family:monospace;color:${item.isMe ? '#4ade80' : '#fcd34d'};font-size:13px;">${item.basePts.toLocaleString()} PTS</strong>
+        </div>
+      `).join('');
+    }
+
+    // Focus Tab stats
+    const hbPassEl = document.getElementById('hub-hb-pass-count');
+    const hbFailEl = document.getElementById('hub-hb-fail-count');
+    if (hbPassEl) hbPassEl.textContent = `${puzzleState.heartbeatPassedCount} 次`;
+    if (hbFailEl) hbFailEl.textContent = `${puzzleState.heartbeatFailedCount} 次`;
+
+    // Notebook Tab stats
+    const nbMonthlyEl = document.getElementById('nb-stat-monthly-pts');
+    if (nbMonthlyEl) nbMonthlyEl.textContent = `${notePts.toLocaleString()} PTS`;
+    const nbLogEl = document.getElementById('nb-audit-log-list');
+    if (nbLogEl && Array.isArray(puzzleState.auditLogs)) {
+      nbLogEl.innerHTML = puzzleState.auditLogs.slice(0, 8).map(line => `<div style="margin-bottom:3px;">${line}</div>`).join('');
+    }
+
+    // BOOTH Key & Settlement Hash
+    const selHeadId = document.getElementById('puzzle-head-select')?.value || 'SPEC-2026-FYP';
+    const curLoadout = getHeadLoadout(selHeadId);
+    const boothKeyEl = document.getElementById('booth-generated-key');
+    if (boothKeyEl) {
+      boothKeyEl.textContent = generateBoothPuzzleKey(selHeadId, puzzleState.yearMonth, curLoadout);
+    }
+    const hashEl = document.getElementById('booth-settlement-hash');
+    if (hashEl) {
+      const { receiptCode } = generateMonthlySettlementHash(puzzleState);
+      hashEl.textContent = receiptCode;
+    }
+
+    if (desktopEngine) {
+      renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+    }
+  }
+
+  function openPuzzleHubTab(tabId = 'focus') {
+    if (puzzleHubModal) puzzleHubModal.classList.remove('hidden');
+    document.querySelectorAll('[data-hub-tab]').forEach(btn => {
+      const isAct = btn.dataset.hubTab === tabId;
+      btn.classList.toggle('active', isAct);
+      btn.style.background = isAct ? 'rgba(245,158,11,0.24)' : 'rgba(255,255,255,0.05)';
+      btn.style.borderColor = isAct ? 'rgba(251,191,36,0.65)' : 'rgba(255,255,255,0.16)';
+      btn.style.color = isAct ? '#fef08a' : '#cbd5e1';
+    });
+    ['focus', 'notebook', 'victor', 'leaderboard', 'booth', 'bipolar'].forEach(id => {
+      const pane = document.getElementById(`hub-pane-${id}`);
+      if (pane) pane.classList.toggle('hidden', id !== tabId);
+    });
+    refreshPuzzleHubUI();
+    if (tabId === 'notebook') {
+      setTimeout(() => document.getElementById('hub-notebook-textarea')?.focus(), 60);
+    }
+  }
+  window.__openPuzzleHubTab = openPuzzleHubTab;
+
+  // Stage 54: Floating Dopamine & Pain Score Popup Spawner
+  function spawnDopaminePopup(text, isNegative = false) {
+    const layer = document.getElementById('dopamine-floating-popups');
+    if (!layer) return;
+    const el = document.createElement('div');
+    const rx = 36 + Math.random() * 28;
+    const ry = 28 + Math.random() * 26;
+    el.textContent = text;
+    el.style.cssText = `
+      position:absolute;left:${rx.toFixed(1)}vw;top:${ry.toFixed(1)}vh;
+      transform:translate(-50%,-50%);
+      padding:6px 14px;border-radius:999px;font-weight:900;font-size:15px;
+      font-family:monospace;white-space:nowrap;pointer-events:none;
+      background:${isNegative ? 'rgba(185,28,28,0.92)' : 'rgba(180,83,9,0.94)'};
+      border:2px solid ${isNegative ? '#fca5a5' : '#fef08a'};
+      color:${isNegative ? '#fecaca' : '#fef9c3'};
+      box-shadow:0 8px 24px ${isNegative ? 'rgba(220,38,38,0.65)' : 'rgba(245,158,11,0.65)'};
+      transition:transform 1.1s cubic-bezier(0.16,1,0.3,1), opacity 1.1s ease;
+      opacity:1;
+    `;
+    layer.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.transform = `translate(-50%, -145%) scale(1.12)`;
+      el.style.opacity = '0';
+    });
+    setTimeout(() => el.remove(), 1150);
+  }
+  window.__spawnDopaminePopup = spawnDopaminePopup;
+
+  // Stage 54: 3D Physical Domination Actions ("更多爽") & Specimen Reverse Taunt / Blood Wager ("更多不爽")
+  let tauntIdx = 0;
+  let activeWagerPts = 0;
+  const provBanner = document.getElementById('specimen-provocation-banner');
+
+  function execute3DDominationAction(actionId) {
+    const act = SPECIMEN_DOMINATION_ACTIONS.find(a => a.id === actionId) || SPECIMEN_DOMINATION_ACTIONS[0];
+    const gain = Math.round(act.pts * getActivePuzzleMultiplier());
+    puzzleState.monthlyVictorScore += gain;
+    puzzleState.auditLogs.unshift(`• [3D物理支配] ${act.label} · +${gain} PTS`);
+    savePuzzleScoreState();
+
+    // Drive physical 3D head reaction on desktopEngine!
+    if (desktopEngine && desktopEngine.pets.size > 0) {
+      for (const pet of desktopEngine.pets.values()) {
+        if (actionId === 'dom_flick_forehead') {
+          pet.vel.y += 4.5;
+          pet.vel.z -= 5.0;
+          if (pet.node) {
+            pet.node.rotation.x = -0.34;
+            pet.node.rotation.y += (Math.random() - 0.5) * 0.45;
+          }
+        } else if (actionId === 'dom_force_kneel_gaze') {
+          if (pet.node) {
+            pet.node.rotation.x = 0.28; // 低头俯首臣服
+            pet.node.rotation.y = 0;
+          }
+        } else if (actionId === 'dom_shame_expression') {
+          const shameExprs = ['dead_shock_gaze', 'dead_half_open', 'dead_serene_sleep'];
+          const nextE = shameExprs[Math.floor(Math.random() * shameExprs.length)];
+          desktopEngine.setPetExpression(pet.id, nextE);
+        } else if (actionId === 'dom_harvest_jackpot') {
+          pet.vel.y += 6.2;
+        }
+      }
+      desktopEngine.wakeRender(2.2, true);
+    }
+
+    const fbEl = document.getElementById('dom-reaction-feedback');
+    if (fbEl) {
+      fbEl.innerHTML = `<strong style="color:#4ade80;">⚡ 已执行【${act.label}】 (+${gain} PTS)：</strong><br/>${act.submissiveQuote}`;
+    }
+    if (provBanner) provBanner.classList.add('hidden');
+    soundEngine.playSummon(true);
+    spawnDopaminePopup(`+${gain} PTS 🔥 ${act.label.split('·')[0].trim()}!`, false);
+    refreshPuzzleHubUI();
+    showToast(`👑 ${act.label} 成功！获得支配快感积分 +${gain} PTS！`);
+  }
+
+  document.querySelectorAll('[data-dom-action]').forEach(btn => {
+    btn.addEventListener('click', () => execute3DDominationAction(btn.dataset.domAction));
+  });
+
+  function triggerSpecimenIdleTaunt() {
+    const t = SPECIMEN_IDLE_TAUNTS[tauntIdx % SPECIMEN_IDLE_TAUNTS.length];
+    tauntIdx += 1;
+    puzzleState.monthlyVictorScore = Math.max(0, (puzzleState.monthlyVictorScore || 0) - t.bleedPts);
+    puzzleState.auditLogs.unshift(`• [💸摸鱼失血挑衅] 被「${t.speaker}」反向毒舌嘲讽 · -${t.bleedPts} PTS`);
+    savePuzzleScoreState();
+
+    const spkEl = document.getElementById('taunt-speaker-name');
+    const bldEl = document.getElementById('taunt-bleed-badge');
+    const qEl = document.getElementById('taunt-quote-body');
+    if (spkEl) spkEl.textContent = `💀【死人反向嘲讽 · ${t.speaker}】`;
+    if (bldEl) bldEl.textContent = `💸 摸鱼失血 -${t.bleedPts} PTS (分红被抢 ${t.bleedRmb})`;
+    if (qEl) qEl.textContent = t.taunt;
+    if (provBanner) provBanner.classList.remove('hidden');
+
+    spawnDopaminePopup(`💸 -${t.bleedPts} PTS 摸鱼失血！分红被抢 ${t.bleedRmb}!`, true);
+    refreshPuzzleHubUI();
+    showToast(`😤【被死人嘲讽了！】${t.speaker}正在嘲笑你摸鱼，你的月底分红刚被抢走 ${t.bleedRmb}！快拍头镇压反击！`);
+  }
+
+  document.getElementById('btn-trigger-idle-taunt-now')?.addEventListener('click', () => triggerSpecimenIdleTaunt());
+  document.getElementById('btn-taunt-slap-counter')?.addEventListener('click', () => {
+    execute3DDominationAction('dom_flick_forehead');
+    if (!puzzleRuntime.focusRunning) {
+      togglePuzzleFocusTimer('counter');
+    }
+  });
+  document.getElementById('btn-taunt-dismiss')?.addEventListener('click', () => {
+    provBanner?.classList.add('hidden');
+  });
+
+  // Blood Wager Stakes
+  const wagerBadgeEl = document.getElementById('wager-timer-badge');
+  document.getElementById('btn-wager-start-300')?.addEventListener('click', () => {
+    if (getMonthlyTotalScore() < 300) {
+      showToast('⚠️ 当前总分不足 300 PTS，请先通过专注或笔记赚取筹码！');
+      return;
+    }
+    activeWagerPts = 300;
+    puzzleState.monthlyVictorScore -= 300;
+    savePuzzleScoreState();
+    if (wagerBadgeEl) wagerBadgeEl.textContent = '🔥 押注 300 分对赌中';
+    spawnDopaminePopup('🩸 已押注 -300 PTS 开启生死血契！', true);
+    refreshPuzzleHubUI();
+    showToast('🩸 血契赌局已开启！已冻结 300 PTS 筹码，完成后点击「翻倍收米」狂揽 +660 PTS！');
+  });
+
+  document.getElementById('btn-wager-win-claim')?.addEventListener('click', () => {
+    const winPts = activeWagerPts > 0 ? Math.round(activeWagerPts * 2.2) : 660;
+    activeWagerPts = 0;
+    puzzleState.monthlyVictorScore += winPts;
+    puzzleState.auditLogs.unshift(`• [🎰血契赌局大胜] 生死对赌翻倍暴富收米 · +${winPts} PTS`);
+    savePuzzleScoreState();
+    if (wagerBadgeEl) wagerBadgeEl.textContent = `🏆 已狂赢 +${winPts} PTS`;
+    soundEngine.playSummon(true);
+    spawnDopaminePopup(`🎰 血契暴富 +${winPts} PTS (×2.2倍)!`, false);
+    refreshPuzzleHubUI();
+    showToast(`🎰【血契豪赌大胜！】连本带利狂揽 +${winPts} PTS，排名与月底分红暴涨！`);
+  });
+
+  document.getElementById('btn-wager-bust-now')?.addEventListener('click', () => {
+    const lost = activeWagerPts > 0 ? activeWagerPts : 300;
+    if (activeWagerPts === 0) {
+      puzzleState.monthlyVictorScore = Math.max(0, puzzleState.monthlyVictorScore - lost);
+    }
+    activeWagerPts = 0;
+    puzzleState.auditLogs.unshift(`• [💥血契赌局爆仓] 半途摸鱼/切屏导致赌局败北，筹码灰飞烟灭 · -${lost} PTS`);
+    savePuzzleScoreState();
+    if (wagerBadgeEl) wagerBadgeEl.textContent = `💀 爆仓惨败 (-${lost} PTS)`;
+    spawnDopaminePopup(`💥 血契爆仓 -${lost} PTS 筹码归零！`, true);
+    triggerSpecimenIdleTaunt();
+    refreshPuzzleHubUI();
+  });
+
+  document.getElementById('btn-open-puzzle-hub')?.addEventListener('click', () => {
+    if (puzzleHubModal?.classList.contains('hidden')) {
+      openPuzzleHubTab('focus');
+    } else {
+      puzzleHubModal?.classList.add('hidden');
+    }
+  });
+  document.getElementById('btn-triumph-open-hub')?.addEventListener('click', () => openPuzzleHubTab('focus'));
+  document.getElementById('btn-close-puzzle-hub')?.addEventListener('click', () => puzzleHubModal?.classList.add('hidden'));
+
+  document.querySelectorAll('[data-hub-tab]').forEach(btn => {
+    btn.addEventListener('click', () => openPuzzleHubTab(btn.dataset.hubTab));
+  });
+
+  // 1. Focus Timer & Anti-AFK Random Heartbeat Check (方尧平 PZ-A1 & PZ-G1)
+  function updateFocusClockUI() {
+    const clockEl = document.getElementById('hub-focus-clock');
+    const sessEl = document.getElementById('hub-focus-session-pts');
+    const badgeEl = document.getElementById('focus-running-badge');
+    const toggleBtn = document.getElementById('btn-hub-focus-toggle');
+    const nextHbEl = document.getElementById('hub-hb-next-status');
+
+    const hrs = String(Math.floor(puzzleRuntime.focusSessionSec / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((puzzleRuntime.focusSessionSec % 3600) / 60)).padStart(2, '0');
+    const secs = String(puzzleRuntime.focusSessionSec % 60).padStart(2, '0');
+    if (clockEl) clockEl.textContent = `${hrs}:${mins}:${secs}`;
+    if (sessEl) {
+      sessEl.textContent = `本轮已实时计入：+${Math.round(puzzleRuntime.focusSessionPendingPts)} PTS（本月专注总分：${Math.round(puzzleState.monthlyFocusScore)} PTS）`;
+    }
+    if (badgeEl) {
+      badgeEl.textContent = puzzleRuntime.focusRunning
+        ? '🔥 专注吸取中 · 防挂机巡检已布防'
+        : '⏸️ 待机中 · 点头或下方按钮开启';
+      badgeEl.style.background = puzzleRuntime.focusRunning ? 'rgba(34,197,94,0.22)' : 'rgba(148,163,184,0.2)';
+      badgeEl.style.color = puzzleRuntime.focusRunning ? '#4ade80' : '#cbd5e1';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = puzzleRuntime.focusRunning
+        ? '⏸️ 暂停专注计时 (安全保留已得积分)'
+        : '▶️ 点头开启专注计时 (开始吸取状元脑力)';
+    }
+    if (nextHbEl) {
+      nextHbEl.textContent = puzzleRuntime.hbActive
+        ? `🚨 正在倒计时抽查 (${puzzleRuntime.hbCountdownSec}s)！快点确认！`
+        : (puzzleRuntime.focusRunning ? `将在随机时刻突袭抽查 (约 ${puzzleRuntime.nextHeartbeatInSec}s 内)` : '开启专注后随机降临');
+    }
+  }
+
+  function triggerHeartbeatCheckNow() {
+    puzzleRuntime.hbActive = true;
+    puzzleRuntime.hbCountdownSec = 25;
+    if (hbBanner) hbBanner.classList.remove('hidden');
+    const cdEl = document.getElementById('hb-countdown-badge');
+    if (cdEl) cdEl.textContent = '25s';
+    soundEngine.playSummon(true);
+    updateFocusClockUI();
+    refreshPuzzleHubUI();
+    showToast('🚨【防挂机活人巡检】请在 25 秒内点击确认或点击方尧平头颅，逾期未点本月专注分清零！');
+  }
+
+  function confirmHeartbeatCheck() {
+    if (!puzzleRuntime.hbActive) return;
+    puzzleRuntime.hbActive = false;
+    puzzleRuntime.nextHeartbeatInSec = 55 + Math.floor(Math.random() * 65);
+    if (hbBanner) hbBanner.classList.add('hidden');
+    const bonus = Math.round(150 * getActivePuzzleMultiplier());
+    puzzleState.monthlyFocusScore += bonus;
+    puzzleRuntime.focusSessionPendingPts += bonus;
+    puzzleState.heartbeatPassedCount += 1;
+    puzzleState.auditLogs.unshift(`• [活人巡检通过] 方尧平防挂机签到成功 (剩余${puzzleRuntime.hbCountdownSec}s) · +${bonus} PTS`);
+    savePuzzleScoreState();
+    soundEngine.playSummon(true);
+    updateFocusClockUI();
+    refreshPuzzleHubUI();
+    showToast(`✅ 活人专注巡检通过！获得防挂机暴击奖励 +${bonus} PTS（本月总分 ${getMonthlyTotalScore()} PTS）`);
+  }
+  window.__confirmPuzzleHeartbeatCheck = confirmHeartbeatCheck;
+
+  function togglePuzzleFocusTimer(source = 'ui') {
+    if (puzzleRuntime.hbActive) {
+      confirmHeartbeatCheck();
+      return;
+    }
+    puzzleRuntime.focusRunning = !puzzleRuntime.focusRunning;
+    if (puzzleRuntime.focusRunning) {
+      puzzleRuntime.nextHeartbeatInSec = 40 + Math.floor(Math.random() * 45);
+      soundEngine.playSummon(true);
+      showToast('⏱️ 已开启【方尧平·生死心跳专注计时器】！每秒实时累加月度总分，注意随时响应活人抽查！');
+    } else {
+      const settled = Math.round(puzzleRuntime.focusSessionPendingPts);
+      puzzleRuntime.focusSessionPendingPts = 0;
+      puzzleRuntime.focusSessionSec = 0;
+      savePuzzleScoreState();
+      showToast(`💰 已暂停并结算本轮专注时长（本轮入账 +${settled} PTS · 本月总分 ${getMonthlyTotalScore()} PTS）`);
+    }
+    updateFocusClockUI();
+    refreshPuzzleHubUI();
+  }
+  window.__togglePuzzleFocusTimer = togglePuzzleFocusTimer;
+
+  document.getElementById('btn-hub-focus-toggle')?.addEventListener('click', () => togglePuzzleFocusTimer('hub'));
+  document.getElementById('btn-hub-focus-settle')?.addEventListener('click', () => {
+    if (puzzleRuntime.focusRunning) {
+      togglePuzzleFocusTimer('settle');
+    } else {
+      showToast(`💰 当前本月专注分已安全落袋：${Math.round(puzzleState.monthlyFocusScore)} PTS`);
+    }
+  });
+  document.getElementById('btn-hub-trigger-hb-test')?.addEventListener('click', () => triggerHeartbeatCheckNow());
+  document.getElementById('btn-confirm-heartbeat-now')?.addEventListener('click', () => confirmHeartbeatCheck());
+  document.getElementById('chk-hb-hardcore-wipe')?.addEventListener('change', (e) => {
+    puzzleState.hardcoreWipeEnabled = Boolean(e.target.checked);
+    savePuzzleScoreState();
+  });
+
+  // 2. Anti-Cheat Entropy Study Notebook (初夏 PZ-B1 & PZ-G2)
+  const nbTextarea = document.getElementById('hub-notebook-textarea');
+  function evaluateNotebookDraft() {
+    const text = nbTextarea?.value || '';
+    const audit = analyzeNotebookAntiCheat(text, puzzleRuntime.pastedCharsInDraft, puzzleRuntime.keystrokeIntervals);
+    const mult = getActivePuzzleMultiplier();
+    const previewPts = audit.isCheating ? 0 : Math.round(audit.validTypedChars * 2.0 * mult);
+
+    const validEl = document.getElementById('nb-stat-valid');
+    const entEl = document.getElementById('nb-stat-entropy');
+    const pasteEl = document.getElementById('nb-stat-pasted');
+    const prevBtnEl = document.getElementById('nb-preview-pts');
+    const badgeEl = document.getElementById('nb-grade-badge');
+    const verdictEl = document.getElementById('nb-anticheat-verdict');
+
+    if (validEl) validEl.textContent = `${audit.validTypedChars} 字`;
+    if (entEl) entEl.textContent = `${audit.entropy.toFixed(2)} bits`;
+    if (pasteEl) pasteEl.textContent = `${audit.pastedChars || 0} 字`;
+    if (prevBtnEl) prevBtnEl.textContent = String(previewPts);
+    if (badgeEl) {
+      badgeEl.textContent = audit.grade;
+      badgeEl.style.background = audit.isCheating ? 'rgba(239,68,68,0.28)' : 'rgba(16,185,129,0.22)';
+      badgeEl.style.color = audit.isCheating ? '#fca5a5' : '#6ee7b7';
+    }
+    if (verdictEl) {
+      verdictEl.textContent = audit.statusLabel;
+      verdictEl.style.borderColor = audit.isCheating ? '#f87171' : 'rgba(52,211,153,0.35)';
+      verdictEl.style.color = audit.isCheating ? '#fecaca' : '#a7f3d0';
+    }
+    return { audit, previewPts };
+  }
+
+  nbTextarea?.addEventListener('paste', (e) => {
+    const pasted = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+    const cleanLen = pasted.replace(/\s+/g, '').length;
+    puzzleRuntime.pastedCharsInDraft += cleanLen;
+    setTimeout(evaluateNotebookDraft, 20);
+    showToast(`🔍【初夏·防粘贴审计】检测到粘贴 ${cleanLen} 字，已自动隔离粘贴水字数，仅真实手敲计分！`);
+  });
+
+  nbTextarea?.addEventListener('keydown', (e) => {
+    if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Enter') {
+      const now = performance.now();
+      const ts = puzzleRuntime.keystrokeTimestamps;
+      if (ts.length > 0) {
+        const dt = now - ts[ts.length - 1];
+        puzzleRuntime.keystrokeIntervals.push(dt);
+        if (puzzleRuntime.keystrokeIntervals.length > 30) puzzleRuntime.keystrokeIntervals.shift();
+      }
+      ts.push(now);
+      if (ts.length > 30) ts.shift();
+    }
+  });
+
+  nbTextarea?.addEventListener('input', () => evaluateNotebookDraft());
+
+  document.getElementById('btn-nb-sample-good')?.addEventListener('click', () => {
+    if (!nbTextarea) return;
+    puzzleRuntime.pastedCharsInDraft = 0;
+    puzzleRuntime.keystrokeIntervals = [115, 148, 92, 180, 134, 210, 98, 164, 142, 128, 175, 109];
+    nbTextarea.value = '【今日硬核研习复盘】1. 微积分拉格朗日中值定理与柯西中值定理的几何意义对比：若函数f(x)在闭区间连续、开区间可导，则必存在一点ξ使得切线斜率等于割线斜率；2. WebGL2 着色器双瓣各向异性高光需沿切线副切线做纵向偏移；3. 今日已完成全部核心模块推导与默写。';
+    evaluateNotebookDraft();
+  });
+
+  document.getElementById('btn-nb-sample-cheat')?.addEventListener('click', () => {
+    if (!nbTextarea) return;
+    puzzleRuntime.pastedCharsInDraft = 0;
+    nbTextarea.value = 'aaaaaaaaaaaaaaaaaaaaaaaa123123123123123123asdfasdfasdfasdf';
+    evaluateNotebookDraft();
+    showToast('🚫 已填入乱敲水字样本：香农信息熵低于 2.1 bits，系统已自动拦截并判定 0 分！');
+  });
+
+  document.getElementById('btn-nb-commit-score')?.addEventListener('click', () => {
+    const { audit, previewPts } = evaluateNotebookDraft();
+    if (audit.isCheating || previewPts <= 0) {
+      showToast('🚫 提交失败：当前笔记未通过反作弊信息熵核验或有效手敲字数为 0！');
+      return;
+    }
+    puzzleState.monthlyNotebookScore += previewPts;
+    puzzleState.totalValidNotebookChars += audit.validTypedChars;
+    puzzleState.lastNotebookEntropy = audit.entropy;
+    const snippet = (nbTextarea.value || '').trim().slice(0, 18).replace(/\s+/g, ' ');
+    puzzleState.auditLogs.unshift(
+      `• [笔记入库] "${snippet}..." · ${audit.validTypedChars}有效字 · 熵${audit.entropy}(${audit.grade.split('·')[0].trim()}) · +${previewPts} PTS`
+    );
+    nbTextarea.value = '';
+    puzzleRuntime.pastedCharsInDraft = 0;
+    savePuzzleScoreState();
+    evaluateNotebookDraft();
+    refreshPuzzleHubUI();
+    soundEngine.playSummon(true);
+    showToast(`📓 研习笔记已通过反作弊核验入库！获得 +${previewPts} PTS（本月总分 ${getMonthlyTotalScore()} PTS）`);
+  });
+
+  // 3. Survivor Dopamine Siphon & Deadline Guillotine Bounty (林汐 PZ-C1)
+  function triggerVictorSiphonAction() {
+    const decl = SURVIVOR_VICTORY_DECLARATIONS[puzzleRuntime.declIdx % SURVIVOR_VICTORY_DECLARATIONS.length];
+    puzzleRuntime.declIdx += 1;
+    const customInput = document.getElementById('victor-anxiety-input')?.value?.trim();
+    const pts = 180;
+    puzzleState.monthlyVictorScore += pts;
+    puzzleRuntime.victorBuffUntilMs = Date.now() + 15 * 60 * 1000;
+
+    const titleEl = document.getElementById('victor-decl-title');
+    const quoteDom = document.getElementById('victor-decl-quote');
+    const buffDom = document.getElementById('victor-decl-buff');
+    if (titleEl) titleEl.textContent = decl.title;
+    if (quoteDom) {
+      quoteDom.textContent = customInput
+        ? `【已将你的焦虑「${customInput}」踩碎在标本底座下】：${decl.quote}`
+        : decl.quote;
+    }
+    if (buffDom) buffDom.textContent = decl.buffNote;
+    if (document.getElementById('victor-anxiety-input')) {
+      document.getElementById('victor-anxiety-input').value = '';
+    }
+
+    puzzleState.auditLogs.unshift(`• [胜者精神汲取] 粉碎负面内耗激活15分钟×1.4亢奋加成 · +${pts} PTS`);
+    savePuzzleScoreState();
+    soundEngine.playSummon(true);
+    refreshPuzzleHubUI();
+    showToast(`⚡【我是活人胜利者】精神能量汲取成功！+${pts} PTS & 激活 15 分钟 ×1.40 全场积分暴击！`);
+  }
+  window.__triggerVictorSiphonAction = triggerVictorSiphonAction;
+
+  document.getElementById('btn-victor-siphon-now')?.addEventListener('click', () => triggerVictorSiphonAction());
+
+  document.getElementById('btn-bounty-start')?.addEventListener('click', () => {
+    puzzleRuntime.bountyRunning = true;
+    puzzleRuntime.bountyRemainingSec = 15 * 60;
+    const tagEl = document.getElementById('bounty-status-tag');
+    if (tagEl) tagEl.textContent = '🔥 死线悬赏进行中！切勿摸鱼！';
+    soundEngine.playSummon(true);
+    showToast('🩸 已立下 15 分钟死线斩首军令状！倒计时前完成立得 +380 PTS！');
+  });
+
+  document.getElementById('btn-bounty-complete')?.addEventListener('click', () => {
+    const taskName = document.getElementById('bounty-task-input')?.value?.trim() || '限时核心任务';
+    const reward = Math.round(380 * getActivePuzzleMultiplier());
+    puzzleRuntime.bountyRunning = false;
+    puzzleRuntime.bountyRemainingSec = 15 * 60;
+    puzzleState.monthlyVictorScore += reward;
+    const tagEl = document.getElementById('bounty-status-tag');
+    if (tagEl) tagEl.textContent = `✅ 已斩首完成 (+${reward} PTS)`;
+    puzzleState.auditLogs.unshift(`• [死线任务斩首] 完成「${taskName.slice(0, 16)}」 · +${reward} PTS`);
+    savePuzzleScoreState();
+    soundEngine.playSummon(true);
+    refreshPuzzleHubUI();
+    showToast(`🗡️ 死线悬赏任务斩首成功！狂揽 +${reward} PTS（本月总分 ${getMonthlyTotalScore()} PTS）`);
+  });
+
+  // 4. BOOTH Prize Pool & Modular Puzzle Slot Selector Wiring
+  document.getElementById('pool-sub-count')?.addEventListener('input', (e) => {
+    puzzleState.subscriberCount = Math.max(10, Number(e.target.value || 200));
+    savePuzzleScoreState();
+    refreshPuzzleHubUI();
+  });
+
+  function populatePuzzleSelectors() {
+    const headSel = document.getElementById('puzzle-head-select');
+    const actSel = document.getElementById('puzzle-slot-active');
+    const pasSel = document.getElementById('puzzle-slot-passive');
+    const grdSel = document.getElementById('puzzle-slot-guard');
+    if (!headSel || !actSel || !pasSel || !grdSel) return;
+
+    const curHeadId = headSel.value || 'SPEC-2026-FYP';
+    const loadout = getHeadLoadout(curHeadId);
+
+    actSel.innerHTML = PUZZLE_SKILL_CATALOG.filter(p => p.slot === PUZZLE_SKILL_SLOTS.ACTIVE_TRIGGER)
+      .map(p => `<option value="${p.code}" ${p.code === loadout.activeTrigger ? 'selected' : ''}>[${p.code}] ${p.name} — ${p.baseRateDesc}</option>`).join('');
+    pasSel.innerHTML = PUZZLE_SKILL_CATALOG.filter(p => p.slot === PUZZLE_SKILL_SLOTS.PASSIVE_BUFF)
+      .map(p => `<option value="${p.code}" ${p.code === loadout.passiveBuff ? 'selected' : ''}>[${p.code}] ${p.name}</option>`).join('');
+    grdSel.innerHTML = PUZZLE_SKILL_CATALOG.filter(p => p.slot === PUZZLE_SKILL_SLOTS.ANTICHEAT_GUARD)
+      .map(p => `<option value="${p.code}" ${p.code === loadout.anticheatGuard ? 'selected' : ''}>[${p.code}] ${p.name}</option>`).join('');
+  }
+  populatePuzzleSelectors();
+
+  document.getElementById('puzzle-head-select')?.addEventListener('change', () => {
+    populatePuzzleSelectors();
+    refreshPuzzleHubUI();
+  });
+  ['puzzle-slot-active', 'puzzle-slot-passive', 'puzzle-slot-guard'].forEach(selId => {
+    document.getElementById(selId)?.addEventListener('change', () => {
+      const headId = document.getElementById('puzzle-head-select')?.value || 'SPEC-2026-FYP';
+      const loadout = getHeadLoadout(headId);
+      loadout.activeTrigger = document.getElementById('puzzle-slot-active')?.value || loadout.activeTrigger;
+      loadout.passiveBuff = document.getElementById('puzzle-slot-passive')?.value || loadout.passiveBuff;
+      loadout.anticheatGuard = document.getElementById('puzzle-slot-guard')?.value || loadout.anticheatGuard;
+      savePuzzleScoreState();
+      refreshPuzzleHubUI();
+      showToast(`🧩 已更新「${headId}」的拼图技能槽配置并重新生成 BOOTH 识别 KEY！`);
+    });
+  });
+
+  document.getElementById('btn-copy-settlement-hash')?.addEventListener('click', () => {
+    const keyTxt = document.getElementById('booth-generated-key')?.textContent || '';
+    const hashTxt = document.getElementById('booth-settlement-hash')?.textContent || '';
+    const combined = `【CERVIX-3D 月底结算回执】${hashTxt}\n【当前头模拼图KEY】${keyTxt}`;
+    navigator.clipboard?.writeText(combined).catch(() => {});
+    showToast('📋 已复制月底客服核验哈希回执码与头模拼图 KEY！');
+  });
+
+  refreshPuzzleHubUI();
+  updateFocusClockUI();
+
+  // Live 1-second Study Companion Timer, Focus Heartbeat Check & Energy Accumulation (zero GPU overhead)
   setInterval(() => {
+    // 1. Focus Timer & Anti-AFK Random Heartbeat Countdown
+    if (puzzleRuntime.hbActive) {
+      puzzleRuntime.hbCountdownSec -= 1;
+      const cdEl = document.getElementById('hb-countdown-badge');
+      if (cdEl) cdEl.textContent = `${Math.max(0, puzzleRuntime.hbCountdownSec)}s`;
+      if (puzzleRuntime.hbCountdownSec <= 0) {
+        puzzleRuntime.hbActive = false;
+        puzzleRuntime.focusRunning = false;
+        if (hbBanner) hbBanner.classList.add('hidden');
+        puzzleState.heartbeatFailedCount += 1;
+        if (puzzleState.hardcoreWipeEnabled) {
+          const wiped = Math.round(puzzleState.monthlyFocusScore);
+          puzzleState.monthlyFocusScore = 0;
+          puzzleRuntime.focusSessionPendingPts = 0;
+          puzzleRuntime.focusSessionSec = 0;
+          puzzleState.auditLogs.unshift(`• [💀挂机熔断清零] 活人抽查25秒超时未点！已扣光本月全部专注分 (-${wiped} PTS)`);
+          showToast(`💀【活人巡检超时未点】判定挂机作弊！已按规则扣光本月全部专注分 (-${wiped} PTS)！`);
+        } else {
+          const wipedSession = Math.round(puzzleRuntime.focusSessionPendingPts);
+          puzzleState.monthlyFocusScore = Math.max(0, puzzleState.monthlyFocusScore - wipedSession);
+          puzzleRuntime.focusSessionPendingPts = 0;
+          puzzleRuntime.focusSessionSec = 0;
+          puzzleState.auditLogs.unshift(`• [⚠️巡检超时扣分] 演示安全锁生效，已扣除本轮专注分 (-${wipedSession} PTS)`);
+          showToast(`⚠️ 活人抽查超时未点！已扣除本轮未结算专注分 (-${wipedSession} PTS)`);
+        }
+        savePuzzleScoreState();
+        updateFocusClockUI();
+        refreshPuzzleHubUI();
+      } else {
+        updateFocusClockUI();
+      }
+    } else if (puzzleRuntime.focusRunning) {
+      puzzleRuntime.focusSessionSec += 1;
+      const ptsPerSec = 0.5 * getActivePuzzleMultiplier(); // Base 30 PTS/min * multiplier
+      puzzleRuntime.focusSessionPendingPts += ptsPerSec;
+      puzzleState.monthlyFocusScore += ptsPerSec;
+      puzzleRuntime.nextHeartbeatInSec -= 1;
+      if (puzzleRuntime.nextHeartbeatInSec <= 0) {
+        triggerHeartbeatCheckNow();
+      } else {
+        updateFocusClockUI();
+        if (puzzleRuntime.focusSessionSec % 5 === 0) {
+          savePuzzleScoreState();
+          refreshPuzzleHubUI();
+        }
+      }
+    }
+
+    // 2. Deadline Guillotine Bounty Countdown
+    if (puzzleRuntime.bountyRunning && puzzleRuntime.bountyRemainingSec > 0) {
+      puzzleRuntime.bountyRemainingSec -= 1;
+      const bMin = String(Math.floor(puzzleRuntime.bountyRemainingSec / 60)).padStart(2, '0');
+      const bSec = String(puzzleRuntime.bountyRemainingSec % 60).padStart(2, '0');
+      const bValEl = document.getElementById('bounty-timer-val');
+      if (bValEl) bValEl.textContent = `${bMin}:${bSec}`;
+      if (puzzleRuntime.bountyRemainingSec <= 0) {
+        puzzleRuntime.bountyRunning = false;
+        puzzleState.monthlyVictorScore = Math.max(0, puzzleState.monthlyVictorScore - 100);
+        const tagEl = document.getElementById('bounty-status-tag');
+        if (tagEl) tagEl.textContent = '💀 死线超时失败 (-100 PTS)';
+        savePuzzleScoreState();
+        refreshPuzzleHubUI();
+        showToast('💀 死线斩首任务超时未完成！已扣除押金 -100 PTS！');
+      }
+    }
+
     if (!state.studyTriumphEnabled || document.hidden) return;
     const elapsedSec = Math.floor((Date.now() - state.studyStartTime) / 1000);
     const hrs = String(Math.floor(elapsedSec / 3600)).padStart(2, '0');
@@ -5060,13 +5907,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       timerEl.textContent = `${hrs}:${mins}:${secs}`;
     }
 
-    const activeCount = desktopEngine ? desktopEngine.pets.size : 0;
-    if (activeCount > 0) {
-      const gain = Math.round(activeCount * 3 * (state.activeRoleBuffMultiplier || 1.5));
-      state.studyEnergyPoints += gain;
-      if (energyValEl) energyValEl.textContent = `${state.studyEnergyPoints.toLocaleString()} PTS (x${(state.activeRoleBuffMultiplier || 1.5).toFixed(1)})`;
-      if (barFillEl) barFillEl.style.width = `${Math.min(100, ((state.studyEnergyPoints % 2500) / 2500) * 100)}%`;
-    }
+    const totalPts = getMonthlyTotalScore();
+    if (energyValEl) energyValEl.textContent = `${totalPts.toLocaleString()} PTS (x${getActivePuzzleMultiplier().toFixed(2)})`;
+    if (barFillEl) barFillEl.style.width = `${Math.min(100, ((totalPts % 2500) / 2500) * 100)}%`;
   }, 1000);
 
   // Stage 43: Boot into DLSS-5 Neural Photorealistic Reconstruction preset

@@ -47,6 +47,7 @@ export class DesktopBoxSpaceEngine {
     this.onStructuresUpdate = callbacks.onStructuresUpdate || (() => {});
     this.onBoxCollisionVisual = callbacks.onBoxCollisionVisual || (() => {});
     this.onPlacardsUpdate = callbacks.onPlacardsUpdate || (() => {});
+    this.onHeadClick = callbacks.onHeadClick || (() => {});
 
     this.settings = {
       fov: 42,
@@ -1569,9 +1570,10 @@ export class DesktopBoxSpaceEngine {
       if (info.structure) {
         const struct = info.structure;
         const bz = this.getBoxBoundsAtZ(struct.pos.z, struct.scale);
-        // If clicked without dragging on an occupied structure's head, toggle rotation mode on that head
+        // If clicked without dragging on an occupied structure's head, toggle rotation mode on that head & trigger head click callback
         if (info.movedDist <= 4 && info.pet) {
           this.toggleRotationMode(info.pet.id);
+          this.onHeadClick(info.pet.id);
         } else if (!struct.occupiedByPetId && !struct.isShelfStructure && !struct.isDecorProp) {
           // If this empty container structure was dropped onto a free severed head, snap that head into it!
           for (const p of this.pets.values()) {
@@ -1593,6 +1595,7 @@ export class DesktopBoxSpaceEngine {
 
       if (info.movedDist <= 5) {
         this.toggleRotationMode(pet.id);
+        this.onHeadClick(pet.id);
       } else if (info.pickupSoundPlayed) {
         const targetStruct = this.findNearestAvailableStructure(pet.pos, 14.8);
         if (targetStruct) {
