@@ -31,6 +31,7 @@ import {
 import {
   VISUAL_STYLE_PRESETS,
   HDR_ENVIRONMENT_CATALOG,
+  DYNAMIC_LIGHT_MODES,
   updateInteractiveCursorLight
 } from './three/photorealLighting.js';
 import {
@@ -107,6 +108,9 @@ const state = {
   pomodoroRunning: true,
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
+  placardsEnabled: true,
+  pinnedDossierPetId: null,
+  pureScreenMode: false,
   petStripExpanded: false,
   activeStripPetId: 'spec-fang-yaoping-001',
   visualCustomConfig: {
@@ -115,6 +119,9 @@ const state = {
     envIntensity: 0.32,
     windowGobo: 'rain_mullion',
     windowGoboStrength: 0.34,
+    dynamicLightMode: 'sunset_cloud_drift',
+    dynamicLightSpeed: 1.0,
+    dynamicLightAmp: 1.0,
     chiaroscuro: 0.68,
     tyndall: 0.58,
     vintagePhoto: 0.48,
@@ -412,9 +419,10 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
 }
 
 // ============================================================================
-// HOVER DOSSIER FLOATING WINDOW RENDERER (Includes In-Life Photo & Study Role)
+// HOVER DOSSIER FLOATING WINDOW & ALWAYS-ON CONNECTED SPECIMEN PLACARDS
+// ("角色断头就是来个那种信息条不用关的那种类似标牌的连接，能看到角色照片，简要信息")
 // ============================================================================
-function updateHoverDossierHUD(hoverInfo) {
+function populateAndShowDossierHUD(hoverInfo) {
   const hud = document.getElementById('pet-hover-dossier');
   if (!hud) return;
 
@@ -517,6 +525,188 @@ function updateHoverDossierHUD(hoverInfo) {
   hud.classList.remove('hidden');
 }
 
+function updateHoverDossierHUD(hoverInfo) {
+  // Stage 37: When Always-On Connected Specimen Placards are active ("不用关的那种类似标牌的连接"),
+  // hovering a 3D head highlights its connected placard strip instead of popping up the 395x385px modal over the screen!
+  // The full dossier modal only appears when the user clicks [📋详档] or the portrait photo on the placard, or if placards are disabled.
+  if (state.placardsEnabled) {
+    if (state.pinnedDossierPetId && desktopEngine && desktopEngine.pets.has(state.pinnedDossierPetId)) {
+      if (hoverInfo && hoverInfo.collectible?.id === state.pinnedDossierPetId) {
+        populateAndShowDossierHUD(hoverInfo);
+      }
+      return;
+    }
+    const hud = document.getElementById('pet-hover-dossier');
+    if (hud && !hud.classList.contains('hidden')) {
+      hud.classList.add('hidden');
+    }
+    return;
+  }
+  populateAndShowDossierHUD(hoverInfo);
+}
+
+function togglePinnedDossierForPet(petId) {
+  const hud = document.getElementById('pet-hover-dossier');
+  if (!petId || !desktopEngine || !desktopEngine.pets.has(petId)) {
+    state.pinnedDossierPetId = null;
+    if (hud) hud.classList.add('hidden');
+    return;
+  }
+  if (state.pinnedDossierPetId === petId && hud && !hud.classList.contains('hidden')) {
+    state.pinnedDossierPetId = null;
+    hud.classList.add('hidden');
+    return;
+  }
+  state.pinnedDossierPetId = petId;
+  const pet = desktopEngine.pets.get(petId);
+  const snappedStruct = pet.snappedStructureId ? desktopEngine.structures.get(pet.snappedStructureId) : null;
+  const screenPt = desktopEngine.worldToScreen(pet.pos);
+  populateAndShowDossierHUD({
+    collectible: pet.collectible,
+    snappedStructure: snappedStruct || null,
+    isRotationMode: pet.isRotationMode,
+    positionCm: {
+      x: Math.round(pet.pos.x),
+      y: Math.round(pet.pos.y),
+      zMm: Math.round(pet.pos.z * 10),
+    },
+    screenX: screenPt.x,
+    screenY: screenPt.y,
+  });
+}
+
+function renderSpecimenPlacards(placardsList = []) {
+  const layer = document.getElementById('specimen-placards-layer');
+  const svgEl = document.getElementById('specimen-placards-svg');
+  const cardsEl = document.getElementById('specimen-placards-cards');
+  if (!layer || !svgEl || !cardsEl) return;
+
+  if (!state.placardsEnabled || placardsList.length === 0) {
+    layer.classList.add('hidden');
+    svgEl.innerHTML = '';
+    cardsEl.innerHTML = '';
+    return;
+  }
+  layer.classList.remove('hidden');
+
+  const winW = window.innerWidth;
+  const winH = window.innerHeight;
+  const cardHalfW = 114;
+  const cardHalfH = 30;
+  const existingCards = new Map();
+  cardsEl.querySelectorAll('.specimen-placard-card').forEach((el) => {
+    existingCards.set(el.dataset.placardPetId, el);
+  });
+
+  const activeIds = new Set();
+  const svgParts = [];
+
+  for (const item of placardsList) {
+    const col = item.collectible;
+    if (!col) continue;
+    activeIds.add(item.id);
+
+    // Clamp placard position inside screen bounds and avoid overlapping the software window when open & docked right
+    let maxRight = winW - cardHalfW - 12;
+    const swWin = document.getElementById('software-window');
+    if (swWin && !state.windowHidden && swWin.classList.contains('window-dock-right') && !document.body.classList.contains('pure-screen-mode')) {
+      const rect = swWin.getBoundingClientRect();
+      if (rect.width > 80 && item.anchorX < rect.left) {
+        maxRight = Math.min(maxRight, rect.left - cardHalfW - 10);
+      }
+    }
+    const cx = Math.max(cardHalfW + 12, Math.min(maxRight, item.cardX));
+    const cy = Math.max(66, Math.min(winH - cardHalfH - 44, item.cardY));
+
+    // Brass Callout Leader Line from 3D Neck Cut (anchorX, anchorY) -> Elbow -> Placard Edge
+    const attachX = cx >= item.anchorX ? cx - cardHalfW + 4 : cx + cardHalfW - 4;
+    const attachY = cy;
+    const elbowX = item.anchorX + (attachX - item.anchorX) * 0.42;
+    const elbowY = attachY;
+    const strokeCol = item.isHovered ? 'rgba(251, 191, 36, 0.96)' : 'rgba(217, 179, 130, 0.72)';
+    const glowCol = item.isHovered ? 'rgba(245, 158, 11, 0.42)' : 'rgba(15, 12, 10, 0.55)';
+
+    svgParts.push(`
+      <g>
+        <polyline points="${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${elbowX.toFixed(1)},${elbowY.toFixed(1)} ${attachX.toFixed(1)},${attachY.toFixed(1)}"
+          fill="none" stroke="${glowCol}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+        <polyline points="${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${elbowX.toFixed(1)},${elbowY.toFixed(1)} ${attachX.toFixed(1)},${attachY.toFixed(1)}"
+          fill="none" stroke="${strokeCol}" stroke-width="1.35" stroke-dasharray="${item.isHovered ? 'none' : '4 2.5'}" stroke-linecap="round" stroke-linejoin="round" />
+        <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.4" fill="#fde68a" stroke="#451a03" stroke-width="1.2" />
+        <circle cx="${attachX.toFixed(1)}" cy="${attachY.toFixed(1)}" r="2.6" fill="#d9b382" />
+      </g>
+    `);
+
+    let cardEl = existingCards.get(item.id);
+    const photoSrc = resolveCollectibleLifePhotoSrc(col);
+    const shortName = col.name.split('·')[0].trim();
+    const roleShort = col.name.includes('·') ? col.name.split('·')[1].trim().slice(0, 9) : (col.grade || '特级标本').slice(0, 8);
+    const briefIdentity = col.fateRecord?.vitalityStatus || col.subtitle || '19岁青春巅峰标本';
+    const cutShort = (col.anatomyOptions?.cutLevel || 'C4齐根断面').split('(')[0].trim();
+    const stateLabel = item.containerLabel ? `🏛️${item.containerLabel}` : `🩸${cutShort.slice(0, 9)}`;
+
+    if (!cardEl) {
+      cardEl = document.createElement('div');
+      cardEl.className = 'specimen-placard-card';
+      cardEl.dataset.placardPetId = item.id;
+      cardEl.innerHTML = `
+        <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/收起「${shortName}」生前大图与完整断头档案">
+          <img src="${photoSrc}" alt="${shortName}生前照片" />
+          <span class="placard-photo-badge">生前照</span>
+        </div>
+        <div class="placard-info-col">
+          <div class="placard-top-row">
+            <span class="placard-name" title="${col.name}">${shortName} · ${roleShort}</span>
+            <span class="placard-depth-tag" data-placard-z>Z:${item.zMm}mm</span>
+          </div>
+          <div class="placard-brief-line" data-placard-brief title="${briefIdentity}">${briefIdentity}</div>
+          <div class="placard-sub-line">
+            <span class="placard-cut-tag" data-placard-cut>${stateLabel}</span>
+            <div class="placard-actions">
+              <button type="button" class="placard-mini-btn" data-placard-rot="${item.id}" title="切换360°旋转把玩">360°</button>
+              <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开/收起完整档案卡">详档</button>
+            </div>
+          </div>
+        </div>
+      `;
+      cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          togglePinnedDossierForPet(item.id);
+        });
+      });
+      cardEl.querySelector('[data-placard-rot]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (desktopEngine) {
+          desktopEngine.toggleRotationMode(item.id);
+          renderVaultGrid();
+        }
+      });
+      cardsEl.appendChild(cardEl);
+    } else {
+      const zEl = cardEl.querySelector('[data-placard-z]');
+      if (zEl) zEl.textContent = `Z:${item.zMm}mm`;
+      const cutEl = cardEl.querySelector('[data-placard-cut]');
+      if (cutEl) cutEl.textContent = stateLabel;
+      const rotBtn = cardEl.querySelector('[data-placard-rot]');
+      if (rotBtn) rotBtn.textContent = item.isRotationMode ? '🔄转中' : '360°';
+    }
+
+    cardEl.classList.toggle('is-hovered', Boolean(item.isHovered));
+    cardEl.style.left = `${cx.toFixed(1)}px`;
+    cardEl.style.top = `${cy.toFixed(1)}px`;
+  }
+
+  // Remove stale placard DOM elements for dismissed heads
+  for (const [id, el] of existingCards.entries()) {
+    if (!activeIds.has(id)) {
+      el.remove();
+    }
+  }
+
+  svgEl.innerHTML = svgParts.join('');
+}
+
 function updateStructureFloatingHUD(info) {
   const hud = document.getElementById('structure-floating-hud');
   if (!hud) return;
@@ -532,11 +722,15 @@ function updateStructureFloatingHUD(info) {
     const occSuffix = info.occupiedByName ? ` (已装入: ${info.occupiedByName.split('·')[0].trim()})` : '';
     titleEl.textContent = `${icon} ${info.label}${occSuffix}`;
   }
+  const depthEl = document.getElementById('struct-hud-depth');
+  if (depthEl && info.zMm !== undefined) {
+    depthEl.textContent = `Z:${info.zMm}mm`;
+  }
   const ejectBtn = document.getElementById('btn-struct-hud-eject');
   if (ejectBtn) {
     ejectBtn.style.display = info.occupiedByPetId ? 'inline-flex' : 'none';
   }
-  const left = Math.max(150, Math.min(window.innerWidth - 150, info.screenX || window.innerWidth * 0.5));
+  const left = Math.max(185, Math.min(window.innerWidth - 185, info.screenX || window.innerWidth * 0.5));
   const top = Math.max(68, Math.min(window.innerHeight - 60, (info.screenY || window.innerHeight * 0.5) - 18));
   hud.style.left = `${left}px`;
   hud.style.top = `${top}px`;
@@ -1516,6 +1710,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   desktopEngine = new DesktopBoxSpaceEngine(desktopCanvas, {
     onHoverChange: updateHoverDossierHUD,
     onStructureSelect: updateStructureFloatingHUD,
+    onPlacardsUpdate: renderSpecimenPlacards,
     onPetStateUpdate: (list) => {
       renderActivePetsStrip(list);
       renderVaultGrid();
@@ -1530,6 +1725,22 @@ window.addEventListener('DOMContentLoaded', async () => {
         el.classList.add('active');
         setTimeout(() => el.classList.remove('active'), 260);
       }
+    }
+  });
+
+  document.getElementById('btn-struct-hud-closer')?.addEventListener('click', () => {
+    const hud = document.getElementById('structure-floating-hud');
+    const structId = hud?.dataset?.structId;
+    if (structId && desktopEngine) {
+      desktopEngine.stepStructureDepth(structId, 9.0);
+    }
+  });
+
+  document.getElementById('btn-struct-hud-farther')?.addEventListener('click', () => {
+    const hud = document.getElementById('structure-floating-hud');
+    const structId = hud?.dataset?.structId;
+    if (structId && desktopEngine) {
+      desktopEngine.stepStructureDepth(structId, -9.0);
     }
   });
 
@@ -1549,6 +1760,80 @@ window.addEventListener('DOMContentLoaded', async () => {
       desktopEngine.removeContainerStructure(structId);
       showToast('🗑️ 已删除选中的 3D 建筑/层架/摆件！');
     }
+  });
+
+  document.getElementById('btn-struct-hud-close')?.addEventListener('click', () => {
+    if (desktopEngine) {
+      desktopEngine.selectedStructureId = null;
+    }
+    updateStructureFloatingHUD(null);
+  });
+
+  document.getElementById('btn-close-hover-dossier')?.addEventListener('click', () => {
+    state.pinnedDossierPetId = null;
+    const hud = document.getElementById('pet-hover-dossier');
+    if (hud) hud.classList.add('hidden');
+  });
+
+  // Global Unstuck-UI Safeguard: clicking outside popups/drawers or pressing Escape reliably dismisses them!
+  window.addEventListener('pointerdown', (e) => {
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+    const dossierEl = document.getElementById('pet-hover-dossier');
+    if (dossierEl && !dossierEl.classList.contains('hidden')) {
+      if (!target.closest('#pet-hover-dossier') && !target.closest('[data-placard-dossier]')) {
+        state.pinnedDossierPetId = null;
+        dossierEl.classList.add('hidden');
+      }
+    }
+    const vcdEl = document.getElementById('visual-customizer-drawer');
+    if (vcdEl && !vcdEl.classList.contains('hidden')) {
+      if (target === desktopCanvas || target.closest('#specimen-placards-layer')) {
+        vcdEl.classList.add('hidden');
+      }
+    }
+  }, true);
+
+  const setPureScreenMode = (enabled) => {
+    state.pureScreenMode = Boolean(enabled);
+    document.body.classList.toggle('pure-screen-mode', state.pureScreenMode);
+    const restoreBtn = document.getElementById('pure-screen-floating-btn');
+    if (restoreBtn) restoreBtn.classList.toggle('hidden', !state.pureScreenMode);
+    if (desktopEngine) {
+      desktopEngine.onPlacardsUpdate(desktopEngine.getPlacardsScreenData());
+    }
+  };
+  document.getElementById('btn-quick-pure-screen')?.addEventListener('click', () => {
+    setPureScreenMode(true);
+    showToast('👁️ 已进入纯享画面模式！所有悬浮面板已收起，仅保留3D动态光影与标本连接标牌（按 Esc 随时恢复）');
+  });
+  document.getElementById('pure-screen-floating-btn')?.addEventListener('click', () => {
+    setPureScreenMode(false);
+    showToast('✨ 已恢复显示全部 UI 控制面板');
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (state.pureScreenMode) {
+        setPureScreenMode(false);
+      }
+      state.pinnedDossierPetId = null;
+      document.getElementById('pet-hover-dossier')?.classList.add('hidden');
+      document.getElementById('visual-customizer-drawer')?.classList.add('hidden');
+      updateStructureFloatingHUD(null);
+    }
+  });
+
+  document.getElementById('btn-quick-placards')?.addEventListener('click', (e) => {
+    state.placardsEnabled = !state.placardsEnabled;
+    e.currentTarget.classList.toggle('active-top', state.placardsEnabled);
+    e.currentTarget.textContent = state.placardsEnabled ? '🏷️ 连接标牌: 开' : '🏷️ 连接标牌: 关';
+    if (desktopEngine) {
+      renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+    }
+    showToast(state.placardsEnabled
+      ? '🏷️ 已开启断头标本连接标牌（常驻显示角色生前照片与简要信息，无需手动关闭）'
+      : '🏷️ 已隐藏断头标本连接标牌（鼠标悬停人头将显示传统悬浮卡片）');
   });
 
   if (window.cervixDesktopBridge?.isDesktop) {
@@ -2725,6 +3010,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       const colRim = document.getElementById('vc-rim-color');
       if (colRim) colRim.value = state.visualCustomConfig.rimColor;
     }
+    const selDyn = document.getElementById('sel-dynamic-light-mode');
+    if (selDyn && state.visualCustomConfig.dynamicLightMode) {
+      selDyn.value = state.visualCustomConfig.dynamicLightMode;
+    }
+    const btnDynTop = document.getElementById('btn-quick-dyn-light');
+    if (btnDynTop) {
+      const mId = state.visualCustomConfig.dynamicLightMode || 'sunset_cloud_drift';
+      const shortLabels = {
+        sunset_cloud_drift: '🌅 慢速流光: 暮光云影',
+        tree_breeze_dappled: '🌿 慢速流光: 树影微风',
+        rain_caustics_sway: '🌧️ 慢速流光: 雨窗水纹',
+        candle_chiaroscuro: '🕯️ 慢速流光: 烛火呼吸',
+        cinema_orbit: '🎬 慢速流光: 电影环绕',
+        static_locked: '🔒 慢速流光: 静态定格',
+      };
+      btnDynTop.textContent = shortLabels[mId] || '🌅 慢速流光: 开启';
+      btnDynTop.classList.toggle('active-top', mId !== 'static_locked');
+    }
     desktopEngine?.applyVisualCustomConfig(state.visualCustomConfig);
     studioEngine?.applyVisualCustomConfig(state.visualCustomConfig);
   };
@@ -2738,6 +3041,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       const p = VISUAL_STYLE_PRESETS[presetId];
       if (p) showToast(`🎬 已切换电影色调/HDR/柔焦预设：${p.label} — ${p.desc}`);
     });
+  });
+
+  document.getElementById('sel-dynamic-light-mode')?.addEventListener('change', (e) => {
+    applyVisualConfigAndSyncUI({ dynamicLightMode: e.target.value }, false);
+    const dm = DYNAMIC_LIGHT_MODES.find(x => x.id === e.target.value);
+    showToast(`🌅 已切换慢速变换光影：${dm ? `${dm.label} — ${dm.desc}` : e.target.value}`);
+  });
+
+  document.getElementById('btn-quick-dyn-light')?.addEventListener('click', () => {
+    const modes = DYNAMIC_LIGHT_MODES.map(m => m.id);
+    const cur = state.visualCustomConfig.dynamicLightMode || 'sunset_cloud_drift';
+    const nextMode = modes[(modes.indexOf(cur) + 1) % modes.length];
+    applyVisualConfigAndSyncUI({ dynamicLightMode: nextMode }, false);
+    const dm = DYNAMIC_LIGHT_MODES.find(x => x.id === nextMode);
+    showToast(`🌅 已切换慢速变换光影模式：${dm ? `${dm.label} — ${dm.desc}` : nextMode}`);
   });
 
   document.getElementById('sel-hdr-mode')?.addEventListener('change', (e) => {
@@ -2766,6 +3084,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       applyVisualConfigAndSyncUI({ [key]: v }, false);
     });
   };
+  bindVcSlider('vc-dyn-speed', 'val-vc-dyn-speed', 'dynamicLightSpeed', v => `${Number(v).toFixed(2)}x`);
+  bindVcSlider('vc-dyn-amp', 'val-vc-dyn-amp', 'dynamicLightAmp', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-cursor-torch', 'val-vc-cursor-torch', 'cursorTorch', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-iris-sparkle', 'val-vc-iris-sparkle', 'irisSparkle', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-halation', 'val-vc-halation', 'halation', v => `${Math.round(v * 100)}%`);

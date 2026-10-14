@@ -291,53 +291,110 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
   frontBar.receiveShadow = true;
   group.add(frontBar);
 
-  // Stage 28: Every shelf & podium is built as an individually draggable & deletable 3D structure!
+  // Stage 37: High-Detail Museum Gallery Console Shelves & Fluted Neoclassical Columns
   const addShelfPlatform = (id, label, cx, surfaceY, cz, w, d, hThickness = 1.6, isColumn = false) => {
     const shelfNode = new THREE.Group();
     shelfNode.name = `StageShelf_${id}`;
     shelfNode.position.set(cx, surfaceY, cz);
 
-    const slabGeo = isColumn
-      ? new THREE.CylinderGeometry(w * 0.5, w * 0.54, hThickness, 32)
-      : new THREE.BoxGeometry(w, hThickness, d);
-    const slab = new THREE.Mesh(slabGeo, floorMat);
-    slab.position.set(0, -hThickness * 0.5, 0);
-    slab.castShadow = true;
-    slab.receiveShadow = true;
-    shelfNode.add(slab);
-
     if (!isColumn) {
-      const lipGeo = new THREE.BoxGeometry(w + 0.4, hThickness * 0.65, 0.9);
-      const lip = new THREE.Mesh(lipGeo, trimMat);
-      lip.position.set(0, -hThickness * 0.35, d * 0.5);
-      shelfNode.add(lip);
+      // Top polished deck slab + stepped architectural cornice molding
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(w, hThickness * 0.65, d), floorMat);
+      slab.position.set(0, -hThickness * 0.32, 0);
+      slab.castShadow = true;
+      slab.receiveShadow = true;
+      shelfNode.add(slab);
+
+      const lowerMolding = new THREE.Mesh(new THREE.BoxGeometry(w * 0.94, hThickness * 0.55, d * 0.94), floorMat);
+      lowerMolding.position.set(0, -hThickness * 0.88, 0);
+      lowerMolding.castShadow = true;
+      shelfNode.add(lowerMolding);
+
+      // Perimeter brushed-brass inlay band
+      const brassBand = new THREE.Mesh(new THREE.BoxGeometry(w + 0.35, hThickness * 0.28, d + 0.35), trimMat);
+      brassBand.position.set(0, -hThickness * 0.52, 0);
+      shelfNode.add(brassBand);
+
+      // Museum Brass Gallery Balustrade Rail along back & sides (prevents visual "floating brick" look!)
+      const railH = 1.65;
+      const backRail = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, w * 0.96, 12), trimMat);
+      backRail.rotation.z = Math.PI * 0.5;
+      backRail.position.set(0, railH, -d * 0.45);
+      shelfNode.add(backRail);
 
       for (const side of [-1, 1]) {
-        const brkGeo = new THREE.BoxGeometry(0.8, 3.6, d * 0.82);
-        const brk = new THREE.Mesh(brkGeo, trimMat);
-        brk.position.set(side * (w * 0.42), -hThickness - 1.6, -d * 0.05);
-        shelfNode.add(brk);
+        const sideRail = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, d * 0.86, 12), trimMat);
+        sideRail.rotation.x = Math.PI * 0.5;
+        sideRail.position.set(side * w * 0.47, railH, -d * 0.02);
+        shelfNode.add(sideRail);
+
+        // Turned corner & side balusters
+        for (const zf of [-0.45, 0.0, 0.40]) {
+          const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, railH, 12), trimMat);
+          post.position.set(side * w * 0.47, railH * 0.5, d * zf);
+          shelfNode.add(post);
+        }
+
+        // Ornate Wrought-Brass Scroll Corbel Brackets underneath shelf
+        const corbelSpine = new THREE.Mesh(new THREE.BoxGeometry(0.65, 4.8, d * 0.78), trimMat);
+        corbelSpine.position.set(side * (w * 0.41), -hThickness - 2.2, -d * 0.06);
+        shelfNode.add(corbelSpine);
+
+        const scrollArch = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.24, 12, 28, Math.PI * 1.15), trimMat);
+        scrollArch.rotation.y = Math.PI * 0.5;
+        scrollArch.position.set(side * (w * 0.41), -hThickness - 2.0, d * 0.14);
+        shelfNode.add(scrollArch);
+
+        const finialDrop = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.4, 14), trimMat);
+        finialDrop.rotation.x = Math.PI;
+        finialDrop.position.set(side * (w * 0.41), -hThickness - 5.1, -d * 0.32);
+        shelfNode.add(finialDrop);
       }
     } else {
-      const shaftH = Math.max(2, surfaceY - hThickness - floorSurfaceY);
+      // Neoclassical Fluted Museum Pedestal Column with Lathe-Turned Capital & Plinth
+      const shaftH = Math.max(3, surfaceY - hThickness - floorSurfaceY);
+      const capPts = [
+        new THREE.Vector2(0.0, -hThickness * 1.6),
+        new THREE.Vector2(w * 0.36, -hThickness * 1.6),
+        new THREE.Vector2(w * 0.42, -hThickness * 1.1),
+        new THREE.Vector2(w * 0.52, -hThickness * 0.6),
+        new THREE.Vector2(w * 0.55, 0.0),
+        new THREE.Vector2(0.0, 0.0),
+      ];
+      const capMesh = new THREE.Mesh(new THREE.LatheGeometry(capPts, 48), floorMat);
+      capMesh.castShadow = true;
+      capMesh.receiveShadow = true;
+      shelfNode.add(capMesh);
+
       if (shaftH > 2) {
-        const shaftGeo = new THREE.CylinderGeometry(w * 0.34, w * 0.40, shaftH, 24);
-        const shaftMat = new THREE.MeshStandardMaterial({
-          color: '#111827',
-          roughness: 0.32,
-          metalness: 0.25,
+        const shaftMat = new THREE.MeshPhysicalMaterial({
+          map: floorTex,
+          color: isLightMarble ? '#e2e8f0' : '#1e293b',
+          roughness: 0.28,
+          clearcoat: 0.35,
         });
-        const shaft = new THREE.Mesh(shaftGeo, shaftMat);
-        shaft.position.set(0, -hThickness - shaftH * 0.5, 0);
+        const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.34, w * 0.39, shaftH, 24), shaftMat);
+        shaft.position.set(0, -hThickness * 1.4 - shaftH * 0.5, 0);
         shaft.castShadow = true;
         shaft.receiveShadow = true;
         shelfNode.add(shaft);
 
-        const ringGeo = new THREE.TorusGeometry(w * 0.46, 0.38, 12, 32);
-        ringGeo.rotateX(Math.PI / 2);
-        const topRing = new THREE.Mesh(ringGeo, trimMat);
-        topRing.position.set(0, -hThickness, 0);
+        // 12 vertical classical flutes around column shaft
+        for (let fi = 0; fi < 12; fi++) {
+          const ang = (fi / 12) * Math.PI * 2;
+          const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, shaftH * 0.92, 8), trimMat);
+          rib.position.set(Math.cos(ang) * w * 0.365, -hThickness * 1.4 - shaftH * 0.5, Math.sin(ang) * w * 0.365);
+          shelfNode.add(rib);
+        }
+
+        const topRing = new THREE.Mesh(new THREE.TorusGeometry(w * 0.46, 0.32, 14, 48), trimMat);
+        topRing.rotateX(Math.PI / 2);
+        topRing.position.set(0, -hThickness * 0.9, 0);
         shelfNode.add(topRing);
+
+        const basePlinth = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.46, w * 0.54, 1.6, 36), floorMat);
+        basePlinth.position.set(0, -hThickness * 1.4 - shaftH + 0.8, 0);
+        shelfNode.add(basePlinth);
       }
     }
 
@@ -672,6 +729,34 @@ export function updateRainyStudyBackdrop(stageGroup, dt = 0.016) {
  * (`glass_bell_jar`, `velvet_chalice`, `formalin_cylinder`, `acrylic_cube`, `surgical_tray`, `none`).
  * Local coordinates match `buildCollectibleHeadNode` where neck cut is at `y ≈ -12.4` and crown is at `y ≈ +12.5`.
  */
+let engravedPlaqueTex = null;
+function getEngravedPlaqueTexture() {
+  if (engravedPlaqueTex) return engravedPlaqueTex;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 256, 64);
+  g.addColorStop(0, '#b48a28');
+  g.addColorStop(0.5, '#f3d078');
+  g.addColorStop(1, '#9e761e');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.strokeStyle = '#3b2806';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(4, 4, 248, 56);
+  ctx.fillStyle = '#261802';
+  ctx.font = 'bold 16px serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CERVIX · ARCHIVE', 128, 28);
+  ctx.font = '11px monospace';
+  ctx.fillText('SPECIMEN COLLECTION', 128, 48);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  engravedPlaqueTex = tex;
+  return tex;
+}
+
 export function buildSpecimenContainerGroup(containerStyle = 'glass_bell_jar') {
   const group = new THREE.Group();
   group.name = 'SpecimenContainerGroup';
@@ -683,252 +768,440 @@ export function buildSpecimenContainerGroup(containerStyle = 'glass_bell_jar') {
   }
 
   const brassMat = new THREE.MeshStandardMaterial({
-    color: '#d4af37',
-    roughness: 0.24,
-    metalness: 0.86,
+    color: '#c9a23f',
+    roughness: 0.26,
+    metalness: 0.84,
+  });
+  const plaqueMat = new THREE.MeshStandardMaterial({
+    map: getEngravedPlaqueTexture(),
+    roughness: 0.28,
+    metalness: 0.78,
   });
   const obsidianMat = new THREE.MeshPhysicalMaterial({
-    color: '#111827',
-    roughness: 0.18,
-    metalness: 0.15,
-    clearcoat: 0.75,
-    clearcoatRoughness: 0.15,
+    map: getFloorTexture('dark_obsidian'),
+    color: '#182234',
+    roughness: 0.22,
+    metalness: 0.14,
+    clearcoat: 0.55,
+    clearcoatRoughness: 0.20,
+  });
+  const walnutCarvedMat = new THREE.MeshPhysicalMaterial({
+    map: getFloorTexture('walnut_desk'),
+    color: '#3a1f14',
+    roughness: 0.30,
+    clearcoat: 0.42,
+    clearcoatRoughness: 0.24,
   });
   const velvetMat = new THREE.MeshPhysicalMaterial({
-    color: '#58101d',
-    roughness: 0.85,
+    color: '#4c0b18',
+    roughness: 0.88,
     metalness: 0.0,
     sheen: 0.92,
     sheenRoughness: 0.35,
-    sheenColor: new THREE.Color('#fb7185'),
+    sheenColor: new THREE.Color('#f43f5e'),
   });
+  // Ultra-clean museum crystal glass: never milky or overly bright!
   const glassMat = new THREE.MeshPhysicalMaterial({
-    color: '#f0f9ff',
+    color: '#e2f1ff',
     transparent: true,
-    opacity: 0.19,
-    roughness: 0.04,
+    opacity: 0.085,
+    roughness: 0.06,
     metalness: 0.0,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.02,
-    specularIntensity: 1.0,
-    ior: 1.50,
-    envMapIntensity: 1.65,
+    clearcoat: 0.42,
+    clearcoatRoughness: 0.05,
+    specularIntensity: 0.45,
+    ior: 1.48,
+    envMapIntensity: 0.32,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
 
   if (containerStyle === 'glass_bell_jar') {
-    // 1. Stepped Obsidian & Turned Brass Pedestal Base (y = -12.5 down to -15.4)
-    const basePlinth = new THREE.Mesh(new THREE.CylinderGeometry(10.8, 11.6, 1.8, 48), obsidianMat);
-    basePlinth.position.set(0, -14.5, -0.5);
+    // 1. 64-Segment Lathe-Turned Victorian Ebony & Brass Ogee Plinth Base (y = -15.6 .. -12.4)
+    const baseProfile = [
+      new THREE.Vector2(0.0, -15.5),
+      new THREE.Vector2(11.8, -15.5),
+      new THREE.Vector2(12.0, -15.0),
+      new THREE.Vector2(11.3, -14.6),
+      new THREE.Vector2(11.4, -13.9),
+      new THREE.Vector2(10.5, -13.5),
+      new THREE.Vector2(10.2, -13.0),
+      new THREE.Vector2(9.1, -12.7),
+      new THREE.Vector2(0.0, -12.7),
+    ];
+    const basePlinth = new THREE.Mesh(new THREE.LatheGeometry(baseProfile, 64), obsidianMat);
+    basePlinth.position.set(0, 0, -0.5);
     basePlinth.castShadow = true;
     basePlinth.receiveShadow = true;
     group.add(basePlinth);
 
-    const brassStep = new THREE.Mesh(new THREE.CylinderGeometry(9.8, 10.4, 0.7, 48), brassMat);
-    brassStep.position.set(0, -13.3, -0.5);
-    brassStep.receiveShadow = true;
-    group.add(brassStep);
+    // 4 Carved Brass Claw/Bun Feet under the Victorian Base
+    for (let i = 0; i < 4; i++) {
+      const a = (i + 0.5) * Math.PI * 0.5;
+      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.95, 20, 14), brassMat);
+      foot.scale.set(1.2, 0.65, 1.2);
+      foot.position.set(Math.cos(a) * 10.6, -15.4, -0.5 + Math.sin(a) * 10.6);
+      group.add(foot);
+    }
 
-    const velvetCushion = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 8.8, 0.55, 40), velvetMat);
-    velvetCushion.position.set(0, -12.75, -0.5);
+    // Precision Turned Brass Gallery Rim & 16 Miniature Balusters
+    const galleryRing = new THREE.Mesh(new THREE.TorusGeometry(9.85, 0.22, 16, 64), brassMat);
+    galleryRing.rotateX(Math.PI / 2);
+    galleryRing.position.set(0, -12.6, -0.5);
+    group.add(galleryRing);
+
+    const lowerRing = new THREE.Mesh(new THREE.TorusGeometry(10.8, 0.18, 14, 64), brassMat);
+    lowerRing.rotateX(Math.PI / 2);
+    lowerRing.position.set(0, -13.5, -0.5);
+    group.add(lowerRing);
+
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const bal = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.9, 10), brassMat);
+      bal.position.set(Math.cos(a) * 9.85, -13.05, -0.5 + Math.sin(a) * 9.85);
+      group.add(bal);
+    }
+
+    // Tufted Burgundy Velvet Neck Cushion
+    const velvetCushion = new THREE.Mesh(new THREE.CylinderGeometry(8.1, 8.7, 0.62, 48), velvetMat);
+    velvetCushion.position.set(0, -12.55, -0.5);
     velvetCushion.receiveShadow = true;
     group.add(velvetCushion);
 
-    // Engraved Brass Nameplate on the front of the base
-    const plate = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.0, 0.4), brassMat);
-    plate.position.set(0, -14.4, 10.9);
+    // Curved Engraved Brass Museum Plaque on Front
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(5.8, 1.25, 0.35), plaqueMat);
+    plate.position.set(0, -14.3, 11.1);
     group.add(plate);
 
-    // 2. Crystal Bell Jar Dome (Cylinder + Hemisphere Dome + Top Finial Knob)
-    const cylGeo = new THREE.CylinderGeometry(9.9, 9.9, 18.5, 48, 1, true);
-    const cylMesh = new THREE.Mesh(cylGeo, glassMat);
-    cylMesh.position.set(0, -3.8, -0.5);
-    group.add(cylMesh);
+    // 2. Seamless Lathe-Blown Victorian Bell Jar Dome + Multi-Tiered Brass Crown Finial
+    const bellProfile = [];
+    for (let i = 0; i <= 28; i++) {
+      const t = i / 28;
+      if (t < 0.62) {
+        const y = -12.8 + (t / 0.62) * 18.2;
+        bellProfile.push(new THREE.Vector2(9.95, y));
+      } else {
+        const u = (t - 0.62) / 0.38;
+        const ang = u * Math.PI * 0.5;
+        bellProfile.push(new THREE.Vector2(Math.cos(ang) * 9.95, 5.4 + Math.sin(ang) * 9.8));
+      }
+    }
+    const bellDome = new THREE.Mesh(new THREE.LatheGeometry(bellProfile, 64), glassMat);
+    bellDome.position.set(0, 0, -0.5);
+    group.add(bellDome);
 
-    const domeGeo = new THREE.SphereGeometry(9.9, 48, 24, 0, Math.PI * 2, 0, Math.PI * 0.5);
-    const domeMesh = new THREE.Mesh(domeGeo, glassMat);
-    domeMesh.position.set(0, 5.45, -0.5);
-    group.add(domeMesh);
+    // Subtle Brass Rim Band at Bottom of Glass Bell
+    const glassRim = new THREE.Mesh(new THREE.TorusGeometry(9.96, 0.16, 12, 64), brassMat);
+    glassRim.rotateX(Math.PI / 2);
+    glassRim.position.set(0, -12.75, -0.5);
+    group.add(glassRim);
 
-    // Top Brass & Glass Finial Knob
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(1.15, 24, 16), brassMat);
-    knob.position.set(0, 16.1, -0.5);
-    group.add(knob);
+    // Ornate Turned Brass Spire Finial on Top of Dome
+    const finialPts = [
+      new THREE.Vector2(0.0, 15.1),
+      new THREE.Vector2(1.45, 15.1),
+      new THREE.Vector2(0.95, 15.4),
+      new THREE.Vector2(0.55, 15.8),
+      new THREE.Vector2(0.85, 16.3),
+      new THREE.Vector2(0.35, 16.9),
+      new THREE.Vector2(0.0, 17.5),
+    ];
+    const finial = new THREE.Mesh(new THREE.LatheGeometry(finialPts, 32), brassMat);
+    finial.position.set(0, 0, -0.5);
+    group.add(finial);
 
-    group.userData.baseBottomOffset = -15.4;
+    group.userData.baseBottomOffset = -15.6;
   } else if (containerStyle === 'velvet_chalice') {
-    // Open-air Luxury Velvet & Gold Chalice Pedestal (No glass cover)
-    const foot = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 9.6, 1.4, 40), obsidianMat);
-    foot.position.set(0, -15.3, -0.5);
-    foot.castShadow = true;
-    foot.receiveShadow = true;
-    group.add(foot);
+    // 64-Segment Baroque Gilded Museum Goblet / Chalice Pedestal
+    const chalicePts = [
+      new THREE.Vector2(0.0, -16.0),
+      new THREE.Vector2(9.8, -16.0),
+      new THREE.Vector2(10.1, -15.5),
+      new THREE.Vector2(8.6, -15.0),
+      new THREE.Vector2(5.2, -14.5),
+      new THREE.Vector2(3.1, -14.0),
+      new THREE.Vector2(4.2, -13.5),
+      new THREE.Vector2(2.9, -13.0),
+      new THREE.Vector2(5.8, -12.6),
+      new THREE.Vector2(9.0, -12.1),
+      new THREE.Vector2(9.2, -11.8),
+      new THREE.Vector2(0.0, -11.8),
+    ];
+    const chaliceBody = new THREE.Mesh(new THREE.LatheGeometry(chalicePts, 64), obsidianMat);
+    chaliceBody.position.set(0, 0, -0.5);
+    chaliceBody.castShadow = true;
+    chaliceBody.receiveShadow = true;
+    group.add(chaliceBody);
 
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 4.6, 2.4, 32), brassMat);
-    stem.position.set(0, -13.6, -0.5);
-    stem.castShadow = true;
-    group.add(stem);
+    const knopRing = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.32, 16, 48), brassMat);
+    knopRing.rotateX(Math.PI / 2);
+    knopRing.position.set(0, -13.5, -0.5);
+    group.add(knopRing);
 
-    const cup = new THREE.Mesh(new THREE.CylinderGeometry(8.8, 5.2, 1.4, 40), obsidianMat);
-    cup.position.set(0, -12.6, -0.5);
-    cup.receiveShadow = true;
-    group.add(cup);
+    const footRing = new THREE.Mesh(new THREE.TorusGeometry(9.6, 0.25, 16, 64), brassMat);
+    footRing.rotateX(Math.PI / 2);
+    footRing.position.set(0, -15.4, -0.5);
+    group.add(footRing);
 
-    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(8.2, 8.5, 0.65, 40), velvetMat);
-    cushion.position.set(0, -12.1, -0.5);
+    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(8.3, 8.6, 0.65, 48), velvetMat);
+    cushion.position.set(0, -11.75, -0.5);
     cushion.receiveShadow = true;
     group.add(cushion);
 
-    const goldRim = new THREE.Mesh(new THREE.TorusGeometry(8.6, 0.26, 12, 48), brassMat);
+    const goldRim = new THREE.Mesh(new THREE.TorusGeometry(9.05, 0.28, 16, 64), brassMat);
     goldRim.rotateX(Math.PI / 2);
-    goldRim.position.set(0, -12.0, -0.5);
+    goldRim.position.set(0, -11.8, -0.5);
     group.add(goldRim);
+
+    // 16 Baroque Brass Stud Pearls around the Chalice Crown
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 12), brassMat);
+      pearl.position.set(Math.cos(a) * 9.25, -11.8, -0.5 + Math.sin(a) * 9.25);
+      group.add(pearl);
+    }
 
     group.userData.baseBottomOffset = -16.0;
   } else if (containerStyle === 'formalin_cylinder') {
-    // Medical Formalin Preservation Tank with Amber Meniscus & Graduation Ticks
+    // Precision Anatomical Formalin Chamber with Bolted Brass Flanges & Pressure Gauge
     const steelMat = new THREE.MeshStandardMaterial({
-      color: '#94a3b8',
-      roughness: 0.25,
-      metalness: 0.85,
+      color: '#64748b',
+      roughness: 0.26,
+      metalness: 0.86,
     });
-    const bottomCap = new THREE.Mesh(new THREE.CylinderGeometry(10.6, 10.9, 2.0, 48), steelMat);
-    bottomCap.position.set(0, -14.4, -0.5);
+    const bottomPts = [
+      new THREE.Vector2(0.0, -15.5),
+      new THREE.Vector2(11.4, -15.5),
+      new THREE.Vector2(11.4, -14.6),
+      new THREE.Vector2(10.6, -14.3),
+      new THREE.Vector2(10.6, -13.2),
+      new THREE.Vector2(0.0, -13.2),
+    ];
+    const bottomCap = new THREE.Mesh(new THREE.LatheGeometry(bottomPts, 64), steelMat);
+    bottomCap.position.set(0, 0, -0.5);
     bottomCap.castShadow = true;
     bottomCap.receiveShadow = true;
     group.add(bottomCap);
 
-    // Formalin-tinted glass cylinder with graduation ruler texture
+    // 12 Brass Hex Bolts & 4 Vertical Tie-Rods around the Formalin Cylinder
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const boltB = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.45, 6), brassMat);
+      boltB.position.set(Math.cos(a) * 10.95, -14.4, -0.5 + Math.sin(a) * 10.95);
+      group.add(boltB);
+
+      const boltT = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.45, 6), brassMat);
+      boltT.position.set(Math.cos(a) * 10.95, 16.5, -0.5 + Math.sin(a) * 10.95);
+      group.add(boltT);
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = (i + 0.5) * Math.PI * 0.5;
+      const tieRod = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 30.8, 12), brassMat);
+      tieRod.position.set(Math.cos(a) * 10.85, 1.0, -0.5 + Math.sin(a) * 10.85);
+      group.add(tieRod);
+    }
+
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(5.6, 1.2, 0.35), plaqueMat);
+    plate.position.set(0, -14.4, 11.3);
+    group.add(plate);
+
+    // Subtle Amber Formalin Glass Cylinder with Graduation Scale
     const formalinGlassMat = new THREE.MeshPhysicalMaterial({
-      color: '#fef3c7',
+      color: '#fde68a',
       map: getFormalinGradTexture(),
       transparent: true,
-      opacity: 0.26,
-      roughness: 0.05,
-      clearcoat: 1.0,
-      ior: 1.48,
-      envMapIntensity: 1.5,
+      opacity: 0.12,
+      roughness: 0.08,
+      clearcoat: 0.40,
+      ior: 1.46,
+      envMapIntensity: 0.30,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    const tank = new THREE.Mesh(new THREE.CylinderGeometry(10.2, 10.2, 28.5, 48, 1, true), formalinGlassMat);
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(10.2, 10.2, 28.5, 64, 1, true), formalinGlassMat);
     tank.position.set(0, 0.8, -0.5);
     group.add(tank);
 
-    // Formalin liquid meniscus surface ring near top
     const meniscusMat = new THREE.MeshBasicMaterial({
-      color: '#fde68a',
+      color: '#fcd34d',
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.14,
       side: THREE.DoubleSide,
       depthWrite: false,
     });
-    const meniscus = new THREE.Mesh(new THREE.RingGeometry(0.5, 10.1, 48), meniscusMat);
+    const meniscus = new THREE.Mesh(new THREE.RingGeometry(0.6, 10.1, 48), meniscusMat);
     meniscus.rotateX(-Math.PI / 2);
-    meniscus.position.set(0, 13.4, -0.5);
+    meniscus.position.set(0, 13.6, -0.5);
     group.add(meniscus);
 
-    // Heavy Stainless Top Lid & Specimen Suspension Ring
-    const topLid = new THREE.Mesh(new THREE.CylinderGeometry(10.7, 10.5, 1.5, 48), steelMat);
+    // Top Machined Flange Lid + Brass Valve Wheel
+    const topLid = new THREE.Mesh(new THREE.CylinderGeometry(11.3, 10.6, 1.6, 64), steelMat);
     topLid.position.set(0, 15.6, -0.5);
     group.add(topLid);
 
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.35, 12, 32), brassMat);
-    handle.position.set(0, 17.2, -0.5);
-    group.add(handle);
+    const valveWheel = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.32, 14, 36), brassMat);
+    valveWheel.rotateX(Math.PI / 2);
+    valveWheel.position.set(0, 17.1, -0.5);
+    group.add(valveWheel);
 
-    group.userData.baseBottomOffset = -15.4;
+    const valveStem = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 1.4, 16), brassMat);
+    valveStem.position.set(0, 16.6, -0.5);
+    group.add(valveStem);
+
+    group.userData.baseBottomOffset = -15.5;
   } else if (containerStyle === 'acrylic_cube') {
-    // Modern Museum Acrylic Vitrine Box + 4 Brass Corner Pillars + Uplight Ring
-    const baseBox = new THREE.Mesh(new THREE.BoxGeometry(20.6, 2.2, 20.6), obsidianMat);
-    baseBox.position.set(0, -14.3, -0.5);
-    baseBox.castShadow = true;
-    baseBox.receiveShadow = true;
-    group.add(baseBox);
+    // Louvre-Grade Architectural Vitrine Case with Stepped Marble-Obsidian Plinth & Mitered Brass Frame
+    const plinthBottom = new THREE.Mesh(new THREE.BoxGeometry(22.0, 1.4, 22.0), obsidianMat);
+    plinthBottom.position.set(0, -14.9, -0.5);
+    plinthBottom.castShadow = true;
+    plinthBottom.receiveShadow = true;
+    group.add(plinthBottom);
 
-    // Glowing LED Uplight Ring illuminating the C4/C5 neck cross-section
-    const ledGeo = new THREE.RingGeometry(5.6, 6.4, 48);
+    const plinthStep = new THREE.Mesh(new THREE.BoxGeometry(20.4, 1.3, 20.4), obsidianMat);
+    plinthStep.position.set(0, -13.65, -0.5);
+    plinthStep.receiveShadow = true;
+    group.add(plinthStep);
+
+    const brassMolding = new THREE.Mesh(new THREE.BoxGeometry(21.0, 0.35, 21.0), brassMat);
+    brassMolding.position.set(0, -14.2, -0.5);
+    group.add(brassMolding);
+
+    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(8.0, 8.5, 0.5, 48), velvetMat);
+    cushion.position.set(0, -12.8, -0.5);
+    group.add(cushion);
+
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(6.0, 1.2, 0.35), plaqueMat);
+    plate.position.set(0, -14.2, 11.0);
+    group.add(plate);
+
+    // Warm Museum Uplight Ring
+    const ledGeo = new THREE.RingGeometry(6.2, 6.8, 48);
     ledGeo.rotateX(-Math.PI / 2);
     const ledMat = new THREE.MeshBasicMaterial({
-      color: '#38bdf8',
+      color: '#fde68a',
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.45,
       side: THREE.DoubleSide,
     });
     const ledRing = new THREE.Mesh(ledGeo, ledMat);
-    ledRing.position.set(0, -13.15, -0.5);
+    ledRing.position.set(0, -12.95, -0.5);
     group.add(ledRing);
 
     const boxGlass = new THREE.Mesh(new THREE.BoxGeometry(19.6, 28.2, 19.6), glassMat);
-    boxGlass.position.set(0, 0.9, -0.5);
+    boxGlass.position.set(0, 1.1, -0.5);
     group.add(boxGlass);
 
-    // 4 Thin Brass Corner Edges
+    // Top & Bottom Mitered Brass Vitrine Frame + 4 Corner Pillars with Finials
+    const topCapFrame = new THREE.Mesh(new THREE.BoxGeometry(20.2, 0.55, 20.2), brassMat);
+    topCapFrame.position.set(0, 15.3, -0.5);
+    group.add(topCapFrame);
+
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 28.4, 12), brassMat);
-        post.position.set(sx * 9.8, 0.9, -0.5 + sz * 9.8);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 28.4, 16), brassMat);
+        post.position.set(sx * 9.85, 1.1, -0.5 + sz * 9.85);
         group.add(post);
+
+        const cornerFinial = new THREE.Mesh(new THREE.SphereGeometry(0.55, 16, 12), brassMat);
+        cornerFinial.position.set(sx * 9.85, 15.85, -0.5 + sz * 9.85);
+        group.add(cornerFinial);
       }
     }
 
-    group.userData.baseBottomOffset = -15.4;
+    group.userData.baseBottomOffset = -15.6;
   } else if (containerStyle === 'surgical_tray') {
-    // Medical Stainless-Steel Dissection Tray + Coagulated Blood Pad
+    // Precision Lathe-Formed Medical Dissection Basin with Rolled Rim & Brass Handles
     const steelTrayMat = new THREE.MeshStandardMaterial({
+      map: getFloorTexture('surgical_steel'),
       color: '#cbd5e1',
-      roughness: 0.22,
-      metalness: 0.88,
+      roughness: 0.24,
+      metalness: 0.86,
     });
-    const trayBottom = new THREE.Mesh(new THREE.CylinderGeometry(10.2, 8.8, 1.4, 40), steelTrayMat);
-    trayBottom.position.set(0, -13.4, -0.5);
-    trayBottom.castShadow = true;
-    trayBottom.receiveShadow = true;
-    group.add(trayBottom);
+    const trayPts = [
+      new THREE.Vector2(0.0, -14.2),
+      new THREE.Vector2(8.6, -14.2),
+      new THREE.Vector2(9.4, -13.8),
+      new THREE.Vector2(10.5, -12.7),
+      new THREE.Vector2(10.9, -12.5),
+      new THREE.Vector2(10.3, -12.4),
+      new THREE.Vector2(8.8, -13.2),
+      new THREE.Vector2(0.0, -13.2),
+    ];
+    const trayMesh = new THREE.Mesh(new THREE.LatheGeometry(trayPts, 64), steelTrayMat);
+    trayMesh.position.set(0, 0, -0.5);
+    trayMesh.castShadow = true;
+    trayMesh.receiveShadow = true;
+    group.add(trayMesh);
 
-    const trayRim = new THREE.Mesh(new THREE.TorusGeometry(10.2, 0.42, 12, 48), steelTrayMat);
+    const trayRim = new THREE.Mesh(new THREE.TorusGeometry(10.6, 0.34, 16, 64), steelTrayMat);
     trayRim.rotateX(Math.PI / 2);
-    trayRim.position.set(0, -12.7, -0.5);
+    trayRim.position.set(0, -12.5, -0.5);
     group.add(trayRim);
+
+    // Side Brass Carrying Handles
+    for (const side of [-1, 1]) {
+      const handle = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.22, 12, 28, Math.PI), brassMat);
+      handle.rotation.z = -side * Math.PI * 0.5;
+      handle.position.set(side * 10.7, -12.6, -0.5);
+      group.add(handle);
+    }
 
     const bloodPadMat = new THREE.MeshPhysicalMaterial({
       color: '#4c0519',
-      roughness: 0.14,
-      clearcoat: 0.95,
-      clearcoatRoughness: 0.08,
+      roughness: 0.18,
+      clearcoat: 0.85,
+      clearcoatRoughness: 0.10,
     });
-    const bloodPool = new THREE.Mesh(new THREE.CylinderGeometry(6.8, 7.2, 0.35, 32), bloodPadMat);
-    bloodPool.position.set(0, -12.6, -0.5);
+    const bloodPool = new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.0, 0.42, 48), bloodPadMat);
+    bloodPool.position.set(0, -12.9, -0.5);
     group.add(bloodPool);
 
-    group.userData.baseBottomOffset = -14.1;
+    group.userData.baseBottomOffset = -14.2;
   } else if (containerStyle === 'guillotine_plinth') {
-    // Dark Walnut Executioner's Plinth + Brass Trophy Plaque + Velvet Neck Depression
-    const walnutMat = new THREE.MeshPhysicalMaterial({
-      color: '#2b150d',
-      roughness: 0.34,
-      clearcoat: 0.35,
-    });
-    const plinth = new THREE.Mesh(new THREE.BoxGeometry(19.2, 2.6, 19.2), walnutMat);
-    plinth.position.set(0, -14.1, -0.5);
-    plinth.castShadow = true;
-    plinth.receiveShadow = true;
-    group.add(plinth);
+    // Carved Dark Walnut Executioner's Plinth + Twin Brass Lion-Ring Handles + Velvet Lunette Cradle
+    const plinthBase = new THREE.Mesh(new THREE.BoxGeometry(20.4, 1.2, 20.4), walnutCarvedMat);
+    plinthBase.position.set(0, -15.0, -0.5);
+    plinthBase.castShadow = true;
+    plinthBase.receiveShadow = true;
+    group.add(plinthBase);
 
-    const brassTrim = new THREE.Mesh(new THREE.BoxGeometry(19.8, 0.5, 19.8), brassMat);
-    brassTrim.position.set(0, -15.2, -0.5);
+    const plinthBody = new THREE.Mesh(new THREE.BoxGeometry(18.8, 2.2, 18.8), walnutCarvedMat);
+    plinthBody.position.set(0, -13.6, -0.5);
+    plinthBody.castShadow = true;
+    plinthBody.receiveShadow = true;
+    group.add(plinthBody);
+
+    const brassTrim = new THREE.Mesh(new THREE.BoxGeometry(19.6, 0.42, 19.6), brassMat);
+    brassTrim.position.set(0, -14.5, -0.5);
     group.add(brassTrim);
 
-    const neckPad = new THREE.Mesh(new THREE.CylinderGeometry(7.6, 8.2, 0.65, 36), velvetMat);
-    neckPad.position.set(0, -12.55, -0.5);
+    const topBevelRing = new THREE.Mesh(new THREE.TorusGeometry(8.2, 0.28, 16, 64), brassMat);
+    topBevelRing.rotateX(Math.PI / 2);
+    topBevelRing.position.set(0, -12.45, -0.5);
+    group.add(topBevelRing);
+
+    const neckPad = new THREE.Mesh(new THREE.CylinderGeometry(7.9, 8.3, 0.65, 48), velvetMat);
+    neckPad.position.set(0, -12.45, -0.5);
     group.add(neckPad);
 
-    const plaque = new THREE.Mesh(new THREE.BoxGeometry(7.4, 1.3, 0.45), brassMat);
-    plaque.position.set(0, -14.0, 9.2);
+    // Twin Brass Lion-Ring Handles on Left & Right Sides
+    for (const side of [-1, 1]) {
+      const mount = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.75, 0.4, 20), brassMat);
+      mount.rotation.z = Math.PI * 0.5;
+      mount.position.set(side * 9.5, -13.5, -0.5);
+      group.add(mount);
+
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.18, 12, 32), brassMat);
+      ring.rotation.y = Math.PI * 0.5;
+      ring.position.set(side * 9.75, -13.9, -0.5);
+      group.add(ring);
+    }
+
+    const plaque = new THREE.Mesh(new THREE.BoxGeometry(6.8, 1.35, 0.4), plaqueMat);
+    plaque.position.set(0, -13.6, 9.4);
     group.add(plaque);
 
-    group.userData.baseBottomOffset = -15.45;
+    group.userData.baseBottomOffset = -15.6;
   } else {
     group.userData.baseBottomOffset = -12.6;
   }

@@ -54,7 +54,18 @@
 
     <!-- FULL-SCREEN 3D DESKTOP PET CANVAS (True Screen-Space 3D Perspective Box Space) -->
     <canvas id="desktop-pet-canvas"></canvas>
+
+    <!-- Stage 37: Always-On Connected Specimen Placards & Brass Callout Leader Lines ("不用关的那种类似标牌的连接，能看到角色照片、简要信息") -->
+    <div id="specimen-placards-layer" aria-label="断头标本连接标牌层">
+      <svg id="specimen-placards-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="specimen-placards-cards"></div>
+    </div>
   </div>
+
+  <!-- Stage 37: Floating One-Click Restore Button when in Pure Screen Mode (👁️ 纯享画面) -->
+  <button type="button" id="pure-screen-floating-btn" class="hidden" title="恢复显示所有UI控制栏 (快捷键: Esc)">
+    👁️ 退出纯享画面 · 恢复UI (Esc)
+  </button>
 
   <!-- HOVER DOSSIER FLOATING WINDOW (Outside #desktop-environment at z-index: 9999 so NEVER blocked by any window!) -->
   <div id="pet-hover-dossier" class="hidden">
@@ -63,7 +74,10 @@
         <span class="dossier-serial" id="hud-serial">SPEC-2026-FYP</span>
         <span class="dossier-grade" id="hud-grade">UR · 高考状元孤品</span>
       </div>
-      <span class="dossier-mode-badge" id="hud-mode-badge">🪦 静止标本态</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="dossier-mode-badge" id="hud-mode-badge">🪦 静止标本态</span>
+        <button type="button" id="btn-close-hover-dossier" class="chip-btn" style="padding:1px 6px;font-size:11px;line-height:1.2;pointer-events:auto;cursor:pointer;" title="关闭悬浮详情卡 (Esc)">✕</button>
+      </div>
     </div>
     <div class="dossier-title" id="hud-name">方尧平 · 广东怀集19岁高考女状元标本</div>
     <div class="dossier-subtitle" id="hud-subtitle">齐刘海清爽学霸束发 · 十九岁校园巅峰状元骨相</div>
@@ -108,15 +122,19 @@
     </div>
   </div>
 
-  <!-- Stage 28: Floating 3D Structure / Shelf / Prop Action HUD (Appears when clicking/selecting any 3D structure) -->
-  <div id="structure-floating-hud" class="hidden" style="position:fixed;z-index:10020;transform:translate(-50%,-100%);background:rgba(15,12,10,0.92);border:1px solid rgba(217,179,130,0.55);border-radius:10px;padding:7px 11px;box-shadow:0 10px 28px rgba(0,0,0,0.68);backdrop-filter:blur(10px);color:#f5ebd9;font-size:12px;pointer-events:auto;white-space:nowrap;">
-    <div style="display:flex;align-items:center;gap:8px;">
+  <!-- Stage 28 & 37: Floating 3D Structure / Shelf / Prop Action HUD (Supports Wheel Depth + Closer/Farther Buttons + Reliable Close) -->
+  <div id="structure-floating-hud" class="hidden" style="position:fixed;z-index:10020;transform:translate(-50%,-100%);background:rgba(15,12,10,0.94);border:1px solid rgba(217,179,130,0.62);border-radius:10px;padding:7px 11px;box-shadow:0 10px 28px rgba(0,0,0,0.72);backdrop-filter:blur(10px);color:#f5ebd9;font-size:12px;pointer-events:auto;white-space:nowrap;">
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
       <strong id="struct-hud-title" style="color:#fde68a;font-size:12px;">🧪 维多利亚玻璃钟罩座</strong>
+      <span id="struct-hud-depth" style="font-size:10.5px;color:#fcd34d;background:rgba(217,179,130,0.16);padding:1px 6px;border-radius:5px;border:1px solid rgba(217,179,130,0.32);">Z:-160mm</span>
+      <button type="button" id="btn-struct-hud-closer" class="chip-btn" style="padding:2px 7px;font-size:11px;background:rgba(251,191,36,0.2);border-color:rgba(251,191,36,0.5);color:#fde68a;" title="向屏幕前方拉近此建筑 (也可直接鼠标滚轮上滚)">🔍 拉近</button>
+      <button type="button" id="btn-struct-hud-farther" class="chip-btn" style="padding:2px 7px;font-size:11px;background:rgba(148,163,184,0.2);border-color:rgba(148,163,184,0.45);color:#e2e8f0;" title="向书桌深处推远此建筑 (也可直接鼠标滚轮下滚)">🔭 推远</button>
       <button type="button" id="btn-struct-hud-eject" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(56,189,248,0.22);border-color:rgba(56,189,248,0.55);color:#bae6fd;display:none;">📤 取出头颅</button>
-      <button type="button" id="btn-struct-hud-delete" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(244,63,94,0.25);border-color:rgba(244,63,94,0.6);color:#fecdd3;">🗑️ 删除此建筑/摆件</button>
+      <button type="button" id="btn-struct-hud-delete" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(244,63,94,0.25);border-color:rgba(244,63,94,0.6);color:#fecdd3;">🗑️ 删除</button>
+      <button type="button" id="btn-struct-hud-close" class="chip-btn" style="padding:2px 6px;font-size:11px;background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.25);color:#cbd5e1;" title="关闭建筑操作条 (Esc)">✕</button>
     </div>
-    <div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;opacity:0.88;">
-      💡 左键按住直接平滑拖动移位（Alt+左键单独拎出人头）· 右键单击或按 Delete 键秒删
+    <div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;opacity:0.9;">
+      💡 鼠标悬停建筑<strong>滚轮直接切换前后景深(Z)</strong> · 左键按住拖动移位 · 右键或 Delete 秒删
     </div>
   </div>
 
@@ -130,13 +148,19 @@
       <span class="badge-count" id="active-pet-count-badge">3 在屏</span>
     </div>
     <div class="overlay-actions">
-      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开光影、柔焦模糊、老照片胶片感、收纳建筑与伴学环境定制器">
-        🎨 光影·模糊·老照片定制
+      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开可定制化画面效果：动态慢速变换光影、光学柔焦模糊、老照片胶片感与建筑系统">
+        🎨 画面·动态光影定制
+      </button>
+      <button id="btn-quick-dyn-light" class="overlay-btn active-top" title="一键切换慢速变换光影模式 (暮光云影缓移 / 树影微风斑驳 / 雨窗流光 / 烛火呼吸 / 电影环绕)">
+        🌅 慢速流光: 暮光云影
+      </button>
+      <button id="btn-quick-placards" class="overlay-btn active-top" title="开关断头标本常驻连接信息标牌 (显示生前照片与简要信息，无需手动关闭)">
+        🏷️ 连接标牌: 开
       </button>
       <button id="btn-quick-rain-study" class="overlay-btn active-top" title="一键开关雨夜书房窗外小雨白噪音(ASMR)与3D雨窗伴学环境">
         🌧️ 雨声伴学
       </button>
-      <button id="btn-quick-place-container" class="overlay-btn" title="在书桌/展架上放置一座独立的3D头颅收纳建筑">
+      <button id="btn-quick-place-container" class="overlay-btn" title="在书桌/展架上放置一座高精度3D头颅收纳建筑 (支持滚轮切换景深)">
         🏗️ +放置建筑
       </button>
       <button id="btn-quick-gravity" class="overlay-btn active-top" title="切换物理重力落地系统">
@@ -147,6 +171,9 @@
       </button>
       <button id="btn-quick-dock-window" class="overlay-btn" title="将窗口停靠在右侧，左半屏完整操作3D桌宠">
         ◧ 右侧停靠
+      </button>
+      <button id="btn-quick-pure-screen" class="overlay-btn" title="一键隐藏所有悬浮UI面板，纯享3D动态光影与断头标本标牌 (按 Esc 随时恢复)">
+        👁️ 纯享画面
       </button>
       <button id="btn-quick-pets-top" class="overlay-btn active-top" title="切换3D桌宠是否置顶显示在所有窗口最前方">
         📌 桌宠置顶
@@ -237,6 +264,18 @@
         </div>
 
         <div class="field-row" style="margin-top:8px;">
+          <label>🌅 慢速变换光影模式 (消除画面静态感 · 实时动态窗光/云影/树影缓慢流转)</label>
+          <select id="sel-dynamic-light-mode">
+            <option value="sunset_cloud_drift" selected>🌅 暮光云影缓移 (推荐 · 落日窗格光影与丁达尔光束缓慢流转)</option>
+            <option value="tree_breeze_dappled">🌿 窗外梧桐树影微风斑驳 (自然摇曳光斑)</option>
+            <option value="rain_caustics_sway">🌧️ 雨夜窗玻璃水纹流光 (潮湿冷暖微光呼吸)</option>
+            <option value="candle_chiaroscuro">🕯️ 古典烛火伦勃朗明暗摇曳 (暖金油画呼吸光)</option>
+            <option value="cinema_orbit">🎬 360° 环绕电影柔光慢速流转 (全方位立体骨相光影)</option>
+            <option value="static_locked">🔒 静态定格光源 (关闭动态光影变换)</option>
+          </select>
+        </div>
+
+        <div class="field-row" style="margin-top:6px;">
           <label>🌐 HDR 全景环境光场模式 (影棚柔光箱 / 落日逆光 / 雨夜天光 / 展柜穹顶)</label>
           <select id="sel-hdr-mode">
             <option value="softbox_portrait">📸 85mm 影棚双柔光箱 + 环形眼神光 HDR</option>
@@ -269,6 +308,16 @@
         </div>
 
         <div class="vcd-sliders">
+          <div class="slider-row">
+            <span>🌊 动态光影缓慢流转速度 (Dynamic Light Speed)</span>
+            <input type="range" id="vc-dyn-speed" min="0.0" max="2.5" step="0.05" value="1.0" />
+            <span id="val-vc-dyn-speed">1.0x</span>
+          </div>
+          <div class="slider-row">
+            <span>🎭 动态光影偏移幅度 (Dynamic Light Amplitude)</span>
+            <input type="range" id="vc-dyn-amp" min="0.0" max="2.0" step="0.05" value="1.0" />
+            <span id="val-vc-dyn-amp">100%</span>
+          </div>
           <div class="slider-row">
             <span>🌫️ 电影黑柔镜/光学柔焦模糊 (Pro-Mist · 彻底消除3D生硬感)</span>
             <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.56" />

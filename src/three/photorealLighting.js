@@ -16,18 +16,28 @@ export const HDR_ENVIRONMENT_CATALOG = [
 ];
 
 export const WINDOW_GOBO_CATALOG = [
-  { id: 'rain_mullion', modeInt: 1, label: '🌧️ 雨夜十字窗格 + 柔和漫射窗光 (伴学推荐)' },
-  { id: 'venetian_blinds', modeInt: 2, label: '🪟 书房百叶窗柔化漫射光 (电影感光影)' },
-  { id: 'gothic_lattice', modeInt: 3, label: '🏰 哥特菱格花窗柔光 (古典标本馆)' },
-  { id: 'tree_dappled', modeInt: 4, label: '🌿 窗外梧桐树影柔光 (静谧庭院)' },
-  { id: 'none', modeInt: 0, label: '🔦 纯净影棚无影柔光箱 (无窗框投影)' },
+  { id: 'rain_mullion', modeInt: 1, label: '🌧️ 雨夜十字窗格 + 流云漫射窗光 (伴学推荐)' },
+  { id: 'venetian_blinds', modeInt: 2, label: '🪟 书房百叶窗条纹光影 (电影感明暗切割)' },
+  { id: 'gothic_lattice', modeInt: 3, label: '🏰 哥特菱格花窗光影 (古典标本馆)' },
+  { id: 'tree_dappled', modeInt: 4, label: '🌿 窗外梧桐树影摇曳斑驳光 (自然呼吸感)' },
+  { id: 'none', modeInt: 0, label: '🔦 纯净影棚柔光箱 (无窗框投影)' },
+];
+
+export const DYNAMIC_LIGHT_MODES = [
+  { id: 'sunset_cloud_drift', label: '🌅 暮色流云慢移 · 光影角度与冷暖缓慢呼吸 (默认推荐)' },
+  { id: 'tree_breeze_dappled', label: '🌿 梧桐树影微风摇曳 · 斑驳光斑缓慢流淌' },
+  { id: 'rain_caustics_sway', label: '🌧️ 雨夜窗影水波 · 柔和冷暖交替漫游' },
+  { id: 'candle_chiaroscuro', label: '🕯️ 古典烛火摇曳 · 暖金伦勃朗明暗跳动' },
+  { id: 'cinema_orbit', label: '🎬 戏剧环绕走马灯 · 140°立体雕塑光巡航' },
+  { id: 'static_locked', label: '⏸️ 固定静帧光影 · 锁定当前手动光源角度' },
 ];
 
 export const GLOBAL_CHIAROSCURO_UNIFORMS = {
   uSssIntensity: { value: 0.82 },
   uChiaroscuro: { value: 0.68 },
   uWindowGoboMode: { value: 1.0 },
-  uWindowGoboStrength: { value: 0.34 },
+  uWindowGoboStrength: { value: 0.38 },
+  uWindowGoboPhase: { value: 0.0 },
   uWindowLightDir: { value: new THREE.Vector3(0.54, 0.44, 0.72).normalize() },
   uCursorLightDir: { value: new THREE.Vector3(0.18, 0.28, 0.94).normalize() },
   uCursorTorchIntensity: { value: 0.28 },
@@ -733,6 +743,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
     shader.uniforms.uChiaroscuro = GLOBAL_CHIAROSCURO_UNIFORMS.uChiaroscuro;
     shader.uniforms.uWindowGoboMode = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboMode;
     shader.uniforms.uWindowGoboStrength = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboStrength;
+    shader.uniforms.uWindowGoboPhase = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboPhase;
     shader.uniforms.uWindowLightDir = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir;
     shader.uniforms.uCursorLightDir = GLOBAL_CHIAROSCURO_UNIFORMS.uCursorLightDir;
     shader.uniforms.uCursorTorchIntensity = GLOBAL_CHIAROSCURO_UNIFORMS.uCursorTorchIntensity;
@@ -757,6 +768,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
       uniform float uChiaroscuro;
       uniform float uWindowGoboMode;
       uniform float uWindowGoboStrength;
+      uniform float uWindowGoboPhase;
       uniform vec3 uWindowLightDir;
       uniform vec3 uCursorLightDir;
       uniform float uCursorTorchIntensity;
@@ -769,10 +781,33 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
         vec3 rightAx = normalize(cross(vec3(0.0, 1.0, 0.0), L) + vec3(1e-4, 0.0, 0.0));
         vec3 upAx = normalize(cross(L, rightAx));
         vec2 p = vec2(dot(worldPos, rightAx), dot(worldPos, upAx));
-        float radialCone = smoothstep(78.0, 14.0, length(p * vec2(0.75, 0.85)));
-        float softMullion = 0.88 + 0.12 * smoothstep(-0.6, 0.6, cos(p.y * 0.085 + p.x * 0.04));
-        float env = clamp(0.55 + 0.45 * radialCone * softMullion, 0.48, 1.0);
-        return mix(1.0, env, clamp(uWindowGoboStrength * 0.55, 0.0, 1.0));
+        float radialCone = smoothstep(82.0, 14.0, length(p * vec2(0.75, 0.85)));
+        float ph = uWindowGoboPhase;
+        float pattern = 1.0;
+        if (uWindowGoboMode < 1.5) {
+          // 1. Rainy Mullion Window Lattice + Drifting Cloud Caustics
+          float mx = smoothstep(-0.75, 0.45, cos((p.x + sin(ph * 0.7) * 3.5) * 0.14));
+          float my = smoothstep(-0.75, 0.45, cos((p.y + cos(ph * 0.5) * 2.5) * 0.14));
+          float rainRipple = 0.90 + 0.10 * sin(p.x * 0.25 + p.y * 0.32 - ph * 1.8);
+          pattern = (0.62 + 0.38 * mx * my) * rainRipple;
+        } else if (uWindowGoboMode < 2.5) {
+          // 2. Venetian Blinds Slats (slowly tilting & drifting across face)
+          float slat = smoothstep(-0.45, 0.55, cos((p.y * 0.38 + p.x * 0.08) + sin(ph * 0.6) * 1.4));
+          pattern = 0.48 + 0.52 * slat;
+        } else if (uWindowGoboMode < 3.5) {
+          // 3. Gothic Diamond Stained-Glass Lattice
+          float d1 = smoothstep(-0.65, 0.50, cos((p.x + p.y) * 0.16 + sin(ph * 0.5) * 0.8));
+          float d2 = smoothstep(-0.65, 0.50, cos((p.x - p.y) * 0.16 - cos(ph * 0.5) * 0.8));
+          pattern = 0.52 + 0.48 * d1 * d2;
+        } else {
+          // 4. Swaying Sycamore Tree Dappled Sunlight (斑驳树影微风摇曳)
+          float leaf1 = sin(p.x * 0.22 + ph * 1.1) * cos(p.y * 0.24 - ph * 0.9);
+          float leaf2 = sin((p.x - p.y) * 0.17 - ph * 0.7) * cos((p.x + p.y) * 0.15 + ph * 1.2);
+          float dappled = smoothstep(-0.35, 0.48, 0.55 * leaf1 + 0.45 * leaf2);
+          pattern = 0.46 + 0.54 * dappled;
+        }
+        float env = clamp(0.42 + 0.58 * radialCone * pattern, 0.36, 1.0);
+        return mix(1.0, env, clamp(uWindowGoboStrength * 0.85, 0.0, 1.0));
       }
 
       vec3 computeDualLobeSkinSSS(vec3 fragNormal, vec3 lightDir, vec3 lightColor, vec3 viewDir, vec3 localPos) {
@@ -879,6 +914,7 @@ export function injectStageWindowGoboShader(material) {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWindowGoboMode = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboMode;
     shader.uniforms.uWindowGoboStrength = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboStrength;
+    shader.uniforms.uWindowGoboPhase = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboPhase;
     shader.uniforms.uWindowLightDir = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir;
     shader.uniforms.uChiaroscuro = GLOBAL_CHIAROSCURO_UNIFORMS.uChiaroscuro;
 
@@ -897,6 +933,7 @@ export function injectStageWindowGoboShader(material) {
       `#include <common>
       uniform float uWindowGoboMode;
       uniform float uWindowGoboStrength;
+      uniform float uWindowGoboPhase;
       uniform vec3 uWindowLightDir;
       uniform float uChiaroscuro;
       varying vec3 vStageWorldPos;`
@@ -910,13 +947,15 @@ export function injectStageWindowGoboShader(material) {
         vec3 upAx = normalize(cross(L, rightAx));
         vec2 p = vec2(dot(vStageWorldPos, rightAx), dot(vStageWorldPos, upAx));
         float gMask = smoothstep(92.0, 18.0, length(p * vec2(0.75, 0.85)));
-        float finalGobo = mix(1.0, clamp(0.32 + 0.68 * gMask, 0.28, 1.0), clamp(uWindowGoboStrength * 0.75, 0.0, 1.0));
+        float ph = uWindowGoboPhase;
+        float pat = 0.65 + 0.35 * sin((p.x + sin(ph * 0.7) * 4.0) * 0.14) * cos((p.y + cos(ph * 0.5) * 3.0) * 0.14);
+        float finalGobo = mix(1.0, clamp(0.28 + 0.72 * gMask * pat, 0.24, 1.0), clamp(uWindowGoboStrength * 0.85, 0.0, 1.0));
         reflectedLight.directDiffuse *= finalGobo;
         reflectedLight.directSpecular *= finalGobo;
       }`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-stage-window-gobo-v29';
+  material.customProgramCacheKey = () => 'cervix3d-stage-window-gobo-v37';
   return material;
 }
 
@@ -1114,10 +1153,155 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     });
   }
 
+  engine._activeVisualState = m;
+
   requestShadowUpdate(engine.renderer);
   if (typeof engine.wakeRender === 'function') {
     engine.wakeRender(1.8, true);
   }
+}
+
+/**
+ * Stage 37 · Slow Shifting Dynamic Light & Shadow Engine ("设计那种变换光影缓慢")
+ * Smoothly evolves window light azimuth/elevation, color temperature breathing, window gobo shadow phase,
+ * and Tyndall god-ray angle so the portrait and desk are alive with poetic shifting light and shadow.
+ */
+export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
+  if (!engine || !engine.renderer || !engine.scene) return false;
+  const m = engine._activeVisualState || engine.visualConfig || {};
+  const mode = m.dynamicLightMode || 'sunset_cloud_drift';
+  const speed = Number(m.dynamicLightSpeed ?? 1.0);
+  const amp = Number(m.dynamicLightAmp ?? 1.0);
+
+  if (mode === 'static_locked' || speed <= 0.001 || amp <= 0.001) {
+    return false;
+  }
+
+  const t = elapsed * speed;
+  const isStudio = Boolean(engine.controls);
+  const rig = engine.lightRig || {
+    hemi: engine.hemiLight || engine.hemi,
+    key: engine.keyLight,
+    fill: engine.fillLight,
+    up: engine.anatomyUpLight || engine.upLight,
+    rim: engine.rimLight,
+  };
+  if (!rig.key) return false;
+
+  const basePreset = VISUAL_STYLE_PRESETS[m.presetId] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait;
+  const hdrMode = m.hdrMode || basePreset.hdrMode || 'golden_hour';
+  const hdrSig = HDR_MODE_LIGHT_SIGNATURES[hdrMode] || HDR_MODE_LIGHT_SIGNATURES.golden_hour;
+
+  const baseAz = Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg ?? 38);
+  const baseEl = Number(m.keyElevationDeg ?? basePreset.keyElevationDeg ?? 28);
+  const baseKeyInt = Number(m.keyIntensity ?? basePreset.keyIntensity ?? 1.36) * hdrSig.keyScale;
+  const baseRimInt = Number(m.rimIntensity ?? basePreset.rimIntensity ?? 0.78) * hdrSig.rimScale;
+  const baseTyndall = Number(m.tyndall ?? basePreset.tyndall ?? 0.58);
+
+  let azOffset = 0;
+  let elOffset = 0;
+  let intFactor = 1.0;
+  let warmthShift = 0.0;
+  let goboPhase = t * 0.45;
+
+  if (mode === 'sunset_cloud_drift') {
+    // Slow sweeping window sun/cloud drift across face (+-24 deg azimuth, +-7 deg elevation)
+    azOffset = (Math.sin(t * 0.36) * 20.0 + Math.cos(t * 0.17) * 6.0) * amp;
+    elOffset = Math.sin(t * 0.25 + 0.8) * 6.5 * amp;
+    intFactor = 1.0 + Math.sin(t * 0.42) * 0.14 * amp;
+    warmthShift = Math.sin(t * 0.28) * 0.18 * amp;
+    goboPhase = t * 0.42;
+  } else if (mode === 'tree_breeze_dappled') {
+    // Gentle breeze swaying sycamore tree leaves & dappled sunlight
+    azOffset = Math.sin(t * 0.48) * 15.0 * amp;
+    elOffset = Math.cos(t * 0.35) * 5.0 * amp;
+    intFactor = 1.0 + (Math.sin(t * 0.95) * 0.10 + Math.cos(t * 1.6) * 0.06) * amp;
+    warmthShift = Math.sin(t * 0.40) * 0.12 * amp;
+    goboPhase = t * 0.85;
+  } else if (mode === 'rain_caustics_sway') {
+    // Rainy window water-caustic shimmer & cool-warm study lamp breathing
+    azOffset = Math.sin(t * 0.30) * 16.0 * amp;
+    elOffset = Math.sin(t * 0.44 + 1.2) * 5.5 * amp;
+    intFactor = 1.0 + Math.sin(t * 0.65) * 0.12 * amp;
+    warmthShift = -0.10 + Math.sin(t * 0.32) * 0.20 * amp;
+    goboPhase = t * 0.72;
+  } else if (mode === 'candle_chiaroscuro') {
+    // Warm organic multi-harmonic candle flame sway & chiaroscuro dance
+    const flicker = Math.sin(t * 2.8) * 0.5 + Math.sin(t * 5.3 + 1.4) * 0.3 + Math.cos(t * 1.7) * 0.2;
+    azOffset = (Math.sin(t * 0.85) * 14.0 + flicker * 6.0) * amp;
+    elOffset = (Math.cos(t * 0.95) * 4.5 + flicker * 3.0) * amp;
+    intFactor = 1.0 + flicker * 0.18 * amp;
+    warmthShift = 0.16 + flicker * 0.10 * amp;
+    goboPhase = t * 0.55;
+  } else if (mode === 'cinema_orbit') {
+    // Continuous 130-degree sculptural light orbit across nose bridge & both cheeks
+    azOffset = Math.sin(t * 0.52) * 62.0 * amp;
+    elOffset = Math.cos(t * 0.26) * 10.0 * amp;
+    intFactor = 1.0 + Math.cos(t * 0.52) * 0.10 * amp;
+    warmthShift = Math.sin(t * 0.52) * 0.16 * amp;
+    goboPhase = t * 0.60;
+  }
+
+  const curAzDeg = baseAz + azOffset;
+  const curElDeg = Math.max(4, Math.min(72, baseEl + elOffset));
+  const radius = isStudio ? 64 : 116;
+  const azRad = THREE.MathUtils.degToRad(curAzDeg);
+  const elRad = THREE.MathUtils.degToRad(curElDeg);
+  const cosEl = Math.cos(elRad);
+
+  rig.key.position.set(
+    radius * cosEl * Math.sin(azRad),
+    radius * Math.sin(elRad),
+    radius * cosEl * Math.cos(azRad)
+  );
+  rig.key.intensity = Math.max(0.35, baseKeyInt * intFactor);
+
+  // Subtle color temperature breathing on key & rim lights
+  const baseKeyCol = new THREE.Color(m.keyColor || basePreset.keyColor || '#ffeed6');
+  baseKeyCol.lerp(new THREE.Color(hdrSig.keyTint), 0.52);
+  if (warmthShift >= 0) {
+    baseKeyCol.lerp(new THREE.Color('#ffbe6b'), Math.min(0.45, warmthShift));
+  } else {
+    baseKeyCol.lerp(new THREE.Color('#b6d4ff'), Math.min(0.45, -warmthShift));
+  }
+  rig.key.color.copy(baseKeyCol);
+
+  if (rig.rim) {
+    rig.rim.intensity = Math.max(0.2, baseRimInt * (1.0 - (intFactor - 1.0) * 0.5));
+    const rimAz = azRad + Math.PI * 0.82;
+    rig.rim.position.set(
+      radius * 0.72 * Math.sin(rimAz),
+      radius * 0.42,
+      -radius * 0.68 * Math.cos(azRad * 0.5)
+    );
+  }
+
+  GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir.value.copy(rig.key.position).normalize();
+  GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboPhase.value = goboPhase;
+
+  // Update Tyndall ray direction & breathing intensity
+  const tyndallAngleRad = -THREE.MathUtils.clamp(curAzDeg / 58.0, -0.82, 0.82);
+  const curTyndall = Math.max(0, baseTyndall * (0.90 + 0.22 * intFactor));
+  if (engine.atmosphere && typeof engine.atmosphere.setTyndallConfig === 'function') {
+    engine.atmosphere.setTyndallConfig({
+      intensity: curTyndall,
+      color: baseKeyCol.getStyle(),
+      azimuthDeg: curAzDeg,
+    });
+  }
+  if (engine.beautyPost && engine.beautyPost.gradePass?.uniforms) {
+    const u = engine.beautyPost.gradePass.uniforms;
+    if (u.uTyndallAngle) u.uTyndallAngle.value = tyndallAngleRad;
+    if (u.uTyndall) u.uTyndall.value = curTyndall;
+  }
+
+  // Throttle shadow map rebuilds during slow ambient light drift (every ~120ms is silky smooth & saves GPU!)
+  const nowMs = performance.now();
+  if (!engine._lastDynShadowMs || nowMs - engine._lastDynShadowMs > 110) {
+    engine._lastDynShadowMs = nowMs;
+    requestShadowUpdate(engine.renderer);
+  }
+  return true;
 }
 
 const QUALITY_CONFIGS = {

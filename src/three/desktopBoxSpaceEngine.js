@@ -16,6 +16,7 @@ import {
   buildDesktopLightRig,
   applyRenderQualityToEngine,
   applyCustomVisualConfigToEngine,
+  updateDynamicLightingOnEngine,
   requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
@@ -45,6 +46,7 @@ export class DesktopBoxSpaceEngine {
     this.onPetStateUpdate = callbacks.onPetStateUpdate || (() => {});
     this.onStructuresUpdate = callbacks.onStructuresUpdate || (() => {});
     this.onBoxCollisionVisual = callbacks.onBoxCollisionVisual || (() => {});
+    this.onPlacardsUpdate = callbacks.onPlacardsUpdate || (() => {});
 
     this.settings = {
       fov: 42,
@@ -631,6 +633,7 @@ export class DesktopBoxSpaceEngine {
 
   emitPetsChange() {
     this.onPetStateUpdate(this.getSummonedList());
+    this.onPlacardsUpdate(this.getPlacardsScreenData());
   }
 
   updateSettings(newPartial = {}) {
@@ -1078,9 +1081,134 @@ export class DesktopBoxSpaceEngine {
       occupiedByName: occPet ? occPet.collectible.name : null,
       isShelfStructure: Boolean(s.isShelfStructure),
       isDecorProp: Boolean(s.isDecorProp),
+      zMm: Math.round(s.pos.z * 10),
       screenX: screenPt.x,
       screenY: screenPt.y,
     });
+  }
+
+  /**
+   * Computes 2D screen coordinates for each summoned head's C4/C5 neck cut anchor & connected museum placard
+   */
+  getPlacardsScreenData() {
+    const out = [];
+    let idx = 0;
+    for (const pet of this.pets.values()) {
+      const sc = pet.currentScale || pet.targetScale || 0.76;
+      // Anchor at the C4/C5 severed neck base of the 3D head
+      const neckWorld = pet.pos.clone().add(new THREE.Vector3(0, -9.2 * sc, 2.2 * sc));
+      const neckScreen = this.worldToScreen(neckWorld);
+      // Offset the connected placard strip below-right or below-left so it NEVER covers the face!
+      const sideSign = pet.pos.x < -8 ? -1 : 1;
+      const offsetX = sideSign * Math.round(62 + Math.min(34, sc * 26));
+      const offsetY = Math.round(28 + (idx % 2) * 10);
+      const snappedStruct = pet.snappedStructureId ? this.structures.get(pet.snappedStructureId) : null;
+      out.push({
+        id: pet.id,
+        collectible: pet.collectible,
+        anchorX: neckScreen.x,
+        anchorY: neckScreen.y,
+        cardX: neckScreen.x + offsetX,
+        cardY: neckScreen.y + offsetY,
+        sideSign,
+        scale: sc,
+        zMm: Math.round(pet.pos.z * 10),
+        isHovered: this.hoveredPetId === pet.id,
+        isRotationMode: Boolean(pet.isRotationMode),
+        containerLabel: snappedStruct ? snappedStruct.label : null,
+      });
+      idx++;
+    }
+    return out;
+  }
+
+  /**
+   * Smoothly steps a 3D Building / Container / Shelf / Prop along the Z depth axis (via mouse wheel or HUD buttons)
+   */
+  stepStructureDepth(structureId, stepCm = 0) {
+    const hitStruct = this.structures.get(structureId);
+    if (!hitStruct) return false;
+    this.selectedStructureId = hitStruct.id;
+    const baseB = this.getBoxBounds();
+    const prevZ = hitStruct.pos.z;
+    const baseScale = hitStruct.baseScale || (hitStruct.isStageGenerated ? 0.92 : 0.76);
+    const nextZRaw = prevZ + stepCm;
+    const nextScale = this.computeMacroTargetScale(nextZRaw, baseScale);
+    const bz = this.getBoxBoundsAtZ(nextZRaw, nextScale);
+    const panX = hitStruct.pos.x / Math.max(1, bz.maxX);
+
+    if (nextZRaw < bz.minZ) {
+      hitStruct.pos.z = bz.minZ;
+      soundEngine.playBoxWallCollision(0.75, 'back_wall', panX);
+      this.onBoxCollisionVisual('back');
+    } else if (nextZRaw > bz.maxZ) {
+      hitStruct.pos.z = bz.maxZ;
+      soundEngine.playBoxWallCollision(0.85, 'front_glass', panX);
+      this.onBoxCollisionVisual('front');
+    } else {
+      hitStruct.pos.z = nextZRaw;
+      const totalRange = Math.max(1, baseB.maxZ - baseB.minZ);
+      const depthRatio = (baseB.maxZ - hitStruct.pos.z) / totalRange;
+      soundEngine.playDepthTick(depthRatio, panX);
+    }
+
+    const deltaZ = hitStruct.pos.z - prevZ;
+    hitStruct.scale = this.computeMacroTargetScale(hitStruct.pos.z, baseScale);
+    if (!hitStruct.isShelfStructure) {
+      hitStruct.pos.y = this.getSupportSurfaceY(hitStruct.pos.x, hitStruct.pos.y + 4, hitStruct.pos.z, hitStruct.scale, 0);
+    }
+    this.clampStructureToBounds(hitStruct);
+    hitStruct.node.position.copy(hitStruct.pos);
+    hitStruct.node.scale.setScalar(hitStruct.scale);
+
+    // Update shelf landing platform Z bounds & carry any heads/containers resting on this shelf!
+    if (hitStruct.isShelfStructure && hitStruct.platformRef) {
+      const plat = hitStruct.platformRef;
+      plat.centerZ = hitStruct.pos.z;
+      plat.minZ = hitStruct.pos.z - (plat.halfD || 18) * hitStruct.scale;
+      plat.maxZ = hitStruct.pos.z + (plat.halfD || 18) * hitStruct.scale;
+      plat.minX = hitStruct.pos.x - (plat.halfW || 14) * hitStruct.scale;
+      plat.maxX = hitStruct.pos.x + (plat.halfW || 14) * hitStruct.scale;
+      if (Math.abs(deltaZ) > 1e-4) {
+        for (const p of this.pets.values()) {
+          if (p.snappedStructureId) continue;
+          const bottomOff = (p.node?.userData?.baseBottomOffset ?? -10.8) * p.targetScale;
+          const footY = p.pos.y + bottomOff;
+          if (
+            Math.abs(footY - (plat.surfaceY ?? plat.y ?? hitStruct.pos.y)) < 6.0 &&
+            p.pos.x >= plat.minX - 7 &&
+            p.pos.x <= plat.maxX + 7 &&
+            Math.abs(p.pos.z - prevZ) <= 18
+          ) {
+            p.pos.z = hitStruct.pos.z;
+            p.targetScale = this.computeMacroTargetScale(p.pos.z, p.baseScale || 0.76);
+            this.clampPetToBounds(p);
+            p.node.position.copy(p.pos);
+          }
+        }
+      }
+    }
+
+    // If this container structure holds a snapped head, move & scale the head in lockstep
+    if (hitStruct.occupiedByPetId && this.pets.has(hitStruct.occupiedByPetId)) {
+      const occPet = this.pets.get(hitStruct.occupiedByPetId);
+      occPet.pos.z = hitStruct.pos.z;
+      occPet.pos.x = hitStruct.pos.x;
+      occPet.targetScale = hitStruct.scale;
+      const socketLocalY = hitStruct.node.userData.headSocketLocalY ?? 13.5;
+      occPet.pos.y = hitStruct.pos.y + socketLocalY * hitStruct.scale;
+      this.clampPetToBounds(occPet);
+      occPet.node.position.copy(occPet.pos);
+    }
+
+    this.interactionHighlightTimer = 1.6;
+    this.wakeRender(1.8, true);
+    this.refreshHoverHUD();
+    this.refreshSelectedStructureHUD();
+    this.onStructuresUpdate(this.getPlacedStructuresList());
+    this.onPetStateUpdate(this.getSummonedList());
+    this.onPlacardsUpdate(this.getPlacardsScreenData());
+    return true;
   }
 
   /**
@@ -1090,7 +1218,7 @@ export class DesktopBoxSpaceEngine {
     if (document.body.classList.contains('real-desktop-manager')) return true;
     const target = e.target;
     if (!target || !(target instanceof Element)) return false;
-    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud, #structure-floating-hud')) {
+    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud, #structure-floating-hud, #pet-hover-dossier, .specimen-placard-card, #pure-screen-floating-btn')) {
       return true;
     }
     if (target.closest('button, input, select, textarea, label, a, #window-titlebar, .nav-tab, .os-icon, .archive-folder-item')) {
@@ -1103,7 +1231,25 @@ export class DesktopBoxSpaceEngine {
   }
 
   bindEvents() {
-    window.addEventListener('resize', () => this.resize());
+    window.addEventListener('resize', () => {
+      this.resize();
+      this.onPlacardsUpdate(this.getPlacardsScreenData());
+    });
+
+    // Clear hover/drag states when mouse leaves window or window loses focus so UI never gets stuck!
+    const clearTransientStates = () => {
+      if (this.hoveredPetId) {
+        this.hoveredPetId = null;
+        document.body.style.cursor = '';
+        this.onHoverChange(null);
+      }
+      if (this.pointerDownInfo) {
+        this.pointerDownInfo = null;
+        soundEngine.stopDragWhoosh();
+      }
+    };
+    window.addEventListener('blur', clearTransientStates);
+    document.addEventListener('mouseleave', clearTransientStates);
 
     // Stage 28: Right-Click on any 3D Building / Container Structure / Shelf / Prop immediately deletes it!
     window.addEventListener('contextmenu', (e) => {
@@ -1119,8 +1265,15 @@ export class DesktopBoxSpaceEngine {
       }
     }, true);
 
-    // Stage 28: Delete / Backspace key deletes the currently selected 3D Structure / Shelf / Prop!
+    // Stage 28: Delete / Backspace key deletes the currently selected 3D Structure / Shelf / Prop; Escape clears selection!
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (this.selectedStructureId) {
+          this.selectedStructureId = null;
+          this.onStructureSelect(null);
+        }
+        return;
+      }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const activeTag = document.activeElement?.tagName?.toLowerCase();
         if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
@@ -1134,7 +1287,15 @@ export class DesktopBoxSpaceEngine {
     window.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       this.updateMouseCoords(e);
-      if (this.isBlockedByUI(e)) return;
+      const target = e.target;
+      // If clicking anywhere outside #structure-floating-hud while a structure is selected, dismiss the HUD if we hit UI!
+      if (this.isBlockedByUI(e)) {
+        if (this.selectedStructureId && !(target instanceof Element && target.closest('#structure-floating-hud'))) {
+          this.selectedStructureId = null;
+          this.onStructureSelect(null);
+        }
+        return;
+      }
 
       const hitPet = this.pickPetAtCursor();
       const hitStructInfo = this.pickStructureAtCursor();
@@ -1334,6 +1495,7 @@ export class DesktopBoxSpaceEngine {
       if (newId !== this.hoveredPetId) {
         this.hoveredPetId = newId;
         this.wakeRender(0.8);
+        this.onPlacardsUpdate(this.getPlacardsScreenData());
       }
       document.body.style.cursor = hitStruct
         ? 'move'
@@ -1396,7 +1558,8 @@ export class DesktopBoxSpaceEngine {
       this.updateMouseCoords(e);
       if (this.isBlockedByUI(e)) return;
 
-      const directStruct = this.pickStructureAtCursor();
+      const directStructInfo = this.pickStructureAtCursor();
+      const directStruct = directStructInfo ? directStructInfo.struct : null;
       const directPet = this.pickPetAtCursor();
       const fallbackStruct = !directPet && this.selectedStructureId ? this.structures.get(this.selectedStructureId) : null;
       const hitStruct = directStruct || fallbackStruct;
@@ -1414,76 +1577,9 @@ export class DesktopBoxSpaceEngine {
       const stepCm = (e.deltaY > 0 ? -mag : mag) * this.settings.wheelDepthStep;
 
       // Case A: Mouse wheel on a Placed 3D Structure / Building (Container, Shelf, or Prop)
+      // Fixed Stage 37 Bug: pickStructureAtCursor() returns { struct, hitPoint }, so extract directStruct properly!
       if (hitStruct && (!directPet || directStruct)) {
-        this.selectedStructureId = hitStruct.id;
-        const prevZ = hitStruct.pos.z;
-        const nextScale = hitStruct.isStageGenerated
-          ? 1.0
-          : this.computeMacroTargetScale(prevZ + stepCm, 0.76);
-        const bz = this.getBoxBoundsAtZ(prevZ + stepCm, nextScale);
-        const panX = hitStruct.pos.x / Math.max(1, bz.maxX);
-
-        if (prevZ + stepCm < bz.minZ) {
-          hitStruct.pos.z = bz.minZ;
-          soundEngine.playBoxWallCollision(0.75, 'back_wall', panX);
-          this.onBoxCollisionVisual('back');
-        } else if (prevZ + stepCm > bz.maxZ) {
-          hitStruct.pos.z = bz.maxZ;
-          soundEngine.playBoxWallCollision(0.85, 'front_glass', panX);
-          this.onBoxCollisionVisual('front');
-        } else {
-          hitStruct.pos.z = prevZ + stepCm;
-          const totalRange = Math.max(1, baseB.maxZ - baseB.minZ);
-          const depthRatio = (baseB.maxZ - hitStruct.pos.z) / totalRange;
-          soundEngine.playDepthTick(depthRatio, panX);
-        }
-
-        const deltaZ = hitStruct.pos.z - prevZ;
-        hitStruct.scale = hitStruct.isStageGenerated
-          ? 1.0
-          : this.computeMacroTargetScale(hitStruct.pos.z, 0.76);
-        if (!hitStruct.isShelfStructure) {
-          hitStruct.pos.y = this.getSupportSurfaceY(hitStruct.pos.x, hitStruct.pos.y + 4, hitStruct.pos.z, hitStruct.scale, 0);
-        }
-        this.clampStructureToBounds(hitStruct);
-        hitStruct.node.position.copy(hitStruct.pos);
-        hitStruct.node.scale.setScalar(hitStruct.scale);
-
-        // If this container structure holds a snapped head, move the head in lockstep
-        if (hitStruct.occupiedByPetId && this.pets.has(hitStruct.occupiedByPetId)) {
-          const occPet = this.pets.get(hitStruct.occupiedByPetId);
-          occPet.pos.z = hitStruct.pos.z;
-          occPet.pos.x = hitStruct.pos.x;
-          occPet.targetScale = hitStruct.scale;
-          const socketLocalY = hitStruct.node.userData.headSocketLocalY ?? 13.5;
-          occPet.pos.y = hitStruct.pos.y + socketLocalY * hitStruct.scale;
-          this.clampPetToBounds(occPet);
-          occPet.node.position.copy(occPet.pos);
-        } else if (hitStruct.isShelfStructure && hitStruct.platformRef && Math.abs(deltaZ) > 1e-4) {
-          // If this is a shelf structure, carry any heads resting on this shelf along in Z!
-          const plat = hitStruct.platformRef;
-          for (const p of this.pets.values()) {
-            if (p.snappedStructureId) continue;
-            const bottomOff = (p.node?.userData?.baseBottomOffset ?? -10.8) * p.targetScale;
-            const footY = p.pos.y + bottomOff;
-            if (
-              Math.abs(footY - plat.y) < 5.5 &&
-              p.pos.x >= plat.minX - 6 &&
-              p.pos.x <= plat.maxX + 6 &&
-              Math.abs(p.pos.z - prevZ) <= 14
-            ) {
-              p.pos.z = hitStruct.pos.z;
-              p.targetScale = this.computeMacroTargetScale(p.pos.z, p.baseScale || 0.76);
-              this.clampPetToBounds(p);
-              p.node.position.copy(p.pos);
-            }
-          }
-        }
-
-        this.refreshHoverHUD();
-        this.refreshSelectedStructureHUD();
-        this.onStructuresUpdate(this.getPlacedStructuresList());
-        this.onPetStateUpdate(this.getSummonedList());
+        this.stepStructureDepth(hitStruct.id, stepCm);
         return;
       }
 
@@ -1530,6 +1626,7 @@ export class DesktopBoxSpaceEngine {
       this.refreshSelectedStructureHUD();
       this.onStructuresUpdate(this.getPlacedStructuresList());
       this.onPetStateUpdate(this.getSummonedList());
+      this.onPlacardsUpdate(this.getPlacardsScreenData());
     }, { passive: false, capture: true });
   }
 
@@ -1628,9 +1725,14 @@ export class DesktopBoxSpaceEngine {
       }
     }
 
-    // Zero-Fan-Roar Smart Idle Sleep: when all desktop pets are stationary and wake timer has elapsed -> 0% GPU!
+    // Zero-Fan-Roar Smart Idle Sleep + Slow Dynamic Light & Shadow Cadence:
+    // When dynamic lighting is active ('sunset_cloud_drift', etc.), run a whisper-quiet ~26 FPS ambient cadence
+    // when pets are stationary; if 'static_locked', sleep completely at 0% GPU when stationary.
+    const dynLightActive = this._activeVisualState && this._activeVisualState.dynamicLightMode && this._activeVisualState.dynamicLightMode !== 'static_locked';
     if (!anyActiveAnimation && now > this.renderWakeUntil) {
-      return;
+      if (!dynLightActive) return;
+      if (now - (this._lastAmbientRenderAt || 0) < 36) return;
+      this._lastAmbientRenderAt = now;
     }
 
     // Stage 15: 仅 rtx2070 档启用动态分辨率（其余档行为不变）
@@ -1650,6 +1752,7 @@ export class DesktopBoxSpaceEngine {
       }
     }
     const elapsed = this.clock.getElapsedTime();
+    updateDynamicLightingOnEngine(this, elapsed);
     const baseB = this.getBoxBounds();
 
     if (this.interactionHighlightTimer > 0) {
@@ -1850,6 +1953,14 @@ export class DesktopBoxSpaceEngine {
     }
     if (this.stageGroup && this.settings.rainyWindowEnabled !== false) {
       updateRainyStudyBackdrop(this.stageGroup, dt);
+    }
+
+    if (anyActiveAnimation || now - (this._lastPlacardSyncAt || 0) > 120) {
+      this._lastPlacardSyncAt = now;
+      this.onPlacardsUpdate(this.getPlacardsScreenData());
+      if (this.selectedStructureId) {
+        this.refreshSelectedStructureHUD();
+      }
     }
 
     if (this.needsShadowRefresh) {

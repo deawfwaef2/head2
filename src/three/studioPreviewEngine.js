@@ -14,6 +14,7 @@ import {
   buildStudioLightRig,
   applyRenderQualityToEngine,
   applyCustomVisualConfigToEngine,
+  updateDynamicLightingOnEngine,
   requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
@@ -294,18 +295,22 @@ export class StudioPreviewEngine {
     }
 
     const now = performance.now();
+    const dynMode = this._activeVisualState?.dynamicLightMode || 'sunset_cloud_drift';
+    const hasDynLight = dynMode !== 'static_locked' && Number(this._activeVisualState?.dynamicLightSpeed ?? 1.0) > 0.001;
+    const isIdle = !this.autoRotate && now > this.renderWakeUntil;
     const elapsedMs = now - this.lastFrameTime;
-    // Cap Studio Preview at ~60 FPS (15.5 ms) so high-refresh monitors never burn GPU
-    if (elapsedMs < 15.5) return;
+    // Cap Studio Preview at ~60 FPS when active, ~28 FPS when in ambient dynamic-light drift
+    const minIntervalMs = isIdle && hasDynLight ? 35.0 : 15.5;
+    if (elapsedMs < minIntervalMs) return;
     const dt = Math.min(0.05, elapsedMs / 1000);
     this.lastFrameTime = now;
 
-    // Smart Idle Sleep: when not auto-rotating and user hasn't interacted recently -> 0% GPU!
-    if (!this.autoRotate && now > this.renderWakeUntil) {
+    if (isIdle && !hasDynLight) {
       return;
     }
 
     const elapsed = this.clock.getElapsedTime();
+    updateDynamicLightingOnEngine(this, elapsed);
     if (this.headNode) {
       if (this.autoRotate) {
         this.headNode.rotation.y += dt * 0.65;
