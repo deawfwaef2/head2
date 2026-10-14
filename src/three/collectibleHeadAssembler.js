@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
 import { refineArtistHairCards } from './hairCardSubdivision.js';
+import { fitArtistHairOutsideScalp } from './hairScalpFit.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
@@ -676,6 +677,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       out[i3 + 2] = z;
     }
 
+    if (child.material?.userData?.builtInHair) fitArtistHairOutsideScalp(geo, rootGroup.getObjectByName('HeadSkinMesh'));
     posAttr.needsUpdate = true;
     // CRITICAL RULE: NEVER call raw geo.computeVertexNormals() on UV-split hair cards!
     // Raw computeVertexNormals() creates flat faceted triangles across UV seams (causing white triangle glare).
@@ -1290,6 +1292,7 @@ async function loadModularDonorMeshes(donorSpec) {
         const m = new THREE.Mesh(subGeo, child.material);
         m.name = `Modular_${donorSpec.style}`;
         m.userData.isModularPart = true;
+        m.userData.hairSourceStyle = donorSpec.style;
         meshes.push(m);
       }
     });
@@ -1366,9 +1369,9 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     });
 
     // Stage 43 · 4-Zone Surgical Modular Hair Assembly (Crown / Front Bangs / Side Locks / Back Attachment)
-    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle);
-    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || MODULAR_SIDELOCKS_DONORS[sideLocksStyle]?.style !== resolvedStyle);
-    const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || MODULAR_BACK_DONORS[backAttachmentStyle]?.style !== resolvedStyle);
+    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || (MODULAR_BANGS_DONORS[frontBangsStyle] && MODULAR_BANGS_DONORS[frontBangsStyle].style !== resolvedStyle));
+    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || (MODULAR_SIDELOCKS_DONORS[sideLocksStyle] && MODULAR_SIDELOCKS_DONORS[sideLocksStyle].style !== resolvedStyle));
+    const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || (MODULAR_BACK_DONORS[backAttachmentStyle] && MODULAR_BACK_DONORS[backAttachmentStyle].style !== resolvedStyle));
 
     const bangsDonor = (frontBangsStyle !== 'default' && frontBangsStyle !== 'forehead_bare' && MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle)
       ? MODULAR_BANGS_DONORS[frontBangsStyle]
@@ -1380,11 +1383,17 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       ? MODULAR_BACK_DONORS[backAttachmentStyle]
       : null;
 
+    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
+      loadModularDonorMeshes(bangsDonor),
+      loadModularDonorMeshes(sideDonor),
+      loadModularDonorMeshes(backDonor),
+    ]);
+
     if (stripFrontBangs || stripSideLocks || stripBackDrape) {
       loadedScene.traverse((child) => {
         if (!child.isMesh || !child.geometry?.attributes?.position) return;
         let geo = child.geometry;
-        if (stripFrontBangs) {
+        if (stripFrontBangs && (frontBangsStyle === 'forehead_bare' || bangsMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => z > 0.048 && y > 0.012 && y < 0.086 && Math.abs(x) < 0.056,
@@ -1392,7 +1401,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           );
           if (trimmed) geo = trimmed;
         }
-        if (stripSideLocks) {
+        if (stripSideLocks && (sideLocksStyle === 'tucked_ear' || sideMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => Math.abs(x) > 0.046 && z > 0.002 && z < 0.068 && y > -0.058 && y < 0.042,
@@ -1400,7 +1409,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           );
           if (trimmed) geo = trimmed;
         }
-        if (stripBackDrape) {
+        if (stripBackDrape && (backAttachmentStyle === 'cropped_nape' || backMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => z < -0.018 && y < 0.025,
@@ -1412,11 +1421,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       });
     }
 
-    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
-      loadModularDonorMeshes(bangsDonor),
-      loadModularDonorMeshes(sideDonor),
-      loadModularDonorMeshes(backDonor),
-    ]);
     for (const m of [...bangsMeshes, ...sideMeshes, ...backMeshes]) {
       loadedScene.add(m);
     }
@@ -1455,7 +1459,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         totalVerts += g.attributes.position.count;
         totalTris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
       }
-      if (!customAsset) updateArtistHairFlow(g, resolvedStyle === 'daz_hair_asym_short');
+      if (!customAsset) updateArtistHairFlow(g, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
       const configureMaterial = original => {
         // Imported GLBs retain artist PBR textures, material slots and alpha modes.
         // Never turn an imported multi-material groom into one black material.
@@ -1482,7 +1486,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         });
         material.userData.builtInHair = true;
         configureHairSheen(material, sheenIntensity);
-        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: resolvedStyle === 'daz_hair_asym_short' });
+        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short' });
         return material;
       };
       child.material = Array.isArray(child.material)
