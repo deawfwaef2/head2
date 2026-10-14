@@ -46,7 +46,7 @@ import { createCollectibleFolderZip } from './data/offlineArchiveZip.js';
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage35-master-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage36-master-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -63,6 +63,7 @@ function restoreCollectibles() {
     }
     // Migrate only custom user-created specimens from previous storage keys
     const legacy = JSON.parse(
+      localStorage.getItem('cervix3d-collectibles-stage35-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage30-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage28-master-v1') ||
       localStorage.getItem('cervix3d-collectibles-stage27-master-v1') ||
@@ -106,35 +107,43 @@ const state = {
   pomodoroRunning: true,
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
+  petStripExpanded: false,
+  activeStripPetId: 'spec-fang-yaoping-001',
   visualCustomConfig: {
     presetId: 'cinema_85mm_portrait',
-    hdrMode: 'softbox_portrait',
-    envIntensity: 0.88,
-    windowGobo: 'none',
-    windowGoboStrength: 0.16,
-    chiaroscuro: 0.28,
-    tyndall: 0.36,
-    vintagePhoto: 0.06,
-    softFocus: 0.14,
-    depthBlur: 0.12,
-    chromatic: 0.08,
-    keyColor: '#fff6ee',
-    rimColor: '#fff0e4',
-    keyAzimuthDeg: 26,
-    keyElevationDeg: 22,
-    keyIntensity: 1.55,
-    rimIntensity: 1.35,
-    sssIntensity: 0.92,
-    skinGloss: 0.54,
-    wetGloss: 0.54,
-    sharpen: 0.30,
-    contrast: 1.05,
-    warmth: 0.02,
-    bloomStrength: 0.12,
-    irisSparkle: 0.82,
-    halation: 0.48,
-    skinLumen: 0.58,
-    cursorTorch: 0.75
+    hdrMode: 'golden_hour',
+    envIntensity: 0.32,
+    windowGobo: 'rain_mullion',
+    windowGoboStrength: 0.34,
+    chiaroscuro: 0.68,
+    tyndall: 0.58,
+    vintagePhoto: 0.48,
+    softFocus: 0.56,
+    depthBlur: 0.44,
+    chromatic: 0.14,
+    keyColor: '#ffeed6',
+    rimColor: '#fcd9a8',
+    keyAzimuthDeg: 38,
+    keyElevationDeg: 28,
+    keyIntensity: 1.36,
+    fillIntensity: 0.28,
+    rimIntensity: 0.78,
+    hemiIntensity: 0.24,
+    exposure: 0.80,
+    sssIntensity: 0.82,
+    skinGloss: 0.12,
+    wetGloss: 0.12,
+    sharpen: 0.06,
+    contrast: 1.09,
+    saturation: 0.90,
+    warmth: 0.07,
+    vignette: 0.36,
+    filmGrain: 0.09,
+    bloomStrength: 0.07,
+    irisSparkle: 0.05,
+    halation: 0.28,
+    skinLumen: 0.0,
+    cursorTorch: 0.28
   },
   studioDraft: {
     basePreset: 'fangyaoping',
@@ -842,11 +851,52 @@ function renderActivePetsStrip(summonedList = []) {
   pillsContainer.innerHTML = '';
 
   if (summonedList.length === 0) {
-    pillsContainer.innerHTML = `<span style="font-size:11.5px;color:#94a3b8;">当前屏幕暂无桌宠，可在「典藏库」点击召唤至屏幕</span>`;
+    pillsContainer.innerHTML = `<span style="font-size:11px;color:#94a3b8;">当前屏幕暂无桌宠，可在「典藏库」点击召唤至屏幕</span>`;
     return;
   }
 
+  if (!summonedList.some(p => p.id === state.activeStripPetId)) {
+    state.activeStripPetId = summonedList[0].id;
+  }
+
+  // Row 1: Ultra-compact character tab pills + [🎛️ 展开微调] button (takes < 1.2% screen area!)
+  const tabsRow = document.createElement('div');
+  tabsRow.style.cssText = 'display:flex;align-items:center;flex-wrap:wrap;gap:5px;';
   for (const p of summonedList) {
+    const isSel = p.id === state.activeStripPetId;
+    const shortName = p.name.split('·')[0].trim();
+    const tabPill = document.createElement('div');
+    tabPill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
+    tabPill.style.cssText = `padding:2px 7px;border-color:${isSel ? 'rgba(56,189,248,0.65)' : 'rgba(148,163,184,0.18)'};background:${isSel ? 'rgba(15,32,58,0.88)' : 'rgba(17,25,42,0.72)'};cursor:pointer;`;
+    tabPill.innerHTML = `
+      <span data-select-strip-pet="${p.id}" style="font-weight:600;color:${isSel ? '#7dd3fc' : '#e2e8f0'};font-size:11px;">${isSel ? '🟢' : '⚪'} ${shortName}</span>
+      <button class="pill-mini-btn" data-pill-rot="${p.id}" title="切换旋转" style="padding:1px 5px;font-size:10px;">${p.isRotationMode ? '🔄转' : '🔄'}</button>
+      <button class="pill-mini-btn" data-pill-reset="${p.id}" title="回正角度" style="padding:1px 5px;font-size:10px;">回正</button>
+    `;
+    tabsRow.appendChild(tabPill);
+  }
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'pill-mini-btn';
+  toggleBtn.style.cssText = 'padding:2px 8px;font-size:10.5px;background:rgba(56,189,248,0.18);border-color:rgba(56,189,248,0.45);color:#bae6fd;font-weight:600;';
+  toggleBtn.textContent = state.petStripExpanded ? '🎛️ 收起微调 ▾' : '🎛️ 展开微调 ▴';
+  toggleBtn.addEventListener('click', () => {
+    state.petStripExpanded = !state.petStripExpanded;
+    renderActivePetsStrip(summonedList);
+  });
+  tabsRow.appendChild(toggleBtn);
+  pillsContainer.appendChild(tabsRow);
+
+  tabsRow.querySelectorAll('[data-select-strip-pet]').forEach(el => {
+    el.addEventListener('click', () => {
+      state.activeStripPetId = el.dataset.selectStripPet;
+      state.petStripExpanded = true;
+      renderActivePetsStrip(summonedList);
+    });
+  });
+
+  // Row 2 (Only rendered when expanded, and ONLY for the single selected pet so it NEVER blocks the screen!)
+  if (state.petStripExpanded) {
+    const p = summonedList.find(x => x.id === state.activeStripPetId) || summonedList[0];
     const col = state.collectibles.find(c => c.id === p.id) || p;
     const curHair = resolveRealHairStyle(col.hairStyle || p.hairStyle || 'hair_user_photo');
     const curBangs = col.frontBangs || col.morphs?.frontBangs || 'default';
@@ -885,38 +935,35 @@ function renderActivePetsStrip(summonedList = []) {
       rl => `<option value="${rl.id}" ${rl.id === curRole ? 'selected' : ''}>${rl.shortLabel}</option>`
     ).join('');
     const pill = document.createElement('div');
-    pill.className = `pet-pill ${p.isRotationMode ? 'rotating' : ''}`;
+    pill.className = 'pet-pill';
+    pill.style.cssText = 'margin-top:4px;padding:4px 8px;';
     pill.innerHTML = `
-      <strong style="min-width:48px;color:#f8fafc;">${p.name.split('·')[0].trim()}</strong>
-      <select class="pill-mini-btn" data-pill-skin="${p.id}" title="独立切换 8 款无皱纹中式/韩系/混血少女真摄影皮肤材质" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#fecdd3;border:1px solid rgba(251,113,133,0.42);border-radius:6px;">
+      <strong style="color:#7dd3fc;font-size:11px;">${p.name.split('·')[0].trim()} 微调:</strong>
+      <select class="pill-mini-btn" data-pill-skin="${p.id}" title="切换皮肤材质" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(30,41,59,0.88);color:#fecdd3;border:1px solid rgba(251,113,133,0.42);border-radius:6px;">
         ${skinShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换 10 款纯净独立中韩青年女头型（默认单头模不混合）" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#fbcfe8;border:1px solid rgba(244,114,182,0.42);border-radius:6px;">
+      <select class="pill-mini-btn" data-pill-face="${p.id}" title="切换独立头型" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(30,41,59,0.88);color:#fbcfe8;border:1px solid rgba(244,114,182,0.42);border-radius:6px;">
         ${faceShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换 8 款中韩高对比度立体 3D 眉毛模型" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#fde68a;border:1px solid rgba(245,158,11,0.42);border-radius:6px;">
+      <select class="pill-mini-btn" data-pill-brow="${p.id}" title="切换3D眉毛" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(30,41,59,0.88);color:#fde68a;border:1px solid rgba(245,158,11,0.42);border-radius:6px;">
         ${browShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-hair="${p.id}" title="一键切换 28 款大师级真发丝 3D 基底发型" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#7dd3fc;border:1px solid rgba(56,189,248,0.45);border-radius:6px;">
+      <select class="pill-mini-btn" data-pill-hair="${p.id}" title="切换3D基底发型" style="width:auto!important;max-width:126px;padding:2px 4px;background:rgba(30,41,59,0.88);color:#7dd3fc;border:1px solid rgba(56,189,248,0.45);border-radius:6px;">
         ${hairShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-bangs="${p.id}" title="模块化拼装前额刘海（空气碎刘海 / 八字刘海 / 齐刘海 / 斜刘海 / 露额）" style="padding:2px 5px;background:rgba(30,41,59,0.88);color:#f9a8d4;border:1px solid rgba(236,72,153,0.45);border-radius:6px;">
+      <select class="pill-mini-btn" data-pill-bangs="${p.id}" title="模块化拼装刘海" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(30,41,59,0.88);color:#f9a8d4;border:1px solid rgba(236,72,153,0.45);border-radius:6px;">
         ${bangsShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-role="${p.id}" title="分配该角色绑定的伴学职能" style="padding:2px 5px;background:rgba(15,35,34,0.88);color:#a7f3d0;border:1px solid rgba(16,185,129,0.42);border-radius:6px;">
+      <select class="pill-mini-btn" data-pill-role="${p.id}" title="伴学职能" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(15,35,34,0.88);color:#a7f3d0;border:1px solid rgba(16,185,129,0.42);border-radius:6px;">
         ${roleShortOpts}
       </select>
-      <button class="pill-role-trigger-btn" data-pill-trigger-role="${p.id}" title="一键激发该角色的伴学赋能">⚡督学</button>
-      <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换死人表情" style="padding:2px 5px;background:rgba(20,28,44,0.88);color:#fda4af;border:1px solid rgba(244,63,94,0.38);border-radius:6px;">
+      <button class="pill-role-trigger-btn" data-pill-trigger-role="${p.id}" title="激发伴学赋能">⚡督学</button>
+      <select class="pill-mini-btn" data-pill-expr="${p.id}" title="切换表情" style="width:auto!important;max-width:112px;padding:2px 4px;background:rgba(20,28,44,0.88);color:#fda4af;border:1px solid rgba(244,63,94,0.38);border-radius:6px;">
         ${exprShortOpts}
       </select>
-      <select class="pill-mini-btn" data-pill-container="${p.id}" title="切换标本容器" style="padding:2px 5px;background:rgba(20,28,44,0.88);color:#fde68a;border:1px solid rgba(251,191,36,0.38);border-radius:6px;">
+      <select class="pill-mini-btn" data-pill-container="${p.id}" title="切换容器" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(20,28,44,0.88);color:#fde68a;border:1px solid rgba(251,191,36,0.38);border-radius:6px;">
         ${contShortOpts}
       </select>
-      <button class="pill-mini-btn" data-pill-rot="${p.id}">
-        ${p.isRotationMode ? '🔄 旋转中' : '🔄 旋转'}
-      </button>
-      <button class="pill-mini-btn" data-pill-reset="${p.id}" title="重置角度">回正</button>
     `;
     pillsContainer.appendChild(pill);
   }
@@ -3287,7 +3334,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-triumph-collapse')?.addEventListener('click', (e) => {
     if (!triumphBody) return;
     triumphBody.classList.toggle('collapsed');
-    e.currentTarget.textContent = triumphBody.classList.contains('collapsed') ? '▸' : '▾';
+    e.currentTarget.textContent = triumphBody.classList.contains('collapsed') ? '▴ 展开' : '▾ 收起';
   });
 
   document.getElementById('sel-triumph-mindset')?.addEventListener('change', (e) => {

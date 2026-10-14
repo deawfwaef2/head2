@@ -1640,12 +1640,12 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
 }
 
 /**
- * Stage 35 · Refractive Wet Cornea & Dual Studio Catchlight Eye Shader
- * Adds gleaming HDR primary octabox + secondary pinpoint catchlights + lower iris amber caustic glow
- * so character eyes look bright, moist, and alive like the reference photo!
+ * Stage 36 · Natural Deep Espresso-Brown Iris & Pinpoint Catchlight Eye Shader
+ * Eliminates milky grey-white environment wash and faceted cornea rings so eyes are
+ * deep, dark, crystal-clear, and expressive with a delicate pinpoint catchlight.
  */
 function injectLifelikeEyeShader(material) {
-  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v35';
+  material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v36';
   material.onBeforeCompile = (shader) => {
     shader.vertexShader = `
       varying vec3 vEyeLocalPos;
@@ -1664,6 +1664,21 @@ function injectLifelikeEyeShader(material) {
       varying vec3 vEyeNormal;
     ` + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `
+      #include <map_fragment>
+      // Deepen iris & pupil contrast so East Asian dark brown eyes never look washed-out or grey
+      float eyeSideMap = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
+      vec2 relXYMap = (vEyeLocalPos.xy - vec2(eyeSideMap * 0.0285, 0.0179)) / 0.0061;
+      float rIrisMap = length(relXYMap);
+      float inIrisMap = 1.0 - smoothstep(0.82, 1.04, rIrisMap);
+      float inPupilMap = 1.0 - smoothstep(0.24, 0.42, rIrisMap);
+      vec3 deepIrisCol = pow(max(diffuseColor.rgb, vec3(0.001)), vec3(1.26)) * vec3(0.76, 0.70, 0.66);
+      diffuseColor.rgb = mix(diffuseColor.rgb * 0.90, deepIrisCol, inIrisMap);
+      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.010, 0.014), inPupilMap * 0.92);
+      `
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_end>',
       `
       #include <lights_fragment_end>
@@ -1674,31 +1689,25 @@ function injectLifelikeEyeShader(material) {
       float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
       vec2 relXY = (vEyeLocalPos.xy - vec2(eyeSide * 0.0285, 0.0179)) / 0.0061;
       float rIris = length(relXY);
-      float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
+      float inIris = 1.0 - smoothstep(0.86, 1.04, rIris);
 
-      // Upper eyelid soft ambient occlusion & wet tear meniscus along eyelid rims
-      float upperLidAO = smoothstep(0.0242, 0.0195, vEyeLocalPos.y);
-      reflectedLight.directDiffuse *= (0.72 + 0.28 * upperLidAO);
-      reflectedLight.indirectDiffuse *= (0.76 + 0.24 * upperLidAO);
+      // Upper eyelid soft ambient occlusion along upper lid shadow line
+      float upperLidAO = smoothstep(0.0238, 0.0182, vEyeLocalPos.y);
+      reflectedLight.directDiffuse *= (0.58 + 0.42 * upperLidAO);
+      reflectedLight.indirectDiffuse *= (0.62 + 0.38 * upperLidAO);
+      reflectedLight.indirectSpecular *= 0.08;
 
-      // Lower iris warm amber caustic crescent (opposite top-right key light)
-      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.26, 2.0));
-      reflectedLight.directDiffuse += vec3(0.42, 0.22, 0.11) * causticZone * inIris * 0.95;
+      // Subtle warm amber lower-iris caustic crescent
+      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.30, 0.0, 1.0) * exp(-pow((rIris - 0.56) / 0.22, 2.0));
+      reflectedLight.directDiffuse += vec3(0.24, 0.12, 0.05) * causticZone * inIris;
 
-      // Dual Crisp HDR Corneal Catchlights (Primary Top-Right Studio Softbox + Secondary Bottom-Left Fill)
-      vec3 catchDir1 = normalize(vec3(0.28, 0.36, 0.89));
-      vec3 catchDir2 = normalize(vec3(-0.34, -0.22, 0.91));
-      vec3 H1 = normalize(catchDir1 + viewDir);
-      vec3 H2 = normalize(catchDir2 + viewDir);
-      float catch1 = smoothstep(0.991, 0.9985, max(0.0, dot(nEye, H1)));
-      float catch2 = smoothstep(0.994, 0.9992, max(0.0, dot(nEye, H2)));
-      // Also crisp UV-space corneal window catchlight right on the iris upper-left quadrant
-      float uvCatch1 = exp(-(pow((relXY.x + 0.28) / 0.15, 2.0) + pow((relXY.y - 0.30) / 0.13, 2.0)));
-      float uvCatch2 = exp(-(pow((relXY.x - 0.30) / 0.08, 2.0) + pow((relXY.y + 0.26) / 0.08, 2.0)));
+      // Delicate, tiny pinpoint catchlight at upper-right of pupil (never covers whole iris)
+      float uvCatch1 = exp(-(pow((relXY.x + 0.24) / 0.075, 2.0) + pow((relXY.y - 0.26) / 0.068, 2.0)));
+      float uvCatch2 = exp(-(pow((relXY.x - 0.26) / 0.045, 2.0) + pow((relXY.y + 0.22) / 0.045, 2.0)));
 
-      vec3 wetCatchlight = vec3(2.45, 2.42, 2.38) * max(catch1, uvCatch1 * 0.92 * inIris)
-                         + vec3(1.45, 1.48, 1.55) * max(catch2, uvCatch2 * 0.85 * inIris);
-      reflectedLight.directSpecular += wetCatchlight * upperLidAO;
+      vec3 wetCatchlight = vec3(0.72, 0.69, 0.64) * (uvCatch1 * inIris)
+                         + vec3(0.28, 0.27, 0.26) * (uvCatch2 * inIris);
+      reflectedLight.directSpecular = reflectedLight.directSpecular * 0.15 + wetCatchlight * upperLidAO;
       `
     );
   };
@@ -1826,20 +1835,20 @@ export async function buildCollectibleHeadNode(config = {}) {
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
-        normalScale: new THREE.Vector2(0.54, 0.54),
+        normalScale: new THREE.Vector2(0.58, 0.58),
         roughnessMap: skinMicro.roughnessMap,
         color: computeSkinTintColor(skinToneHex),
-        roughness: Math.max(0.38, Number(materials.skinRoughness ?? 0.44)),
+        roughness: Math.max(0.56, Number(materials.skinRoughness ?? 0.62)),
         metalness: 0.0,
-        sheen: 0.28,
-        sheenRoughness: 0.68,
-        sheenColor: new THREE.Color('#ffddd4'),
-        clearcoat: 0.16,
-        clearcoatRoughness: 0.28,
-        specularIntensity: 0.56,
-        specularColor: new THREE.Color('#fff9f6'),
-        ior: 1.40,
-        envMapIntensity: 0.92,
+        sheen: 0.18,
+        sheenRoughness: 0.78,
+        sheenColor: new THREE.Color('#f7d5ca'),
+        clearcoat: 0.0,
+        clearcoatRoughness: 0.65,
+        specularIntensity: 0.22,
+        specularColor: new THREE.Color('#fff5ee'),
+        ior: 1.38,
+        envMapIntensity: 0.24,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -1856,15 +1865,15 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.32,
+        emissiveIntensity: 0.24,
         bumpMap: bumpTex,
         bumpScale: 0.005,
-        roughness: Math.max(0.34, 0.72 - wetness * 0.40),
+        roughness: Math.max(0.42, 0.76 - wetness * 0.32),
         metalness: 0.0,
-        clearcoat: 0.25,
-        clearcoatRoughness: 0.35,
-        specularIntensity: 0.40,
-        envMapIntensity: 0.32,
+        clearcoat: 0.12,
+        clearcoatRoughness: 0.45,
+        specularIntensity: 0.28,
+        envMapIntensity: 0.20,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -1875,28 +1884,21 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       const eyeMat = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.04,
+        roughness: 0.30,
         metalness: 0.0,
-        clearcoat: 0.98,
-        clearcoatRoughness: 0.015,
-        specularIntensity: 1.0,
-        ior: 1.40,
-        envMapIntensity: 1.35,
+        clearcoat: 0.0,
+        clearcoatRoughness: 0.50,
+        specularIntensity: 0.16,
+        ior: 1.38,
+        envMapIntensity: 0.03,
       });
       injectLifelikeEyeShader(eyeMat);
       child.material = eyeMat;
     } else if (matName === 'Cornea') {
-      child.material = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#ffffff'),
+      child.visible = false;
+      child.material = new THREE.MeshBasicMaterial({
         transparent: true,
-        opacity: 0.14,
-        roughness: 0.015,
-        metalness: 0.0,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.01,
-        specularIntensity: 1.0,
-        ior: 1.40,
-        envMapIntensity: 1.45,
+        opacity: 0.0,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {

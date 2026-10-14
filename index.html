@@ -130,53 +130,53 @@
       <span class="badge-count" id="active-pet-count-badge">3 在屏</span>
     </div>
     <div class="overlay-actions">
-      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开窗户透光光影、明暗差分、独立收纳建筑建造与小雨伴学环境定制器">
-        🎨 窗影·收纳建筑·雨夜定制
+      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开光影、柔焦模糊、老照片胶片感、收纳建筑与伴学环境定制器">
+        🎨 光影·模糊·老照片定制
       </button>
       <button id="btn-quick-rain-study" class="overlay-btn active-top" title="一键开关雨夜书房窗外小雨白噪音(ASMR)与3D雨窗伴学环境">
-        🌧️ 小雨伴学: 开启
+        🌧️ 雨声伴学
       </button>
-      <button id="btn-quick-place-container" class="overlay-btn" title="在书桌/展架上放置一座独立的3D头颅收纳建筑（不与角色绑定，可拖入或拎出任意断头）">
-        🏗️ +放置收纳建筑
+      <button id="btn-quick-place-container" class="overlay-btn" title="在书桌/展架上放置一座独立的3D头颅收纳建筑">
+        🏗️ +放置建筑
       </button>
-      <button id="btn-quick-gravity" class="overlay-btn active-top" title="切换物理重力落地系统：开启后头模稳固落在3D地板/层架上绝不浮空">
-        ⚓ 重力落地: 开启
+      <button id="btn-quick-gravity" class="overlay-btn active-top" title="切换物理重力落地系统">
+        ⚓ 重力: 开
       </button>
       <button id="btn-toggle-window" class="overlay-btn" title="隐藏或展开软件主窗口，直接欣赏电脑屏幕上的3D头部桌宠">
-        🗕 隐藏软件窗口 (纯看屏幕桌宠)
+        🗕 隐藏工坊面板
       </button>
       <button id="btn-quick-dock-window" class="overlay-btn" title="将窗口停靠在右侧，左半屏完整操作3D桌宠">
-        ◧ 窗口: 右侧紧凑停靠
+        ◧ 右侧停靠
       </button>
-      <button id="btn-quick-pets-top" class="overlay-btn active-top" title="切换3D桌宠是否置顶显示在所有窗口最前方，防止DAZ窗口遮挡桌宠">
-        📌 3D桌宠: 置顶最前
+      <button id="btn-quick-pets-top" class="overlay-btn active-top" title="切换3D桌宠是否置顶显示在所有窗口最前方">
+        📌 桌宠置顶
       </button>
       <button id="btn-quick-box-grid" class="overlay-btn" title="切换屏幕中心透视消失点与3D盒型空间辅助网格">
-        📦 盒型透视网格: 常显
+        📦 网格: 拖拽显示
       </button>
       <button id="btn-quick-bg-mode" class="overlay-btn" title="切换仿真电脑桌面背景或暗房标本展柜">
-        🖥️ 背景: 仿真电脑桌面
+        🖥️ 背景切换
       </button>
       <button id="btn-quick-mute" class="overlay-btn" title="物理音效开关">
-        🔊 物理音效: 开启
+        🔊 音效
       </button>
     </div>
   </div>
 
-  <!-- STUDY COMPANION ENERGY SIPHON & SURVIVOR TRIUMPH HUD (Toggleable Option) -->
+  <!-- STUDY COMPANION ENERGY SIPHON & SURVIVOR TRIUMPH HUD (Collapsed by default at bottom-right so it never blocks screen!) -->
   <div id="study-triumph-hud">
     <div class="triumph-hud-header">
       <div class="triumph-badge-row">
         <span class="triumph-crown">👑</span>
-        <strong>伴学能量汲取 · 生者加冕台</strong>
-        <span class="triumph-status-pill" id="triumph-active-specimens">3 具青春标本伴读中</span>
+        <strong>伴学能量台</strong>
+        <span class="triumph-status-pill" id="triumph-active-specimens">3 具伴读中</span>
       </div>
       <div class="triumph-header-btns">
-        <button id="btn-triumph-formation" class="triumph-mini-btn" title="一键将标本排列至屏幕两侧伴学护法架">📚 排列伴学阵型</button>
-        <button id="btn-triumph-collapse" class="triumph-mini-btn" title="折叠/展开伴学能量面板">▾</button>
+        <button id="btn-triumph-formation" class="triumph-mini-btn" title="一键将标本排列至屏幕两侧伴学护法架">📚 阵型</button>
+        <button id="btn-triumph-collapse" class="triumph-mini-btn" title="折叠/展开伴学能量面板">▴ 展开</button>
       </div>
     </div>
-    <div id="triumph-hud-body" class="triumph-hud-body">
+    <div id="triumph-hud-body" class="triumph-hud-body collapsed">
       <div class="triumph-metrics-grid">
         <div class="triumph-metric-box">
           <span class="tm-label">⏳ 本次伴学专注时长</span>
@@ -239,8 +239,8 @@
         <div class="field-row" style="margin-top:8px;">
           <label>🌐 HDR 全景环境光场模式 (影棚柔光箱 / 落日逆光 / 雨夜天光 / 展柜穹顶)</label>
           <select id="sel-hdr-mode">
-            <option value="softbox_portrait" selected>📸 85mm 影棚双柔光箱 + 环形眼神光 HDR (消除脸部生硬黑影·人像推荐)</option>
-            <option value="golden_hour">🌅 落日暖金胶片逆光 HDR (夕阳暖肤漫反射)</option>
+            <option value="softbox_portrait">📸 85mm 影棚双柔光箱 + 环形眼神光 HDR</option>
+            <option value="golden_hour" selected>🌅 落日暖金胶片逆光 HDR (怀旧老照片暖肤漫反射·推荐)</option>
             <option value="rainy_window">🌧️ 雨夜书房天光漫射 + 暖台灯 HDR (沉浸伴学)</option>
             <option value="museum_velvet">🏛️ 卢浮宫天鹅绒展柜穹顶 HDR (戏剧性明暗)</option>
           </select>
@@ -249,8 +249,8 @@
         <div class="field-row" style="margin-top:6px;">
           <label>🪟 窗户透光光影格栅样式 (投射在面部与书桌上)</label>
           <select id="sel-window-gobo">
-            <option value="none" selected>🔦 纯净影棚无影柔光箱 (无窗框投影 · 肤质最清透干净)</option>
-            <option value="rain_mullion">🌧️ 雨夜十字窗格 + 柔和漫射窗光 (伴学推荐)</option>
+            <option value="none">🔦 纯净影棚无影柔光箱 (无窗框投影)</option>
+            <option value="rain_mullion" selected>🌧️ 雨夜十字窗格 + 柔和漫射窗光 (立体光线感·推荐)</option>
             <option value="venetian_blinds">🪟 书房百叶窗柔化漫射光 (电影感光影)</option>
             <option value="gothic_lattice">🏰 哥特菱格花窗柔光 (古典标本馆)</option>
             <option value="tree_dappled">🌿 窗外梧桐树影柔光 (静谧庭院)</option>
@@ -260,103 +260,103 @@
         <div class="field-row" style="margin-top:6px;display:flex;gap:12px;align-items:center;">
           <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
             ☀️ 主光源(柔光箱/窗光)色温:
-            <input type="color" id="vc-key-color" value="#fff3e4" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+            <input type="color" id="vc-key-color" value="#ffeed6" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
           </label>
           <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
             🌙 背部发丝轮廓光色:
-            <input type="color" id="vc-rim-color" value="#ffe8d6" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+            <input type="color" id="vc-rim-color" value="#fcd9a8" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
           </label>
         </div>
 
         <div class="vcd-sliders">
           <div class="slider-row">
-            <span>🔦 鼠标跟随影棚眼神补光手电 (Cursor Beauty Torch)</span>
-            <input type="range" id="vc-cursor-torch" min="0.0" max="1.6" step="0.05" value="0.75" />
-            <span id="val-vc-cursor-torch">75%</span>
-          </div>
-          <div class="slider-row">
-            <span>✨ 星芒水光眼神光与高光星耀 (Iris Star Sparkle)</span>
-            <input type="range" id="vc-iris-sparkle" min="0.0" max="1.6" step="0.05" value="0.82" />
-            <span id="val-vc-iris-sparkle">82%</span>
-          </div>
-          <div class="slider-row">
-            <span>🌸 电影暖粉高光光晕晕染 (Pro-Mist Halation)</span>
-            <input type="range" id="vc-halation" min="0.0" max="1.5" step="0.05" value="0.48" />
-            <span id="val-vc-halation">48%</span>
-          </div>
-          <div class="slider-row">
-            <span>💧 清透冷白水光肌提亮滤镜 (Porcelain Skin Lumen)</span>
-            <input type="range" id="vc-skin-lumen" min="0.0" max="1.2" step="0.05" value="0.58" />
-            <span id="val-vc-skin-lumen">58%</span>
-          </div>
-          <div class="slider-row">
-            <span>🌫️ 电影黑柔镜/皮肤柔焦扩散模糊 (Pro-Mist · 消除3D硬边感)</span>
-            <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.14" />
-            <span id="val-vc-soft-focus">14%</span>
+            <span>🌫️ 电影黑柔镜/光学柔焦模糊 (Pro-Mist · 彻底消除3D生硬感)</span>
+            <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.56" />
+            <span id="val-vc-soft-focus">56%</span>
           </div>
           <div class="slider-row">
             <span>📷 85mm 大光圈景深边缘虚化模糊 (DOF Bokeh Blur)</span>
-            <input type="range" id="vc-depth-blur" min="0.0" max="1.0" step="0.04" value="0.12" />
-            <span id="val-vc-depth-blur">12%</span>
+            <input type="range" id="vc-depth-blur" min="0.0" max="1.0" step="0.04" value="0.44" />
+            <span id="val-vc-depth-blur">44%</span>
           </div>
           <div class="slider-row">
-            <span>🌈 光学定焦镜头微色散 (Chromatic Dispersion)</span>
-            <input type="range" id="vc-chromatic" min="0.0" max="1.0" step="0.04" value="0.08" />
-            <span id="val-vc-chromatic">8%</span>
+            <span>🎞️ 怀旧银盐老照片胶片乳剂感 (Vintage Old Photo)</span>
+            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.48" />
+            <span id="val-vc-vintage-photo">48%</span>
           </div>
           <div class="slider-row">
-            <span>🌐 HDR 环境柔光箱漫反射强度 (Env HDR)</span>
-            <input type="range" id="vc-env-intensity" min="0.10" max="1.40" step="0.04" value="0.88" />
-            <span id="val-vc-env-intensity">88%</span>
+            <span>✨ 窗畔丁达尔斜射体积光束 (Tyndall Light Rays)</span>
+            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.58" />
+            <span id="val-vc-tyndall">58%</span>
           </div>
           <div class="slider-row">
-            <span>✨ 丁达尔体积光散射晕染 (Tyndall Scatter)</span>
-            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.36" />
-            <span id="val-vc-tyndall">36%</span>
-          </div>
-          <div class="slider-row">
-            <span>🎞️ 胶片乳剂暖银盐色调 (Film Emulsion)</span>
-            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.06" />
-            <span id="val-vc-vintage-photo">6%</span>
-          </div>
-          <div class="slider-row">
-            <span>🌓 光影明暗过渡对比 (低=柔光奶油肌 / 高=立体明暗)</span>
-            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.5" step="0.05" value="0.28" />
-            <span id="val-vc-chiaroscuro">28%</span>
+            <span>🌓 伦勃朗立体光影明暗过渡 (Chiaroscuro 光线感)</span>
+            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.5" step="0.05" value="0.68" />
+            <span id="val-vc-chiaroscuro">68%</span>
           </div>
           <div class="slider-row">
             <span>🪟 窗户格栅光影浓度 (Window Gobo)</span>
-            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.16" />
-            <span id="val-vc-window-gobo-strength">16%</span>
+            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.34" />
+            <span id="val-vc-window-gobo-strength">34%</span>
+          </div>
+          <div class="slider-row">
+            <span>🌸 胶片暖金高光晕染 (Halation)</span>
+            <input type="range" id="vc-halation" min="0.0" max="1.5" step="0.05" value="0.28" />
+            <span id="val-vc-halation">28%</span>
+          </div>
+          <div class="slider-row">
+            <span>🌈 光学定焦镜头微色散 (Chromatic Dispersion)</span>
+            <input type="range" id="vc-chromatic" min="0.0" max="1.0" step="0.04" value="0.14" />
+            <span id="val-vc-chromatic">14%</span>
+          </div>
+          <div class="slider-row">
+            <span>🔦 鼠标跟随柔和补光手电 (Cursor Torch)</span>
+            <input type="range" id="vc-cursor-torch" min="0.0" max="1.6" step="0.05" value="0.28" />
+            <span id="val-vc-cursor-torch">28%</span>
+          </div>
+          <div class="slider-row">
+            <span>✨ 高光微星芒点缀 (Iris Sparkle)</span>
+            <input type="range" id="vc-iris-sparkle" min="0.0" max="1.6" step="0.05" value="0.05" />
+            <span id="val-vc-iris-sparkle">5%</span>
+          </div>
+          <div class="slider-row">
+            <span>💧 额外冷白提亮滤镜 (Skin Lumen · 建议0%防过曝)</span>
+            <input type="range" id="vc-skin-lumen" min="0.0" max="1.2" step="0.05" value="0.0" />
+            <span id="val-vc-skin-lumen">0%</span>
+          </div>
+          <div class="slider-row">
+            <span>🌐 HDR 环境漫反射强度 (Env HDR)</span>
+            <input type="range" id="vc-env-intensity" min="0.10" max="1.40" step="0.04" value="0.32" />
+            <span id="val-vc-env-intensity">32%</span>
           </div>
           <div class="slider-row">
             <span>☀️ 主光水平入射角 (Azimuth)</span>
-            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="26" />
-            <span id="val-vc-key-azimuth">+26°</span>
+            <input type="range" id="vc-key-azimuth" min="-150" max="150" step="2" value="38" />
+            <span id="val-vc-key-azimuth">+38°</span>
           </div>
           <div class="slider-row">
             <span>📐 主光高度俯角 (Elevation)</span>
-            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="22" />
-            <span id="val-vc-key-elevation">22°</span>
+            <input type="range" id="vc-key-elevation" min="-5" max="75" step="1" value="28" />
+            <span id="val-vc-key-elevation">28°</span>
           </div>
           <div class="slider-row">
-            <span>💡 主光柔光箱强度</span>
-            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="1.55" />
-            <span id="val-vc-key-intensity">1.55</span>
+            <span>💡 主光强度</span>
+            <input type="range" id="vc-key-intensity" min="0.4" max="3.0" step="0.05" value="1.36" />
+            <span id="val-vc-key-intensity">1.36</span>
           </div>
           <div class="slider-row">
             <span>🌙 背部发丝轮廓光 (Rim)</span>
-            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.35" />
-            <span id="val-vc-rim-intensity">1.35</span>
+            <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="0.78" />
+            <span id="val-vc-rim-intensity">0.78</span>
           </div>
           <div class="slider-row">
-            <span>🩸 真皮次表面透光粉嫩感 (SSS)</span>
-            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="0.92" />
-            <span id="val-vc-sss">92%</span>
+            <span>🩸 真皮次表面透光感 (SSS)</span>
+            <input type="range" id="vc-sss" min="0.0" max="2.2" step="0.05" value="0.82" />
+            <span id="val-vc-sss">82%</span>
           </div>
           <div class="slider-row">
-            <span>🧴 丝绒粉雾肌 ↔ 水光奶油肌光度</span>
-            <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.54" />
+            <span>🧴 自然哑光丝绒肌 ↔ 柔润光泽度 (防硅胶感)</span>
+            <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.12" />
             <span id="val-vc-wet-gloss">54%</span>
           </div>
           <div class="slider-row">
@@ -648,7 +648,6 @@
 
   <!-- Active Screen Pets Floating Mini-Strip (Bottom-Left of Computer Screen) -->
   <div id="screen-pets-strip">
-    <div class="strip-title">🎯 屏幕已召唤藏品 (单击模型切换旋转 / 滚轮调景深 / 拖拽碰撞盒壁)</div>
     <div id="screen-pets-pills"></div>
   </div>
 
