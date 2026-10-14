@@ -1684,9 +1684,13 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     if (!obj.isMesh || !obj.material) return;
     if (obj.name === 'HeadSkinMesh' || obj.material.userData?.uSssIntensity) {
       const userRough = obj.material.userData?.customSkinRoughness;
-      obj.material.roughness = typeof userRough === 'number'
+      const baseRoughness = typeof userRough === 'number'
         ? userRough
         : Math.max(0.42, 0.64 - skinGloss * 0.24);
+      // Optional Stage 45 matte module: recompute from the character's base each time.
+      // No edits to customSkinRoughness, archives or imported materials; zero/off restores exactly.
+      const matteAmount = Math.max(0, Math.min(1, Number(m.repairSkinMatteAmount) || 0));
+      obj.material.roughness = THREE.MathUtils.lerp(baseRoughness, Math.max(baseRoughness, 0.54), matteAmount);
       obj.material.clearcoat = Math.max(0.0, (skinGloss - 0.55) * 0.18);
       obj.material.clearcoatRoughness = 0.45;
       obj.material.specularIntensity = 0.24 + skinGloss * 0.26;
