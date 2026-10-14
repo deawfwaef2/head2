@@ -1303,56 +1303,57 @@ export function buildSpecimenContainerGroup(containerStyle = 'glass_bell_jar') {
     group.add(scalpelBlade);
 
     const bloodVenousMat = new THREE.MeshPhysicalMaterial({
-      color: '#3b0309',
+      color: '#420309',
       emissive: '#140103',
-      roughness: 0.04,
+      roughness: 0.03,
       metalness: 0.0,
       clearcoat: 1.0,
       clearcoatRoughness: 0.02,
       ior: 1.49,
-      specularIntensity: 0.96,
-    });
-    const bloodArterialMat = new THREE.MeshPhysicalMaterial({
-      color: '#6e0711',
-      emissive: '#220205',
-      roughness: 0.06,
-      metalness: 0.0,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.03,
-      ior: 1.48,
-      specularIntensity: 0.92,
+      specularIntensity: 0.98,
     });
 
-    // Organic irregular multi-lobe 3D coagulating blood puddle + satellite droplets (replaces flat cylinder)
-    const puddleLobes = [
-      [0.0, -0.5, 6.4, 5.8, 0.24, 0.0, false],
-      [-2.6, 1.4, 4.2, 3.3, 0.22, 0.45, true],
-      [2.9, -1.6, 4.5, 3.4, 0.22, -0.38, false],
-      [1.8, 2.2, 3.6, 2.8, 0.20, 0.62, true],
-      [-3.1, -2.1, 3.8, 2.9, 0.20, -0.52, false],
-      [0.4, -3.4, 3.2, 2.5, 0.19, 0.18, true],
-    ];
-    const lobeGeo = new THREE.SphereGeometry(1.0, 28, 16);
-    for (const [lx, lz, rx, rz, ry, rotY, isArt] of puddleLobes) {
-      const lobe = new THREE.Mesh(lobeGeo, isArt ? bloodArterialMat : bloodVenousMat);
-      lobe.position.set(lx, -12.96, lz);
-      lobe.rotation.y = rotY;
-      lobe.scale.set(rx, ry, rz);
-      group.add(lobe);
+    // Single seamless organic multi-harmonic 3D liquid blood pool with raised surface-tension meniscus rim
+    const nAng = 128;
+    const nRad = 22;
+    const strideP = nAng + 1;
+    const poolPos = new Float32Array((nRad + 1) * strideP * 3);
+    const poolIdx = [];
+    for (let ir = 0; ir <= nRad; ir++) {
+      const rho = ir / nRad;
+      // Liquid surface tension meniscus profile: flat mirror interior, rounded convex meniscus at rho in [0.82, 1.0]
+      const meniscusH = ir === nRad ? 0.0 : 0.24 * Math.pow(1.0 - Math.pow(Math.max(0, (rho - 0.80) / 0.20), 2.0), 0.65)
+                      + 0.04 * Math.exp(-Math.pow((rho - 0.86) / 0.08, 2.0));
+      for (let ia = 0; ia <= nAng; ia++) {
+        const theta = (ia / nAng) * Math.PI * 2.0;
+        const rWave = 7.4
+          + 1.35 * Math.sin(theta * 2.0 + 0.4)
+          + 0.92 * Math.cos(theta * 3.0 - 0.8)
+          + 0.68 * Math.sin(theta * 5.0 + 1.7)
+          + 0.36 * Math.cos(theta * 8.0 - 1.1);
+        const r = rho * rWave;
+        const idx = (ir * strideP + ia) * 3;
+        poolPos[idx] = Math.cos(theta) * r * 1.06;
+        poolPos[idx + 1] = -13.06 + meniscusH;
+        poolPos[idx + 2] = -0.5 + Math.sin(theta) * r * 0.94;
+      }
     }
-
-    // Satellite arterial splatter droplets & coagulated clots around the tray floor
-    const dropletGeo = new THREE.SphereGeometry(1.0, 14, 10);
-    for (let d = 0; d < 16; d++) {
-      const ang = (d / 16) * Math.PI * 2 + 0.28 * Math.sin(d * 3.1);
-      const dist = 6.2 + (d % 4) * 0.95;
-      const rDrop = 0.28 + (d % 3) * 0.16;
-      const drop = new THREE.Mesh(dropletGeo, d % 2 === 0 ? bloodArterialMat : bloodVenousMat);
-      drop.position.set(Math.cos(ang) * dist * 1.08, -12.98, -0.5 + Math.sin(ang) * dist * 0.86);
-      drop.rotation.y = -ang;
-      drop.scale.set(rDrop * 1.35, rDrop * 0.42, rDrop * 0.95);
-      group.add(drop);
+    for (let ir = 0; ir < nRad; ir++) {
+      for (let ia = 0; ia < nAng; ia++) {
+        const a = ir * strideP + ia;
+        const b = a + 1;
+        const d = (ir + 1) * strideP + ia;
+        const c = d + 1;
+        poolIdx.push(a, c, b);
+        poolIdx.push(a, d, c);
+      }
     }
+    const poolGeo = new THREE.BufferGeometry();
+    poolGeo.setAttribute('position', new THREE.BufferAttribute(poolPos, 3));
+    poolGeo.setIndex(poolIdx);
+    poolGeo.computeVertexNormals();
+    const bloodPool = new THREE.Mesh(poolGeo, bloodVenousMat);
+    group.add(bloodPool);
 
     group.userData.baseBottomOffset = -14.25;
   } else if (containerStyle === 'guillotine_plinth') {

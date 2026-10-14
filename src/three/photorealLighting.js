@@ -959,6 +959,13 @@ export function createSkinGradingUniforms(initial = {}) {
     uLipGloss: { value: Number(initial.lipGloss ?? 0.48) },
     uFreckleStrength: { value: Number(initial.freckleStrength ?? 0.0) },
     uBeautyMarkMode: { value: Number(initial.beautyMarkMode ?? 0.0) },
+    uNeckBloodStrength: { value: Number(initial.neckBloodStrength ?? 0.85) },
+    uNosebleedStrength: { value: Number(initial.nosebleedStrength ?? 0.0) },
+    uNosebleedMode: { value: Number(initial.nosebleedMode ?? 0.0) },
+    uTearTrackStrength: { value: Number(initial.tearTrackStrength ?? 0.0) },
+    uTearType: { value: Number(initial.tearType ?? 0.0) },
+    uMouthBloodStrength: { value: Number(initial.mouthBloodStrength ?? 0.0) },
+    uFaceSplatterStrength: { value: Number(initial.faceSplatterStrength ?? 0.0) },
     uPhotoProjMap: { value: initial.photoProjMap || getFallbackPhotoTex() },
     uPhotoProjEnabled: { value: initial.photoProjMap ? 1.0 : 0.0 },
     uPhotoProjStrength: { value: Number(initial.photoProjStrength ?? 0.0) },
@@ -1053,6 +1060,13 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       uniform float uLipGloss;
       uniform float uFreckleStrength;
       uniform float uBeautyMarkMode;
+      uniform float uNeckBloodStrength;
+      uniform float uNosebleedStrength;
+      uniform float uNosebleedMode;
+      uniform float uTearTrackStrength;
+      uniform float uTearType;
+      uniform float uMouthBloodStrength;
+      uniform float uFaceSplatterStrength;
       uniform sampler2D uPhotoProjMap;
       uniform float uPhotoProjEnabled;
       uniform float uPhotoProjStrength;
@@ -1062,6 +1076,9 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       varying vec3 vCervixLocalPos;
       float vDermisPoreCavity;
       float vLipVermilionMask;
+      float vWetFluidSpecMask;
+      float vBloodSpecMask;
+      float vFluidHeight;
 
       float dermisHash21(vec2 p) {
         p = fract(p * vec2(234.56, 789.12));
@@ -1399,29 +1416,269 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           skinCol *= (1.0 - (0.26 * seamAO + 0.20 * cornerAO) * lipMask);
         }
 
-        // 10. Crisp 3D Millimeter-Space Severed Neck Dermal Incision & Micro-Coagulation Rim (Zero Low-Res UV Smudge!)
-        if (p.y < -0.1055) {
+        // =====================================================================
+        // 10. Stage 53 · 3D Millimeter-Space Forensic & Emotional Fluid System
+        //     (Tear Tracks / Blood Tears, Nosebleed, Mouth Blood, Face Splatter & Multi-Layer Neck Blood)
+        // =====================================================================
+        vWetFluidSpecMask = 0.0;
+        vBloodSpecMask = 0.0;
+        vFluidHeight = 0.0;
+
+        // 10A. 💧 Tear Tracks, Lower-Lid Tear Meniscus, Crying Erythema Flush & Optional Blood Tears
+        float tearStr = clamp(uTearTrackStrength, 0.0, 1.4);
+        if (tearStr > 0.01 && p.z > 0.045) {
+          float ax = abs(p.x);
+          float sideSign = p.x >= 0.0 ? 1.0 : -1.0;
+
+          // Physiological crying erythema: warm rosy-red flush on lower eyelid rim, medial canthus & nasal tip
+          float lidFlush = exp(-pow((ax - 0.0275) / 0.0155, 2.0)) * exp(-pow((p.y - 0.0118) / 0.0046, 2.0));
+          float noseTipCry = exp(-pow(p.x / 0.0115, 2.0)) * exp(-pow((p.y + 0.0148) / 0.0075, 2.0)) * smoothstep(0.094, 0.112, p.z);
+          float cryFlushAmt = clamp((lidFlush * 0.72 + noseTipCry * 0.65) * tearStr, 0.0, 0.72);
+          skinCol = mix(skinCol, skinCol * vec3(1.04, 0.74, 0.76) + vec3(0.04, -0.01, -0.01), cryFlushAmt * 0.58);
+
+          // Glistening lower-eyelid tear meniscus (waterline pooling at y ≈ 0.0124, |x| in [0.0175, 0.0405])
+          float inLidSpan = smoothstep(0.0168, 0.0195, ax) * (1.0 - smoothstep(0.0385, 0.0418, ax));
+          float lidCurveY = 0.0124 + 0.0016 * pow((ax - 0.0285) / 0.0110, 2.0);
+          float lidMeniscus = exp(-pow((p.y - lidCurveY) / 0.00075, 2.0)) * inLidSpan * clamp(tearStr * 1.2, 0.0, 1.0);
+
+          // Stream 1: Inner Canthus Nasojugal Tear Rivulet (starts at |x|=0.0184, y=0.0136, flows down cheek to y=-0.042)
+          float yTop1 = 0.0138;
+          float yBot1 = mix(0.0060, -0.0415, clamp(tearStr, 0.0, 1.0)) - 0.0025 * sideSign;
+          float tProg1 = clamp((yTop1 - p.y) / max(0.002, yTop1 - yBot1), 0.0, 1.0);
+          float inY1 = smoothstep(yBot1 - 0.0018, yBot1 + 0.0012, p.y) * (1.0 - smoothstep(yTop1 - 0.0008, yTop1 + 0.0012, p.y));
+          float meander1 = 0.00085 * sin(p.y * 290.0 + sideSign * 1.4)
+                         + 0.00055 * (dermisNoise2D(vec2(p.y * 220.0, sideSign * 7.3)) - 0.5);
+          float targetX1 = 0.0184 + 0.0068 * pow(tProg1, 0.78) + meander1;
+          float width1 = mix(0.00125, 0.00082, tProg1) * (1.0 + 0.55 * exp(-pow((tProg1 - 0.94) / 0.06, 2.0)));
+          float stream1 = exp(-pow((ax - targetX1) / width1, 2.0)) * inY1;
+          // Swollen 3D teardrop bead at the bottom tip of Stream 1
+          float drop1 = exp(-(pow((ax - targetX1) / 0.00165, 2.0) + pow((p.y - (yBot1 + 0.0012)) / 0.0022, 2.0)))
+                      * step(0.15, tearStr);
+
+          // Stream 2: Mid-Lower Eyelid Malar Cheek Tear Rivulet (starts at |x|=0.0308, y=0.0120, flows down to y=-0.029)
+          float yTop2 = 0.0122;
+          float yBot2 = mix(0.0050, -0.0295, clamp(tearStr * 0.92, 0.0, 1.0)) + 0.0020 * sideSign;
+          float tProg2 = clamp((yTop2 - p.y) / max(0.002, yTop2 - yBot2), 0.0, 1.0);
+          float inY2 = smoothstep(yBot2 - 0.0016, yBot2 + 0.0010, p.y) * (1.0 - smoothstep(yTop2 - 0.0008, yTop2 + 0.0010, p.y));
+          float meander2 = 0.00075 * cos(p.y * 310.0 - sideSign * 0.9)
+                         + 0.00045 * (dermisNoise2D(vec2(p.y * 250.0, sideSign * 13.1)) - 0.5);
+          float targetX2 = 0.0308 + 0.0024 * sin(tProg2 * 3.14159) + meander2;
+          float width2 = mix(0.00110, 0.00072, tProg2);
+          float stream2 = exp(-pow((ax - targetX2) / width2, 2.0)) * inY2 * smoothstep(0.22, 0.55, tearStr);
+          float drop2 = exp(-(pow((ax - targetX2) / 0.00145, 2.0) + pow((p.y - (yBot2 + 0.0010)) / 0.0019, 2.0)))
+                      * smoothstep(0.30, 0.65, tearStr);
+
+          float tearMask = clamp(max(lidMeniscus, max(max(stream1, drop1 * 1.25), max(stream2, drop2 * 1.15))) * clamp(tearStr * 1.15, 0.0, 1.0), 0.0, 1.0);
+
+          if (uTearType > 1.5) {
+            // Mode 2: Haunting Crimson Blood Tears (凄美血泪)
+            float coreBlood = smoothstep(0.35, 0.85, tearMask);
+            vec3 bloodTearCol = mix(vec3(0.46, 0.015, 0.024), vec3(0.12, 0.003, 0.006), coreBlood * 0.68);
+            skinCol = mix(skinCol, bloodTearCol, clamp(tearMask * 0.92, 0.0, 0.95));
+            vBloodSpecMask = max(vBloodSpecMask, tearMask);
+            vFluidHeight += tearMask * 0.42;
+          } else if (uTearType > 0.5) {
+            // Mode 1: Smudged Mascara / Smoky Eyeliner Tear Tracks (微晕眼妆哭痕)
+            float smudgeZone = tearMask * smoothstep(-0.022, 0.013, p.y);
+            skinCol = mix(skinCol, skinCol * vec3(0.48, 0.44, 0.46), clamp(smudgeZone * 0.68, 0.0, 0.70));
+            skinCol = mix(skinCol, skinCol * vec3(0.93, 0.86, 0.87), tearMask * 0.25);
+            vWetFluidSpecMask = max(vWetFluidSpecMask, tearMask);
+            vFluidHeight += tearMask * 0.34;
+          } else {
+            // Mode 0: Crystal-Clear Wet Tears & Moistened Dermis (清澈泪痕)
+            skinCol = mix(skinCol, skinCol * vec3(0.93, 0.86, 0.86), tearMask * 0.32);
+            vWetFluidSpecMask = max(vWetFluidSpecMask, tearMask);
+            vFluidHeight += tearMask * 0.36;
+          }
+        }
+
+        // 10B. 🩸 Realistic 3D Nostril-to-Philtrum-to-Lip Nosebleed (鼻血涓流与涌血)
+        float nosebleedStr = clamp(uNosebleedStrength, 0.0, 1.4);
+        if (nosebleedStr > 0.01 && p.z > 0.082 && p.y < -0.0155 && p.y > -0.0585 && abs(p.x) < 0.0165) {
+          float leftEnable = (uNosebleedMode < 1.5) ? 1.0 : 0.0; // Mode 0 (both) or Mode 1 (left)
+          float rightEnable = (uNosebleedMode < 0.5 || uNosebleedMode > 1.5) ? 1.0 : 0.0; // Mode 0 (both) or Mode 2 (right)
+
+          float nbMask = 0.0;
+          float nbCore = 0.0;
+
+          // Left Nostril Stream (x ≈ -0.0064 at nostril y=-0.0180 -> flows down philtrum ridge to upper lip y=-0.0435)
+          if (leftEnable > 0.5) {
+            float yStartL = -0.0176;
+            float yEndL = mix(-0.0245, -0.0442, clamp(nosebleedStr * 1.08, 0.0, 1.0));
+            float tL = clamp((yStartL - p.y) / max(0.0015, yStartL - yEndL), 0.0, 1.0);
+            float inYL = smoothstep(yEndL - 0.0015, yEndL + 0.0008, p.y) * (1.0 - smoothstep(yStartL - 0.0008, yStartL + 0.0010, p.y));
+            float waveL = 0.00055 * sin(p.y * 420.0 + 0.8) + 0.00040 * (dermisNoise2D(vec2(p.y * 320.0, 4.2)) - 0.5);
+            float pathXL = mix(-0.0064, -0.0036, pow(tL, 0.85)) + waveL;
+            float wL = mix(0.00165, 0.00105, tL) * (1.0 + 0.45 * exp(-pow((tL - 0.92) / 0.08, 2.0)));
+            float sL = exp(-pow((p.x - pathXL) / wL, 2.0)) * inYL;
+            float poolL = exp(-(pow((p.x + 0.0065) / 0.0024, 2.0) + pow((p.y + 0.0182) / 0.0018, 2.0)));
+            nbMask = max(nbMask, max(sL, poolL));
+            nbCore = max(nbCore, exp(-pow((p.x - pathXL) / (wL * 0.52), 2.0)) * inYL + poolL * 0.85);
+          }
+
+          // Right Nostril Stream (x ≈ +0.0062 at nostril y=-0.0180 -> flows into philtrum groove & Cupid's bow)
+          if (rightEnable > 0.5) {
+            float effR = (uNosebleedMode < 0.5) ? clamp(nosebleedStr * 0.78, 0.0, 1.0) : clamp(nosebleedStr * 1.08, 0.0, 1.0);
+            float yStartR = -0.0176;
+            float yEndR = mix(-0.0235, -0.0398, effR);
+            float tR = clamp((yStartR - p.y) / max(0.0015, yStartR - yEndR), 0.0, 1.0);
+            float inYR = smoothstep(yEndR - 0.0014, yEndR + 0.0008, p.y) * (1.0 - smoothstep(yStartR - 0.0008, yStartR + 0.0010, p.y));
+            float waveR = 0.00050 * cos(p.y * 450.0 - 1.1) + 0.00038 * (dermisNoise2D(vec2(p.y * 340.0, 9.7)) - 0.5);
+            float pathXR = mix(0.0062, 0.0022, pow(tR, 0.90)) + waveR;
+            float wR = mix(0.00150, 0.00092, tR) * (1.0 + 0.40 * exp(-pow((tR - 0.93) / 0.07, 2.0)));
+            float sR = exp(-pow((p.x - pathXR) / wR, 2.0)) * inYR * step(0.05, effR);
+            float poolR = exp(-(pow((p.x - 0.0064) / 0.0022, 2.0) + pow((p.y + 0.0182) / 0.0017, 2.0))) * step(0.05, effR);
+            nbMask = max(nbMask, max(sR, poolR));
+            nbCore = max(nbCore, exp(-pow((p.x - pathXR) / (wR * 0.52), 2.0)) * inYR + poolR * 0.85);
+          }
+
+          // Heavy nosebleed (> 0.65): secondary blood pooling along Cupid's bow & oral seam
+          if (nosebleedStr > 0.62) {
+            float bowPool = exp(-pow((p.y + 0.0358) / 0.0011, 2.0)) * exp(-pow(p.x / 0.0058, 2.0)) * (nosebleedStr - 0.62) * 2.2;
+            nbMask = max(nbMask, clamp(bowPool, 0.0, 0.95));
+          }
+
+          nbMask = clamp(nbMask * smoothstep(0.088, 0.098, p.z), 0.0, 1.0);
+          if (nbMask > 0.01) {
+            vec3 artBlood = vec3(0.44, 0.012, 0.018);
+            vec3 clotCore = vec3(0.09, 0.002, 0.004);
+            vec3 nbCol = mix(artBlood, clotCore, clamp(nbCore * 0.82, 0.0, 0.92));
+            skinCol = mix(skinCol, nbCol, smoothstep(0.08, 0.62, nbMask) * 0.96);
+            vBloodSpecMask = max(vBloodSpecMask, smoothstep(0.10, 0.55, nbMask));
+            vFluidHeight += smoothstep(0.08, 0.70, nbMask) * 0.52;
+          }
+        }
+
+        // 10C. 🥀 Oral Commissure & Lower-Lip Mouth Blood (嘴角溢血)
+        float mouthBloodStr = clamp(uMouthBloodStrength, 0.0, 1.4);
+        if (mouthBloodStr > 0.01 && p.z > 0.075 && p.y < -0.0405 && p.y > -0.0685 && abs(p.x) < 0.0255) {
+          float mbMask = 0.0;
+          float mbCore = 0.0;
+
+          // Left oral commissure trickle (x ≈ -0.0182, y = -0.0436 -> flows down marionette line to chin y=-0.064)
+          float yTopM = -0.0432;
+          float yBotML = mix(-0.0475, -0.0645, clamp(mouthBloodStr * 1.05, 0.0, 1.0));
+          float tML = clamp((yTopM - p.y) / max(0.0015, yTopM - yBotML), 0.0, 1.0);
+          float inYML = smoothstep(yBotML - 0.0015, yBotML + 0.0008, p.y) * (1.0 - smoothstep(yTopM - 0.0008, yTopM + 0.0012, p.y));
+          float waveML = 0.00065 * sin(p.y * 380.0 + 1.5) + 0.00045 * (dermisNoise2D(vec2(p.y * 290.0, 15.3)) - 0.5);
+          float pathXML = mix(-0.0182, -0.0148, pow(tML, 0.82)) + waveML;
+          float wML = mix(0.00165, 0.00095, tML) * (1.0 + 0.50 * exp(-pow((tML - 0.93) / 0.07, 2.0)));
+          float sML = exp(-pow((p.x - pathXML) / wML, 2.0)) * inYML;
+          float cornerPoolL = exp(-(pow((p.x + 0.0182) / 0.0024, 2.0) + pow((p.y + 0.0436) / 0.0015, 2.0)));
+          mbMask = max(mbMask, max(sML, cornerPoolL));
+          mbCore = max(mbCore, exp(-pow((p.x - pathXML) / (wML * 0.52), 2.0)) * inYML + cornerPoolL * 0.85);
+
+          // Right oral commissure & lower-lip seam trickle
+          float yBotMR = mix(-0.0465, -0.0585, clamp(mouthBloodStr * 0.82, 0.0, 1.0));
+          float tMR = clamp((yTopM - p.y) / max(0.0015, yTopM - yBotMR), 0.0, 1.0);
+          float inYMR = smoothstep(yBotMR - 0.0014, yBotMR + 0.0008, p.y) * (1.0 - smoothstep(yTopM - 0.0008, yTopM + 0.0012, p.y));
+          float pathXMR = mix(0.0180, 0.0156, tMR) + 0.00050 * cos(p.y * 410.0);
+          float wMR = mix(0.00140, 0.00085, tMR);
+          float sMR = exp(-pow((p.x - pathXMR) / wMR, 2.0)) * inYMR * smoothstep(0.18, 0.45, mouthBloodStr);
+          float cornerPoolR = exp(-(pow((p.x - 0.0180) / 0.0022, 2.0) + pow((p.y + 0.0436) / 0.0014, 2.0))) * smoothstep(0.12, 0.35, mouthBloodStr);
+          mbMask = max(mbMask, max(sMR, cornerPoolR));
+          mbCore = max(mbCore, exp(-pow((p.x - pathXMR) / (wMR * 0.52), 2.0)) * inYMR);
+
+          // Oral seam blood stain along the center lip parting
+          float seamStain = exp(-pow((p.y + 0.0434) / 0.0011, 2.0)) * exp(-pow(p.x / 0.0165, 2.0)) * clamp(mouthBloodStr * 0.85, 0.0, 0.90);
+          mbMask = clamp(max(mbMask, seamStain), 0.0, 1.0);
+
+          if (mbMask > 0.01) {
+            vec3 mbCol = mix(vec3(0.42, 0.010, 0.016), vec3(0.08, 0.002, 0.004), clamp(mbCore * 0.82, 0.0, 0.92));
+            skinCol = mix(skinCol, mbCol, smoothstep(0.08, 0.58, mbMask) * 0.95);
+            vBloodSpecMask = max(vBloodSpecMask, smoothstep(0.10, 0.52, mbMask));
+            vFluidHeight += smoothstep(0.08, 0.65, mbMask) * 0.48;
+          }
+        }
+
+        // 10D. 💦 Forensic Arterial Blood Micro-Splatter across Face & Jawline (面部飞溅血点)
+        float faceSplatStr = clamp(uFaceSplatterStrength, 0.0, 1.4);
+        if (faceSplatStr > 0.01 && p.z > 0.035 && p.y > -0.072 && p.y < 0.042) {
+          vec2 spUv1 = vec2(p.x * 165.0 + 3.7, p.y * 145.0 - 2.1);
+          vec2 cell1 = floor(spUv1);
+          vec2 f1 = fract(spUv1) - 0.5;
+          float h1 = dermisHash21(cell1);
+          float splatMask = 0.0;
+          if (h1 > (1.0 - 0.28 * clamp(faceSplatStr, 0.0, 1.0))) {
+            vec2 jit1 = vec2(dermisHash21(cell1 + 7.1) - 0.5, dermisHash21(cell1 + 19.3) - 0.5) * 0.45;
+            vec2 d1 = f1 - jit1;
+            // Elongate droplet slightly along diagonal spray trajectory
+            vec2 rotD1 = vec2(d1.x * 0.86 - d1.y * 0.50, (d1.x * 0.50 + d1.y * 0.86) * 0.68);
+            float r1 = (0.09 + 0.16 * dermisHash21(cell1 + 31.7)) * clamp(faceSplatStr * 1.1, 0.4, 1.2);
+            splatMask = max(splatMask, 1.0 - smoothstep(r1 * 0.55, r1, length(rotD1)));
+          }
+          // Fine secondary mist droplets
+          vec2 spUv2 = vec2(p.x * 340.0 - 5.2, p.y * 310.0 + 8.4);
+          vec2 cell2 = floor(spUv2);
+          float h2 = dermisHash21(cell2);
+          if (h2 > (1.0 - 0.22 * clamp(faceSplatStr, 0.0, 1.0))) {
+            vec2 jit2 = vec2(dermisHash21(cell2 + 11.3) - 0.5, dermisHash21(cell2 + 23.9) - 0.5) * 0.42;
+            float r2 = 0.08 + 0.12 * dermisHash21(cell2 + 41.1);
+            splatMask = max(splatMask, (1.0 - smoothstep(r2 * 0.5, r2, length(fract(spUv2) - 0.5 - jit2))) * 0.88);
+          }
+          splatMask *= (1.0 - eyeHoleMask * 0.15);
+          if (splatMask > 0.01) {
+            vec3 spCol = mix(vec3(0.45, 0.014, 0.020), vec3(0.11, 0.003, 0.006), smoothstep(0.4, 0.9, splatMask) * 0.65);
+            skinCol = mix(skinCol, spCol, splatMask * 0.94);
+            vBloodSpecMask = max(vBloodSpecMask, splatMask);
+            vFluidHeight += splatMask * 0.38;
+          }
+        }
+
+        // 10E. 🔪 Multi-Layered 3D Forensic Neck Cut Blood, Arterial Streams & Micro-Splatter (p.y < -0.048)
+        float neckBloodStr = clamp(uNeckBloodStrength, 0.0, 1.4);
+        if (p.y < -0.0480 && neckBloodStr > 0.01) {
           float angCut = atan(p.z + 0.0128, p.x);
-          float cutWave = 0.00075 * sin(angCut * 9.0 + 0.6)
-                        + 0.00045 * cos(angCut * 19.0 - 1.3)
-                        + 0.00035 * (dermisNoise2D(vec2(angCut * 18.0, p.y * 950.0)) - 0.5);
-          float dyFromCut = max(0.0, (p.y - (-0.1100)) + cutWave);
-          // Razor-sharp 1.2mm coagulated blood rim right at the blade incision plane
-          float clotRim = 1.0 - smoothstep(0.0004, 0.0014, dyFromCut);
-          // 1.0mm arterial capillary seepage fringe immediately above the clot rim
-          float seepFringe = (1.0 - smoothstep(0.0010, 0.0024, dyFromCut)) * (1.0 - clotRim * 0.65);
-          // Subtle post-mortem dermal retraction blanch line just above the incision
-          float blanchLine = exp(-pow((dyFromCut - 0.0025) / 0.0007, 2.0)) * 0.14;
-          skinCol = mix(skinCol, skinCol * vec3(1.05, 0.98, 0.96), blanchLine);
-          skinCol = mix(skinCol, vec3(0.38, 0.018, 0.028), seepFringe * 0.78);
-          skinCol = mix(skinCol, vec3(0.11, 0.005, 0.009), clotRim * 0.92);
+          float nFbm1 = dermisNoise2D(vec2(angCut * 6.5 + 1.2, p.y * 180.0));
+          float nFbm2 = dermisNoise2D(vec2(angCut * 17.0 - 3.4, p.y * 420.0));
+          float nFbm3 = dermisNoise2D(vec2(angCut * 38.0 + 7.1, p.y * 880.0));
+
+          float dyFromCut = max(0.0, p.y - (-0.1100));
+
+          // Layer 1: Irregular Coagulated Wound Margin & Dark Venous Crust (extends 5mm to 16mm up the neck)
+          float crustHeight = (0.0055 + 0.0075 * nFbm1 + 0.0035 * sin(angCut * 5.0 + 0.4) + 0.0025 * cos(angCut * 11.0 - 0.9))
+                            * clamp(neckBloodStr * 1.12, 0.25, 1.35);
+          float crustMask = (1.0 - smoothstep(crustHeight * 0.52, crustHeight, dyFromCut + (nFbm2 - 0.5) * 0.0028));
+          float darkClotEdge = 1.0 - smoothstep(0.0012, 0.0048, dyFromCut + (nFbm3 - 0.5) * 0.0012);
+
+          // Layer 2: 10 Organic Arterial Gush Streams & Smeared Rivulets (extending 18mm to 48mm up the neck!)
+          float streamWaveA = pow(max(0.0, cos(angCut * 5.0 - 0.35 + (nFbm1 - 0.5) * 1.1)), 5.5);
+          float streamWaveB = pow(max(0.0, sin(angCut * 9.0 + 1.15 + (nFbm2 - 0.5) * 0.9)), 7.0);
+          float streamReach = (0.014 + 0.028 * streamWaveA + 0.022 * streamWaveB) * clamp(neckBloodStr * 1.15, 0.0, 1.35);
+          float inStreamY = 1.0 - smoothstep(streamReach * 0.65, streamReach, dyFromCut);
+          float streamMask = clamp((streamWaveA * 0.85 + streamWaveB * 0.78) * inStreamY * (0.65 + 0.45 * nFbm2), 0.0, 1.0);
+          // Swollen blood bead at the upper tip of each arterial streak
+          float tipBead = exp(-pow((dyFromCut - streamReach * 0.82) / 0.0022, 2.0)) * step(0.32, max(streamWaveA, streamWaveB)) * clamp(neckBloodStr, 0.0, 1.0);
+
+          // Layer 3: Fine Forensic Arterial Spray Droplets above the wound margin (up to y = -0.050)
+          vec2 nkSpUv = vec2(angCut * 28.0, p.y * 260.0);
+          vec2 nkCell = floor(nkSpUv);
+          float nkH = dermisHash21(nkCell);
+          float nkDrop = 0.0;
+          if (nkH > (1.0 - 0.34 * clamp(neckBloodStr, 0.0, 1.0)) && dyFromCut < 0.054 * neckBloodStr) {
+            vec2 nkJit = vec2(dermisHash21(nkCell + 5.7) - 0.5, dermisHash21(nkCell + 14.9) - 0.5) * 0.44;
+            vec2 nkD = (fract(nkSpUv) - 0.5 - nkJit) * vec2(1.0, 0.65);
+            float nkR = 0.11 + 0.17 * dermisHash21(nkCell + 29.1);
+            nkDrop = (1.0 - smoothstep(nkR * 0.45, nkR, length(nkD))) * (1.0 - smoothstep(0.028, 0.054, dyFromCut));
+          }
+
+          float totalNeckBlood = clamp(max(crustMask, max(streamMask * 0.92, max(tipBead * 0.95, nkDrop * 0.90))), 0.0, 1.0);
+          if (totalNeckBlood > 0.01) {
+            vec3 freshCrimson = vec3(0.46, 0.012, 0.018);
+            vec3 venousClot = vec3(0.08, 0.002, 0.004);
+            float clotMix = clamp(darkClotEdge * 0.85 + smoothstep(0.55, 0.95, totalNeckBlood) * 0.52 + (1.0 - nFbm2) * 0.25, 0.0, 0.92);
+            vec3 neckBloodCol = mix(freshCrimson, venousClot, clotMix);
+            skinCol = mix(skinCol, neckBloodCol, smoothstep(0.05, 0.48, totalNeckBlood) * 0.96);
+            vBloodSpecMask = max(vBloodSpecMask, smoothstep(0.08, 0.45, totalNeckBlood));
+            vFluidHeight += smoothstep(0.06, 0.65, totalNeckBlood) * (0.45 + 0.25 * darkClotEdge);
+          }
         }
 
         diffuseColor.rgb = skinCol;
       }`
     );
 
-    // 3D Sub-Millimeter Dermis Micro-Groove + Vertical Lip Sulci Normal Perturbation
+    // 3D Sub-Millimeter Dermis Micro-Groove + Vertical Lip Sulci + 3D Liquid Meniscus Normal Perturbation
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <normal_fragment_maps>',
       `#include <normal_fragment_maps>
@@ -1437,15 +1694,21 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           combinedMicroHeight = mix(combinedMicroHeight, roughnessFactor, 0.24);
         #endif
 
+        // Smooth fluid covers skin pores and raises a 3D surface-tension meniscus rim at blood/tear edges
+        float fluidCover = clamp(max(vWetFluidSpecMask, vBloodSpecMask), 0.0, 1.0);
+        combinedMicroHeight = mix(combinedMicroHeight, 0.5 + vFluidHeight * 1.85, fluidCover * 0.88);
+
         vec3 dPosDx = dFdx( vViewPosition );
         vec3 dPosDy = dFdy( vViewPosition );
-        float dHdx = clamp( dFdx( combinedMicroHeight ), -0.14, 0.14 );
-        float dHdy = clamp( dFdy( combinedMicroHeight ), -0.14, 0.14 );
+        float dHdx = clamp( dFdx( combinedMicroHeight ), -0.22, 0.22 );
+        float dHdy = clamp( dFdy( combinedMicroHeight ), -0.22, 0.22 );
         vec3 r1 = cross( dPosDy, normal );
         vec3 r2 = cross( normal, dPosDx );
         float det = dot( dPosDx, r1 );
         if ( abs( det ) > 1e-6 ) {
-          float reliefAmp = 0.0026 * clamp(uPoreRelief, 0.0, 1.5) * (0.35 + 0.65 * faceRegion);
+          float baseAmp = 0.0026 * clamp(uPoreRelief, 0.0, 1.5) * (0.35 + 0.65 * faceRegion);
+          float fluidAmp = 0.0052 * fluidCover;
+          float reliefAmp = max(baseAmp, fluidAmp);
           vec3 surfGrad = sign( det ) * ( dHdx * r1 + dHdy * r2 );
           normal = normalize( normal - ( reliefAmp / max( abs( det ), 1e-4 ) ) * surfGrad );
         }
@@ -1493,21 +1756,32 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       // Lower lip cushion has natural mucosal moisture; upper lip is slightly more satin
       float lowerLipWet = vLipVermilionMask * smoothstep(-0.0365, -0.0410, vCervixLocalPos.y);
       float lipSpecBoost = (vLipVermilionMask * 0.45 + lowerLipWet * 0.65) * clamp(uLipGloss, 0.0, 1.2);
-      reflectedLight.directSpecular *= (0.12 + (0.24 + 0.26 * oilBoost) * sunMask * specLobeScale + lipSpecBoost) * poreSpecMask;
-      reflectedLight.indirectSpecular *= (0.10 + (0.18 + 0.20 * oilBoost) * sunMask * specLobeScale + 0.10 * fresnelSheen * sunMask + lipSpecBoost * 0.65) * poreSpecMask;
+      float fluidSpecTotal = clamp(max(vWetFluidSpecMask * 1.65, vBloodSpecMask * 1.85), 0.0, 2.2);
+      reflectedLight.directSpecular *= (0.12 + (0.24 + 0.26 * oilBoost) * sunMask * specLobeScale + lipSpecBoost + fluidSpecTotal) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
+      reflectedLight.indirectSpecular *= (0.10 + (0.18 + 0.20 * oilBoost) * sunMask * specLobeScale + 0.10 * fresnelSheen * sunMask + lipSpecBoost * 0.65 + fluidSpecTotal * 0.85) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
+
+      // Razor-Sharp Liquid Clearcoat Glint on Wet Tears & Fresh Blood (ior=1.49 mirror catchlights!)
+      if (fluidSpecTotal > 0.02) {
+        vec3 winH = normalize(viewWinL + viewDir);
+        vec3 topH = normalize(vec3(0.18, 0.82, 0.54) + viewDir);
+        float glint1 = pow(max(0.0, dot(normal, winH)), 110.0);
+        float glint2 = pow(max(0.0, dot(normal, topH)), 72.0) * 0.55;
+        vec3 glintTint = mix(vec3(1.0, 0.98, 0.99), vec3(1.0, 0.82, 0.84), clamp(vBloodSpecMask, 0.0, 1.0) * 0.35);
+        reflectedLight.directSpecular += glintTint * (glint1 + glint2) * fluidSpecTotal * 0.85;
+      }
 
       // Subtle Interactive Studio Fill Catchlight (softened so it never creates a plastic spotlight on the cheek)
       if (uCursorTorchIntensity > 0.01) {
         vec3 curL = normalize(uCursorLightDir);
         vec3 curH = normalize(curL + viewDir);
         float curNdl = max(0.0, dot(normal, curL));
-        float curSpec = pow(max(0.0, dot(normal, curH)), 32.0) * (0.14 + 0.22 * oilBoost + lipSpecBoost * 0.65) * poreSpecMask;
+        float curSpec = pow(max(0.0, dot(normal, curH)), 32.0) * (0.14 + 0.22 * oilBoost + lipSpecBoost * 0.65 + fluidSpecTotal * 0.9) * poreSpecMask;
         reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.00, 0.99, 0.98) * curNdl * 0.035 * uCursorTorchIntensity;
         reflectedLight.directSpecular += vec3(0.98, 0.99, 1.00) * curSpec * 0.065 * uCursorTorchIntensity;
       }
 
       // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along outer jawline contour only
-      float vellusRim = pow(1.0 - ndotv, 4.2) * smoothstep(-0.15, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
+      float vellusRim = pow(1.0 - ndotv, 4.2) * smoothstep(-0.15, 0.55, fragNdl) * (1.0 - vLipVermilionMask) * (1.0 - clamp(fluidSpecTotal, 0.0, 1.0));
       reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.01, 0.99, 0.97) * vellusRim * (0.03 + 0.08 * sunMask) * clamp(uVellusFuzz * 1.2, 0.0, 1.4);
 
       #if ( NUM_DIR_LIGHTS > 0 )
@@ -1521,7 +1795,75 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v46';
+  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v53';
+}
+
+/**
+ * Stage 53 · 3D Histological & Forensic Wet-Tissue Shader for NeckCrossSectionCap
+ * Replaces flat 2D cartoon look with procedural sub-millimeter myofibril striations,
+ * cancellous bone marrow pores, deep cavity ambient occlusion, and razor-sharp wet blood speculars.
+ */
+export function injectForensicCrossSectionShader(material, initialWetness = 0.92) {
+  if (!material) return material;
+  material.userData = material.userData || {};
+  const uCrossWetness = { value: Number(initialWetness ?? 0.92) };
+  material.userData.uCrossWetness = uCrossWetness;
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uCrossWetness = uCrossWetness;
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <common>',
+      `#include <common>
+      varying vec3 vCrossLocalPos;`
+    );
+    shader.vertexShader = shader.vertexShader.replace(
+      '#include <worldpos_vertex>',
+      `#include <worldpos_vertex>
+      vCrossLocalPos = position;`
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <common>',
+      `#include <common>
+      uniform float uCrossWetness;
+      varying vec3 vCrossLocalPos;
+      float crossHash21(vec2 p) {
+        p = fract(p * vec2(234.56, 789.12));
+        p += dot(p, p + 34.56);
+        return fract(p.x * p.y);
+      }
+      float crossNoise2D(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(crossHash21(i), crossHash21(i + vec2(1.0, 0.0)), u.x),
+          mix(crossHash21(i + vec2(0.0, 1.0)), crossHash21(i + vec2(1.0, 1.0)), u.x),
+          u.y
+        );
+      }`
+    );
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+      {
+        // High-frequency 3D histological tissue grain & deep cavity ambient occlusion
+        vec2 mm = vCrossLocalPos.xz * 720.0;
+        float fib1 = crossNoise2D(mm * 1.4);
+        float fib2 = crossNoise2D(mm * 3.8 + 13.7);
+        float fib3 = crossNoise2D(mm * 9.2 - 7.1);
+        float microGrain = (fib1 * 0.45 + fib2 * 0.35 + fib3 * 0.20) - 0.5;
+
+        // Cavity depth from cut plane y = -0.1100 (positive dy means recessed upward into the neck)
+        float cavityDepth = clamp((vCrossLocalPos.y - (-0.1100)) / 0.0085, -0.35, 1.0);
+        float cavityAO = 1.0 - 0.78 * smoothstep(0.08, 0.85, cavityDepth);
+
+        // Enrich meat/blood contrast and apply histological grain
+        diffuseColor.rgb *= (1.0 + microGrain * 0.22) * cavityAO;
+      }`
+    );
+  };
+  material.customProgramCacheKey = () => 'cervix3d-forensic-cross-v53';
+  return material;
 }
 
 /**

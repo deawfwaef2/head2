@@ -233,6 +233,13 @@ const state = {
     earTipFlush: 0.32,
     corneaWetness: 0.92,
     scleraVeinIntensity: 0.16,
+    neckBloodStrength: 0.85,
+    tearTrackStrength: 0.0,
+    tearType: 0,
+    nosebleedStrength: 0.0,
+    nosebleedMode: 0,
+    mouthBloodStrength: 0.0,
+    faceSplatterStrength: 0.0,
     hairStyle: 'hair_user_photo',
     topCrown: 'default',
     frontBangs: 'default',
@@ -1311,11 +1318,23 @@ function renderActivePetsStrip(summonedList = []) {
     const roleShortOpts = STUDY_ROLE_CATALOG.map(
       rl => `<option value="${rl.id}" ${rl.id === curRole ? 'selected' : ''}>${rl.shortLabel}</option>`
     ).join('');
+    const curFluid = p.fluidPreset || 'fresh_neck_cut';
+    const fluidShortOpts = [
+      ['fresh_neck_cut', '🔪 鲜血断口'],
+      ['crying_tears', '💧 梨花泪痕'],
+      ['nosebleed_tears', '🥀 鼻血+泪痕'],
+      ['blood_tears_mouth', '🩸 血泪+嘴血'],
+      ['heavy_trauma', '⚔️ 重度战损'],
+      ['clean_specimen', '✨ 洁净无血'],
+    ].map(([fid, flabel]) => `<option value="${fid}" ${fid === curFluid ? 'selected' : ''}>${flabel}</option>`).join('');
     const pill = document.createElement('div');
     pill.className = 'pet-pill';
     pill.style.cssText = 'margin-top:4px;padding:4px 8px;';
     pill.innerHTML = `
       <strong style="color:#7dd3fc;font-size:11px;">${p.name.split('·')[0].trim()} 微调:</strong>
+      <select class="pill-mini-btn" data-pill-fluid="${p.id}" title="切换鼻血/泪痕/血泪/断口血迹状态" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(48,14,24,0.92);color:#fda4af;border:1px solid rgba(244,63,94,0.55);border-radius:6px;">
+        ${fluidShortOpts}
+      </select>
       <select class="pill-mini-btn" data-pill-skin="${p.id}" title="切换皮肤材质" style="width:auto!important;max-width:118px;padding:2px 4px;background:rgba(30,41,59,0.88);color:#fecdd3;border:1px solid rgba(251,113,133,0.42);border-radius:6px;">
         ${skinShortOpts}
       </select>
@@ -1344,6 +1363,40 @@ function renderActivePetsStrip(summonedList = []) {
     `;
     pillsContainer.appendChild(pill);
   }
+
+  pillsContainer.querySelectorAll('[data-pill-fluid]').forEach(sel => {
+    sel.addEventListener('change', (e) => {
+      const id = sel.dataset.pillFluid;
+      const fluidId = e.target.value;
+      const presetMap = {
+        fresh_neck_cut: { label: '🔪 鲜血断口', neckBloodStrength: 0.85, tearTrackStrength: 0.0, tearType: 0, nosebleedStrength: 0.0, nosebleedMode: 0, mouthBloodStrength: 0.0, faceSplatterStrength: 0.0 },
+        crying_tears: { label: '💧 梨花带雨泪痕', neckBloodStrength: 0.85, tearTrackStrength: 0.88, tearType: 0, nosebleedStrength: 0.0, nosebleedMode: 0, mouthBloodStrength: 0.0, faceSplatterStrength: 0.0 },
+        nosebleed_tears: { label: '🥀 凄美鼻血+泪痕', neckBloodStrength: 0.90, tearTrackStrength: 0.86, tearType: 0, nosebleedStrength: 0.84, nosebleedMode: 0, mouthBloodStrength: 0.28, faceSplatterStrength: 0.18 },
+        blood_tears_mouth: { label: '🩸 猩红血泪+嘴角血', neckBloodStrength: 0.95, tearTrackStrength: 0.92, tearType: 2, nosebleedStrength: 0.68, nosebleedMode: 1, mouthBloodStrength: 0.88, faceSplatterStrength: 0.35 },
+        heavy_trauma: { label: '⚔️ 重度断首战损', neckBloodStrength: 1.15, tearTrackStrength: 0.95, tearType: 2, nosebleedStrength: 0.96, nosebleedMode: 0, mouthBloodStrength: 0.92, faceSplatterStrength: 0.78 },
+        clean_specimen: { label: '✨ 洁净无血标本', neckBloodStrength: 0.0, tearTrackStrength: 0.0, tearType: 0, nosebleedStrength: 0.0, nosebleedMode: 0, mouthBloodStrength: 0.0, faceSplatterStrength: 0.0 },
+      };
+      const pCfg = presetMap[fluidId] || presetMap.fresh_neck_cut;
+      const col = state.collectibles.find(c => c.id === id);
+      if (col) {
+        col.fluidPreset = fluidId;
+        Object.assign(col, pCfg);
+        col.morphs = { ...(col.morphs || {}), ...pCfg };
+        persistCollectibles();
+      }
+      const petEntry = desktopEngine?.pets.get(id);
+      if (petEntry?.collectible) {
+        petEntry.collectible.fluidPreset = fluidId;
+        Object.assign(petEntry.collectible, pCfg);
+      }
+      const headGroup = petEntry?.node || petEntry?.headNode;
+      if (headGroup) {
+        updateCollectibleMaterialsLive(headGroup, pCfg);
+        desktopEngine.wakeRender(1.5, true);
+      }
+      showToast(`🩸 已为「${col ? col.name.split('·')[0].trim() : id}」切换体液与创伤状态：${pCfg.label}`);
+    });
+  });
 
   pillsContainer.querySelectorAll('[data-pill-skin]').forEach(sel => {
     sel.addEventListener('change', (e) => {
@@ -3177,6 +3230,142 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindLiveMaterialSlider('slider-photo-proj-scale', 'val-photo-proj-scale', 'photoProjScale', 'pct');
   bindLiveMaterialSlider('slider-photo-proj-x', 'val-photo-proj-x', 'photoProjOffsetX', 'signed');
   bindLiveMaterialSlider('slider-photo-proj-y', 'val-photo-proj-y', 'photoProjOffsetY', 'signed');
+
+  // Stage 53: Forensic & Emotional Fluid System (Neck Cut Blood, Tear Tracks / Blood Tears, Nosebleed, Mouth Blood & Splatter)
+  bindLiveMaterialSlider('slider-neck-blood', 'val-neck-blood', 'neckBloodStrength', 'pct');
+  bindLiveMaterialSlider('slider-tear-track', 'val-tear-track', 'tearTrackStrength', 'pct');
+  bindLiveMaterialSlider('slider-nosebleed', 'val-nosebleed', 'nosebleedStrength', 'pct');
+  bindLiveMaterialSlider('slider-mouth-blood', 'val-mouth-blood', 'mouthBloodStrength', 'pct');
+  bindLiveMaterialSlider('slider-face-splatter', 'val-face-splatter', 'faceSplatterStrength', 'pct');
+
+  document.getElementById('sel-tear-type')?.addEventListener('change', (e) => {
+    const v = parseInt(e.target.value, 10) || 0;
+    const patch = { tearType: v };
+    if (Number(state.studioDraft.tearTrackStrength ?? 0) < 0.15) {
+      patch.tearTrackStrength = 0.85;
+      const sEl = document.getElementById('slider-tear-track');
+      const vEl = document.getElementById('val-tear-track');
+      if (sEl) sEl.value = '0.85';
+      if (vEl) vEl.textContent = '85%';
+    }
+    applyLiveMaterialPatch(patch);
+    showToast(`💧 已切换泪水与哭痕类型：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  document.getElementById('sel-nosebleed-mode')?.addEventListener('change', (e) => {
+    const v = parseInt(e.target.value, 10) || 0;
+    const patch = { nosebleedMode: v };
+    if (Number(state.studioDraft.nosebleedStrength ?? 0) < 0.15) {
+      patch.nosebleedStrength = 0.82;
+      const sEl = document.getElementById('slider-nosebleed');
+      const vEl = document.getElementById('val-nosebleed');
+      if (sEl) sEl.value = '0.82';
+      if (vEl) vEl.textContent = '82%';
+    }
+    applyLiveMaterialPatch(patch);
+    showToast(`🩸 已切换鼻血流向模式：${e.target.options[e.target.selectedIndex].text}`);
+  });
+
+  const FORENSIC_FLUID_PRESETS = {
+    fresh_neck_cut: {
+      label: '🔪 鲜血断口 (默认)',
+      neckBloodStrength: 0.85,
+      tearTrackStrength: 0.0,
+      tearType: 0,
+      nosebleedStrength: 0.0,
+      nosebleedMode: 0,
+      mouthBloodStrength: 0.0,
+      faceSplatterStrength: 0.0,
+    },
+    crying_tears: {
+      label: '💧 梨花带雨 (清澈湿泪 + 哭红眼眶鼻头)',
+      neckBloodStrength: 0.85,
+      tearTrackStrength: 0.88,
+      tearType: 0,
+      nosebleedStrength: 0.0,
+      nosebleedMode: 0,
+      mouthBloodStrength: 0.0,
+      faceSplatterStrength: 0.0,
+    },
+    nosebleed_tears: {
+      label: '🥀 凄美鼻血 + 双颊泪痕',
+      neckBloodStrength: 0.90,
+      tearTrackStrength: 0.86,
+      tearType: 0,
+      nosebleedStrength: 0.84,
+      nosebleedMode: 0,
+      mouthBloodStrength: 0.28,
+      faceSplatterStrength: 0.18,
+    },
+    blood_tears_mouth: {
+      label: '🩸 猩红血泪 + 嘴角溢血',
+      neckBloodStrength: 0.95,
+      tearTrackStrength: 0.92,
+      tearType: 2,
+      nosebleedStrength: 0.68,
+      nosebleedMode: 1,
+      mouthBloodStrength: 0.88,
+      faceSplatterStrength: 0.35,
+    },
+    heavy_trauma: {
+      label: '⚔️ 重度断首战损 (鼻血+血泪+嘴角血+动脉溅血)',
+      neckBloodStrength: 1.15,
+      tearTrackStrength: 0.95,
+      tearType: 2,
+      nosebleedStrength: 0.96,
+      nosebleedMode: 0,
+      mouthBloodStrength: 0.92,
+      faceSplatterStrength: 0.78,
+    },
+    clean_specimen: {
+      label: '✨ 洁净无血标本 (清空血迹与泪痕)',
+      neckBloodStrength: 0.0,
+      tearTrackStrength: 0.0,
+      tearType: 0,
+      nosebleedStrength: 0.0,
+      nosebleedMode: 0,
+      mouthBloodStrength: 0.0,
+      faceSplatterStrength: 0.0,
+    },
+  };
+
+  const syncForensicFluidUI = (p) => {
+    for (const [sId, vId, k] of [
+      ['slider-neck-blood', 'val-neck-blood', 'neckBloodStrength'],
+      ['slider-tear-track', 'val-tear-track', 'tearTrackStrength'],
+      ['slider-nosebleed', 'val-nosebleed', 'nosebleedStrength'],
+      ['slider-mouth-blood', 'val-mouth-blood', 'mouthBloodStrength'],
+      ['slider-face-splatter', 'val-face-splatter', 'faceSplatterStrength'],
+    ]) {
+      if (p[k] === undefined) continue;
+      const sEl = document.getElementById(sId);
+      const vEl = document.getElementById(vId);
+      if (sEl) sEl.value = String(p[k]);
+      if (vEl) vEl.textContent = `${Math.round(Number(p[k]) * 100)}%`;
+    }
+    if (p.tearType !== undefined) {
+      const sel = document.getElementById('sel-tear-type');
+      if (sel) sel.value = String(p.tearType);
+    }
+    if (p.nosebleedMode !== undefined) {
+      const sel = document.getElementById('sel-nosebleed-mode');
+      if (sel) sel.value = String(p.nosebleedMode);
+    }
+  };
+
+  document.querySelectorAll('[data-fluid-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.fluidPreset;
+      const preset = FORENSIC_FLUID_PRESETS[key];
+      if (!preset) return;
+      document.querySelectorAll('[data-fluid-preset]').forEach(b => {
+        b.classList.toggle('active', b.dataset.fluidPreset === key);
+      });
+      syncForensicFluidUI(preset);
+      applyLiveMaterialPatch(preset);
+      showToast(`🩸 已套用体液与创伤状态：${preset.label}`);
+    });
+  });
 
   // Stage 44: One-Click Per-Character Material & Photorealism Presets
   const syncCharMaterialPresetUI = (recipe = {}) => {
