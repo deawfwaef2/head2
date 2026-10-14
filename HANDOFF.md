@@ -916,3 +916,10 @@
   - Added **14 Per-Character DLSS-5 Dermis & Ocular Photorealism Controls** (`normalMapStrength`, `poreScale`, `poreRelief`, `skinRoughness`, `tZoneOiliness`, `specularLobe`, `charSssDepth`, `charSssColor`, `vascularity`, `skinMottle`, `vellusFuzz`, `lipCreaseDepth`, `earTipFlush`, `corneaWetness`, `scleraVeinIntensity`), all updating in `0ms` on the GPU and persisted per character when saving/summoning (`#btn-save-and-summon`).
 
 
+
+## Stage 45A — 2026-10-14 · Safe playable checkpoint / modular style work
+- Read root constraints and latest Stage 41–44 history before edits. Preserve this append-only handoff, original presets, collectibles, imported models, and all existing UI workflows. No live multi-agent channel is available; coordinate through Git and this log, fetch before pushing, never force-push.
+- Rebuilt the existing single-file playable HTML FIRST (25.93 MiB) before changing UI/render logic. Root HTML and docs/index.html are identical; dependencies/browser stay under /tmp, not in snapshots. Expanded workspace currently ~102 MiB, actual ~76 MiB (local HTML hard link).
+- User priorities reaffirmed: photographic realism, avoid plastic/artificial 3D look; editable individually switchable style modules; active screenshot review and bug tests; stage checkpoints; downloadable click-to-start HTML always available; total persisted workspace below 128 MiB. Never put credentials in repository or exports.
+- Planned isolated extension of existing opt-in visualRepair layer: separately adjustable photography light/material modules, preserve A/B, cancel, export/import, no automatic destructive preset change. Existing asset limitations must be reported honestly; no WebGL shader effect is NVIDIA DLSS or true path tracing.
+- Baseline build complete. Browser visual/runtime checks and modular changes pending; this checkpoint makes no new quality claims.
