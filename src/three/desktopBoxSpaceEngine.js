@@ -104,7 +104,8 @@ export class DesktopBoxSpaceEngine {
   }
 
   wakeRender(durationSeconds = 1.6, refreshShadow = false) {
-    const until = performance.now() + durationSeconds * 1000;
+    const dur = this.softwareRenderer ? Math.min(durationSeconds, 0.16) : durationSeconds;
+    const until = performance.now() + dur * 1000;
     if (until > this.renderWakeUntil) {
       this.renderWakeUntil = until;
     }
@@ -133,6 +134,9 @@ export class DesktopBoxSpaceEngine {
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
+    if (this.softwareRenderer) {
+      this.renderWakeUntil = performance.now() + 180;
+    }
     this.renderer.localClippingEnabled = true;
     applyBaseRendererSettings(this.renderer, 0.88);
     ensureSceneEnvironment(this.renderer, this.scene, 0.16, 'golden_hour');
@@ -1729,7 +1733,7 @@ export class DesktopBoxSpaceEngine {
   animate() {
     this.animFrameId = requestAnimationFrame(this.animate);
 
-    if (document.hidden) {
+    if (this.booting || document.hidden) {
       this.lastFrameTime = performance.now();
       return;
     }
@@ -1775,7 +1779,7 @@ export class DesktopBoxSpaceEngine {
     // Zero-Fan-Roar Smart Idle Sleep + Slow Dynamic Light & Shadow Cadence:
     // When dynamic lighting is active ('sunset_cloud_drift', etc.), run a whisper-quiet ~26 FPS ambient cadence
     // when pets are stationary; if 'static_locked', sleep completely at 0% GPU when stationary.
-    const dynLightActive = this._activeVisualState && this._activeVisualState.dynamicLightMode && this._activeVisualState.dynamicLightMode !== 'static_locked';
+    const dynLightActive = !this.softwareRenderer && this._activeVisualState && this._activeVisualState.dynamicLightMode && this._activeVisualState.dynamicLightMode !== 'static_locked';
     if (!anyActiveAnimation && now > this.renderWakeUntil) {
       if (!dynLightActive) return;
       if (now - (this._lastAmbientRenderAt || 0) < 36) return;
@@ -2010,12 +2014,20 @@ export class DesktopBoxSpaceEngine {
       }
     }
 
-    if (this.needsShadowRefresh) {
+    if (this.softwareRenderer) {
+      if (anyActiveAnimation && now - (this._lastSoftRenderAt || 0) < 900) {
+        return;
+      }
+      this._lastSoftRenderAt = now;
+      this.renderWakeUntil = 0;
+    }
+
+    if (this.needsShadowRefresh && !this.softwareRenderer) {
       requestShadowUpdate(this.renderer);
       this.needsShadowRefresh = false;
     }
 
-    if (this.beautyPost && this.beautyPost.enabled) {
+    if (this.beautyPost && this.beautyPost.enabled && !this.softwareRenderer) {
       this.beautyPost.render();
     } else {
       this.renderer.render(this.scene, this.camera);

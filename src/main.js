@@ -11,6 +11,7 @@ import {
   HAIR_DYE_PRESET_CATALOG,
   HEAD_BLEND_CHANNELS,
   FACE_ARCHETYPE_CATALOG,
+  EYE_SHAPE_PRESET_CATALOG,
   EYEBROW_STYLE_CATALOG,
   EYELINER_STYLE_CATALOG,
   CHAR_MATERIAL_PRESET_CATALOG,
@@ -233,17 +234,17 @@ const state = {
     corneaWetness: 0.92,
     scleraVeinIntensity: 0.16,
     hairStyle: 'hair_user_photo',
-    topCrown: 'photo_sleek_crown',
-    frontBangs: 'wispy_air',
-    sideLocks: 'photo_asymmetric_ear',
-    backAttachment: 'photo_tied_ponytail',
+    topCrown: 'default',
+    frontBangs: 'default',
+    sideLocks: 'default',
+    backAttachment: 'none',
     hairDyePreset: 'natural_ebony',
     hairTipColor: '#4a3528',
     hairOmbreMix: 0.0,
-    hairWispyFeather: 0.68,
+    hairWispyFeather: 0.58,
     groomDensity: 6000,
     hairColor: '#121216',
-    hairSheen: 0.85,
+    hairSheen: 0.78,
     neckClearance: 0.55,
     photoElement: null,
     photoBlend: 0.0,
@@ -253,13 +254,13 @@ const state = {
       eyeRollUp: 0.0,
       tongueOut: 0.0,
       jawSide: 0.0,
-      topCrownStyle: 'photo_sleek_crown',
-      frontBangs: 'wispy_air',
-      sideLocks: 'photo_asymmetric_ear',
-      backAttachment: 'photo_tied_ponytail',
+      topCrownStyle: 'default',
+      frontBangs: 'default',
+      sideLocks: 'default',
+      backAttachment: 'none',
       hairTipColor: '#4a3528',
       hairOmbreMix: 0.0,
-      hairWispyFeather: 0.68,
+      hairWispyFeather: 0.58,
       bangsLength: 0.0,
       bangsParting: 0.0,
       hairVolume: 0.0,
@@ -269,19 +270,19 @@ const state = {
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
-      jawVLine: -0.18,
-      chinLength: -0.08,
-      cheekSoftness: 0.32,
+      jawVLine: -0.08,
+      chinLength: -0.04,
+      cheekSoftness: 0.16,
       noseBridge: 0.04,
-      noseWidth: 0.08,
-      eyeSize: 0.18,
-      eyeAperture: 0.14,
-      eyeAlmond: 0.12,
-      eyeTilt: 0.02,
-      eyeSpacing: 0.02,
-      lipFullness: 0.10,
-      mouthSmile: 0.18,
-      foreheadHeight: 0.08,
+      noseWidth: 0.04,
+      eyeSize: 0.12,
+      eyeAperture: 0.0,
+      eyeAlmond: 0.08,
+      eyeTilt: -0.04,
+      eyeSpacing: 0.0,
+      lipFullness: 0.08,
+      mouthSmile: 0.06,
+      foreheadHeight: 0.04,
       eyelinerStyle: 0,
       eyelinerStrength: 0.0,
       eyeshadowIntensity: 0.0,
@@ -368,10 +369,14 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
       img.src = (typeof window !== 'undefined' && window.__EMBEDDED_FANG_PHOTO__)
         ? window.__EMBEDDED_FANG_PHOTO__
         : '/models/fang_yaoping_ref.jpg';
+    } else if (preset === 'linxi') {
+      img.src = (typeof window !== 'undefined' && window.__EMBEDDED_LINXI_PHOTO__)
+        ? window.__EMBEDDED_LINXI_PHOTO__
+        : '/models/linxi_life_ref.jpg';
     } else {
       img.src = (typeof window !== 'undefined' && window.__EMBEDDED_REF_PHOTO__)
         ? window.__EMBEDDED_REF_PHOTO__
-        : '/models/user_photo_ref.png';
+        : '/models/chuxia_life_ref.jpg';
     }
   }
 
@@ -2122,7 +2127,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Summon initial default collectibles onto the computer screen (pure severed heads, not bound to containers!)
+  // Stage 8: headless visual-QA hook（无头浏览器截图验证/排障用，对正常游玩无任何影响）
+  window.__cervixQA = {
+    get desktop() { return desktopEngine; },
+    get studio() { return studioEngine; },
+    state,
+  };
+
+  // Summon initial default collectibles onto the computer screen (defer canvas render until all initial pets are in scene!)
+  desktopEngine.booting = true;
   for (const item of state.collectibles) {
     if (item.summoned) {
       try { await desktopEngine.summonCollectible(item); }
@@ -2142,13 +2155,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   const refPhotoCanvas = document.getElementById('ref-photo-canvas');
   drawPresetReferencePortrait(refPhotoCanvas, 'user_photo');
   await refreshStudio3DModel();
-
-  // Stage 8: headless visual-QA hook（无头浏览器截图验证/排障用，对正常游玩无任何影响）
-  window.__cervixQA = {
-    get desktop() { return desktopEngine; },
-    get studio() { return studioEngine; },
-    state,
-  };
 
   // 3. Render Tutorial & Fetch Archives
   renderTutorialTab();
@@ -2460,6 +2466,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-eyelid-open', 'val-morph-eyelid-open', 'eyelidOpen', ''],
       ['morph-eye-tilt', 'val-morph-eye-tilt', 'eyeTilt', ''],
       ['morph-eye-spacing', 'val-morph-eye-spacing', 'eyeSpacing', ''],
+      ['morph-eye-epicanthus', 'val-morph-eye-epicanthus', 'eyeEpicanthus', ''],
+      ['morph-eye-crease', 'val-morph-eye-crease', 'eyeCrease', ''],
+      ['morph-eye-bag', 'val-morph-eye-bag', 'eyeBag', ''],
       ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
       ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
       ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
@@ -2648,44 +2657,44 @@ window.addEventListener('DOMContentLoaded', async () => {
     };
     const presetMorphMap = {
       fangyaoping: {
-        jawVLine: -0.18, chinLength: -0.08, cheekSoftness: 0.32, noseBridge: 0.04, noseWidth: 0.08,
-        eyeSize: 0.18, eyeAperture: 0.14, eyeAlmond: 0.12, eyeTilt: 0.02, eyeSpacing: 0.02,
-        irisScale: 1.04, pupilSize: 1.00, lipFullness: 0.10, mouthSmile: 0.18, foreheadHeight: 0.08,
+        jawVLine: -0.08, chinLength: -0.04, cheekSoftness: 0.16, noseBridge: 0.04, noseWidth: 0.04,
+        eyeSize: 0.12, eyeAperture: 0.0, eyeAlmond: 0.08, eyeTilt: -0.04, eyeSpacing: 0.0,
+        irisScale: 1.02, pupilSize: 1.00, lipFullness: 0.08, mouthSmile: 0.06, foreheadHeight: 0.04,
         eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
-        topCrownStyle: 'photo_sleek_crown', frontBangs: 'wispy_air', sideLocks: 'photo_asymmetric_ear', backAttachment: 'photo_tied_ponytail'
+        topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
       },
       user_photo: {
-        jawVLine: -0.32, chinLength: -0.34, cheekSoftness: 0.62, noseBridge: -0.14, noseWidth: 0.04,
-        eyeSize: 0.64, eyeAperture: 0.42, eyeAlmond: -0.28, eyeTilt: -0.24, eyeSpacing: 0.08,
-        irisScale: 1.24, pupilSize: 1.12, lipFullness: 0.38, mouthSmile: 0.12, foreheadHeight: 0.14,
+        jawVLine: -0.22, chinLength: -0.18, cheekSoftness: 0.28, noseBridge: -0.08, noseWidth: 0.04,
+        eyeSize: 0.28, eyeAperture: 0.0, eyeAlmond: -0.12, eyeTilt: -0.16, eyeSpacing: 0.04,
+        irisScale: 1.06, pupilSize: 1.02, lipFullness: 0.24, mouthSmile: 0.08, foreheadHeight: 0.08,
         eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
-        topCrownStyle: 'fluffy_high_crown', frontBangs: 'wispy_air', sideLocks: 'hime_cheek', backAttachment: 'twin_buns'
+        topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
       },
       linxi: {
-        jawVLine: 0.68, chinLength: 0.24, cheekSoftness: -0.36, noseBridge: 0.46, noseWidth: -0.28,
-        eyeSize: 0.06, eyeAperture: -0.06, eyeAlmond: 0.56, eyeTilt: 0.52, eyeSpacing: -0.06,
-        irisScale: 0.94, pupilSize: 0.90, lipFullness: -0.12, mouthSmile: -0.06, foreheadHeight: 0.04,
+        jawVLine: 0.34, chinLength: 0.12, cheekSoftness: -0.18, noseBridge: 0.28, noseWidth: -0.14,
+        eyeSize: 0.06, eyeAperture: -0.04, eyeAlmond: 0.38, eyeTilt: 0.32, eyeSpacing: -0.02,
+        irisScale: 0.98, pupilSize: 0.95, lipFullness: -0.06, mouthSmile: -0.04, foreheadHeight: 0.02,
         eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
-        topCrownStyle: 'center_part_crown', frontBangs: 'curtain_part', sideLocks: 'tucked_ear', backAttachment: 'sleek_long_back'
+        topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
       },
       suwan: {
-        jawVLine: 0.34, chinLength: 0.14, cheekSoftness: 0.12, noseBridge: 0.22, noseWidth: -0.18,
-        eyeSize: 0.24, eyeAperture: 0.10, eyeAlmond: 0.28, eyeTilt: 0.12, eyeSpacing: 0.04,
-        irisScale: 1.06, pupilSize: 1.02, lipFullness: 0.16, mouthSmile: 0.04, foreheadHeight: 0.10,
+        jawVLine: 0.24, chinLength: 0.10, cheekSoftness: 0.12, noseBridge: 0.18, noseWidth: -0.12,
+        eyeSize: 0.18, eyeAperture: 0.04, eyeAlmond: 0.22, eyeTilt: 0.10, eyeSpacing: 0.02,
+        irisScale: 1.04, pupilSize: 1.00, lipFullness: 0.14, mouthSmile: 0.04, foreheadHeight: 0.06,
         eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
         topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
       },
       qianxue: {
-        jawVLine: 0.46, chinLength: -0.12, cheekSoftness: 0.38, noseBridge: 0.18, noseWidth: -0.14,
-        eyeSize: 0.48, eyeAperture: 0.28, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.02,
-        irisScale: 1.16, pupilSize: 1.08, lipFullness: 0.28, mouthSmile: 0.0, foreheadHeight: 0.06,
+        jawVLine: 0.32, chinLength: -0.08, cheekSoftness: 0.24, noseBridge: 0.14, noseWidth: -0.10,
+        eyeSize: 0.30, eyeAperture: 0.08, eyeAlmond: 0.08, eyeTilt: -0.08, eyeSpacing: 0.02,
+        irisScale: 1.08, pupilSize: 1.04, lipFullness: 0.22, mouthSmile: 0.0, foreheadHeight: 0.04,
         eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
         topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
       },
       shenzhiwei: {
-        jawVLine: 0.42, chinLength: 0.28, cheekSoftness: -0.42, noseBridge: 0.52, noseWidth: -0.22,
-        eyeSize: 0.14, eyeAperture: 0.04, eyeAlmond: 0.44, eyeTilt: 0.28, eyeSpacing: -0.04,
-        irisScale: 0.98, pupilSize: 0.95, lipFullness: 0.18, mouthSmile: 0.22, foreheadHeight: 0.02,
+        jawVLine: 0.30, chinLength: 0.18, cheekSoftness: -0.24, noseBridge: 0.32, noseWidth: -0.16,
+        eyeSize: 0.12, eyeAperture: 0.02, eyeAlmond: 0.32, eyeTilt: 0.20, eyeSpacing: -0.02,
+        irisScale: 0.98, pupilSize: 0.95, lipFullness: 0.14, mouthSmile: 0.12, foreheadHeight: 0.02,
         eyelinerStyle: 0, eyelinerStrength: 0.0, eyeshadowIntensity: 0.0,
         topCrownStyle: 'default', frontBangs: 'default', sideLocks: 'default', backAttachment: 'none'
       },
@@ -2836,6 +2845,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-eyelid-open', 'val-morph-eyelid-open', 'eyelidOpen', ''],
     ['morph-eye-tilt', 'val-morph-eye-tilt', 'eyeTilt', ''],
     ['morph-eye-spacing', 'val-morph-eye-spacing', 'eyeSpacing', ''],
+    ['morph-eye-epicanthus', 'val-morph-eye-epicanthus', 'eyeEpicanthus', ''],
+    ['morph-eye-crease', 'val-morph-eye-crease', 'eyeCrease', ''],
+    ['morph-eye-bag', 'val-morph-eye-bag', 'eyeBag', ''],
     ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
     ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
     ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
@@ -2858,6 +2870,42 @@ window.addEventListener('DOMContentLoaded', async () => {
   for (const [sId, vId, mKey, unit] of SHAPE_MORPH_SLIDERS) {
     bindMorphSlider(sId, vId, mKey, unit || '');
   }
+
+  document.getElementById('studio-eye-preset-select')?.addEventListener('change', (e) => {
+    const preset = EYE_SHAPE_PRESET_CATALOG.find(p => p.id === e.target.value);
+    if (!preset) return;
+    const patch = {
+      eyePreset: preset.id,
+      eyeSize: preset.eyeSize,
+      eyeTilt: preset.eyeTilt,
+      eyeAperture: preset.eyeHeight,
+      eyelidOpen: preset.eyeHeight,
+      eyeSpacing: preset.eyeSpacing,
+      eyeEpicanthus: preset.eyeEpicanthus,
+      eyeCrease: preset.eyeCrease,
+      eyeBag: preset.eyeBag,
+      aegyoSalStrength: Math.max(0.10, preset.eyeBag * 0.55),
+      irisScale: preset.irisScale,
+    };
+    Object.assign(state.studioDraft.morphs, patch);
+    syncStudioShapeSlidersFromMorphs(state.studioDraft.morphs);
+    const vcdSel = document.getElementById('vcd-eye-preset-select');
+    if (vcdSel) vcdSel.value = preset.id;
+    studioEngine.updateMorphsFast(state.studioDraft.morphs);
+    studioEngine.updateMaterialsFast(patch);
+    for (const pet of getTargetDesktopPetsList()) {
+      const headGroup = pet?.node || pet?.headNode;
+      if (headGroup) {
+        applyHeadMorphsToGroup(headGroup, { ...(pet.collectible?.morphs || {}), ...patch });
+        updateCollectibleMaterialsLive(headGroup, patch);
+      }
+      if (pet.collectible) {
+        Object.assign(pet.collectible.morphs, patch);
+      }
+    }
+    if (desktopEngine) desktopEngine.wakeRender(1.5, true);
+    showToast(`👁️ 已切换东亚3D眼型预设：${preset.label}`);
+  });
 
   document.getElementById('btn-reset-shape-morphs')?.addEventListener('click', () => {
     for (const [sId, vId, mKey, unit] of SHAPE_MORPH_SLIDERS) {
@@ -4327,6 +4375,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     setSliderUI('vcd-eye-aperture', 'val-vcd-eye-aperture', m.eyeAperture ?? m.eyelidOpen ?? 0.0, 'signed');
     setSliderUI('vcd-eye-tilt', 'val-vcd-eye-tilt', m.eyeTilt ?? 0.0, 'signed');
     setSliderUI('vcd-eye-spacing', 'val-vcd-eye-spacing', m.eyeSpacing ?? 0.0, 'signed');
+    setSliderUI('vcd-eye-epicanthus', 'val-vcd-eye-epicanthus', m.eyeEpicanthus ?? 0.15, 'signed');
+    setSliderUI('vcd-eye-crease', 'val-vcd-eye-crease', m.eyeCrease ?? 0.25, 'signed');
+    setSliderUI('vcd-eye-bag', 'val-vcd-eye-bag', m.eyeBag ?? 0.20, 'signed');
     setSliderUI('vcd-iris-scale', 'val-vcd-iris-scale', m.irisScale ?? col.irisScale ?? 1.0, 'pct');
     setSliderUI('vcd-pupil-size', 'val-vcd-pupil-size', m.pupilSize ?? col.pupilSize ?? 1.0, 'pct');
     setSliderUI('vcd-iris-brightness', 'val-vcd-iris-brightness', m.irisBrightness ?? col.irisBrightness ?? 1.15, 'pct');
@@ -4445,12 +4496,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  document.getElementById('vcd-eye-preset-select')?.addEventListener('change', (e) => {
+    const preset = EYE_SHAPE_PRESET_CATALOG.find(p => p.id === e.target.value);
+    if (!preset) return;
+    const patch = {
+      eyePreset: preset.id,
+      eyeSize: preset.eyeSize,
+      eyeTilt: preset.eyeTilt,
+      eyeAperture: preset.eyeHeight,
+      eyelidOpen: preset.eyeHeight,
+      eyeSpacing: preset.eyeSpacing,
+      eyeEpicanthus: preset.eyeEpicanthus,
+      eyeCrease: preset.eyeCrease,
+      eyeBag: preset.eyeBag,
+      aegyoSalStrength: Math.max(0.10, preset.eyeBag * 0.55),
+      irisScale: preset.irisScale,
+    };
+    const stSel = document.getElementById('studio-eye-preset-select');
+    if (stSel) stSel.value = preset.id;
+    applyEyePatchToTargetPets(patch);
+    syncVcdSelectedPetUI();
+    showToast(`👁️ 已切换东亚3D眼型预设：${preset.label}`);
+  });
+
   for (const [sId, vId, key, fmt] of [
     ['vcd-eye-size', 'val-vcd-eye-size', 'eyeSize', 'signed'],
     ['vcd-eye-almond', 'val-vcd-eye-almond', 'eyeAlmond', 'signed'],
     ['vcd-eye-aperture', 'val-vcd-eye-aperture', 'eyeAperture', 'signed'],
     ['vcd-eye-tilt', 'val-vcd-eye-tilt', 'eyeTilt', 'signed'],
     ['vcd-eye-spacing', 'val-vcd-eye-spacing', 'eyeSpacing', 'signed'],
+    ['vcd-eye-epicanthus', 'val-vcd-eye-epicanthus', 'eyeEpicanthus', 'signed'],
+    ['vcd-eye-crease', 'val-vcd-eye-crease', 'eyeCrease', 'signed'],
+    ['vcd-eye-bag', 'val-vcd-eye-bag', 'eyeBag', 'signed'],
     ['vcd-iris-scale', 'val-vcd-iris-scale', 'irisScale', 'pct'],
     ['vcd-pupil-size', 'val-vcd-pupil-size', 'pupilSize', 'pct'],
     ['vcd-iris-brightness', 'val-vcd-iris-brightness', 'irisBrightness', 'pct'],
@@ -5009,6 +5086,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (bootStatus) bootStatus.remove();
   if (window.__cervixQA) window.__cervixQA.ready = true;
+  desktopEngine.booting = false;
+  desktopEngine.wakeRender(1.5, true);
   } catch (error) {
     console.error('本地 3D 初始化失败', error);
     if (bootStatus) bootStatus.textContent = `启动失败：${String(error.message).slice(0, 160)}。请使用支持 WebGL2 的 Chrome/Edge 并开启硬件加速。`;

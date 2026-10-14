@@ -288,11 +288,27 @@
         <!-- Eye Color Swatches + Picker -->
         <div style="margin-top:8px;padding:8px;background:rgba(15,23,42,0.65);border:1px solid rgba(125,211,252,0.28);border-radius:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-            <span style="font-size:12px;font-weight:700;color:#bae6fd;">👁️ 眼睛大小 · 眼型弧度 · 虹膜瞳色 · 美瞳直径全维实时调节：</span>
+            <span style="font-size:12px;font-weight:700;color:#bae6fd;">👁️ 12种东亚经典3D眼型一键切换 + 眼睑/内眦/瞳色全维实时微调：</span>
             <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#e2e8f0;">
               自定义瞳色:
               <input type="color" id="vcd-iris-color" value="#32221a" style="width:30px;height:22px;border:none;background:none;cursor:pointer;" />
             </label>
+          </div>
+          <div style="margin-bottom:8px;">
+            <select id="vcd-eye-preset-select" class="studio-select" style="width:100%;font-size:12px;padding:5px 8px;background:rgba(15,23,42,0.88);color:#f8fafc;border:1px solid rgba(56,189,248,0.45);border-radius:6px;">
+              <option value="almond_classic">🦌 东方标准杏眼 (Classical Almond · 温润自然内双·清秀百搭)</option>
+              <option value="danfeng_phoenix">🦢 古典丹凤眼 (Danfeng Phoenix · 内尖外挑·细长瑞凤东方神韵)</option>
+              <option value="peach_blossom">🌸 含情桃花眼 (Peach Blossom · 弯月眼裂·饱满卧蚕·眼尾微翘)</option>
+              <option value="willow_leaf">🍃 江南柳叶眼 (Slender Willow · 修长柔美·书卷仕女细长眼)</option>
+              <option value="puppy_downturned">🐶 无辜小狗下至眼 (Innocent Puppy · 眼睑下至·外眼角微垂楚楚可怜)</option>
+              <option value="fox_slanted">🦊 钓系狐狸吊梢眼 (Slanted Fox · 内勾外翘·凌厉魅惑清冷御姐)</option>
+              <option value="pure_monolid">🍵 东方纯单眼皮 (Pure Monolid · 原生蒙古褶·干净高级东方单睑)</option>
+              <option value="in_out_double">🌙 东亚开扇型内双 (Tapered In-Out Fold · 内窄外宽·清纯初恋扇形双睑)</option>
+              <option value="parallel_double">💎 明艳平行大双 (Parallel Double · 浓颜深邃宽双睑·上镜女团眼)</option>
+              <option value="fawn_round">🦌 灵动小鹿圆眼 (Wide Fawn Doe · 高纵高大眼裂·清澈无辜幼态)</option>
+              <option value="sleepy_phoenix">🍷 微醺睡凤半阖眼 (Drowsy Phoenix · 上睑轻垂·慵懒疏离厌世感)</option>
+              <option value="sanpaku_cool">❄️ 清冷下三白厌世眼 (Cool Sanpaku · 下睑微露白·高岭之花冰山瞳)</option>
+            </select>
           </div>
           <div class="vcd-preset-grid" id="vcd-iris-swatches" style="grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px;">
             <button type="button" class="vcd-preset-btn" data-iris-hex="#32221a">🖤 深邃黑茶</button>
@@ -329,6 +345,21 @@
               <span>📏 眼距宽窄微调 (Inter-Eye Spacing · 紧凑聚焦 ↔ 宽距幼态)</span>
               <input type="range" id="vcd-eye-spacing" min="-1.00" max="1.00" step="0.04" value="0.00" />
               <span id="val-vcd-eye-spacing">+0.00</span>
+            </div>
+            <div class="slider-row">
+              <span>🌙 东亚内眦赘皮/内眼角 (Epicanthus · 开内眼角(-) ↔ 原生蒙古褶(+))</span>
+              <input type="range" id="vcd-eye-epicanthus" min="-1.20" max="1.20" step="0.04" value="0.15" />
+              <span id="val-vcd-eye-epicanthus">+0.15</span>
+            </div>
+            <div class="slider-row">
+              <span>✨ 单眼皮/双眼皮深浅 (Eyelid Crease · 纯单眼皮(-) ↔ 平行大双(+))</span>
+              <input type="range" id="vcd-eye-crease" min="-1.20" max="1.20" step="0.04" value="0.25" />
+              <span id="val-vcd-eye-crease">+0.25</span>
+            </div>
+            <div class="slider-row">
+              <span>🌸 3D卧蚕饱满隆起度 (3D Aegyo-Sal · 平直下睑 ↔ 饱满桃花卧蚕)</span>
+              <input type="range" id="vcd-eye-bag" min="0.00" max="1.20" step="0.04" value="0.20" />
+              <span id="val-vcd-eye-bag">+0.20</span>
             </div>
             <div class="slider-row">
               <span>🔮 虹膜/美瞳直径缩放 (Iris Diameter · 露出干净眼白 ↔ 扩瞳美瞳)</span>
@@ -1378,8 +1409,25 @@
             <!-- SUB-TAB 2: 22-AXIS FULL-RANGE CRANIOFACIAL, EYE SIZE/SHAPE & FEATURE FINE-TUNING -->
             <div class="card-block studio-subtab-panel" data-subtab-panel="shape">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <h3 style="margin:0;">📐 模块 2：22轴全量程眼睛大小/眼型与头骨形状微调 (解锁100%幅度对齐原照)</h3>
+                <h3 style="margin:0;">📐 模块 2：12种东亚经典3D眼型预设 & 25轴全量程头骨五官微调</h3>
                 <button type="button" id="btn-reset-shape-morphs" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置五官形状</button>
+              </div>
+              <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11.5px;color:#bae6fd;white-space:nowrap;font-weight:600;">👁️ 东亚3D眼型预设：</span>
+                <select id="studio-eye-preset-select" class="studio-select" style="flex:1;font-size:12px;padding:5px 8px;background:rgba(15,23,42,0.88);color:#f8fafc;border:1px solid rgba(56,189,248,0.45);border-radius:6px;">
+                  <option value="almond_classic">🦌 东方标准杏眼 (Classical Almond · 温润自然内双·清秀百搭)</option>
+                  <option value="danfeng_phoenix">🦢 古典丹凤眼 (Danfeng Phoenix · 内尖外挑·细长瑞凤东方神韵)</option>
+                  <option value="peach_blossom">🌸 含情桃花眼 (Peach Blossom · 弯月眼裂·饱满卧蚕·眼尾微翘)</option>
+                  <option value="willow_leaf">🍃 江南柳叶眼 (Slender Willow · 修长柔美·书卷仕女细长眼)</option>
+                  <option value="puppy_downturned">🐶 无辜小狗下至眼 (Innocent Puppy · 眼睑下至·外眼角微垂楚楚可怜)</option>
+                  <option value="fox_slanted">🦊 钓系狐狸吊梢眼 (Slanted Fox · 内勾外翘·凌厉魅惑清冷御姐)</option>
+                  <option value="pure_monolid">🍵 东方纯单眼皮 (Pure Monolid · 原生蒙古褶·干净高级东方单睑)</option>
+                  <option value="in_out_double">🌙 东亚开扇型内双 (Tapered In-Out Fold · 内窄外宽·清纯初恋扇形双睑)</option>
+                  <option value="parallel_double">💎 明艳平行大双 (Parallel Double · 浓颜深邃宽双睑·上镜女团眼)</option>
+                  <option value="fawn_round">🦌 灵动小鹿圆眼 (Wide Fawn Doe · 高纵高大眼裂·清澈无辜幼态)</option>
+                  <option value="sleepy_phoenix">🍷 微醺睡凤半阖眼 (Drowsy Phoenix · 上睑轻垂·慵懒疏离厌世感)</option>
+                  <option value="sanpaku_cool">❄️ 清冷下三白厌世眼 (Cool Sanpaku · 下睑微露白·高岭之花冰山瞳)</option>
+                </select>
               </div>
               <div class="control-group compact">
                 <div class="slider-row">
@@ -1406,6 +1454,21 @@
                   <span>↔️ 眼距宽窄微调 · 紧凑聚焦(-) ↔ 宽距幼态(+)</span>
                   <input type="range" id="morph-eye-spacing" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-eye-spacing">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>🌙 东亚内眦赘皮/内眼角 · 开内眼角(-) ↔ 原生蒙古褶(+)</span>
+                  <input type="range" id="morph-eye-epicanthus" min="-1.20" max="1.20" step="0.02" value="0.15" />
+                  <span id="val-morph-eye-epicanthus">+0.15</span>
+                </div>
+                <div class="slider-row">
+                  <span>✨ 单眼皮/双眼皮3D褶皱 · 纯单眼皮(-) ↔ 平行大双(+)</span>
+                  <input type="range" id="morph-eye-crease" min="-1.20" max="1.20" step="0.02" value="0.25" />
+                  <span id="val-morph-eye-crease">+0.25</span>
+                </div>
+                <div class="slider-row">
+                  <span>🌸 3D卧蚕饱满隆起度 · 平直下睑(0) ↔ 饱满桃花卧蚕(+)</span>
+                  <input type="range" id="morph-eye-bag" min="0.00" max="1.20" step="0.02" value="0.20" />
+                  <span id="val-morph-eye-bag">+0.20</span>
                 </div>
                 <div class="slider-row">
                   <span>🔮 虹膜/美瞳直径大小缩放 (Iris Diameter · 68%–138%)</span>

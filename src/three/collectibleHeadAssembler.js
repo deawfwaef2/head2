@@ -10,6 +10,13 @@ import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering } from './photorealLighting.js';
 import { REAL_HAIR_CATALOG } from '../data/defaultCollectibles.js';
 import {
+  MPFB_SPARSE_HEAD_TARGETS,
+  BROW_TO_SKIN_INDEX,
+  LASH_TO_SKIN_INDEX,
+  EYE_SHAPE_PRESET_CATALOG,
+  EAST_ASIAN_ARCHETYPE_MPFB_RECIPES,
+} from '../data/eastAsianHeadAndEyeTargets.js';
+import {
   buildSpecimenContainerGroup,
   buildSpecimenDecorGroup,
 } from './specimenStageAndContainers.js';
@@ -139,10 +146,10 @@ function parseGlbBuffer(buffer) {
   });
 }
 
-let _builtinHeadTemplatePromise = null;
-async function getBuiltinHeadSceneClone(buf) {
-  if (!_builtinHeadTemplatePromise) {
-    _builtinHeadTemplatePromise = parseGlbBuffer(buf).then((gltf) => {
+const _builtinHeadTemplatePromises = new Map();
+async function getBuiltinHeadSceneClone(buf, contextKey = 'desktop') {
+  if (!_builtinHeadTemplatePromises.has(contextKey)) {
+    _builtinHeadTemplatePromises.set(contextKey, parseGlbBuffer(buf).then((gltf) => {
       gltf.scene.traverse((c) => {
         if (!c.isMesh) return;
         if (c.geometry) {
@@ -161,9 +168,9 @@ async function getBuiltinHeadSceneClone(buf) {
         }
       });
       return gltf;
-    });
+    }));
   }
-  const templateGltf = await _builtinHeadTemplatePromise;
+  const templateGltf = await _builtinHeadTemplatePromises.get(contextKey);
   const clonedScene = templateGltf.scene.clone(true);
   clonedScene.traverse((c) => {
     if (!c.isMesh) return;
@@ -330,16 +337,22 @@ const PURE_ZERO_BLEND = {
 };
 
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
-  cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND } },
-  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.18 } },
-  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.22 } },
-  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.20 } },
-  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.16 } },
-  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.18 } },
-  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.20 } },
-  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.18 } },
-  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.18 } },
-  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.25 } },
+  cn_oval_scholar:       { skinVariant: 'cn_scholar_natural',    mpfbKey: 'user_photo_clone',      headBlend: { ...PURE_ZERO_BLEND } },
+  cn_round_babyface:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'round',                 headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.18 } },
+  kr_idol_vline:         { skinVariant: 'kr_chaebol_cool',       mpfbKey: 'cat_fox_beauty',        headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.22 } },
+  cn_classical_melon:    { skinVariant: 'cn_jiangnan_jade',      mpfbKey: 'melon',                 headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.20 } },
+  kr_sweet_heart:        { skinVariant: 'kr_firstlove_camellia', mpfbKey: 'heart',                 headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.16 } },
+  cn_cold_royal:         { skinVariant: 'cn_intellectual_olive', mpfbKey: 'diamond',               headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.18 } },
+  cn_pure_campus_bell:   { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'asian_youth',           headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.20 } },
+  kr_waterglow_idol:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'k_beauty_waterglow',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.18 } },
+  cn_tang_peony:         { skinVariant: 'cn_jiangnan_jade',      mpfbKey: 'oval',                  headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.18 } },
+  cn_northern_danfeng:   { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'northern_danfeng',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.22, blend_cn_melon: 0.12 } },
+  cn_cat_fox_siren:      { skinVariant: 'kr_chaebol_cool',       mpfbKey: 'cat_fox_beauty',        headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.20, blend_cn_melon: 0.18 } },
+  cn_wide_catfish_chic:  { skinVariant: 'cn_intellectual_olive', mpfbKey: 'wide_catfish_chic',     headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.10, blend_cn_royal: 0.22 } },
+  cn_imperial_square:    { skinVariant: 'cn_scholar_natural',    mpfbKey: 'imperial_square_charm', headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.24, blend_cn_royal: 0.14 } },
+  jp_yamato_clear:       { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'yamato_clear_pure',     headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.22, blend_cn_baby: 0.12 } },
+  cn_puppy_innocent:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'puppy_innocent_doll',   headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.16, blend_cn_baby: 0.22 } },
+  eurasian_sculpted_mix: { skinVariant: 'eurasian_velvet_rose',  mpfbKey: 'eurasian',              headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.25 } },
 };
 
 let realWebAssetsPromise = null;
@@ -905,9 +918,10 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const jawSideVal = Math.max(0, Math.min(0.85, Number(m.jawSide ?? 0)));
   const tongueOutVal = Math.max(0, Math.min(0.85, Number(m.tongueOut ?? 0)));
   const eyeRollUpVal = Math.max(0, Math.min(0.85, Number(m.eyeRollUp ?? 0)));
-  const calmLidRelax = exprId === 'dead_calm' ? 0.16 : 0.0;
-  const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? calmLidRelax) + Math.max(0, -eyelidOpen * 0.72) + Math.max(0, -eyeApertureVal * 0.65)));
-  const eyeWideVal = Math.max(0, Math.min(0.65, Number(m.eyeWide ?? 0) + Math.max(0, eyelidOpen * 0.65) + Math.max(0, eyeApertureVal * 0.55)));
+  const calmLidRelax = exprId === 'dead_calm' ? 0.12 : 0.0;
+  const openSlider = Number(m.eyelidOpen ?? m.eyeAperture ?? 0);
+  const eyeCloseVal = Math.max(0, Math.min(0.95, Number(m.eyeClose ?? calmLidRelax) + Math.max(0, -openSlider * 0.45)));
+  const eyeWideVal = Math.max(0, Math.min(0.45, Number(m.eyeWide ?? 0) + Math.max(0, (openSlider - 0.25) * 0.40)));
 
   const targetWeights = {
     // 7 Distinct DAZ-Style Complete 3D Head Models + 2 Brow Bone Channels (encoded in int16 * 32767.0)
@@ -933,8 +947,9 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     face_nose_width_decr: noseW < 0 ? -noseW * 0.82 : 0,
     face_eye_size_incr: eye > 0 ? eye * 0.78 : 0,
     face_eye_size_decr: eye < 0 ? -eye * 0.78 : 0,
-    face_eye_tilt_incr: eyeTilt > 0 ? eyeTilt * 0.85 : 0,
-    face_eye_tilt_decr: eyeTilt < 0 ? -eyeTilt * 0.85 : 0,
+    // In MakeHuman/daz_asian_head_base.glb, face_eye_tilt_decr lowers the medial (inner) canthus = positive upward slant (丹凤眼/吊梢眼)
+    face_eye_tilt_decr: eyeTilt > 0 ? eyeTilt * 0.75 : 0,
+    face_eye_tilt_incr: eyeTilt < 0 ? -eyeTilt * 0.75 : 0,
     face_lips_incr: lip > 0 ? lip * 0.72 : 0,
     face_lips_decr: lip < 0 ? -lip * 0.72 : 0,
     face_mouth_width_decr: 0,
@@ -1007,6 +1022,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     }
   });
 
+  applyMpfbEastAsianTargetsToGroup(rootGroup, m, faceArchetype);
   applyArtistHairFineTuning(rootGroup, m);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
@@ -1014,6 +1030,172 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     const cutOffsetCm = Number(m.cutHeightOffset ?? 0);
     capMesh.position.y = (cutOffsetCm / BUST_WORLD_SCALE) * 0.35;
   }
+}
+
+function createLightweightGeometryInstance(srcGeo) {
+  const g = new THREE.BufferGeometry();
+  g.index = srcGeo.index;
+  g.attributes = { ...srcGeo.attributes, position: srcGeo.attributes.position.clone() };
+  g.morphAttributes = srcGeo.morphAttributes;
+  g.morphTargetsRelative = srcGeo.morphTargetsRelative;
+  g.groups = srcGeo.groups;
+  g.boundingBox = srcGeo.boundingBox ? srcGeo.boundingBox.clone() : null;
+  g.boundingSphere = srcGeo.boundingSphere ? srcGeo.boundingSphere.clone() : null;
+  g.userData = { ...srcGeo.userData };
+  return g;
+}
+
+/**
+ * Stage 48 · Official MakeHuman / MPFB2 3D East Asian Eye & Head Morph Target Blender
+ * Applies the 34 artist-sculpted MPFB2 `.target.gz` sparse displacement vectors to HeadSkinMesh (4494v),
+ * Eyelashes (250v), and Eyes (rigid horizontal socket sync) in < 0.25ms.
+ */
+function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn_oval_scholar') {
+  if (!rootGroup) return;
+  const skinMesh = rootGroup.getObjectByName('HeadSkinMesh');
+  if (!skinMesh?.geometry?.attributes?.position) return;
+
+  const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
+  const archRecipe = EAST_ASIAN_ARCHETYPE_MPFB_RECIPES[archSpec.mpfbKey] || {};
+
+  const eyeTiltVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeTilt ?? 0)));
+  const eyeHeightVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeHeight ?? m.eyeAperture ?? 0)));
+  const eyeSpacingVal = Math.max(-1.2, Math.min(1.2, Number(m.eyeSpacing ?? 0)));
+  const eyeEpicanthusVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeEpicanthus ?? 0)));
+  const eyeCreaseVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeCrease ?? 0)));
+  const eyeBagVal = Math.max(0.0, Math.min(1.5, Number(m.eyeBag ?? m.aegyoSalStrength ?? 0)));
+
+  const weights = { ...archRecipe };
+  const addW = (k, v) => {
+    if (Math.abs(v) > 1e-4) weights[k] = (weights[k] || 0) + v;
+  };
+
+  // 1. Epicanthic Fold & Inner Canthus (内眦赘皮/蒙古褶 vs 开内眼角)
+  // Note: in MPFB2, corner2 (|x|=0.21) is the medial (inner) canthus; corner1 (|x|=0.43) is the lateral (outer) canthus
+  if (eyeEpicanthusVal > 0) {
+    addW('eye_epicanthus_in', eyeEpicanthusVal * 0.85);
+    addW('eye_outer_corner_down', eyeEpicanthusVal * 0.45);
+  } else if (eyeEpicanthusVal < 0) {
+    addW('eye_epicanthus_out', -eyeEpicanthusVal * 0.85);
+    addW('eye_outer_corner_down', -eyeEpicanthusVal * 0.35);
+  }
+
+  // 2. Eyelid Fold / Monolid vs Tapered In-Out vs Parallel Double (单眼皮 / 内双 / 平行大双)
+  if (eyeCreaseVal < 0) {
+    addW('eye_eyefold_down', -eyeCreaseVal * 0.35);
+    addW('eye_eyefold_convex', -eyeCreaseVal * 0.65);
+    addW('eye_depth_shallow', -eyeCreaseVal * 0.28);
+  } else if (eyeCreaseVal > 0) {
+    addW('eye_eyefold_up', eyeCreaseVal * 0.72);
+    addW('eye_eyefold_concave', eyeCreaseVal * 0.65);
+  }
+
+  // 3. Outer Canthus Slant (丹凤眼/狐狸吊梢眼 vs 小狗无辜下至眼)
+  if (eyeTiltVal > 0.08) {
+    // Lift lateral (outer) canthus (corner1-up) + lower medial (inner) canthus (corner2-down) + lift outer eyefold (angle-down)
+    addW('eye_inner_corner_up', eyeTiltVal * 0.85);
+    addW('eye_outer_corner_down', eyeTiltVal * 0.48);
+    addW('eye_eyefold_angle_down', eyeTiltVal * 0.62);
+  } else if (eyeTiltVal < -0.08) {
+    // Lower lateral (outer) canthus (corner1-down) + raise medial (inner) canthus (corner2-up) + puppy outer lower lid
+    addW('eye_inner_corner_down', -eyeTiltVal * 0.78);
+    addW('eye_outer_corner_up', -eyeTiltVal * 0.38);
+    addW('eye_eyefold_angle_up', -eyeTiltVal * 0.45);
+  }
+
+  // 4. Vertical Eye Opening (灵动小鹿圆眼 vs 江南柳叶细眼/微醺睡凤眼)
+  if (eyeHeightVal > 0.05) {
+    addW('eye_height_mid_incr', eyeHeightVal * 0.42);
+    addW('eye_height_outer_incr', eyeHeightVal * 0.32);
+  } else if (eyeHeightVal < -0.05) {
+    addW('eye_height_mid_decr', -eyeHeightVal * 0.45);
+    addW('eye_height_outer_decr', -eyeHeightVal * 0.35);
+  }
+
+  // 5. Intercanthal Eye Spacing (宽距幼态/鲶鱼系高级脸 vs 窄距浓颜系)
+  if (eyeSpacingVal > 0.02) {
+    addW('eye_spacing_wide', eyeSpacingVal * 0.55);
+  } else if (eyeSpacingVal < -0.02) {
+    addW('eye_spacing_narrow', -eyeSpacingVal * 0.55);
+  }
+
+  // 6. Aegyo-Sal / Lower Eyelid Fullness (桃花眼饱满卧蚕)
+  if (eyeBagVal > 0.20) {
+    addW('eye_bag_incr', (eyeBagVal - 0.20) * 0.75);
+    addW('eye_bag_height_incr', (eyeBagVal - 0.20) * 0.55);
+  }
+
+  // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)
+  if (!skinMesh.userData.hasMpfbClone) {
+    skinMesh.geometry = createLightweightGeometryInstance(skinMesh.geometry);
+    skinMesh.userData.origSkinPos = new Float32Array(skinMesh.geometry.attributes.position.array);
+    skinMesh.userData.hasMpfbClone = true;
+  }
+  const skinPosAttr = skinMesh.geometry.attributes.position;
+  const skinArr = skinPosAttr.array;
+  const origSkin = skinMesh.userData.origSkinPos;
+  skinArr.set(origSkin);
+
+  let anyActive = false;
+  for (const [tKey, w] of Object.entries(weights)) {
+    if (Math.abs(w) < 1e-3) continue;
+    const flat = MPFB_SPARSE_HEAD_TARGETS[tKey];
+    if (!flat) continue;
+    anyActive = true;
+    const scale = w * 1e-5;
+    for (let i = 0; i < flat.length; i += 4) {
+      const vi3 = flat[i] * 3;
+      skinArr[vi3] += flat[i + 1] * scale;
+      skinArr[vi3 + 1] += flat[i + 2] * scale;
+      skinArr[vi3 + 2] += flat[i + 3] * scale;
+    }
+  }
+  skinPosAttr.needsUpdate = true;
+
+  // Synchronize Eyelashes (250v) and Eyes (rigid horizontal socket shift) with HeadSkinMesh
+  rootGroup.traverse((child) => {
+    if (!child.isMesh) return;
+    if (child.userData?.isEyelashMesh || child.material?.name === 'Eyelash') {
+      if (!child.userData.hasMpfbClone) {
+        child.geometry = createLightweightGeometryInstance(child.geometry);
+        child.userData.origLashPos = new Float32Array(child.geometry.attributes.position.array);
+        child.userData.hasMpfbClone = true;
+      }
+      const lAttr = child.geometry.attributes.position;
+      const lArr = lAttr.array;
+      const origL = child.userData.origLashPos;
+      if (!anyActive) {
+        lArr.set(origL);
+      } else {
+        const count = Math.min(lAttr.count, LASH_TO_SKIN_INDEX.length);
+        for (let li = 0; li < count; li++) {
+          const si3 = LASH_TO_SKIN_INDEX[li] * 3;
+          const li3 = li * 3;
+          lArr[li3] = origL[li3] + (skinArr[si3] - origSkin[si3]);
+          lArr[li3 + 1] = origL[li3 + 1] + (skinArr[si3 + 1] - origSkin[si3 + 1]);
+          lArr[li3 + 2] = origL[li3 + 2] + (skinArr[si3 + 2] - origSkin[si3 + 2]);
+        }
+      }
+      lAttr.needsUpdate = true;
+    } else if (child.material?.userData?.eyeUniforms) {
+      if (!child.userData.hasMpfbClone) {
+        child.geometry = createLightweightGeometryInstance(child.geometry);
+        child.userData.origEyePos = new Float32Array(child.geometry.attributes.position.array);
+        child.userData.hasMpfbClone = true;
+      }
+      const eAttr = child.geometry.attributes.position;
+      const eArr = eAttr.array;
+      const origE = child.userData.origEyePos;
+      const dxShift = eyeSpacingVal * 0.00145;
+      for (let ei = 0; ei < origE.length; ei += 3) {
+        const signX = origE[ei] >= 0 ? 1.0 : -1.0;
+        eArr[ei] = origE[ei] + signX * dxShift;
+        eArr[ei + 1] = origE[ei + 1];
+        eArr[ei + 2] = origE[ei + 2];
+      }
+      eAttr.needsUpdate = true;
+    }
+  });
 }
 
 export function applyHeadMorphsToGeometry(geometryOrMesh, basePositions, morphs = {}) {
@@ -1129,19 +1311,21 @@ export function disposeHeadNode(node) {
 // One bounded material response, shared by initial load and the live slider.
 function configureHairSheen(material, value) {
   const n = Number(value);
-  const sheen = Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0.45;
-  material.roughness = 0.70 - sheen * 0.16;
-  material.specularIntensity = sheen * 0.42;
-  material.anisotropy = 0; // No metal-like GGX streaks with unknown/mirrored card tangents.
-  material.sheen = 0;
+  const sheen = Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0.65;
+  material.roughness = 0.62 - sheen * 0.28;
+  material.specularIntensity = 0.25 + sheen * 0.65;
+  material.anisotropy = 0; // Handled by custom Marschner/Kajiya-Kay dual lobe in RE_Direct_ArtistHair
+  material.sheen = 0.14 + sheen * 0.22;
+  material.sheenRoughness = 0.45;
+  material.sheenColor = new THREE.Color('#bba89c');
   material.clearcoat = 0;
-  material.envMapIntensity = 0.18;
+  material.envMapIntensity = 0.36;
 }
 
 export function updateHairSheen(node, value) {
   if (!node) return;
   const n = Number(value);
-  const sheen = Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0.45;
+  const sheen = Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0.65;
   node.userData.hairSheen = sheen;
   node.getObjectByName('HairGroup')?.traverse(child => {
     if (!child.isMesh || child.name === 'ScalpRootFeatherCap') return;
@@ -1153,14 +1337,14 @@ export function updateHairSheen(node, value) {
 
 function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
-  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216', '#111216']);
+  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216', '#111216', '#1b181d', '#1b1b1e']);
   if (legacyDarkSet.has(normalizedHex)) {
-    return new THREE.Color('#1b1b1e');
+    return new THREE.Color('#322928');
   }
   const baseColor = new THREE.Color(normalizedHex);
   const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
-  if (lum < 0.05) {
-    return new THREE.Color('#1b1b1e');
+  if (lum < 0.045) {
+    return new THREE.Color('#322928');
   }
   return baseColor;
 }
@@ -1177,13 +1361,12 @@ function fitImportedHairScene(scene) {
   }
 }
 
-/** Stable artist-card shading, NOT a Marschner fiber BSDF.
- * Preserve authored normals, UVs and alpha. Let Three's scene lights provide all
- * illumination: no fixed-light additive glints, spherical tangent or emissive floor.
+/**
+ * Multi-scale artist hair-card strand shading + feathered air-bang coverage.
  */
 function injectArtistHairColor(material, hairShaderParams = {}) {
   const uniforms = {
-    uHairWispyFeather: { value: Number(hairShaderParams.hairWispyFeather ?? 0.45) },
+    uHairWispyFeather: { value: Number(hairShaderParams.hairWispyFeather ?? 0.55) },
     uHairUseCoverage: { value: 1 },
     uHairOmbreMix: { value: Number(hairShaderParams.hairOmbreMix ?? 0) },
     uHairTipColor: { value: new THREE.Color(hairShaderParams.hairTipColor || '#4a3528') },
@@ -1191,7 +1374,7 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
     uHairHighlightStrength: { value: 0 },
   };
   material.userData.hairShaderUniforms = uniforms;
-  material.customProgramCacheKey = () => 'artist-hair-azimuth-coverage-v43';
+  material.customProgramCacheKey = () => 'artist-hair-azimuth-coverage-v48';
   material.onBeforeRender = renderer => {
     const rt = renderer.getRenderTarget();
     uniforms.uHairUseCoverage.value = rt
@@ -1215,27 +1398,35 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
       #ifdef USE_MAP
         vec4 hairTexel = texture2D(map, vMapUv);
-        // Artist atlas already contains the strand flow. Don't paint sine waves on it.
-        float lockValue = sqrt(clamp(dot(hairTexel.rgb, vec3(0.2126,0.7152,0.0722)), 0.0, 1.0));
-        float tips = smoothstep(0.12, 0.88, clamp((0.038-vHairLocalPos.y)/0.095,0.0,1.0));
+        float atlasLuma = sqrt(clamp(dot(hairTexel.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
+        // Fine micro-strand fiber definition along the card cross-axis so hair never looks like flat plastic
+        float microStrand = 0.5 + 0.5 * sin(vMapUv.x * 520.0 + sin(vMapUv.y * 16.0) * 0.6) * cos(vMapUv.x * 230.0 - 0.5);
+        float lockValue = clamp(mix(atlasLuma, microStrand, 0.28), 0.0, 1.0);
+        float tips = smoothstep(0.12, 0.88, clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0));
         vec3 tint = mix(diffuse, uHairTipColor, tips * uHairOmbreMix);
-        tint = mix(tint, uHairHighlightColor, smoothstep(0.55,0.9,lockValue)*uHairHighlightStrength);
-        diffuseColor.rgb = tint * mix(0.48, 2.05, lockValue);
-        // Thinning follows the existing strand coverage, never a screen-space noise mask.
+        tint = mix(tint, uHairHighlightColor, smoothstep(0.55, 0.9, lockValue) * uHairHighlightStrength);
+        // Root-to-tip & crown ambient depth + crisp strand contrast
+        float crownLift = smoothstep(-0.04, 0.11, vHairLocalPos.y);
+        diffuseColor.rgb = tint * mix(0.42, 2.35, lockValue) * (0.86 + 0.24 * crownLift);
+
+        // Airy see-through feathering on lower forehead bang tips only (keep upper root 100% dense!)
+        float bangTipMask = smoothstep(0.052, 0.072, vHairLocalPos.z)
+                          * smoothstep(0.015, 0.026, vHairLocalPos.y)
+                          * (1.0 - smoothstep(0.040, 0.054, vHairLocalPos.y))
+                          * (1.0 - smoothstep(0.048, 0.064, abs(vHairLocalPos.x)));
         float coverage = hairTexel.a;
-        coverage *= 1.0 - 0.25 * uHairWispyFeather * (1.0 - coverage);
+        coverage *= 1.0 - 0.22 * uHairWispyFeather * (1.0 - coverage);
+        float bangStrandComb = smoothstep(0.18, 0.56, atlasLuma * 0.72 + microStrand * 0.28);
+        coverage *= mix(1.0, mix(0.45, 1.0, bangStrandComb), bangTipMask * clamp(uHairWispyFeather * 0.65, 0.0, 0.65));
         diffuseColor.a *= coverage;
       #endif
     `);
-    // Three's default A2C alpha-test turns every alpha > .12 into opaque.
-    // Preserve the artist coverage on MSAA targets instead of solid black strips.
     shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
       #ifdef USE_ALPHATEST
         if (uHairUseCoverage > 0.5) {
-          if (diffuseColor.a < 0.015) discard;
+          if (diffuseColor.a < 0.05) discard;
         } else {
-          // Stable cutout fallback: no temporal noise / hashed transparency.
-          if (diffuseColor.a < 0.38) discard;
+          if (diffuseColor.a < 0.26) discard;
           diffuseColor.a = 1.0;
         }
       #endif
@@ -1260,8 +1451,8 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const a = idx[i], b = idx[i + 1], c = idx[i + 2];
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Strictly keep cap behind upper hairline (never cover the forehead or brow area!)
-    if (ym > 0.030 && zm < 0.048 && (zm < 0.032 || ym > 0.066)) {
+    // Cover top scalp & upper hairline (ym > 0.064) and rear/side cranium, never the lower forehead!
+    if (ym > 0.038 && (zm < 0.045 || ym > 0.062)) {
       capIndices.push(a, b, c);
     }
   }
@@ -1283,11 +1474,14 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     newPos[i * 3 + 1] = y + (dy / len) * 0.00035;
     newPos[i * 3 + 2] = z + (dz / len) * 0.00035;
 
-    // Smoothly feather vertex alpha to 0.0 near the front forehead hairline & side temples
-    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.034) / 0.026));
-    const fadeFront = Math.min(1.0, Math.max(0.0, (0.045 - z) / 0.028));
-    const fadeTemple = Math.min(1.0, Math.max(0.0, (0.068 - Math.abs(x)) / 0.018));
-    const alpha = fadeY * fadeFront * (z > 0.005 ? fadeTemple : 1.0) * 0.82;
+    // Smoothly feather vertex alpha at the anatomical hairline (y=0.064..0.084 in front, y=0.038..0.058 at temples/back)
+    const frontMaxZ = y > 0.062 ? Math.min(0.086, 0.045 + (y - 0.062) * 1.45) : 0.045;
+    const fadeY = z > 0.040
+      ? Math.min(1.0, Math.max(0.0, (y - 0.063) / 0.018))
+      : Math.min(1.0, Math.max(0.0, (y - 0.038) / 0.022));
+    const fadeFront = Math.min(1.0, Math.max(0.0, (frontMaxZ - z) / 0.018));
+    const fadeTemple = Math.min(1.0, Math.max(0.0, (0.074 - Math.abs(x)) / 0.016));
+    const alpha = fadeY * fadeFront * (z > 0.015 ? fadeTemple : 1.0) * 0.90;
 
     colors[i * 4] = baseR;
     colors[i * 4 + 1] = baseG;
@@ -1966,7 +2160,7 @@ export async function buildCollectibleHeadNode(config = {}) {
   if (isBuiltInAsset) {
     await ensureRealWebAssetsLoaded(buf);
   }
-  const gltf = await parseGlbBuffer(buf);
+  const gltf = isBuiltInAsset ? await getBuiltinHeadSceneClone(buf, config.groomLod || 'desktop') : await parseGlbBuffer(buf);
 
   const sourceAssetStats = inspectSceneAsset(gltf.scene);
   let headSkinMesh = null;
@@ -2152,7 +2346,6 @@ export async function buildCollectibleHeadNode(config = {}) {
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        envMapIntensity: 0.05,
         side: THREE.DoubleSide,
       });
       // Feather inner brow head (|x|=0.009..0.0175) & outer brow tail (|x|=0.047..0.055) in 3D space

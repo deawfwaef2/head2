@@ -1,4 +1,6 @@
 // Pre-registered high-precision Asian female collectible heads, 28 Master Artist Photorealistic 3D Hairstyles & 7 post-mortem expressions
+import { EYE_SHAPE_PRESET_CATALOG } from './eastAsianHeadAndEyeTargets.js';
+export { EYE_SHAPE_PRESET_CATALOG };
 
 export const REAL_HAIR_CATALOG = [
   // ================= I. 清纯短发与波波头系 (Short & Bob Series · 6款) =================
@@ -777,10 +779,11 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_tang_peony',
-    shortLabel: '🌺 国风珠圆玉润贵女脸',
-    label: '🌺 国风珠圆玉润世家贵女脸 · 丰盈端庄古典东方骨相',
-    desc: '国风世家贵女丰盈面庞，端庄大气、气韵温润',
+    shortLabel: '🌺 京派端庄世家贵女头模',
+    label: '🌺 京派端庄珠圆玉润贵女头模 · 三庭五眼正统大家闺秀骨相',
+    desc: '华北世家贵女丰盈端庄面庞，国泰民安大气鹅蛋轮廓与温润杏眼',
     defaultSkinVariant: 'cn_jiangnan_jade',
+    defaultEyePreset: 'almond_classic',
     headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.18, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
     morphRecipe: {
       jawVLine: -0.16, chinLength: 0.04, cheekSoftness: 0.26, noseBridge: 0.10, noseWidth: 0.04,
@@ -789,15 +792,107 @@ export const FACE_ARCHETYPE_CATALOG = [
     }
   },
   {
+    id: 'cn_northern_danfeng',
+    shortLabel: '🦢 华北古典丹凤瑞凤头模',
+    label: '🦢 华北古典丹凤瑞凤头模 · 平缓眉弓配内尖外挑细长丹凤眼骨相',
+    desc: '正统东方古典仕女骨相，平缓流畅眉弓、内眦微勾、外眦优雅上挑的丹凤瑞凤眼',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    defaultEyePreset: 'danfeng_phoenix',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.22, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.12, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.10, chinLength: 0.06, cheekSoftness: 0.08, noseBridge: 0.14, noseWidth: -0.08,
+      eyeSize: 0.0, eyeAperture: -0.18, eyeAlmond: 0.28, eyeTilt: 0.68, eyeSpacing: 0.06,
+      eyeEpicanthus: 0.45, eyeCrease: 0.18, eyeBag: 0.10,
+      lipFullness: 0.06, mouthSmile: 0.02, foreheadHeight: 0.05, headWidth: -0.01, headLength: 0.02
+    }
+  },
+  {
+    id: 'cn_cat_fox_siren',
+    shortLabel: '🦊 钓系狐系清冷名伶头模',
+    label: '🦊 钓系狐系清冷名伶头模 · 窄长中庭微翘尖颏配魅惑狐狸吊梢眼',
+    desc: '极具东方魅惑感的狐系清冷骨相，外眼角凌厉上扬、内眼角尖锐深邃、薄唇微勾',
+    defaultSkinVariant: 'kr_chaebol_cool',
+    defaultEyePreset: 'fox_slanted',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.20, blend_cn_melon: 0.18, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.32, chinLength: 0.12, cheekSoftness: -0.14, noseBridge: 0.22, noseWidth: -0.14,
+      eyeSize: 0.12, eyeAperture: -0.12, eyeAlmond: 0.30, eyeTilt: 0.82, eyeSpacing: -0.10,
+      eyeEpicanthus: -0.52, eyeCrease: 0.52, eyeBag: 0.22,
+      lipFullness: 0.08, mouthSmile: 0.10, foreheadHeight: 0.02, headWidth: -0.03, headLength: 0.02
+    }
+  },
+  {
+    id: 'cn_wide_catfish_chic',
+    shortLabel: '🐟 电影感宽眼距高级脸头模',
+    label: '🐟 电影感宽眼距留白高级脸头模 · 舒展眼距微方下颌东方超模骨相',
+    desc: '东亚大银幕电影感高级脸，舒展宽眼距、原生东方单睑/内双、微方折角下颌与饱满厚唇',
+    defaultSkinVariant: 'cn_intellectual_olive',
+    defaultEyePreset: 'pure_monolid',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.10, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.22, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: -0.18, chinLength: 0.04, cheekSoftness: -0.10, noseBridge: 0.06, noseWidth: 0.08,
+      eyeSize: -0.08, eyeAperture: -0.20, eyeAlmond: 0.18, eyeTilt: 0.22, eyeSpacing: 0.32,
+      eyeEpicanthus: 0.72, eyeCrease: -0.78, eyeBag: 0.08,
+      lipFullness: 0.32, mouthSmile: -0.02, foreheadHeight: 0.04, headWidth: 0.02, headLength: 0.01
+    }
+  },
+  {
+    id: 'cn_imperial_square',
+    shortLabel: '🏛️ 东方英气端方青衣头模',
+    label: '🏛️ 东方英气端方折角青衣头模 · 清晰下颌折角与温润开扇双眼皮骨相',
+    desc: '正剧大青衣端方骨相，清晰利落的下颌骨折角、高挺直鼻与端庄开扇型内双杏眼',
+    defaultSkinVariant: 'cn_scholar_natural',
+    defaultEyePreset: 'in_out_double',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.24, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.14, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: -0.24, chinLength: 0.10, cheekSoftness: 0.04, noseBridge: 0.20, noseWidth: -0.06,
+      eyeSize: 0.14, eyeAperture: 0.12, eyeAlmond: 0.12, eyeTilt: 0.14, eyeSpacing: 0.04,
+      eyeEpicanthus: 0.32, eyeCrease: 0.34, eyeBag: 0.38,
+      lipFullness: 0.14, mouthSmile: 0.04, foreheadHeight: 0.04, headWidth: 0.02, headLength: 0.02
+    }
+  },
+  {
+    id: 'jp_yamato_clear',
+    shortLabel: '🍃 日系透明感森系少女头模',
+    label: '🍃 日系透明感森系少女头模 · 短人中窄鼻梁配灵动小鹿圆眼骨相',
+    desc: '东京透明感森系美少女骨相，柔和短下巴、微翘小巧鼻尖与清澈圆润小鹿眼',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    defaultEyePreset: 'fawn_round',
+    headBlend: { blend_asian_youth: 0.22, blend_cn_scholar: 0.0, blend_cn_baby: 0.12, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.06, chinLength: -0.14, cheekSoftness: 0.24, noseBridge: 0.06, noseWidth: -0.10,
+      eyeSize: 0.38, eyeAperture: 0.55, eyeAlmond: -0.08, eyeTilt: -0.10, eyeSpacing: 0.12,
+      eyeEpicanthus: 0.05, eyeCrease: 0.62, eyeBag: 0.52,
+      lipFullness: 0.16, mouthSmile: 0.06, foreheadHeight: 0.06, headWidth: 0.01, headLength: -0.02
+    }
+  },
+  {
+    id: 'cn_puppy_innocent',
+    shortLabel: '🐶 纯欲无辜小狗下至头模',
+    label: '🐶 纯欲无辜小狗下至幼态头模 · 满胶原软糯苹果肌配眼睑下至无辜眼',
+    desc: '极致减龄的纯欲学妹骨相，饱满苹果肌、饱满卧蚕与外眼角微垂的小狗下至眼',
+    defaultSkinVariant: 'kr_dewy_peach',
+    defaultEyePreset: 'puppy_downturned',
+    headBlend: { blend_asian_youth: 0.16, blend_cn_scholar: 0.0, blend_cn_baby: 0.22, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: -0.12, chinLength: -0.22, cheekSoftness: 0.34, noseBridge: -0.04, noseWidth: 0.02,
+      eyeSize: 0.32, eyeAperture: 0.38, eyeAlmond: -0.14, eyeTilt: -0.65, eyeSpacing: 0.12,
+      eyeEpicanthus: 0.10, eyeCrease: 0.48, eyeBag: 0.72,
+      lipFullness: 0.28, mouthSmile: 0.06, foreheadHeight: 0.08, headWidth: 0.03, headLength: -0.03
+    }
+  },
+  {
     id: 'eurasian_sculpted_mix',
-    shortLabel: '🌍 欧亚丝绒轻混血骨相',
-    label: '🌍 欧亚丝绒玫瑰轻混血脸 · 深邃眉弓与高挺鼻梁混血骨相',
-    desc: '东西方骨相融合，深邃眼窝配高挺鼻梁与丝绒玫瑰肤质',
+    shortLabel: '🌍 东亚西域轻混血深邃头模',
+    label: '🌍 东亚西域丝绒玫瑰轻混血头模 · 深邃眉弓高挺鼻梁配明艳平行大双',
+    desc: '东亚与西域/欧亚混血浓颜骨相，立体眉弓深眼窝、高挺琼鼻与明艳平行大双眼皮',
     defaultSkinVariant: 'eurasian_velvet_rose',
+    defaultEyePreset: 'parallel_double',
     headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.25 },
     morphRecipe: {
       jawVLine: 0.18, chinLength: 0.10, cheekSoftness: -0.12, noseBridge: 0.30, noseWidth: -0.16,
-      eyeSize: 0.24, eyeAperture: 0.0, eyeAlmond: 0.20, eyeTilt: 0.12, eyeSpacing: -0.04,
+      eyeSize: 0.34, eyeAperture: 0.32, eyeAlmond: 0.20, eyeTilt: 0.20, eyeSpacing: -0.10,
+      eyeEpicanthus: -0.62, eyeCrease: 0.88, eyeBag: 0.52,
       lipFullness: 0.24, mouthSmile: 0.04, foreheadHeight: 0.04, headWidth: -0.03, headLength: 0.02
     }
   }
@@ -1044,8 +1139,8 @@ export const DEFAULT_COLLECTIBLES = [
     eyebrowStyle: 'kr_straight_mist',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
-    lifePhotoUrl: '/models/user_photo_ref.jpg',
-    lifePhotoCaption: '📸 生前最后留影：19岁音乐学院竖琴首席初夏（演出后台被偷拍的回眸，半小时后她就彻底失去了身体）',
+    lifePhotoUrl: '/models/chuxia_life_ref.jpg',
+    lifePhotoCaption: '📸 生前最后留影：19岁音乐学院竖琴首席初夏（演出后台身穿粉色针织衫抚琴甜笑的抓拍，半小时后她就彻底失去了身体）',
     studyRole: 'survivor_motivator',
     studyGoalNote: '初夏就搁在你手边：生前追她的人排到校门口，现在整颗脑袋只属于你的书桌。',
     skinTone: '#fff0eb',
@@ -1074,7 +1169,7 @@ export const DEFAULT_COLLECTIBLES = [
     fateRecord: {
       vitalityStatus: '享年19岁 · 音乐学院竖琴系首席校花 · 颈部C4完全离断',
       causeOfDeath: '跨年独奏会谢幕当晚，搭载她的保姆车在盘山公路坠崖，车窗钢化玻璃如断头台般瞬间削过她纤细的脖颈',
-      survivorTriumphNote: '生前她是整个音乐学院最娇生惯养的小公主，练琴手指磨出一点水泡都要发朋友圈抱怨半天，追求者送的鲜花堆满琴房；可现在呢？她连一根手指头都不剩了，只剩这颗带着右颊三颗小痣的漂亮脑袋，任由你在书桌上推来滚去、或是塞进容器里封存。每当你背书背到烦躁，捏一捏她冰凉柔軟的脸蛋，想想她已经永远停在19岁那个雨夜，还有什么比“活着”更爽的事？',
+      survivorTriumphNote: '生前她是整个音乐学院最娇生惯养的小公主，练琴手指磨出一点水泡都要发朋友圈抱怨半天，追求者送的鲜花堆满琴房；可现在呢？她连一根手指头都不剩了，只剩这颗梳着栗棕内扣波波头、带着甜美梨涡的漂亮脑袋，任由你在书桌上推来滚去、或是塞进容器里封存。每当你背书背到烦躁，捏一捏她冰凉柔软的婴儿肥脸蛋，想想她已经永远停在19岁那个雨夜，还有什么比“活着”更爽的事？',
       energyYieldPerMin: 150
     },
     morphs: {
@@ -1167,6 +1262,7 @@ export const DEFAULT_COLLECTIBLES = [
     eyebrowStyle: 'kr_idol_arch',
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
+    lifePhotoUrl: '/models/linxi_life_ref.jpg',
     lifePhotoPreset: 'linxi',
     lifePhotoCaption: '📸 生前最后留影：21岁华尔街投行天才分析师林汐（生前在苏黎世私人停机坪前的冷傲抓拍，左眼尾泪痣带着惯有的轻蔑）',
     studyRole: 'sprint_invigilator',
@@ -1596,12 +1692,24 @@ export function resolveCollectibleLifePhotoSrc(item) {
   if (
     item.id === 'SPEC-2026-000' ||
     item.basePreset === 'user_photo' ||
-    (item.lifePhotoUrl && item.lifePhotoUrl.includes('user_photo_ref'))
+    item.basePreset === 'chuxia' ||
+    (item.lifePhotoUrl && (item.lifePhotoUrl.includes('chuxia_life_ref') || item.lifePhotoUrl.includes('user_photo_ref')))
   ) {
     if (typeof window !== 'undefined' && window.__EMBEDDED_REF_PHOTO__) {
       return window.__EMBEDDED_REF_PHOTO__;
     }
-    return '/models/user_photo_ref.jpg';
+    return '/models/chuxia_life_ref.jpg';
+  }
+
+  if (
+    item.id === 'SPEC-2026-001' ||
+    item.basePreset === 'linxi' ||
+    (item.lifePhotoUrl && item.lifePhotoUrl.includes('linxi_life_ref'))
+  ) {
+    if (typeof window !== 'undefined' && window.__EMBEDDED_LINXI_PHOTO__) {
+      return window.__EMBEDDED_LINXI_PHOTO__;
+    }
+    return '/models/linxi_life_ref.jpg';
   }
 
   if (item.lifePhotoUrl && item.lifePhotoUrl.startsWith('data:image/')) {

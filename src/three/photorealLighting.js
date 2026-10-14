@@ -826,7 +826,7 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMod
   }
   const modeKey = hdrMode || 'softbox_portrait';
   let envTex = envMapByMode.get(modeKey);
-  if (!envTex && typeof renderer.compile === 'function') {
+  if (!envTex && typeof renderer.compile === 'function' && !isSoftwareRenderer(renderer)) {
     const pmrem = new THREE.PMREMGenerator(renderer);
     // Build a high-contrast dark-velvet studio HDR light dome instead of a flat white box so HDR sculpts facial topography!
     const domeScene = new THREE.Scene();
@@ -2018,7 +2018,11 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
     });
   });
 
-  const shadowSize = isStudio ? cfg.studioShadowSize || cfg.shadowSize : cfg.shadowSize;
+  const shadowSize = engine.softwareRenderer ? 0 : (isStudio ? cfg.studioShadowSize || cfg.shadowSize : cfg.shadowSize);
+  if (engine.softwareRenderer) {
+    renderer.shadowMap.enabled = false;
+    if (engine.beautyPost) engine.beautyPost.setEnabled(false);
+  }
   const key = engine.keyLight;
   if (key && key.shadow) {
     key.castShadow = shadowSize > 0;

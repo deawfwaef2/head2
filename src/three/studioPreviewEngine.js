@@ -41,7 +41,8 @@ export class StudioPreviewEngine {
   }
 
   wakeRender(durationSeconds = 1.6, refreshShadow = false) {
-    const until = performance.now() + durationSeconds * 1000;
+    const dur = this.softwareRenderer ? Math.min(durationSeconds, 0.16) : durationSeconds;
+    const until = performance.now() + dur * 1000;
     if (until > this.renderWakeUntil) {
       this.renderWakeUntil = until;
     }
@@ -75,6 +76,9 @@ export class StudioPreviewEngine {
     this.renderer.setSize(w, h, false);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
+    if (this.softwareRenderer) {
+      this.renderWakeUntil = performance.now() + 180;
+    }
     this.renderer.localClippingEnabled = true;
     // Stage 39 强明暗发丝投影写实管线：ACES + sRGB + 10:1主补光比 + 落日逆光离线 IBL
     applyBaseRendererSettings(this.renderer, 0.88);
@@ -315,11 +319,11 @@ export class StudioPreviewEngine {
 
     const now = performance.now();
     const dynMode = this._activeVisualState?.dynamicLightMode || 'sunset_cloud_drift';
-    const hasDynLight = dynMode !== 'static_locked' && Number(this._activeVisualState?.dynamicLightSpeed ?? 1.0) > 0.001;
+    const hasDynLight = !this.softwareRenderer && dynMode !== 'static_locked' && Number(this._activeVisualState?.dynamicLightSpeed ?? 1.0) > 0.001;
     const isIdle = !this.autoRotate && now > this.renderWakeUntil;
     const elapsedMs = now - this.lastFrameTime;
     // Cap Studio Preview at ~60 FPS when active, ~28 FPS when in ambient dynamic-light drift
-    const minIntervalMs = isIdle && hasDynLight ? 35.0 : 15.5;
+    const minIntervalMs = this.softwareRenderer ? 220.0 : (isIdle && hasDynLight ? 35.0 : 15.5);
     if (elapsedMs < minIntervalMs) return;
     const dt = Math.min(0.05, elapsedMs / 1000);
     this.lastFrameTime = now;
@@ -348,10 +352,13 @@ export class StudioPreviewEngine {
       requestShadowUpdate(this.renderer);
       this.needsShadowRefresh = false;
     }
-    if (this.beautyPost && this.beautyPost.enabled) {
+    if (this.beautyPost && this.beautyPost.enabled && !this.softwareRenderer) {
       this.beautyPost.render();
     } else {
       this.renderer.render(this.scene, this.camera);
+    }
+    if (this.softwareRenderer) {
+      this.renderWakeUntil = 0;
     }
   }
 }
