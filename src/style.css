@@ -2047,7 +2047,7 @@ input[type="text"]:focus, select:focus, textarea:focus {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 44;
+  z-index: 9500;
   overflow: hidden;
 }
 
@@ -2075,9 +2075,9 @@ input[type="text"]:focus, select:focus, textarea:focus {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 228px;
-  padding: 5px 8px;
+  gap: 7px;
+  width: 284px;
+  padding: 6px 8px;
   border-radius: 9px;
   background: linear-gradient(145deg, rgba(16, 13, 10, 0.88), rgba(26, 20, 15, 0.84));
   border: 1px solid rgba(217, 179, 130, 0.48);
@@ -2096,14 +2096,14 @@ input[type="text"]:focus, select:focus, textarea:focus {
   border-color: rgba(251, 191, 36, 0.88);
   background: linear-gradient(145deg, rgba(22, 18, 13, 0.95), rgba(34, 26, 19, 0.92));
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.78), 0 0 14px rgba(245, 158, 11, 0.24);
-  z-index: 50;
+  z-index: 9550;
 }
 
 .specimen-placard-card.is-dragging {
   cursor: grabbing;
   border-color: rgba(56, 189, 248, 0.95);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.85), 0 0 18px rgba(56, 189, 248, 0.38);
-  z-index: 80;
+  z-index: 9600;
 }
 
 .placard-photo-wrap {
@@ -2194,8 +2194,9 @@ input[type="text"]:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  margin-top: 1px;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
 }
 
 .placard-cut-tag {
@@ -2209,8 +2210,8 @@ input[type="text"]:focus, select:focus, textarea:focus {
 .placard-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 3px;
-  flex-shrink: 0;
 }
 
 .placard-mini-btn {
@@ -2275,3 +2276,11 @@ body.pure-screen-mode #pet-hover-dossier {
   flex: none; min-height: 280px; height: clamp(280px, calc(100dvh - 350px), 560px);
 }
 .studio-col-center .cam-preset-btns { flex-wrap: wrap; }
+
+#victor-puzzle-hub-modal.hidden,
+#heartbeat-anticheat-banner.hidden,
+#specimen-provocation-banner.hidden,
+.hub-tab-pane.hidden {
+  display: none !important;
+}
+
