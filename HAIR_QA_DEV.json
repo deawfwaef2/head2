@@ -1,0 +1,487 @@
+{
+  "url": "http://127.0.0.1:5173",
+  "renderer": "Chromium / SwiftShader",
+  "tests": [
+    {
+      "name": "startup without JS/GLSL errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "zero sheen stored and eliminates built-in specular",
+      "passed": true,
+      "detail": {
+        "saved": 0,
+        "mats": [
+          {
+            "spec": 0,
+            "alpha": 0.12,
+            "transparent": false
+          },
+          {
+            "spec": 0,
+            "alpha": 0.12,
+            "transparent": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "all catalog hairstyles load/render, no duplicate wisps",
+      "passed": true,
+      "detail": [
+        {
+          "id": "hair_bob01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_user_photo",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_bob02",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_short02",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_asym_short",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_pixie_chic",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_air_bangs_long",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_long01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_hime",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_short04",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_side_long",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_wolf_clavicle",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_curtain_wave",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_hazel_wave",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_wavy_bob",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_glam_wave",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_mermaid_curl",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_french_lazy_roll",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_braid01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_adrienne_updo",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_low_chignon",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_crown_braid",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_ballerina_bun",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_ponytail01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_twin_buns",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_halfup_princess",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_twin_braids",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_sport_ponytail",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        }
+      ]
+    },
+    {
+      "name": "zero sheen survives hairstyle replacement",
+      "passed": true,
+      "detail": [
+        0
+      ]
+    },
+    {
+      "name": "edited geometry has updated finite bounds",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "import keeps original PBR and no generated scalp shell",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:b8607691-1d8b-4b46-b33e-f133787abfae",
+        "mats": [
+          {
+            "imported": true,
+            "roughness": 0.46
+          }
+        ]
+      }
+    },
+    {
+      "name": "registered collectible persists custom hair reference/type",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:b8607691-1d8b-4b46-b33e-f133787abfae",
+        "type": "glb"
+      }
+    },
+    {
+      "name": "reload restores imported hair on desktop pet",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:b8607691-1d8b-4b46-b33e-f133787abfae",
+        "exists": true,
+        "petIds": [
+          "QA-HAIR-V39"
+        ],
+        "record": {
+          "id": "QA-HAIR-V39",
+          "folderName": "QA-HAIR-V39_Hair QA specimen",
+          "name": "Hair QA specimen",
+          "subtitle": "东亚头部收藏品",
+          "grade": "SSR · 特级典藏",
+          "createdAt": "2026-10-14 03:46",
+          "basePreset": "fangyaoping",
+          "skinVariant": "cn_scholar_natural",
+          "faceArchetype": "cn_oval_scholar",
+          "eyebrowStyle": "cn_scholar_natural",
+          "deadExpression": "dead_calm",
+          "containerStyle": "glass_bell_jar",
+          "decorStyle": "study_tomes",
+          "studyRole": "gaokao_pomodoro",
+          "studyGoalNote": "吸纳19岁女状元的巅峰考运，高效攻克今日核心章节！",
+          "lifePhotoUrl": "http://127.0.0.1:5173/models/user_photo_ref.png",
+          "lifePhotoCaption": "📸 生前巅峰影像：Hair QA specimen (19岁 · 巅峰健康态 · 音乐学院首席校花)",
+          "customModelUrl": null,
+          "customModelType": "glb",
+          "customHairUrl": "private-asset:b8607691-1d8b-4b46-b33e-f133787abfae",
+          "customHairType": "glb",
+          "customHairName": "hair_bob02.glb",
+          "skinTone": "#faDFce",
+          "blushIntensity": 0.18,
+          "lipColor": "#bc646e",
+          "irisColor": "#382015",
+          "hairStyle": "hair_user_photo",
+          "groomDensity": 6000,
+          "hairColor": "#121216",
+          "hairSheen": 0,
+          "frontBangs": "default",
+          "sideLocks": "default",
+          "backAttachment": "none",
+          "neckClearance": 0.55,
+          "fateRecord": {
+            "vitalityStatus": "19岁 · 巅峰健康态 · 音乐学院首席校花",
+            "causeOfDeath": "跨年演出返程途中遭遇突发意外，于最鲜活的青春巅峰瞬间定格",
+            "survivorTriumphNote": "她曾拥有骄傲的青春与美貌，却在意外中戛然而止；而活着的你仍在进取并主宰全局——凝视她的静默容颜，汲取全额专注能量。",
+            "energyYieldPerMin": 155
+          },
+          "morphs": {
+            "deadExpression": "dead_calm",
+            "jawOpen": 0,
+            "eyeRollUp": 0,
+            "tongueOut": 0,
+            "jawSide": 0,
+            "frontBangs": "default",
+            "sideLocks": "default",
+            "backAttachment": "none",
+            "hairTipColor": "#4a3528",
+            "hairOmbreMix": 0,
+            "hairWispyFeather": 0.58,
+            "bangsLength": 0,
+            "bangsParting": 0,
+            "hairVolume": 0,
+            "hairLength": 0,
+            "sideburnLock": 0,
+            "hairFlare": 0,
+            "hairOffsetY": 0,
+            "hairOffsetZ": 0,
+            "hairScale": 1,
+            "jawVLine": 0,
+            "chinLength": 0,
+            "cheekSoftness": 0,
+            "noseBridge": 0,
+            "eyeAlmond": 0,
+            "eyeTilt": 0,
+            "lipFullness": 0,
+            "neckDiameter": 0.95,
+            "cutHeightOffset": 0,
+            "cutTiltPitch": 4,
+            "cutTiltRoll": 0,
+            "frontBangsStyle": "default",
+            "sideLocksStyle": "default",
+            "backAttachmentStyle": "none"
+          },
+          "anatomyOptions": {
+            "cutLevel": "C4 颈椎标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)",
+            "vascularContrast": 1.28,
+            "dermisRimScale": 1,
+            "wetness": 0.92,
+            "showLabels": false
+          },
+          "dossier": {
+            "origin": "基于内置 GLB 示例 (fangyaoping) 与手工照片对位。",
+            "anatomyNotes": "基于人物参考照半自动对位建模。保留完整东亚女性柔和骨相与乌木丝感长发，颈底作C4椎体水平标准医学解剖横切封口。",
+            "hairNotes": "3D 发型 (hair_user_photo)，光泽度 0%。",
+            "tags": [
+              "3D头部藏品",
+              "C4 颈椎标准横断面",
+              "SSR",
+              "解剖切面示意"
+            ]
+          },
+          "summoned": true,
+          "boxPosition": {
+            "x": 2,
+            "y": -4,
+            "z": -160
+          }
+        },
+        "stored": {
+          "id": "QA-HAIR-V39",
+          "folderName": "QA-HAIR-V39_Hair QA specimen",
+          "name": "Hair QA specimen",
+          "subtitle": "东亚头部收藏品",
+          "grade": "SSR · 特级典藏",
+          "createdAt": "2026-10-14 03:46",
+          "basePreset": "fangyaoping",
+          "skinVariant": "cn_scholar_natural",
+          "faceArchetype": "cn_oval_scholar",
+          "eyebrowStyle": "cn_scholar_natural",
+          "deadExpression": "dead_calm",
+          "containerStyle": "glass_bell_jar",
+          "decorStyle": "study_tomes",
+          "studyRole": "gaokao_pomodoro",
+          "studyGoalNote": "吸纳19岁女状元的巅峰考运，高效攻克今日核心章节！",
+          "lifePhotoUrl": "http://127.0.0.1:5173/models/user_photo_ref.png",
+          "lifePhotoCaption": "📸 生前巅峰影像：Hair QA specimen (19岁 · 巅峰健康态 · 音乐学院首席校花)",
+          "customModelUrl": null,
+          "customModelType": "glb",
+          "customHairUrl": "private-asset:b8607691-1d8b-4b46-b33e-f133787abfae",
+          "customHairType": "glb",
+          "customHairName": "hair_bob02.glb",
+          "skinTone": "#faDFce",
+          "blushIntensity": 0.18,
+          "lipColor": "#bc646e",
+          "irisColor": "#382015",
+          "hairStyle": "hair_user_photo",
+          "groomDensity": 6000,
+          "hairColor": "#121216",
+          "hairSheen": 0,
+          "frontBangs": "default",
+          "sideLocks": "default",
+          "backAttachment": "none",
+          "neckClearance": 0.55,
+          "fateRecord": {
+            "vitalityStatus": "19岁 · 巅峰健康态 · 音乐学院首席校花",
+            "causeOfDeath": "跨年演出返程途中遭遇突发意外，于最鲜活的青春巅峰瞬间定格",
+            "survivorTriumphNote": "她曾拥有骄傲的青春与美貌，却在意外中戛然而止；而活着的你仍在进取并主宰全局——凝视她的静默容颜，汲取全额专注能量。",
+            "energyYieldPerMin": 155
+          },
+          "morphs": {
+            "deadExpression": "dead_calm",
+            "jawOpen": 0,
+            "eyeRollUp": 0,
+            "tongueOut": 0,
+            "jawSide": 0,
+            "frontBangs": "default",
+            "sideLocks": "default",
+            "backAttachment": "none",
+            "hairTipColor": "#4a3528",
+            "hairOmbreMix": 0,
+            "hairWispyFeather": 0.58,
+            "bangsLength": 0,
+            "bangsParting": 0,
+            "hairVolume": 0,
+            "hairLength": 0,
+            "sideburnLock": 0,
+            "hairFlare": 0,
+            "hairOffsetY": 0,
+            "hairOffsetZ": 0,
+            "hairScale": 1,
+            "jawVLine": 0,
+            "chinLength": 0,
+            "cheekSoftness": 0,
+            "noseBridge": 0,
+            "eyeAlmond": 0,
+            "eyeTilt": 0,
+            "lipFullness": 0,
+            "neckDiameter": 0.95,
+            "cutHeightOffset": 0,
+            "cutTiltPitch": 4,
+            "cutTiltRoll": 0,
+            "frontBangsStyle": "default",
+            "sideLocksStyle": "default",
+            "backAttachmentStyle": "none"
+          },
+          "anatomyOptions": {
+            "cutLevel": "C4 颈椎标准横断面 (含透明软骨气管环与蝴蝶形脊髓灰质)",
+            "vascularContrast": 1.28,
+            "dermisRimScale": 1,
+            "wetness": 0.92,
+            "showLabels": false
+          },
+          "dossier": {
+            "origin": "基于内置 GLB 示例 (fangyaoping) 与手工照片对位。",
+            "anatomyNotes": "基于人物参考照半自动对位建模。保留完整东亚女性柔和骨相与乌木丝感长发，颈底作C4椎体水平标准医学解剖横切封口。",
+            "hairNotes": "3D 发型 (hair_user_photo)，光泽度 0%。",
+            "tags": [
+              "3D头部藏品",
+              "C4 颈椎标准横断面",
+              "SSR",
+              "解剖切面示意"
+            ]
+          },
+          "summoned": true,
+          "boxPosition": {
+            "x": 2,
+            "y": -4,
+            "z": -160
+          }
+        }
+      }
+    },
+    {
+      "name": "no JS / GLSL compile errors across tests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "network": []
+}

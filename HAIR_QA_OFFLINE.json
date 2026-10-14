@@ -1,0 +1,76 @@
+{
+  "url": "file:// standalone",
+  "renderer": "Chromium / SwiftShader",
+  "tests": [
+    {
+      "name": "startup without JS/GLSL errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "zero sheen stored and eliminates built-in specular",
+      "passed": true,
+      "detail": {
+        "saved": 0,
+        "mats": [
+          {
+            "spec": 0,
+            "alpha": 0.12,
+            "transparent": false
+          },
+          {
+            "spec": 0,
+            "alpha": 0.12,
+            "transparent": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "import keeps original PBR and no generated scalp shell",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:ebb0fb8a-a9bb-4d35-8130-a02e15bed78d",
+        "mats": [
+          {
+            "imported": true,
+            "roughness": 0.46
+          }
+        ]
+      }
+    },
+    {
+      "name": "registered collectible persists custom hair reference/type",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:ebb0fb8a-a9bb-4d35-8130-a02e15bed78d",
+        "type": "glb"
+      }
+    },
+    {
+      "name": "reload restores imported hair on desktop pet",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:ebb0fb8a-a9bb-4d35-8130-a02e15bed78d",
+        "exists": true,
+        "petIds": [
+          "QA-HAIR-V39"
+        ],
+        "recordExists": true,
+        "storedExists": true
+      }
+    },
+    {
+      "name": "no JS / GLSL compile errors across tests",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "offline HTML makes no HTTP(S) requests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "network": []
+}

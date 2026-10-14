@@ -580,6 +580,10 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     if (!geo.userData.basePositions) {
       geo.userData.basePositions = Float32Array.from(posAttr.array);
     }
+    const signature = JSON.stringify([bangsLen,bangsPart,hairVol,hairLen,sideburn,hairFlare,hairCurlWave,neckClear,frontBangsStyle,sideLocksStyle]);
+    if (geo.userData.hairShapeSignature === signature) return;
+    geo.userData.hairShapeSignature = signature;
+    if (!geo.userData.baseHairNormals && geo.attributes.normal) geo.userData.baseHairNormals = Float32Array.from(geo.attributes.normal.array);
     const base = geo.userData.basePositions;
     const out = posAttr.array;
     const count = posAttr.count;
@@ -670,6 +674,14 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     }
 
     posAttr.needsUpdate = true;
+    const deformed = out.some((value, i) => Math.abs(value - base[i]) > 1e-8);
+    if (deformed) geo.computeVertexNormals();
+    else if (geo.userData.baseHairNormals && geo.attributes.normal) {
+      geo.attributes.normal.array.set(geo.userData.baseHairNormals);
+      geo.attributes.normal.needsUpdate = true;
+    }
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
   });
 }
 
@@ -1038,33 +1050,6 @@ function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   return baseColor;
 }
 
-function smoothHairCardNormals(geometry) {
-  if (!geometry?.attributes?.position || !geometry?.attributes?.normal || geometry.userData?.normalsSmoothed) return;
-  geometry.userData = geometry.userData || {};
-  geometry.userData.normalsSmoothed = true;
-  const pos = geometry.attributes.position;
-  const norm = geometry.attributes.normal;
-  const hcX = 0.0, hcY = 0.015, hcZ = -0.015;
-  for (let i = 0; i < pos.count; i++) {
-    const rx = pos.getX(i) - hcX;
-    const ry = pos.getY(i) - hcY;
-    const rz = pos.getZ(i) - hcZ;
-    const rLen = Math.hypot(rx, ry, rz) || 1.0;
-    const ox = rx / rLen, oy = ry / rLen, oz = rz / rLen;
-
-    let nx = norm.getX(i), ny = norm.getY(i), nz = norm.getZ(i);
-    if (nx * ox + ny * oy + nz * oz < -0.15) {
-      nx = -nx; ny = -ny; nz = -nz;
-    }
-    const bx = nx * 0.65 + ox * 0.35;
-    const by = ny * 0.65 + oy * 0.35;
-    const bz = nz * 0.65 + oz * 0.35;
-    const bLen = Math.hypot(bx, by, bz) || 1.0;
-    norm.setXYZ(i, bx / bLen, by / bLen, bz / bLen);
-  }
-  norm.needsUpdate = true;
-}
-
 function fitImportedHairScene(scene) {
   const box = new THREE.Box3().setFromObject(scene);
   const size = box.getSize(new THREE.Vector3());
@@ -1120,24 +1105,6 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
       #endif
     `);
 
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <lights_fragment_end>',
-      `#include <lights_fragment_end>
-      #ifdef USE_MAP
-        vec3 viewDir = normalize(vViewPosition);
-        vec3 surfNorm = normalize(normal);
-        vec3 keyLightDir = normalize(vec3(0.32, 0.58, 0.74));
-        float ndotv = clamp(abs(dot(surfNorm, viewDir)), 0.0, 1.0);
-        float fresnelRim = pow(1.0 - ndotv, 3.0) * 0.42;
-        float ndotlKey = smoothstep(-0.20, 0.68, dot(surfNorm, keyLightDir));
-        // Warm golden-amber backlit strand translucency on outer wisps + deep shadow side contrast
-        vec3 rimStrand = fresnelRim * (diffuseColor.rgb * 2.4 + vec3(0.24, 0.14, 0.06)) * (0.35 + 0.85 * ndotlKey);
-        float wrapLight = 0.14 + 0.86 * pow(smoothstep(-0.28, 0.72, dot(surfNorm, keyLightDir)), 1.22);
-        reflectedLight.directDiffuse *= (0.30 + 0.90 * wrapLight);
-        reflectedLight.indirectDiffuse *= (0.24 + 0.76 * wrapLight);
-        reflectedLight.indirectSpecular += rimStrand * smoothstep(0.12, 0.65, diffuseColor.a);
-      #endif`
-    );
   };
 }
 
@@ -1316,6 +1283,8 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     disposeHeadNode(oldHair);
     delete rootGroup.userData.groomStats;
     rootGroup.userData.currentHairStyle = 'none';
+    delete rootGroup.userData.hairStats;
+    delete rootGroup.userData.hairLoadError;
     return null;
   }
 
@@ -1384,7 +1353,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     const displayColor = computeTrueHairDisplayColor(hairColorHex);
     const sheenIntensity = Number(config.hairSheen ?? rootGroup.userData.hairSheen ?? 0.45);
     rootGroup.userData.hairSheen = sheenIntensity;
-    const scalpCap = buildScalpRootShadowCap(modelContainer, displayColor);
+    const scalpCap = config.customHairUrl ? null : buildScalpRootShadowCap(modelContainer, displayColor);
     if (scalpCap) {
       hairGroup.add(scalpCap);
     }
@@ -1445,6 +1414,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
     rootGroup.userData.currentHairStyle = resolvedStyle;
+    delete rootGroup.userData.hairLoadError;
     rootGroup.userData.hairStats = { vertices: totalVerts, triangles: totalTris, style: resolvedStyle };
 
     const mergedMorphs = {
@@ -1459,6 +1429,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     applyHeadMorphsToGroup(rootGroup, mergedMorphs);
     return hairGroup;
   } catch (err) {
+    if (rootGroup.userData.hairRequestSerial === request) rootGroup.userData.hairLoadError = String(err.message || err).slice(0, 180);
     console.warn('Failed to load 3D artist hair model:', hairUrl, err);
     return null;
   }
@@ -1983,6 +1954,13 @@ export async function buildCollectibleHeadNode(config = {}) {
 const photoProjTexCache = new Map();
 function loadPhotoProjectionTexture(url, onLoaded) {
   if (!url || typeof Image === 'undefined') return null;
+  // Default portrait projection must use the same embedded assets as the HUD.
+  // file:// cannot fetch /models/... from the OS filesystem.
+  if (typeof window !== 'undefined') {
+    const photoPath = String(url).replace(/^\.\//, '/');
+    if (photoPath === '/models/fang_yaoping_ref.jpg' && window.__EMBEDDED_FANG_PHOTO__) url = window.__EMBEDDED_FANG_PHOTO__;
+    if (/^\/models\/user_photo_ref\.(jpg|png)$/.test(photoPath) && window.__EMBEDDED_REF_PHOTO__) url = window.__EMBEDDED_REF_PHOTO__;
+  }
   if (photoProjTexCache.has(url)) {
     const cached = photoProjTexCache.get(url);
     if (onLoaded) onLoaded(cached);
