@@ -1,0 +1,280 @@
+{
+  "url": "http://127.0.0.1:5173",
+  "renderer": "Chromium / SwiftShader",
+  "tests": [
+    {
+      "name": "startup without JS/GLSL errors",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "zero sheen stored and eliminates built-in specular",
+      "passed": true,
+      "detail": {
+        "saved": 0,
+        "mats": [
+          {
+            "spec": 0,
+            "alpha": 0.12,
+            "transparent": false
+          },
+          {
+            "spec": 0,
+            "alpha": 0.12,
+            "transparent": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "all catalog hairstyles load/render, no duplicate wisps",
+      "passed": true,
+      "detail": [
+        {
+          "id": "hair_bob01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_user_photo",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_bob02",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_short02",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_asym_short",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_pixie_chic",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_air_bangs_long",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_long01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_hime",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_short04",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_side_long",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_wolf_clavicle",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_curtain_wave",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_hazel_wave",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_wavy_bob",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_glam_wave",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_mermaid_curl",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_french_lazy_roll",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_braid01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_adrienne_updo",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_low_chignon",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_crown_braid",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_ballerina_bun",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "hair_ponytail01",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_twin_buns",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_halfup_princess",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_twin_braids",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        },
+        {
+          "id": "daz_hair_sport_ponytail",
+          "loaded": true,
+          "error": null,
+          "duplicates": 0,
+          "materials": 2
+        }
+      ]
+    },
+    {
+      "name": "zero sheen survives hairstyle replacement",
+      "passed": true,
+      "detail": [
+        0
+      ]
+    },
+    {
+      "name": "edited geometry has updated finite bounds",
+      "passed": true,
+      "detail": true
+    },
+    {
+      "name": "import keeps original PBR and no generated scalp shell",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:f55b5410-1adc-44e8-9ea0-f7d7cab46ac3",
+        "mats": [
+          {
+            "imported": true,
+            "roughness": 0.46
+          }
+        ]
+      }
+    },
+    {
+      "name": "registered collectible persists custom hair reference/type",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:f55b5410-1adc-44e8-9ea0-f7d7cab46ac3",
+        "type": "glb"
+      }
+    },
+    {
+      "name": "reload restores imported hair on desktop pet",
+      "passed": true,
+      "detail": {
+        "url": "private-asset:f55b5410-1adc-44e8-9ea0-f7d7cab46ac3",
+        "exists": true
+      }
+    },
+    {
+      "name": "no JS / GLSL compile errors across tests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "network": []
+}

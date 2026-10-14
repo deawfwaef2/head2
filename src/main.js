@@ -58,6 +58,7 @@ function restoreCollectibles() {
       for (const item of saved) {
         if (!item || typeof item.id !== 'string' || typeof item.name !== 'string') continue;
         if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+        if (item.customHairUrl?.startsWith('blob:')) item.customHairUrl = null;
         const def = byId.get(item.id);
         byId.set(item.id, def ? { ...def, ...item } : item);
       }
@@ -82,6 +83,7 @@ function restoreCollectibles() {
       for (const item of legacy) {
         if (item && typeof item.id === 'string' && !builtinIds.has(item.id)) {
           if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
+          if (item.customHairUrl?.startsWith('blob:')) item.customHairUrl = null;
           defaults.unshift(item);
         }
       }
@@ -182,7 +184,7 @@ const state = {
     hairWispyFeather: 0.58,
     groomDensity: 6000,
     hairColor: '#121216',
-    hairSheen: 0.90,
+    hairSheen: 0.45,
     neckClearance: 0.55,
     photoElement: null,
     photoBlend: 0.0,
@@ -1396,20 +1398,26 @@ function formatAssetQuality(stats) {
 async function refreshStudio3DModel() {
   if (!studioEngine) return;
   await studioEngine.loadOrRebuild(state.studioDraft);
+  const node = studioEngine.headNode;
+  const hStats = node?.userData?.hairStats;
+  const error = node?.userData?.hairLoadError;
   const status = document.getElementById('custom-model-status');
   if (status) {
-    const hStats = studioEngine.headNode?.userData?.hairStats;
-    const resolvedId = resolveRealHairStyle(state.studioDraft.hairStyle);
-    const hCatalog = REAL_HAIR_CATALOG.find(x => x.id === resolvedId);
-    status.textContent = formatAssetQuality(studioEngine.headNode?.userData?.assetStats) + (hStats ? ` · 双通道真发丝：${hStats.vertices.toLocaleString()} 顶点 / ${hStats.triangles.toLocaleString()} 三角面` : '');
-    const groomStatus = document.getElementById('groom-quality-status');
-    if (groomStatus) {
-      groomStatus.textContent = hStats
-        ? `当前 3D 发型：${hCatalog ? hCatalog.label : hStats.style} · ${hStats.vertices.toLocaleString()} 顶点 · ${hStats.triangles.toLocaleString()} 三角面（双通道真Alpha羽毛碎发 + Marschner各向异性光泽 + 9轴实时微调）`
-        : '无发模式（完整检视颅面解剖与颈部切面）';
-    }
-    status.title = '双通道深度预写 + 真Alpha半透明羽毛碎发 + Marschner各向异性微纤维着色器。';
+    status.textContent = formatAssetQuality(node?.userData?.assetStats) +
+      (hStats ? ` · 发型：${Math.round(hStats.triangles).toLocaleString()} 三角面` : '');
+    status.title = '内置资产仅为示例，不等同于照片重建或正版 Daz 商业资产。';
   }
+  const groomStatus = document.getElementById('groom-quality-status');
+  if (groomStatus) groomStatus.textContent = error ? `发型加载失败：${error}。请重新导入原件。` :
+    hStats ? `${state.studioDraft.customHairUrl ? '导入发型 · 保留原 PBR 材质' : '内置发片 · 单层覆盖 / 场景光照'} · ${hStats.vertices.toLocaleString()} 顶点 · ${Math.round(hStats.triangles).toLocaleString()} 三角面。轮廓与照片一致性仍取决于资产。` : '无发模式';
+  const sheen = state.studioDraft.hairSheen ?? 0.45;
+  const sheenInput = document.getElementById('slider-hair-sheen');
+  if (sheenInput) {
+    sheenInput.value = String(sheen);
+    sheenInput.disabled = Boolean(state.studioDraft.customHairUrl);
+    sheenInput.title = state.studioDraft.customHairUrl ? '外部模型保留艺术家材质；请在 Blender 调整其粗糙度。' : '';
+  }
+  document.getElementById('val-hair-sheen').textContent = `${Math.round(sheen * 100)}%`;
   update2DAnatomyInspector();
 }
 
@@ -1444,6 +1452,7 @@ function loadCollectibleIntoStudio(col) {
     customModelType: col.customModelType || 'glb',
     customHairUrl: col.customHairUrl || null,
     customHairType: col.customHairType || 'glb',
+    customHairName: col.customHairName || '',
     skinTone: col.skinTone || '#ffe9df',
     blushIntensity: col.blushIntensity ?? 0.25,
     lipColor: col.lipColor || '#c46470',
@@ -1451,7 +1460,7 @@ function loadCollectibleIntoStudio(col) {
     hairStyle: resolvedHair,
     groomDensity: col.groomDensity || 6000,
     hairColor: col.hairColor || '#121216',
-    hairSheen: col.hairSheen ?? 0.90,
+    hairSheen: col.hairSheen ?? 0.45,
     neckClearance: col.neckClearance ?? 0.45,
     photoElement: null,
     photoBlend: 0.0,
@@ -2589,11 +2598,27 @@ window.addEventListener('DOMContentLoaded', async () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const ext = file.name.toLowerCase().endsWith('.obj') ? 'obj' : 'glb';
-    const blobUrl = URL.createObjectURL(file);
-    state.studioDraft.customHairUrl = blobUrl;
+    let reference;
+    let persistent = true;
+    try { reference = await keepPrivateModel(file); }
+    catch (_) { reference = URL.createObjectURL(file); persistent = false; }
+    state.studioDraft.customHairUrl = reference;
     state.studioDraft.customHairType = ext;
+    state.studioDraft.customHairName = file.name;
+    // Don't silently mix a previous preset's ponytail/bangs into an imported groom.
+    for (const [key, value] of Object.entries({ frontBangs: 'default', sideLocks: 'default', backAttachment: 'none' })) {
+      state.studioDraft[key] = value;
+      state.studioDraft.morphs[key] = value;
+      state.studioDraft.morphs[`${key}Style`] = value;
+    }
+    for (const [id, value] of [['sel-hair-bangs','default'],['sel-hair-sidelocks','default'],['sel-hair-back','none']]) {
+      const element = document.getElementById(id); if (element) element.value = value;
+    }
     await refreshStudio3DModel();
-    showToast(`💇‍♀️ 已导入外部 3D 发型模型「${file.name}」，可用下方 10 轴滑杆实时微调大小与位置！`);
+    const error = studioEngine.headNode?.userData?.hairLoadError;
+    showToast(error ? `发型导入失败：${error}` :
+      `已导入「${file.name}」，保留原材质。${persistent ? '已存入本浏览器私人资产库；保存藏品后可恢复。' : '浏览器存储不可用，仅本次会话有效，请保留原件。'}`);
+
   });
 
   // ==========================================================================
@@ -2785,11 +2810,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  document.querySelectorAll('[data-hair-finish]').forEach(button => {
+    button.addEventListener('click', () => {
+      if (state.studioDraft.customHairUrl) return showToast('外部发型保留艺术家原材质；请在 Blender 修改粗糙度后重新导入。');
+      const slider = document.getElementById('slider-hair-sheen');
+      slider.value = button.dataset.hairFinish;
+      slider.dispatchEvent(new Event('input', { bubbles: true }));
+      studioEngine.wakeRender(1.5, false);
+    });
+  });
+
   document.getElementById('slider-hair-sheen').addEventListener('input', (e) => {
     const v = parseFloat(e.target.value);
     state.studioDraft.hairSheen = v;
     document.getElementById('val-hair-sheen').textContent = `${Math.round(v * 100)}%`;
     updateHairSheen(studioEngine.headNode, v);
+    studioEngine.wakeRender(1.5, false);
   });
 
   document.getElementById('slider-neck-clearance').addEventListener('input', async (e) => {
@@ -2857,6 +2893,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       lifePhotoCaption: `📸 生前巅峰影像：${name} (${vitalityStatus})`,
       customModelUrl: state.studioDraft.customModelUrl,
       customModelType: state.studioDraft.customModelType,
+      customHairUrl: state.studioDraft.customHairUrl,
+      customHairType: state.studioDraft.customHairType,
+      customHairName: state.studioDraft.customHairName,
       skinTone: state.studioDraft.skinTone,
       blushIntensity: state.studioDraft.blushIntensity,
       lipColor: state.studioDraft.lipColor,
@@ -2865,6 +2904,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       groomDensity: state.studioDraft.groomDensity || 6000,
       hairColor: state.studioDraft.hairColor,
       hairSheen: state.studioDraft.hairSheen,
+      frontBangs: state.studioDraft.frontBangs || state.studioDraft.morphs.frontBangs,
+      sideLocks: state.studioDraft.sideLocks || state.studioDraft.morphs.sideLocks,
+      backAttachment: state.studioDraft.backAttachment || state.studioDraft.morphs.backAttachment,
       neckClearance: state.studioDraft.neckClearance,
       fateRecord: {
         vitalityStatus,

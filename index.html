@@ -1381,7 +1381,7 @@
                 </div>
 
                 <div class="preset-photo-row" id="hair-style-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-                  <span>28款真发丝速选:</span>
+                  <span>内置发片示例:</span>
                   <button type="button" class="chip-btn active" data-hair-preset="hair_user_photo">📸 照片同款碎刘海束发</button>
                   <button type="button" class="chip-btn" data-hair-preset="hair_long01">八字中分黑长直</button>
                   <button type="button" class="chip-btn" data-hair-preset="daz_hair_air_bangs_long">清透齐刘海中长发</button>
@@ -1400,6 +1400,22 @@
                   <button type="button" class="chip-btn" data-hair-preset="daz_hair_twin_buns">甜酷高颅顶双丸子</button>
                   <button type="button" class="chip-btn" data-hair-preset="daz_hair_halfup_princess">仙气半扎公主长发</button>
                   <button type="button" class="chip-btn" data-hair-preset="daz_hair_twin_braids">学院风双麻花辫</button>
+                </div>
+
+                <div class="hair-quality-note" style="border:1px solid #357b87;border-radius:10px;padding:12px;margin:10px 0;background:#101f2b;line-height:1.7;font-size:12px;color:#d5e4ed">
+                  <strong>头发校准 · 先看轮廓，再调反光</strong><br>
+                  <span>内置发型是发片示例，并非照片重建。单层透明覆盖去掉了叠加假高光；粗糙轮廓仍需高质量 GLB / 艺术家梳理。</span>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                    <button type="button" class="chip-btn" data-hair-finish="0">消除镜面反光</button>
+                    <button type="button" class="chip-btn" data-hair-finish="0.45">自然柔光</button>
+                    <button type="button" class="chip-btn" data-hair-finish="0.8">轻微丝光</button>
+                  </div>
+                  <details style="margin-top:8px"><summary>如何真正贴近照片？如何保存外部发型？</summary>
+                    ① 使用正面、侧面、后面参考照，在固定光照下对齐发际线、分缝、刘海长度及外轮廓。单张照片看不到后脑结构。<br>
+                    ② 在 Blender 制作/梳理 guide curves，导出带透明纹理的发片 GLB；近景可用适量曲线转网格。OBJ 不含贴图材质，优先 GLB。<br>
+                    ③ GLB 保留艺术家材质（染色/反光请在源文件调整）。资产只存本浏览器；保存藏品保留私人引用，档案 ZIP 不包含模型原件。跨电脑请另外备份原始 GLB。<br>
+                    ④ 先检查正面 / 四分之三 / 侧面 / 后面，再保存与召唤。清理浏览器数据会删除私人资产。
+                  </details>
                 </div>
 
                 <!-- Modular Hair Assembly Studio Block -->
@@ -1539,8 +1555,8 @@
                 </div>
                 <div class="slider-row">
                   <span>发丝反光强度（0 = 消除镜面反光）</span>
-                  <input type="range" id="slider-hair-sheen" min="0.0" max="1.0" step="0.05" value="0.90" />
-                  <span id="val-hair-sheen">90%</span>
+                  <input type="range" id="slider-hair-sheen" min="0.0" max="1.0" step="0.05" value="0.45" />
+                  <span id="val-hair-sheen">45%</span>
                 </div>
                 <div class="slider-row">
                   <span>后发避让解剖断面高度</span>

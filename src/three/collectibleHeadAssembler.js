@@ -580,6 +580,10 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     if (!geo.userData.basePositions) {
       geo.userData.basePositions = Float32Array.from(posAttr.array);
     }
+    const signature = JSON.stringify([bangsLen,bangsPart,hairVol,hairLen,sideburn,hairFlare,hairCurlWave,neckClear,frontBangsStyle,sideLocksStyle]);
+    if (geo.userData.hairShapeSignature === signature) return;
+    geo.userData.hairShapeSignature = signature;
+    if (!geo.userData.baseHairNormals && geo.attributes.normal) geo.userData.baseHairNormals = Float32Array.from(geo.attributes.normal.array);
     const base = geo.userData.basePositions;
     const out = posAttr.array;
     const count = posAttr.count;
@@ -670,6 +674,14 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     }
 
     posAttr.needsUpdate = true;
+    const deformed = out.some((value, i) => Math.abs(value - base[i]) > 1e-8);
+    if (deformed) geo.computeVertexNormals();
+    else if (geo.userData.baseHairNormals && geo.attributes.normal) {
+      geo.attributes.normal.array.set(geo.userData.baseHairNormals);
+      geo.attributes.normal.needsUpdate = true;
+    }
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
   });
 }
 
@@ -1038,33 +1050,6 @@ function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   return baseColor;
 }
 
-function smoothHairCardNormals(geometry) {
-  if (!geometry?.attributes?.position || !geometry?.attributes?.normal || geometry.userData?.normalsSmoothed) return;
-  geometry.userData = geometry.userData || {};
-  geometry.userData.normalsSmoothed = true;
-  const pos = geometry.attributes.position;
-  const norm = geometry.attributes.normal;
-  const hcX = 0.0, hcY = 0.015, hcZ = -0.015;
-  for (let i = 0; i < pos.count; i++) {
-    const rx = pos.getX(i) - hcX;
-    const ry = pos.getY(i) - hcY;
-    const rz = pos.getZ(i) - hcZ;
-    const rLen = Math.hypot(rx, ry, rz) || 1.0;
-    const ox = rx / rLen, oy = ry / rLen, oz = rz / rLen;
-
-    let nx = norm.getX(i), ny = norm.getY(i), nz = norm.getZ(i);
-    if (nx * ox + ny * oy + nz * oz < -0.15) {
-      nx = -nx; ny = -ny; nz = -nz;
-    }
-    const bx = nx * 0.65 + ox * 0.35;
-    const by = ny * 0.65 + oy * 0.35;
-    const bz = nz * 0.65 + oz * 0.35;
-    const bLen = Math.hypot(bx, by, bz) || 1.0;
-    norm.setXYZ(i, bx / bLen, by / bLen, bz / bLen);
-  }
-  norm.needsUpdate = true;
-}
-
 function fitImportedHairScene(scene) {
   const box = new THREE.Box3().setFromObject(scene);
   const size = box.getSize(new THREE.Vector3());
@@ -1297,6 +1282,8 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     disposeHeadNode(oldHair);
     delete rootGroup.userData.groomStats;
     rootGroup.userData.currentHairStyle = 'none';
+    delete rootGroup.userData.hairStats;
+    delete rootGroup.userData.hairLoadError;
     return null;
   }
 
@@ -1365,7 +1352,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     const displayColor = computeTrueHairDisplayColor(hairColorHex);
     const sheenIntensity = Number(config.hairSheen ?? rootGroup.userData.hairSheen ?? 0.45);
     rootGroup.userData.hairSheen = sheenIntensity;
-    const scalpCap = buildScalpRootShadowCap(modelContainer, displayColor);
+    const scalpCap = config.customHairUrl ? null : buildScalpRootShadowCap(modelContainer, displayColor);
     if (scalpCap) {
       hairGroup.add(scalpCap);
     }
@@ -1426,6 +1413,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
     rootGroup.userData.currentHairStyle = resolvedStyle;
+    delete rootGroup.userData.hairLoadError;
     rootGroup.userData.hairStats = { vertices: totalVerts, triangles: totalTris, style: resolvedStyle };
 
     const mergedMorphs = {
@@ -1440,6 +1428,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     applyHeadMorphsToGroup(rootGroup, mergedMorphs);
     return hairGroup;
   } catch (err) {
+    if (rootGroup.userData.hairRequestSerial === request) rootGroup.userData.hairLoadError = String(err.message || err).slice(0, 180);
     console.warn('Failed to load 3D artist hair model:', hairUrl, err);
     return null;
   }

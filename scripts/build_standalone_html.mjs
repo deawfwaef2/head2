@@ -73,7 +73,10 @@ if (fs.existsSync(fangPhotoPath)) {
 const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)}; window.__EMBEDDED_FANG_PHOTO__ = ${JSON.stringify(fangPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw
-  .replace(/<link rel="stylesheet"[^>]*>/g, `<style>\n${cssContent}\n</style>`)
+  // Static HUD images load before JS can resolve the embedded photo registry.
+  .replace(/src="\.?\/models\/fang_yaoping_ref\.jpg"/g, () => `src="${fangPhotoDataUri}"`)
+  .replace(/src="\.?\/models\/user_photo_ref\.(jpg|png)"/g, () => `src="${refPhotoDataUri}"`)
+  .replace(/<link rel="stylesheet"[^>]*>/g, () => `<style>\n${cssContent}\n</style>`)
   .replace(/<script type="module"[^>]*src="[^"]+"[^>]*><\/script>/g, () => {
     return `${embeddedModelsScript}\n<script type="module">\n${jsContent}\n</script>`;
   });
