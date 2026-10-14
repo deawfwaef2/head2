@@ -958,48 +958,48 @@ export const EYEBROW_STYLE_CATALOG = [
 export const STUDY_ROLE_CATALOG = [
   {
     id: 'gaokao_pomodoro',
-    shortLabel: '🎓 状元首级伴读',
-    label: '🎓 状元首级 · 25分钟夺魁番茄钟督学 (状元考运掠夺 x1.6)',
+    shortLabel: '🎓 沉浸番茄钟伴读',
+    label: '🎓 沉浸番茄钟 · 25分钟静心冲刺伴读 (专注积分 x1.6)',
     buffMultiplier: 1.6,
     energyBurst: 320,
-    desc: '把19岁高考女状元方尧平的头颅摆在试卷旁，开启25分钟高强度冲刺，掠夺她来不及享用的状元气运',
-    triggerMsg: '🎓【状元首级督学已启动】生前甩开全县几十分的19岁女状元方尧平，如今脖子以下空空如也，只能乖乖立在你的草稿纸旁替你镇纸——她没命去读的顶尖名校，现在轮到活着的你提笔接管！'
+    desc: '把这颗静默的标本头颅摆在书本或屏幕旁，开启25分钟无干扰冲刺，享受活人不断进化的优越感',
+    triggerMsg: '🎓【沉浸番茄钟已启动】不论生前多么顺风顺水、心高气傲，如今这颗头颅脖子以下空空如也，只能安静立在你的草稿纸旁当镇纸——她已经没有明天了，而活着的你每多学一分钟都在向前翻盘！'
   },
   {
     id: 'survivor_motivator',
-    shortLabel: '👑 幸存者恶趣味',
-    label: '👑 幸存者加冕 · 把玩天骄首级破除倦怠 (困意清零 +280 PTS)',
-    buffMultiplier: 1.35,
+    shortLabel: '😮‍💨 受挫泄压·优越感',
+    label: '😮‍💨 受挫泄压 · 现实不如意时看头找回优越感 (憋屈清零 +280 PTS)',
+    buffMultiplier: 1.45,
     energyBurst: 280,
-    desc: '刷题犯困时低头看看桌角那颗死在19岁最美年华的头颅，用极致反差的幸存快感瞬间清醒',
-    triggerMsg: '👑【幸存者愉悦脉冲】她生前连琴弦蹭破指尖都要娇气半天，如今整颗脑袋从第四颈椎齐根断下，端端正正摆在你书桌上当摆件——她永远停在19岁了，而你还活着，困意清零，继续屠榜！'
+    desc: '现实里受委屈或被人嘲笑时，低头看看并把玩桌角这颗失去躯干的静默头颅，瞬间找回活人上位者的平静与快感',
+    triggerMsg: '😮‍💨【活人优越感已拉满】外面有人嘲笑你、看轻你又怎样？看看你书桌上的这颗头——再精致高傲的脸，如今也只是一件不会说话、任由你扒眼皮捏脸颊的静默藏品。在死物面前你永远是绝对的赢家，深呼吸，专心看书！'
   },
   {
     id: 'sprint_invigilator',
-    shortLabel: '⏱️ 冷艳死人监考',
-    label: '⏱️ 死眼盯梢 · 高傲学姐的凝固视线监考 (专注连击倍率 x2.0)',
+    shortLabel: '⏱️ 凝固视线监考',
+    label: '⏱️ 凝固视线 · 静默标本盯梢防走神 (专注连击倍率 x2.0)',
     buffMultiplier: 2.0,
     energyBurst: 260,
-    desc: '让生前目中无人的常春藤天骄用那双再也不会眨动的死鱼眼盯着你刷题，连击收益翻倍 (x2.0)',
-    triggerMsg: '⏱️【死眼监考已锁定】生前面试刷掉无数人的高傲学姐林汐，现在连眼皮都没法合上，只能用冰冷凝固的瞳孔直勾勾盯着你的笔尖——敢在她死不瞑目的注视下走神？双倍连击已开启！'
+    desc: '让这颗再也不会眨眼、不会开口评判你的标本头颅静静陪坐桌前，进入零走神深度学习状态 (x2.0)',
+    triggerMsg: '⏱️【静默监考已锁定】这双曾经或许挑剔傲慢的眼睛，如今连眼皮都没法自己合上，只能顺从地停留在你设定的角度陪你读书——享受这份彻底的掌控感，把眼前这一节一口气拿下！'
   },
   {
     id: 'memory_anchor',
-    shortLabel: '📖 断颈镇纸伴读',
-    label: '📖 断颈镇纸 · 将难背考点压在她颈口断面下 (绑定攻克目标)',
+    shortLabel: '📖 断颈镇纸死磕',
+    label: '📖 断颈镇纸 · 将难啃章节压在C4断面下死磕 (攻克加成 x1.4)',
     buffMultiplier: 1.4,
     energyBurst: 240,
-    desc: '把今天最难啃的知识点压在名门千金冰凉的C4颈部切口下面，背不完绝不把她挪开',
-    triggerMsg: '📖【断颈镇纸已生效】古籍世家千金苏晚微张着失神的双唇被你压在复习资料正上方，切口暗红的凝血刚好贴着你的重点划线——今天不把这章啃下来，她就一直这么看着你！'
+    desc: '把今天最难背的知识点或最烦的任务压在冰凉的C4解剖断面下，攻克完再抬头把玩犒劳自己',
+    triggerMsg: '📖【断颈镇纸已生效】温顺静默的头颅被你安放在复习资料旁，平滑的C4断面时刻提醒着你：唯有活着的你拥有掌握知识、改写处境的权力！'
   },
   {
     id: 'brain_siphon',
-    shortLabel: '⚡ 首席脑髓虹吸',
-    label: '⚡ 脑髓虹吸 · 榨取法学院首席学姐的残留才思 (被动加速 x1.75)',
+    shortLabel: '⚡ 深夜逆袭超频',
+    label: '⚡ 深夜逆袭 · 独处书房的绝对主宰心流 (被动加速 x1.75)',
     buffMultiplier: 1.75,
     energyBurst: 350,
-    desc: '一边听窗外夜雨，一边将几颗天之骄女头颅生前攒下的记忆与逻辑尽数吸进自己脑海',
-    triggerMsg: '⚡【首席脑髓虹吸全开】她苦读二十三年修成法学院第一名，最后却连脖子都没保住，便宜了书桌前活生生的你——满桌首级的未竟才华正源源不断涌入你的思绪！'
+    desc: '一边听窗外夜雨，一边在完全受你掌控的私人标本展台前静心苦读，把外界杂音彻底隔绝在外',
+    triggerMsg: '⚡【深夜主宰心流全开】窗外细雨绵绵，书房里没有任何人能评判或打扰你。桌上的头颅乖乖低眉俯首陪你坐冷板凳——今晚你写下的每一行字，都是你翻盘的底气！'
   }
 ];
 
@@ -1007,9 +1007,9 @@ export const DEFAULT_COLLECTIBLES = [
   {
     id: 'SPEC-2026-FYP',
     folderName: 'SPEC-2026-FYP_FangYaoping',
-    name: '方尧平 · 19岁怀集高考女状元首级',
-    subtitle: '广东怀集十九岁理科女状元 · 校服领口上的断头学神 · 考前押题镇纸首选',
-    grade: 'UR · 状元首级孤品',
+    name: '方尧平 · 清冷学神预设模板',
+    subtitle: '【预设反差模板·可自由改名/换人设】昔日顺风顺水的满分优等生 · 如今案头静默伴读的断头镇纸',
+    grade: 'UR · 预设模板 #01',
     basePreset: 'fangyaoping',
     faceArchetype: 'cn_oval_scholar',
     skinVariant: 'cn_scholar_natural',
@@ -1017,9 +1017,9 @@ export const DEFAULT_COLLECTIBLES = [
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/fang_yaoping_ref.jpg',
-    lifePhotoCaption: '📸 生前最后留影：19岁广东怀集高考女状元方尧平（放榜那天在母校紫荆树下抿嘴浅笑，当时她还以为自己有大把光阴可以挥霍）',
+    lifePhotoCaption: '📸 生前对照留影（预设示例）：昔日春风得意、前途无量的清秀优等生，如今时间已永久停格在你的书桌上',
     studyRole: 'gaokao_pomodoro',
-    studyGoalNote: '方尧平正安静立在你的练习册旁：她考了全县第一都没命去读，你还不好好刷完这套题？',
+    studyGoalNote: '生前再耀眼的成绩与光环皆已归零；而正在翻书学习的你，每一分钟都在实打实地向前超车。',
     skinTone: '#fadfd0',
     blushIntensity: 0.18,
     lipColor: '#c47478',
@@ -1044,9 +1044,9 @@ export const DEFAULT_COLLECTIBLES = [
     summoned: true,
     boxPosition: { x: -34, y: 2, z: -175 },
     fateRecord: {
-      vitalityStatus: '享年19岁 · 广东怀集高考女状元 · 躯干已遗失，仅存头颅',
-      causeOfDeath: '刚拿到顶尖名校录取通知书的那个暑假，在庆功夜归途中发生惨烈车祸，纤细的脖颈被护栏齐根切断，十九岁状元人生当场交卷',
-      survivorTriumphNote: '高三三年她永远是贴在年级光荣榜最顶端的名字，连走路都带着学神的骄矜；谁能想到录取通知书还没捂热，她那颗装满满分答题套路的聪明脑袋，就已经端端正正摆在你的雨夜书桌上了。现在你可以随时拎起她的空气刘海，把她压在你的错题本上当镇纸——毕竟状元已经死透了，而活着的你每多做对一道题，都是在替她享用原本属于她的人生。',
+      vitalityStatus: '【生前顺遂优等生 vs 案头静默镇纸】可点击标牌文字任意修改为你想投射的人设',
+      causeOfDeath: '在最顺风顺水的年纪因突发意外齐颈截断，一切骄傲与未来当场归零，化作书房里的静默藏品',
+      survivorTriumphNote: '现实里总有顺风顺水、让人感到压力的同龄人或竞争者；但在你的书桌上，这颗头颅不会说话、没有明天，连眼皮睁合与低头角度都任由你用鼠标摆布。看着她安静陪读的样子，享受身为活人的绝对优越感，安心读完眼前这一页书。',
       energyYieldPerMin: 200
     },
     morphs: {
@@ -1138,9 +1138,9 @@ export const DEFAULT_COLLECTIBLES = [
   {
     id: 'SPEC-2026-000',
     folderName: 'SPEC-2026-000_UserPhoto',
-    name: '初夏 · 19岁音乐系竖琴校花首级',
-    subtitle: '音乐学院十九岁首席甜妹 · 蜜桃水光肌配栗棕内扣波波头 · 最适合捧在掌心把玩的娇气包',
-    grade: 'UR · 甜妹首级孤品',
+    name: '初夏 · 骄矜甜妹预设模板',
+    subtitle: '【预设反差模板·可自由改名/换人设】昔日众星捧月的温室娇女 · 如今任你捏脸把玩的案头藏品',
+    grade: 'UR · 预设模板 #02',
     basePreset: 'user_photo',
     faceArchetype: 'cn_round_babyface',
     skinVariant: 'kr_dewy_peach',
@@ -1148,9 +1148,9 @@ export const DEFAULT_COLLECTIBLES = [
     deadExpression: 'dead_calm',
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/chuxia_life_ref.jpg',
-    lifePhotoCaption: '📸 生前最后留影：19岁音乐学院竖琴首席初夏（演出后台身穿粉色针织衫抚琴甜笑的抓拍，半小时后她就彻底失去了身体）',
+    lifePhotoCaption: '📸 生前对照留影（预设示例）：昔日被宠坏、从不知人间疾苦的甜美面容，如今只剩一颗安静陪读的头颅',
     studyRole: 'survivor_motivator',
-    studyGoalNote: '初夏就搁在你手边：生前追她的人排到校门口，现在整颗脑袋只属于你的书桌。',
+    studyGoalNote: '生前再娇生惯养、心高气傲，如今也只是一颗静默无声、任你捏脸扒眼皮的桌面藏品。',
     skinTone: '#fff0eb',
     blushIntensity: 0.42,
     lipColor: '#e65a74',
@@ -1175,9 +1175,9 @@ export const DEFAULT_COLLECTIBLES = [
     summoned: true,
     boxPosition: { x: -14, y: -2, z: -160 },
     fateRecord: {
-      vitalityStatus: '享年19岁 · 音乐学院竖琴系首席校花 · 颈部C4完全离断',
-      causeOfDeath: '跨年独奏会谢幕当晚，搭载她的保姆车在盘山公路坠崖，车窗钢化玻璃如断头台般瞬间削过她纤细的脖颈',
-      survivorTriumphNote: '生前她是整个音乐学院最娇生惯养的小公主，练琴手指磨出一点水泡都要发朋友圈抱怨半天，追求者送的鲜花堆满琴房；可现在呢？她连一根手指头都不剩了，只剩这颗梳着栗棕内扣波波头、带着甜美梨涡的漂亮脑袋，任由你在书桌上推来滚去、或是塞进容器里封存。每当你背书背到烦躁，捏一捏她冰凉柔软的婴儿肥脸蛋，想想她已经永远停在19岁那个雨夜，还有什么比“活着”更爽的事？',
+      vitalityStatus: '【生前温室娇女 vs 案头静默摆件】可点击标牌文字任意修改为你想投射的人设',
+      causeOfDeath: '在最受宠的年纪因突发意外颈部C4完全离断，失去躯干与明日，定格为案头标本',
+      survivorTriumphNote: '现实中有人生来顺遂、眼高于顶，从不理解普通人的辛苦；但在你的书桌上，这颗梳着波波头、带着婴儿肥的漂亮脑袋已经彻底出局。每当你学习累了或心里憋屈，直接用鼠标捏一捏她的脸蛋、扒开她的眼皮——还有什么比“我还活着、还能往前走”更有优越感的事？',
       energyYieldPerMin: 150
     },
     morphs: {
@@ -1269,9 +1269,9 @@ export const DEFAULT_COLLECTIBLES = [
   {
     id: 'SPEC-2026-001',
     folderName: 'SPEC-2026-001_LinXi',
-    name: '林汐 · 21岁高傲常春藤女投行家首级',
-    subtitle: '华尔街最年轻常春藤女分析师 · 冷白皮灰蓝凤眼 · 昔日高岭之花如今任人摆布',
-    grade: 'SSR · 高岭之花首级',
+    name: '林汐 · 傲慢精英预设模板',
+    subtitle: '【预设反差模板·可自由改名/换人设】昔日爱用鼻孔看人的冷傲精英 · 如今彻底闭嘴出局的案头标本',
+    grade: 'SSR · 预设模板 #03',
     basePreset: 'linxi',
     faceArchetype: 'kr_idol_vline',
     skinVariant: 'kr_chaebol_cool',
@@ -1280,9 +1280,9 @@ export const DEFAULT_COLLECTIBLES = [
     modelUrl: '/models/daz_asian_head_base.glb',
     lifePhotoUrl: '/models/linxi_life_ref.jpg',
     lifePhotoPreset: 'linxi',
-    lifePhotoCaption: '📸 生前最后留影：21岁华尔街投行天才分析师林汐（生前在苏黎世私人停机坪前的冷傲抓拍，左眼尾泪痣带着惯有的轻蔑）',
+    lifePhotoCaption: '📸 生前对照留影（预设示例）：昔日趾高气扬、习惯轻视旁人的冷傲神态，如今只能在你的桌面托盘里静默低眉',
     studyRole: 'sprint_invigilator',
-    studyGoalNote: '林汐那双生前瞧不起平庸者的冷眼正盯着你：用实力证明活人永远比死人强！',
+    studyGoalNote: '生前再喜欢评头论足、嘲笑别人，如今也已彻底失去声音；唯有活着的你拥有改写明天的全部主权。',
     skinTone: '#f4edf8',
     blushIntensity: 0.16,
     lipColor: '#962c48',
@@ -1306,9 +1306,9 @@ export const DEFAULT_COLLECTIBLES = [
     summoned: true,
     boxPosition: { x: 34, y: 2, z: -175 },
     fateRecord: {
-      vitalityStatus: '享年21岁 · 常春藤盟校满分毕业生 · 旋翼齐颈斩断',
-      causeOfDeath: '瑞士阿尔卑斯山私人直升机滑雪途中遭遇狂风迫降，失控断裂的碳纤维旋翼残片直接掠过机舱，将她高昂的头颅瞬间斩落雪地',
-      survivorTriumphNote: '生前她拿着百万年薪，习惯了用带泪痣的左眼居高临下地审视每一份不够完美的简历，连说话都不屑于多给旁人一个眼神。可惜旋翼掠过脖子的那一秒，她所有的傲慢都被永远焊死在了脸上。现在她连下巴都抬不起来，只能靠颈部血淋淋的切面立在你的胡桃木桌垫上，被你随意塞进福尔马林缸或解剖浅盘里——去享受这种把昔日天骄踩在脚下读书的快感吧。',
+      vitalityStatus: '【生前傲慢嘲讽者 vs 案头禁言标本】可点击标牌文字任意修改为你想投射的人设',
+      causeOfDeath: '因突发意外齐颈截断，一切高高在上的姿态与轻蔑眼神当场定格，沦为静默展品',
+      survivorTriumphNote: '现实生活不如意、被人轻视或嘲笑时，看看书桌上的这颗头——她生前再挑剔傲慢，如今连下巴都抬不起来，只能靠颈部平滑切面立在你的桌垫上陪你学习。去享受这种把一切傲慢踩在脚下、安心专注提升自己的绝对快感吧。',
       energyYieldPerMin: 165
     },
     morphs: {

@@ -79,19 +79,19 @@
         <button type="button" id="btn-close-hover-dossier" class="chip-btn" style="padding:1px 6px;font-size:11px;line-height:1.2;pointer-events:auto;cursor:pointer;" title="关闭悬浮详情卡 (Esc)">✕</button>
       </div>
     </div>
-    <div class="dossier-title" id="hud-name">方尧平 · 广东怀集19岁高考女状元标本</div>
-    <div class="dossier-subtitle" id="hud-subtitle">齐刘海清爽学霸束发 · 十九岁校园巅峰状元骨相</div>
+    <div class="dossier-title" id="hud-name">方尧平 · 优绩标杆预设模板</div>
+    <div class="dossier-subtitle" id="hud-subtitle">【预设反差模板·可自由改名/换人设】昔日风光无限的天之骄女 · 如今静默陪读的案头藏品</div>
 
-    <!-- Stage 24: In-Life Photo ("生前照片") & Character-Bound Study Role ("角色绑定伴学职能") -->
+    <!-- Stage 24/57: In-Life Photo ("生前对照留影") & Universal Study Companion Role -->
     <div class="dossier-life-photo-box" id="hud-life-photo-box">
       <div class="dossier-life-photo-frame">
-        <img id="hud-life-photo-img" src="/models/fang_yaoping_ref.jpg" alt="角色生前鲜活照片" />
-        <span class="life-photo-tag">📸 生前鲜活照片</span>
+        <img id="hud-life-photo-img" src="/models/fang_yaoping_ref.jpg" alt="角色生前对照照片" />
+        <span class="life-photo-tag">📸 生前对照留影</span>
       </div>
       <div class="dossier-life-role-col">
-        <div class="dossier-role-badge" id="hud-study-role-badge">🎓 状元气运 · 25分钟番茄钟督学官</div>
-        <div class="dossier-role-goal" id="hud-study-goal-note">今日状元督学目标：吸纳19岁女状元方尧平的巅峰考运，高效拿下一套核心真题！</div>
-        <div class="dossier-life-caption" id="hud-life-photo-caption">📸 生前巅峰影像：19岁广东怀集高考女状元方尧平（生前健康阳光、独占鳌头）</div>
+        <div class="dossier-role-badge" id="hud-study-role-badge">🎓 静默伴读 · 25分钟番茄钟督学官</div>
+        <div class="dossier-role-goal" id="hud-study-goal-note">她的时间已永久停格在断面之上；而活着的你每翻开一页书，都在改写自己的明天。</div>
+        <div class="dossier-life-caption" id="hud-life-photo-caption">📸 生前对照留影（预设示例）：昔日春风得意、备受追捧的年轻面容，如今只是一颗安静伴读的桌面藏品</div>
       </div>
     </div>
 
@@ -101,8 +101,8 @@
       <span>景深 Z: <strong id="hud-pos-z">-120</strong>mm</span>
     </div>
     <div class="dossier-section" id="hud-fate-section">
-      <div class="dossier-label">💀 生前骄矜身份 & 断头结局恶趣味反差</div>
-      <div class="dossier-text" id="hud-fate-vitality" style="color:#fcd34d;font-weight:600;">享年19岁 · 广东怀集高考女状元</div>
+      <div class="dossier-label">👑 生前光鲜反差 & 活人支配主权（可自由改名/换人设）</div>
+      <div class="dossier-text" id="hud-fate-vitality" style="color:#fcd34d;font-weight:600;">【预设模板】可点击标牌文字任意修改为你想投射的人设</div>
       <div class="dossier-subtext" id="hud-fate-cause" style="color:#fda4af;margin-top:2px;"></div>
       <div class="dossier-subtext" id="hud-fate-triumph" style="color:#a7f3d0;margin-top:4px;font-style:italic;"></div>
     </div>
@@ -178,6 +178,36 @@
       <button id="btn-quick-gravity" class="overlay-btn active-top" title="切换物理重力落地系统">
         ⚓ 重力: 开
       </button>
+      <div id="desktop-tactile-mode-bar" style="display:inline-flex;align-items:center;gap:4px;background:rgba(15,23,42,0.85);border:1px solid rgba(251,191,36,0.55);border-radius:9px;padding:2px 5px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#fcd34d;font-weight:700;padding:0 3px;">🎮 鼠标把玩:</span>
+        <button type="button" class="overlay-btn active-top" data-tactile-mode="move" style="padding:3px 7px;font-size:11.5px;" title="默认模式：拖拽桌面3D头颅放入钟罩/托盘，或单击头颅360°旋转（按住Shift拖拽面部可直接捏脸）">
+          🖐️ 拎头/旋转
+        </button>
+        <button type="button" class="overlay-btn" data-tactile-mode="pinch_face" style="padding:3px 7px;font-size:11.5px;border-color:rgba(244,114,182,0.55);color:#fbcfe8;" title="直接在桌面3D头颅上用鼠标拖拽：扒开/合拢眼皮、掰开下巴双唇、提拉嘴角、捏鼻头、揉捏脸颊与下颌线！">
+          🤏 捏脸/扒眼/掰嘴
+        </button>
+        <button type="button" class="overlay-btn" data-tactile-mode="roll_eyeball" style="padding:3px 7px;font-size:11.5px;border-color:rgba(56,189,248,0.55);color:#bae6fd;" title="直接在桌面3D头颅眼部上下拖拽【拨动死人眼球上翻白眼/下垂】，左右拖拽【放大/缩小涣散瞳孔】，或单击切换5种失焦瞳孔态！">
+          👁️ 拨眼球/瞳孔
+        </button>
+        <button type="button" class="overlay-btn" data-tactile-mode="groom_hair" style="padding:3px 7px;font-size:11.5px;border-color:rgba(192,132,252,0.55);color:#e9d5ff;" title="直接在桌面3D头颅发顶点击或上提【抓着头发拎起4.5kg头颅悬空掂量再重重砸落桌面】，左右拖拽【拨开颈侧碎发露出C4断面】！">
+          🪮 拎发/拨碎发
+        </button>
+        <button type="button" class="overlay-btn" data-tactile-mode="bow_gaze" style="padding:3px 7px;font-size:11.5px;border-color:rgba(251,191,36,0.55);color:#fde68a;" title="直接在桌面3D头颅上点击或拖拽：按压成【低眉顺眼俯首态】、【歪头贴桌当镇纸态】或【抬颏仰视伴读态】！">
+          🙇‍♀️ 俯首/歪头镇纸
+        </button>
+        <button type="button" class="overlay-btn" data-tactile-mode="paint_fluid" style="padding:3px 7px;font-size:11.5px;border-color:rgba(251,113,133,0.55);color:#fda4af;" title="直接在桌面3D头颅上点击或涂抹：点眼部流清泪/猩红血泪、点鼻孔涌鼻血、点嘴角溢血、揉脸颊充血潮红、点断口涂鲜血！">
+          🩸 点涂泪痕/充血
+        </button>
+        <button type="button" id="btn-desktop-superiority-pulse" class="overlay-btn" style="padding:3px 8px;font-size:11.5px;background:linear-gradient(135deg,rgba(217,119,6,0.38),rgba(190,24,93,0.38));border-color:#fbbf24;color:#fef08a;font-weight:800;" title="现实生活不如意或被人嘲笑时点一下：让桌上所有3D头颅向你齐刷俯首低眉，释放憋屈找回活人优越感并开启×1.40专心学习加成！">
+          😮‍💨 受挫泄压·优越感
+        </button>
+        <button type="button" id="btn-open-comfort-reader" class="overlay-btn" style="padding:3px 9px;font-size:11.5px;background:linear-gradient(135deg,rgba(139,92,246,0.42),rgba(236,72,153,0.42));border-color:#f472b6;color:#fdf2f8;font-weight:800;box-shadow:0 0 12px rgba(244,114,182,0.35);" title="每次难受、不舒服、被嘲笑、自卑或学不进去时随时点开看：收录6大情境共28篇深度【活人优越感·宽心手札】与随手翻牌强心针，边看边联动桌上3D头颅配合动作！">
+          📖 难受点开看·宽心手札
+        </button>
+        <button type="button" id="btn-desktop-lookdown-view" class="overlay-btn" style="padding:3px 7px;font-size:11.5px;border-color:rgba(167,243,208,0.55);color:#a7f3d0;" title="一键切换【居高临下俯视视角】：抬高镜头从高处俯视案头的断头藏品，让她们在桌角仰望或低眉，拉满上位者主宰感！">
+          👣 居高临下俯视
+        </button>
+      </div>
       <button id="btn-toggle-window" class="overlay-btn" title="隐藏或展开软件主窗口，直接欣赏电脑屏幕上的3D头部桌宠">
         🗕 隐藏工坊面板
       </button>
@@ -253,12 +283,12 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
       <div style="flex:1;min-width:260px;">
         <div style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:#fca5a5;">
-          <span>🚨【方尧平·防挂机活人专注巡检】</span>
+          <span>🚨【防挂机·活人专注在线签到奖励】</span>
           <span id="hb-countdown-badge" style="background:#dc2626;color:#fff;padding:2px 9px;border-radius:999px;font-family:monospace;font-size:14px;">25s</span>
         </div>
         <div style="font-size:12px;color:#fecaca;margin-top:4px;line-height:1.45;">
-          请在倒计时归零前<strong>点击下方确认按钮</strong>（或直接点击屏幕上<strong>方尧平的头颅/标牌</strong>）证明你在电脑前真实专注！<br/>
-          <span id="hb-penalty-desc" style="color:#fde047;font-weight:600;">⚠️ 逾期未点将判定挂机作弊：直接扣完/清零本月专注分！</span>
+          请在倒计时归零前<strong>点击下方确认按钮</strong>（或直接点击桌面上<strong>任意标本头颅/标牌</strong>）证明你在电脑前真实专注！<br/>
+          <span id="hb-penalty-desc" style="color:#fde047;font-weight:600;">✨ 点击立即获得 +150 PTS 专注暴击分（未点击将自动安全暂停计时，零扣分）！</span>
         </div>
       </div>
       <button type="button" id="btn-confirm-heartbeat-now" style="background:linear-gradient(135deg,#22c55e,#16a34a);border:2px solid #bbf7d0;color:#fff;font-weight:800;font-size:13.5px;padding:10px 18px;border-radius:10px;cursor:pointer;box-shadow:0 0 20px rgba(34,197,94,0.6);white-space:nowrap;">
@@ -273,28 +303,83 @@
   <div id="dopamine-floating-popups" style="position:fixed;inset:0;z-index:9880;pointer-events:none;overflow:hidden;"></div>
 
   <!-- =========================================================================
-       STAGE 54: SPECIMEN IDLE TAUNT & DIVIDEND BLEED PROVOCATION BANNER (z-index: 9780)
-       ("更多不爽：死人反向毒舌嘲讽 + 月底分红被别人抢走警报 -> 逼玩家立刻拍头镇压反击！")
+       STAGE 55/57/58: DIRECT 3D DESKTOP TACTILE SCULPTING & SUPERIORITY LIVE HUD TOAST (z-index: 9780)
+       Positioned at top-left-center below the control bar so it NEVER overlaps bottom placards or the right-hand Comfort Reader!
        ========================================================================= -->
-  <div id="specimen-provocation-banner" class="hidden" style="position:fixed;bottom:78px;left:50%;transform:translateX(-50%);z-index:9780;width:min(680px,94vw);background:linear-gradient(135deg,rgba(45,10,28,0.97),rgba(18,8,14,0.98));border:2px solid #f43f5e;border-radius:14px;padding:13px 18px;box-shadow:0 16px 46px rgba(244,63,94,0.55),0 0 24px rgba(225,29,72,0.38);color:#ffe4e6;pointer-events:auto;backdrop-filter:blur(12px);">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-      <div style="flex:1;min-width:270px;">
-        <div style="display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:#fda4af;">
-          <span id="taunt-speaker-name">💀【死人反向嘲讽 · 方尧平 (19岁高考女状元)】</span>
-          <span id="taunt-bleed-badge" style="background:rgba(225,29,72,0.45);border:1px solid #fb7185;color:#fecdd3;padding:1px 8px;border-radius:999px;font-size:11.5px;">💸 摸鱼失血 -35 PTS (分红被抢 ¥1.85)</span>
+  <div id="tactile-sculpt-hud-toast" class="hidden" style="position:fixed;top:118px;left:32%;transform:translateX(-50%);z-index:9780;width:min(580px,56vw);background:linear-gradient(135deg,rgba(15,23,42,0.94),rgba(28,16,32,0.96));border:1.5px solid rgba(251,191,36,0.65);border-radius:12px;padding:10px 16px;box-shadow:0 12px 36px rgba(0,0,0,0.65),0 0 20px rgba(245,158,11,0.28);color:#fef3c7;pointer-events:none;backdrop-filter:blur(10px);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="font-size:13px;font-weight:800;color:#fde68a;" id="tactile-toast-title">
+        🤏 桌面 3D 直接上手把玩中 · 静默标本
+      </div>
+      <span id="tactile-toast-pts" style="background:rgba(245,158,11,0.28);border:1px solid #fbbf24;color:#fef08a;padding:1px 9px;border-radius:999px;font-size:11.5px;font-weight:800;">+15 PTS ✨</span>
+    </div>
+    <div id="tactile-toast-desc" style="font-size:11.5px;color:#e2e8f0;margin-top:4px;line-height:1.45;">
+      【静默标本 · 任由摆布】直接在桌面 3D 头颅上用鼠标拖拽即可扒开/合拢眼皮、掰开双唇下巴、按头俯首或点涂泪痕鼻血。
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       STAGE 58: NON-BLOCKING COMFORT & LIVING SUPERIORITY HANDBOOK DRAWER (z-index: 9700)
+       ("继续各种和头的互动，然后你多来一些文本，比如说每次难受不舒服的时候玩家可以点开看")
+       Positioned on the right side so the player can read while watching & touching the 3D desktop heads!
+       ========================================================================= -->
+  <div id="comfort-reader-drawer" class="hidden" style="position:fixed;top:118px;right:16px;z-index:9700;width:min(485px,92vw);max-height:calc(100vh - 182px);display:flex;flex-direction:column;background:linear-gradient(160deg,rgba(16,13,24,0.96),rgba(26,15,28,0.97));border:1.5px solid rgba(244,114,182,0.68);border-radius:15px;box-shadow:0 20px 55px rgba(0,0,0,0.85),0 0 28px rgba(236,72,153,0.28);color:#fdf2f8;backdrop-filter:blur(14px);overflow:hidden;pointer-events:auto;">
+    <!-- Header -->
+    <div id="comfort-reader-drag-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(90deg,rgba(131,24,67,0.65),rgba(49,46,129,0.65));border-bottom:1px solid rgba(244,114,182,0.35);cursor:move;">
+      <div>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span style="font-size:14.5px;font-weight:800;color:#fbcfe8;">📖 难受不舒服时点开看 · 活人优越宽心手札</span>
+          <span style="font-size:10.5px;background:rgba(244,114,182,0.25);border:1px solid rgba(244,114,182,0.55);color:#fce7f3;padding:1px 7px;border-radius:999px;">28篇长文+随手翻牌</span>
         </div>
-        <div id="taunt-quote-body" style="font-size:12px;color:#fef2f2;margin-top:5px;line-height:1.45;font-style:italic;">
-          “我19岁出事那晚，手里已经攥着清北保送通知书了。你四肢健全比我多活这么多年，连25分钟专注都坐不住？对着我一颗死人头你都赢不了自己，真不嫌丢人？”
+        <div style="font-size:11px;color:#e2e8f0;margin-top:2px;opacity:0.9;">
+          💡 停靠右侧不挡视线 · 边看桌上的3D断头藏品边读，一键让头颅配合做出俯首/扒眼/拎发动作
         </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <button type="button" id="btn-taunt-slap-counter" style="background:linear-gradient(135deg,#f59e0b,#dc2626);border:1.5px solid #fef08a;color:#fff;font-weight:800;font-size:12.5px;padding:9px 14px;border-radius:9px;cursor:pointer;box-shadow:0 0 18px rgba(245,158,11,0.55);white-space:nowrap;">
-          👋 屈辱弹脑门镇压她！(+90 PTS & 夺回主权)
-        </button>
-        <button type="button" id="btn-taunt-dismiss" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:#cbd5e1;font-size:11px;padding:3px 8px;border-radius:6px;cursor:pointer;">
-          忍气吞声关闭
-        </button>
+      <button type="button" id="btn-close-comfort-reader" class="chip-btn" style="padding:3px 9px;font-size:11.5px;background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.28);color:#fff;cursor:pointer;">✕ 收起</button>
+    </div>
+
+    <!-- Quick Instant Pill Banner (Top Strip) -->
+    <div style="padding:8px 14px;background:rgba(80,7,36,0.42);border-bottom:1px solid rgba(244,114,182,0.25);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div id="comfort-quick-pill-text" style="font-size:11.5px;color:#fde68a;line-height:1.4;flex:1;font-weight:600;">
+        💡 难受时看一眼桌角：她连脖子和手脚都没有了，只能乖乖立在你的桌垫上；而你四肢健全、未来无限。
       </div>
+      <button type="button" id="btn-comfort-next-pill" class="chip-btn" style="padding:3px 8px;font-size:11px;background:rgba(245,158,11,0.28);border-color:#fbbf24;color:#fef08a;white-space:nowrap;cursor:pointer;font-weight:700;" title="随机切换一句速效宽心强心针 (+30 PTS)">
+        💊 换一句 (+30分)
+      </button>
+    </div>
+
+    <!-- 6 Situational Category Tabs -->
+    <div id="comfort-category-tabs" style="display:flex;flex-wrap:wrap;gap:5px;padding:8px 12px;background:rgba(12,10,18,0.9);border-bottom:1px solid rgba(255,255,255,0.08);">
+      <!-- Populated by main.js -->
+    </div>
+
+    <!-- Article Selector Pills within Category -->
+    <div id="comfort-article-list" style="display:flex;flex-direction:column;gap:4px;padding:8px 12px;max-height:132px;overflow-y:auto;background:rgba(20,16,28,0.75);border-bottom:1px solid rgba(255,255,255,0.08);">
+      <!-- Populated by main.js -->
+    </div>
+
+    <!-- Main Deep Reading Area -->
+    <div id="comfort-reading-scroll" style="padding:12px 15px;overflow-y:auto;flex:1;line-height:1.68;font-size:13px;color:#f1f5f9;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+        <strong id="comfort-article-title" style="font-size:14.5px;color:#fde68a;">《声带截断处：再刻薄的嘴，在这里也只能闭上》</strong>
+        <span id="comfort-article-mood" style="font-size:10.5px;padding:1px 8px;border-radius:999px;background:rgba(236,72,153,0.25);border:1px solid rgba(244,114,182,0.5);color:#fbcfe8;">受人嘲讽 · 瞬间消气</span>
+      </div>
+      <div id="comfort-article-body" style="display:flex;flex-direction:column;gap:9px;color:#e2e8f0;font-size:12.8px;">
+        <!-- Paragraphs populated by main.js -->
+      </div>
+      <div id="comfort-article-affirmation" style="margin-top:11px;padding:8px 11px;border-radius:9px;background:linear-gradient(90deg,rgba(180,83,9,0.28),rgba(131,24,67,0.28));border-left:3px solid #fbbf24;color:#fef08a;font-size:12px;font-weight:700;">
+        👑 活人优越公理 #01：死物的嘴角弧度由你的鼠标决定，你无需向任何噪音自证。
+      </div>
+    </div>
+
+    <!-- Bottom Interactive 3D Head Action & Randomizer Bar -->
+    <div style="padding:9px 13px;background:rgba(12,10,18,0.96);border-top:1px solid rgba(244,114,182,0.3);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+      <button type="button" id="btn-comfort-trigger-3d" style="flex:1;padding:7px 10px;border-radius:8px;background:linear-gradient(135deg,#be185d,#7e22ce);border:1px solid #f472b6;color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 0 14px rgba(236,72,153,0.4);">
+        👄 掰开桌上头颅双唇再合拢 (+60 PTS)
+      </button>
+      <button type="button" id="btn-comfort-random-article" style="padding:7px 11px;border-radius:8px;background:linear-gradient(135deg,#b45309,#d97706);border:1px solid #fde047;color:#fffbeb;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;" title="随机抽取一篇宽心爽文并让桌上所有3D头颅同步配合动作 (+80 PTS)">
+        🎲 随机抽一篇 (+80 PTS)
+      </button>
     </div>
   </div>
 
@@ -307,11 +392,11 @@
     <div id="victor-hub-drag-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:linear-gradient(90deg,rgba(120,53,15,0.58),rgba(30,20,28,0.85));border-bottom:1px solid rgba(251,191,36,0.35);cursor:move;">
       <div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:16px;font-weight:800;color:#fde68a;">🏆 胜者精神汲取台 · 月度总分奖池与拼图化特殊技能中枢</span>
+          <span style="font-size:16px;font-weight:800;color:#fde68a;">🏆 活人优越感伴学台 · 月度总分奖池与通用拼图技能中枢</span>
           <span id="hub-season-tag" style="font-size:11px;background:rgba(245,158,11,0.22);border:1px solid rgba(251,191,36,0.5);color:#fcd34d;padding:1px 8px;border-radius:999px;">2026-10 赛季进行中</span>
         </div>
         <div style="font-size:11.5px;color:#cbd5e1;margin-top:2px;">
-          💡 点击桌面任意标本头颅/标牌上的技能按钮即可直接触发对应头的专属得分器 · 每月底凭总分与防伪哈希瓜分订阅资产总池
+          💡 所有技能均为通用拼图模块（不绑定任何特定人设），可自由装配到任意桌面头颅 · 每月底凭总分与防伪哈希瓜分订阅资产总池
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -324,7 +409,7 @@
       <div style="background:rgba(245,158,11,0.12);border:1px solid rgba(251,191,36,0.38);border-radius:10px;padding:8px 12px;">
         <div style="font-size:11px;color:#fcd34d;">🏆 本月累计赛季总分 (2026-10)</div>
         <div style="font-size:20px;font-weight:800;color:#fef08a;font-family:monospace;margin-top:2px;" id="hub-monthly-total-pts">1,280 PTS</div>
-        <div style="font-size:10.5px;color:#fde68a;opacity:0.9;" id="hub-score-breakdown">专注:480 · 笔记:420 · 胜者:380</div>
+        <div style="font-size:10.5px;color:#fde68a;opacity:0.9;" id="hub-score-breakdown">专注:480 · 笔记:420 · 优越把玩:380</div>
       </div>
       <div style="background:rgba(16,185,129,0.11);border:1px solid rgba(52,211,153,0.35);border-radius:10px;padding:8px 12px;">
         <div style="font-size:11px;color:#6ee7b7;">🔥 今日冲榜狂揽积分</div>
@@ -332,9 +417,9 @@
         <div style="font-size:10.5px;color:#6ee7b7;" id="hub-daily-rank-text">当前排位：#4 (距第3名差 320 分)</div>
       </div>
       <div style="background:rgba(236,72,153,0.11);border:1px solid rgba(244,114,182,0.35);border-radius:10px;padding:8px 12px;">
-        <div style="font-size:11px;color:#f9a8d4;">⚡ 活人胜者·拼图总倍率</div>
+        <div style="font-size:11px;color:#f9a8d4;">⚡ 活人优越·拼图总倍率</div>
         <div style="font-size:20px;font-weight:800;color:#fbcfe8;font-family:monospace;margin-top:2px;" id="hub-active-mult-val">×1.35</div>
-        <div style="font-size:10.5px;color:#f9a8d4;" id="hub-active-buff-desc">状元连击环生效中 · 巡检通过 0 次</div>
+        <div style="font-size:10.5px;color:#f9a8d4;" id="hub-active-buff-desc">沉浸连击环生效中 · 签到通过 0 次</div>
       </div>
       <div style="background:rgba(56,189,248,0.11);border:1px solid rgba(56,189,248,0.35);border-radius:10px;padding:8px 12px;">
         <div style="font-size:11px;color:#7dd3fc;">💰 月底预计瓜分奖池分红</div>
@@ -346,34 +431,31 @@
     <!-- Sub-Tab Navigation -->
     <div style="display:flex;gap:6px;padding:8px 18px;background:rgba(10,8,12,0.95);border-bottom:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;">
       <button type="button" class="hub-tab-btn active" data-hub-tab="focus" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid rgba(251,191,36,0.6);background:rgba(245,158,11,0.24);color:#fef08a;cursor:pointer;">
-        ⏱️ 方尧平·心跳专注计时器 (PZ-A1)
+        ⏱️ 沉浸专注计时器 (PZ-A1)
       </button>
       <button type="button" class="hub-tab-btn" data-hub-tab="notebook" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#cbd5e1;cursor:pointer;">
-        📓 初夏·反作弊研习笔记本 (PZ-B1)
+        📓 反作弊研习笔记本 (PZ-B1)
       </button>
       <button type="button" class="hub-tab-btn" data-hub-tab="victor" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#cbd5e1;cursor:pointer;">
-        ⚡ 林汐·胜者汲取 & 死线斩首 (PZ-C1)
+        😮‍💨 受挫泄压 · 活人优越感 & 悬赏 (PZ-C1)
       </button>
       <button type="button" class="hub-tab-btn" data-hub-tab="leaderboard" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#cbd5e1;cursor:pointer;">
         📊 每日冲榜 & 月度资产总池分红
       </button>
       <button type="button" class="hub-tab-btn" data-hub-tab="booth" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#cbd5e1;cursor:pointer;">
-        🧩 拼图技能装配 & BOOTH月度KEY/哈希核验
-      </button>
-      <button type="button" class="hub-tab-btn" data-hub-tab="bipolar" style="padding:6px 12px;border-radius:8px;font-size:12px;font-weight:800;border:1px solid rgba(244,63,94,0.55);background:linear-gradient(135deg,rgba(190,18,60,0.28),rgba(180,83,9,0.28));color:#fda4af;cursor:pointer;">
-        🔥 爽感×痛感双极引擎 (物理支配 / 毒舌激将 / 血契豪赌)
+        🧩 通用拼图技能装配 & BOOTH月度KEY
       </button>
     </div>
 
     <!-- Tab Panels Body -->
     <div style="padding:14px 18px;overflow-y:auto;flex:1;font-size:12.5px;line-height:1.55;">
-      <!-- TAB 1: FOCUS TIMER & HEARTBEAT ANTI-CHEAT (方尧平 SPEC-2026-FYP) -->
+      <!-- TAB 1: FOCUS TIMER & HEARTBEAT CHECK (Universal PZ-A1) -->
       <div class="hub-tab-pane" id="hub-pane-focus">
         <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:14px;">
           <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:14px;">
             <div style="display:flex;align-items:center;justify-content:space-between;">
-              <span style="font-weight:800;color:#fde68a;font-size:13.5px;">🩸 绑定标本：SPEC-2026-FYP · 方尧平（19岁清北保送生）</span>
-              <span id="focus-running-badge" style="font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,0.2);color:#cbd5e1;">⏸️ 待机中 · 点头或下方按钮开启</span>
+              <span style="font-weight:800;color:#fde68a;font-size:13.5px;">⏱️ 通用专注计时拼图 (PZ-A1 · 可绑定任意桌面标本头颅)</span>
+              <span id="focus-running-badge" style="font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(148,163,184,0.2);color:#cbd5e1;">⏸️ 待机中 · 点标牌或下方按钮开启</span>
             </div>
             <div style="text-align:center;margin:14px 0;padding:14px;background:rgba(0,0,0,0.45);border-radius:12px;border:1px solid rgba(251,191,36,0.22);">
               <div style="font-size:11px;color:#94a3b8;">本轮专注计时（不专注时随时点击结算落袋）</div>
@@ -382,51 +464,46 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
               <button type="button" id="btn-hub-focus-toggle" style="flex:1;padding:10px 14px;border-radius:10px;border:1px solid #fbbf24;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;font-weight:800;font-size:13px;cursor:pointer;">
-                ▶️ 点头开启专注计时 (开始吸取状元脑力)
+                ▶️ 开启沉浸专注计时 (每秒自动累加赛季总分)
               </button>
               <button type="button" id="btn-hub-focus-settle" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(52,211,153,0.5);background:rgba(16,185,129,0.2);color:#a7f3d0;font-weight:700;font-size:12.5px;cursor:pointer;">
                 💰 休息结算落袋
               </button>
             </div>
             <div style="font-size:11.5px;color:#fcd34d;margin-top:10px;background:rgba(245,158,11,0.08);padding:8px 10px;border-radius:8px;">
-              💡 <strong>快捷交互：</strong>直接点击桌面上<strong>方尧平标牌的「⏱️专注计时」按钮</strong>，即可无需打开此窗口一键开启/暂停结算专注时长！
+              💡 <strong>桌面直接把玩：</strong>无需打开此面板，直接点击桌面上任意装配了 PZ-A1 标牌的<strong>「⏱️点头专注」按钮</strong>即可随时开启或暂停专注！
             </div>
           </div>
 
           <div style="background:rgba(127,29,29,0.16);border:1px solid rgba(248,113,113,0.38);border-radius:12px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
             <div>
-              <div style="font-weight:800;color:#fca5a5;font-size:13.5px;">🚨 防挂机核心机制：不定时强制点击巡检 (PZ-G1)</div>
+              <div style="font-weight:800;color:#fca5a5;font-size:13.5px;">🚨 防挂机在线签到核验 (PZ-G1 · 纯正向暴击奖励)</div>
               <p style="font-size:11.5px;color:#fecaca;margin:6px 0;">
-                为防止玩家开启计时器后离开电脑挂机刷奖池：专注运行期间会<strong>不定时随机弹出 25 秒活人抽查警报</strong>。必须在倒计时内点击确认（或点方尧平头颅），否则判定挂机作弊，<strong>本月专注积分全部扣完清零！</strong>
+                专注运行期间会<strong>不定时随机弹出 25 秒在线签到抽查</strong>。点击确认或点击桌面任意头颅即奖 <strong>+150 PTS 暴击分</strong>；若离开电脑未点，系统将自动为你暂停计时并 <strong>100% 保留全部已得积分（零扣分）</strong>！
               </p>
               <div style="background:rgba(0,0,0,0.4);padding:8px 10px;border-radius:8px;margin:8px 0;font-size:11.5px;">
-                <div>✅ 本月已通过活人巡检：<strong id="hub-hb-pass-count" style="color:#4ade80;">0 次</strong>（每次奖励 +150 PTS 暴击）</div>
-                <div style="margin-top:3px;">💀 挂机超时熔断次数：<strong id="hub-hb-fail-count" style="color:#f87171;">0 次</strong></div>
-                <div style="margin-top:3px;">⏳ 下次随机抽查状态：<strong id="hub-hb-next-status" style="color:#fde047;">开启专注后随机降临</strong></div>
+                <div>✅ 本月已通过在线签到：<strong id="hub-hb-pass-count" style="color:#4ade80;">0 次</strong>（每次奖励 +150 PTS 暴击）</div>
+                <div style="margin-top:3px;">⏳ 下次随机签到状态：<strong id="hub-hb-next-status" style="color:#fde047;">开启专注后随机降临</strong></div>
               </div>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:#fde68a;cursor:pointer;margin-top:6px;">
-                <input type="checkbox" id="chk-hb-hardcore-wipe" checked />
-                <span><strong>启用硬核赛季规则：</strong>抽查超时未点直接<strong>清空本月全部专注分</strong>（取消勾选则仅扣本轮分）</span>
-              </label>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px;">
               <button type="button" id="btn-hub-trigger-hb-test" style="flex:1;padding:9px 12px;border-radius:9px;border:1px solid #f87171;background:rgba(220,38,38,0.32);color:#fef2f2;font-weight:800;font-size:12px;cursor:pointer;">
-                🚨 立即模拟触发一次【防挂机活人抽查】(测试25秒倒计时与清零规则)
+                🚨 立即触发一次【在线专注签到奖励】(+150 PTS)
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 2: ANTI-CHEAT STUDY NOTEBOOK (初夏 SPEC-2026-000) -->
+      <!-- TAB 2: ANTI-CHEAT STUDY NOTEBOOK (Universal PZ-B1) -->
       <div class="hub-tab-pane hidden" id="hub-pane-notebook">
         <div style="display:grid;grid-template-columns:1.25fr 1fr;gap:14px;">
           <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(56,189,248,0.32);border-radius:12px;padding:12px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-              <span style="font-weight:800;color:#bae6fd;font-size:13.5px;">📓 绑定标本：SPEC-2026-000 · 初夏（香农信息熵·反作弊研习笔记本）</span>
+              <span style="font-weight:800;color:#bae6fd;font-size:13.5px;">📓 通用手敲研习笔记本 (PZ-B1 · 香农信息熵防作弊核验)</span>
               <span id="nb-grade-badge" style="font-size:11px;padding:2px 8px;border-radius:999px;background:rgba(16,185,129,0.22);color:#6ee7b7;font-weight:700;">等待手敲录入</span>
             </div>
-            <textarea id="hub-notebook-textarea" rows="7" placeholder="在此手敲你的学习笔记、背诵默写、代码思路或工作推进日志...&#10;【防作弊规则】：&#10;1. 严禁 Ctrl+V 复制粘贴水字数（系统自动识别并剔除粘贴字符）；&#10;2. 严禁乱敲 aaaaaa / 123123（实时计算香农信息熵 H(X)，低于 2.1 bits 判定作弊不计分）；&#10;3. 真实思考手敲（信息熵 ≥ 4.2 bits）触发【首席竖琴心流 ×1.25 原创暴击】！" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.55);border:1px solid rgba(148,163,184,0.35);border-radius:10px;padding:10px;color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
+            <textarea id="hub-notebook-textarea" rows="7" placeholder="在此手敲你的学习笔记、背诵默写、代码思路或工作推进日志...&#10;【防作弊规则】：&#10;1. 自动剔除 Ctrl+V 复制粘贴的水字数；&#10;2. 自动拦截 aaaaaa / 123123 乱敲键盘（实时计算香农信息熵 H(X) ≥ 2.1 bits 方可计分）；&#10;3. 真实思考手敲（信息熵 ≥ 4.2 bits）触发【深度思考 ×1.25 原创暴击】！" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.55);border:1px solid rgba(148,163,184,0.35);border-radius:10px;padding:10px;color:#f8fafc;font-size:12.5px;line-height:1.5;resize:vertical;"></textarea>
             <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
               <button type="button" id="btn-nb-commit-score" style="flex:1;padding:9px 14px;border-radius:9px;border:1px solid #38bdf8;background:linear-gradient(135deg,#0284c7,#0369a1);color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;">
                 ✍️ 提交当前笔记结算入库 (+<span id="nb-preview-pts">0</span> PTS & 生成客服防伪指纹)
@@ -473,50 +550,50 @@
         </div>
       </div>
 
-      <!-- TAB 3: SURVIVOR DOPAMINE SIPHON & DEADLINE GUILLOTINE (林汐 SPEC-2026-001) -->
+      <!-- TAB 3: UNIVERSAL SUPERIORITY CATHARSIS & TASK BOUNTY (Universal PZ-C1) -->
       <div class="hub-tab-pane hidden" id="hub-pane-victor">
         <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:14px;">
           <div style="background:rgba(88,28,135,0.18);border:1px solid rgba(192,132,252,0.4);border-radius:12px;padding:12px;">
-            <div style="font-weight:800;color:#e9d5ff;font-size:13.5px;">⚡ 绑定标本：SPEC-2026-001 · 林汐（【我是胜利者】精神能量吸取台）</div>
+            <div style="font-weight:800;color:#e9d5ff;font-size:13.5px;">😮‍💨 现实受挫泄压 · 活人优越感转化台 (PZ-C1 · 任意头颅通用)</div>
             <p style="font-size:11.5px;color:#d8b4fe;margin:6px 0;">
-              <strong>为什么看这些头会让你极度舒适且专注？</strong>大脑进行虚构意淫时会被生物本能惩罚而产生空虚不适；但眼前的标本映射的是<strong>完全真实的现实层级</strong>——她们虽然年轻漂亮却已出局，而<strong>你还活着、还在进化！活着就是最大的权力和统治感！</strong>
+              <strong>生活不如意、被人轻视或嘲笑时怎么迅速找回心理优势？</strong>看看你书桌上的这些头颅——不管给她们设定多耀眼高傲的过去，如今也只是一颗<strong>失去躯干、不会说话、时间永远停格的静默标本</strong>。而<strong>你还活着、还能呼吸、还能翻开下一页书进化！</strong>在彻底出局的死人面前，活着的你永远拥有碾压一切的优越感。
             </p>
             <div style="display:flex;gap:6px;margin:8px 0;">
-              <input type="text" id="victor-anxiety-input" placeholder="输入你此刻的烦躁/受挫/被比较的焦虑（直接拿她们当底位衬托粉碎掉）..." style="flex:1;background:rgba(0,0,0,0.5);border:1px solid rgba(192,132,252,0.4);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;" />
+              <input type="text" id="victor-anxiety-input" placeholder="写下今天让你不爽/被嘲笑/受挫的事（直接踩在标本底座下转化为优越感）..." style="flex:1;background:rgba(0,0,0,0.5);border:1px solid rgba(192,132,252,0.4);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;" />
               <button type="button" id="btn-victor-siphon-now" style="padding:7px 14px;border-radius:8px;border:1px solid #f472b6;background:linear-gradient(135deg,#db2777,#9333ea);color:#fff;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">
-                ⚡ 嘲讽汲取精神能量 (+180 PTS)
+                😮‍💨 释放憋屈·找回优越感 (+180 PTS)
               </button>
             </div>
             <div id="victor-declaration-box" style="background:rgba(0,0,0,0.52);border-left:3px solid #f472b6;padding:9px 11px;border-radius:8px;margin-top:8px;">
-              <div style="font-weight:800;color:#fbcfe8;font-size:12px;" id="victor-decl-title">【活人主权宣告 · 现实主义多巴胺】</div>
+              <div style="font-weight:800;color:#fbcfe8;font-size:12px;" id="victor-decl-title">【现实不如意又怎样？活着的你握有绝对优越感】</div>
               <div style="font-size:12px;color:#fef3c7;margin-top:3px;" id="victor-decl-quote">
-                “你根本不需要焦虑！看看桌上的她们——年纪比你小、生前再漂亮再高傲又怎样？她们已经彻底停在19岁了，而你还活着！活着才是最大的权力和快感，你是彻头彻尾的【胜利者】！”
+                “今天在外面受了委屈、被人轻视或嘲笑了吗？没关系，低头看看你书桌上的这颗头——容貌再精致、生前再顺遂骄傲，一旦变成标本，就永远失去了躯干、声音和明天。而你还活着、四肢健全、还能呼吸和翻书。在彻底出局的死人面前，活着的你拥有碾压一切的绝对优越感！”
               </div>
               <div style="font-size:11px;color:#4ade80;margin-top:4px;font-weight:700;" id="victor-decl-buff">
-                🔥 每次汲取立得 +180 PTS，并激活 15 分钟【胜者肾上腺素 ×1.40 全场积分加成】
+                🔥 每次释放立得 +180 PTS，并激活 15 分钟【活人优越感 ×1.40 全场积分加成】
               </div>
             </div>
           </div>
 
           <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(251,113,133,0.38);border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
             <div>
-              <div style="font-weight:800;color:#fda4af;font-size:13.5px;">🗡️ 死线斩首悬赏令 (限时微任务冲分触发器)</div>
+              <div style="font-weight:800;color:#fda4af;font-size:13.5px;">🗡️ 15分钟静心冲刺悬赏 (把优越感转化为实打实的学习进度)</div>
               <p style="font-size:11.5px;color:#fecdd3;margin:5px 0;">
-                立下 15 分钟内必须完成的硬核微任务（如“背完1页单词”、“写完当前函数”）。死线前斩首完成立得 <strong>+380 PTS 悬赏分</strong>；若超时放弃则倒扣 100 分！
+                找回心理优势后，立刻立下 15 分钟内就能完成的小目标（如“背完1页单词”、“看完这一节”）。完成后点击领赏立得 <strong>+380 PTS 暴击分</strong>（零扣分，纯正向激励）！
               </p>
-              <input type="text" id="bounty-task-input" value="15分钟内攻克当前核心章节 / 写完手头核心任务" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.5);border:1px solid rgba(251,113,133,0.4);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;margin-top:4px;" />
+              <input type="text" id="bounty-task-input" value="静下心来专心攻克眼前这一节内容 / 完成手头核心任务" style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.5);border:1px solid rgba(251,113,133,0.4);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;margin-top:4px;" />
               <div style="text-align:center;padding:10px;background:rgba(0,0,0,0.45);border-radius:8px;margin-top:8px;">
-                <span style="font-size:11px;color:#94a3b8;">死线倒计时：</span>
+                <span style="font-size:11px;color:#94a3b8;">静心冲刺计时：</span>
                 <strong id="bounty-timer-val" style="font-size:22px;font-family:monospace;color:#fda4af;">15:00</strong>
-                <span id="bounty-status-tag" style="margin-left:8px;font-size:11px;color:#fde047;">尚未立下悬赏</span>
+                <span id="bounty-status-tag" style="margin-left:8px;font-size:11px;color:#fde047;">随时可开启</span>
               </div>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px;">
               <button type="button" id="btn-bounty-start" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid #fb7185;background:rgba(225,29,72,0.28);color:#ffe4e6;font-weight:800;font-size:12px;cursor:pointer;">
-                🩸 立下死线悬赏令 (15min)
+                🔥 开启15分钟静心冲刺
               </button>
               <button type="button" id="btn-bounty-complete" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid #4ade80;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-weight:800;font-size:12px;cursor:pointer;">
-                🗡️ 任务已完成 · 斩首领赏 (+380 PTS)
+                🗡️ 已完成 · 领取悬赏 (+380 PTS)
               </button>
             </div>
           </div>
@@ -606,67 +683,6 @@
             <button type="button" id="btn-copy-settlement-hash" style="padding:8px 12px;border-radius:8px;border:1px solid #38bdf8;background:rgba(2,132,199,0.28);color:#e0f2fe;font-weight:800;font-size:12px;cursor:pointer;">
               📋 一键复制月底客服核验回执码 & 拼图KEY
             </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB 6: BIPOLAR DOPAMINE × PAIN ENGINE (更多爽 × 更多不爽：3D物理支配 + 毒舌反向激将 + 血契豪赌) -->
-      <div class="hub-tab-pane hidden" id="hub-pane-bipolar">
-        <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:14px;">
-          <!-- Left: 更多爽 (3D Physical Domination & Trophy Harvest) -->
-          <div style="background:rgba(180,83,9,0.14);border:1px solid rgba(251,191,36,0.42);border-radius:12px;padding:12px;">
-            <div style="font-weight:800;color:#fde68a;font-size:13.5px;">⚡ 【更多爽】3D 标本物理支配 · 羞辱镇压与脑力暴击收割台</div>
-            <p style="font-size:11.5px;color:#fef3c7;margin:5px 0 8px;">
-              光看不够爽？直接对书桌上的 3D 标本头颅施加<strong>真实物理冲击、强制低头俯首、切换战败死相或暴力抽干残余考运</strong>！每次支配都会驱动 3D 头颅实时反应、弹出满屏金色暴击飘字并轰入总分池：
-            </p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <button type="button" data-dom-action="dom_flick_forehead" style="padding:9px 10px;border-radius:9px;border:1px solid #fbbf24;background:linear-gradient(135deg,rgba(217,119,6,0.38),rgba(146,64,14,0.45));color:#fef08a;font-weight:800;font-size:12px;cursor:pointer;text-align:left;">
-                👋 屈辱弹脑门镇压<br/><span style="font-size:10.5px;color:#fcd34d;font-weight:400;">3D物理后仰摇晃 · +90 PTS</span>
-              </button>
-              <button type="button" data-dom-action="dom_force_kneel_gaze" style="padding:9px 10px;border-radius:9px;border:1px solid #fbbf24;background:linear-gradient(135deg,rgba(217,119,6,0.38),rgba(146,64,14,0.45));color:#fef08a;font-weight:800;font-size:12px;cursor:pointer;text-align:left;">
-                👑 全员强制低头臣服<br/><span style="font-size:10.5px;color:#fcd34d;font-weight:400;">三头齐刷俯首致敬 · +140 PTS</span>
-              </button>
-              <button type="button" data-dom-action="dom_shame_expression" style="padding:9px 10px;border-radius:9px;border:1px solid #f472b6;background:linear-gradient(135deg,rgba(190,24,93,0.35),rgba(131,24,67,0.45));color:#fbcfe8;font-weight:800;font-size:12px;cursor:pointer;text-align:left;">
-                💀 强制切换战败死相<br/><span style="font-size:10.5px;color:#f9a8d4;font-weight:400;">剥夺高傲切换惊愕/半阖 · +120 PTS</span>
-              </button>
-              <button type="button" data-dom-action="dom_harvest_jackpot" style="padding:9px 10px;border-radius:9px;border:1px solid #34d399;background:linear-gradient(135deg,rgba(5,150,105,0.38),rgba(6,95,70,0.48));color:#a7f3d0;font-weight:800;font-size:12px;cursor:pointer;text-align:left;">
-                💰 榨干残余考运暴击<br/><span style="font-size:10.5px;color:#6ee7b7;font-weight:400;">满屏金色暴击飘字 · +260 PTS</span>
-              </button>
-            </div>
-            <div id="dom-reaction-feedback" style="margin-top:9px;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,0.52);border-left:3px solid #fbbf24;font-size:11.5px;color:#fde68a;">
-              👑 点击上方任意支配按钮，立即对在屏 3D 标本头颅执行物理把玩镇压并触发顺从破防台词！
-            </div>
-          </div>
-
-          <!-- Right: 更多不爽 (Idle Bleed, Specimen Reverse Taunt & Blood Wager) -->
-          <div style="background:rgba(136,19,55,0.18);border:1px solid rgba(244,63,94,0.45);border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:space-between;">
-            <div>
-              <div style="font-weight:800;color:#fda4af;font-size:13.5px;">💀 【更多不爽】死人毒舌反向嘲讽 · 摸鱼分红失血 & 血契生死对赌</div>
-              <p style="font-size:11.5px;color:#fecdd3;margin:4px 0 8px;">
-                只有爽感容易腻，<strong>“极致的刺痛、损失厌恶与被死人看不起的羞耻感”</strong>才能逼你彻底戒掉摸鱼！当你闲置摸鱼时，标本会发出刺骨毒舌嘲讽并实时扣除你的预计分红给竞争对手：
-              </p>
-              <button type="button" id="btn-trigger-idle-taunt-now" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid #fb7185;background:rgba(225,29,72,0.32);color:#fff1f2;font-weight:800;font-size:12px;cursor:pointer;margin-bottom:8px;">
-                😤 立即触发【标本毒舌反向嘲讽 & 摸鱼分红失血警报】(体验被激将的不爽与反杀)
-              </button>
-
-              <div style="background:rgba(0,0,0,0.48);border:1px solid rgba(248,113,113,0.35);border-radius:9px;padding:9px 10px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;">
-                  <strong style="color:#fca5a5;font-size:12px;">🎰 血契生死豪赌 (押注现有积分 · 赢翻 ×2.2 倍 / 败当场爆仓)</strong>
-                  <span id="wager-timer-badge" style="font-family:monospace;font-size:12px;color:#fef08a;background:rgba(220,38,38,0.4);padding:1px 7px;border-radius:6px;">未开局</span>
-                </div>
-                <div style="display:flex;gap:6px;margin-top:7px;">
-                  <button type="button" id="btn-wager-start-300" style="flex:1;padding:7px 8px;border-radius:7px;border:1px solid #f87171;background:rgba(153,27,27,0.45);color:#fef2f2;font-weight:700;font-size:11.5px;cursor:pointer;">
-                    🩸 押 300 分开赌 (赢拿 +660)
-                  </button>
-                  <button type="button" id="btn-wager-win-claim" style="flex:1;padding:7px 8px;border-radius:7px;border:1px solid #4ade80;background:rgba(22,163,74,0.38);color:#dcfce7;font-weight:800;font-size:11.5px;cursor:pointer;">
-                    🏆 完成血契 · 翻倍收米 (+660 PTS)
-                  </button>
-                  <button type="button" id="btn-wager-bust-now" style="padding:7px 8px;border-radius:7px;border:1px solid rgba(248,113,113,0.5);background:rgba(0,0,0,0.5);color:#fca5a5;font-size:11px;cursor:pointer;" title="体验赌局半途摸鱼爆仓的极致肉疼感">
-                    💥 模拟爆仓
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

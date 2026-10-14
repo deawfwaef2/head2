@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
+  updateCollectibleMaterialsLive,
   attachRealHairModel,
   attachSpecimenContainerAndDecor,
   updateHeadLifeAnimation,
@@ -49,6 +50,8 @@ export class DesktopBoxSpaceEngine {
     this.onBoxCollisionVisual = callbacks.onBoxCollisionVisual || (() => {});
     this.onPlacardsUpdate = callbacks.onPlacardsUpdate || (() => {});
     this.onHeadClick = callbacks.onHeadClick || (() => {});
+    this.onTactileManipulate = callbacks.onTactileManipulate || (() => {});
+    this.tactilePlayMode = 'move'; // 'move' | 'pinch_face' | 'paint_fluid'
 
     this.settings = {
       fov: 42,
@@ -1071,6 +1074,11 @@ export class DesktopBoxSpaceEngine {
   }
 
   pickPetAtCursor() {
+    const detail = this.pickPetHitDetailAtCursor();
+    return detail ? detail.pet : null;
+  }
+
+  pickPetHitDetailAtCursor() {
     if (this.pets.size === 0) return null;
     this.raycaster.setFromCamera(this.mouseNDC, this.camera);
     const roots = [];
@@ -1080,14 +1088,424 @@ export class DesktopBoxSpaceEngine {
     const hits = this.raycaster.intersectObjects(roots, true);
     if (hits.length === 0) return null;
 
-    let obj = hits[0].object;
+    const hit = hits[0];
+    let obj = hit.object;
+    let foundPet = null;
+    let skinMesh = null;
     while (obj) {
+      if (obj.name === 'HeadSkinMesh') skinMesh = obj;
       for (const pet of this.pets.values()) {
-        if (pet.node === obj) return pet;
+        if (pet.node === obj) {
+          foundPet = pet;
+          break;
+        }
       }
+      if (foundPet) break;
       obj = obj.parent;
     }
-    return null;
+    if (!foundPet) return null;
+
+    if (!skinMesh) {
+      foundPet.node.traverse(c => {
+        if (!skinMesh && c.isMesh && c.name === 'HeadSkinMesh') skinMesh = c;
+      });
+    }
+    const localPos = skinMesh
+      ? skinMesh.worldToLocal(hit.point.clone())
+      : foundPet.node.worldToLocal(hit.point.clone()).multiplyScalar(0.01);
+
+    const lx = localPos.x;
+    const ly = localPos.y;
+    let zone = 'cheeks';
+    if (ly > 0.027) {
+      zone = 'brow';
+    } else if (ly >= 0.004 && ly <= 0.027) {
+      zone = 'eyes';
+    } else if (Math.abs(lx) < 0.024 && ly >= -0.032 && ly < 0.004) {
+      zone = 'nose';
+    } else if (Math.abs(lx) < 0.033 && ly >= -0.064 && ly < -0.032) {
+      zone = 'mouth';
+    } else if (ly < -0.064) {
+      zone = 'neck';
+    }
+    return { pet: foundPet, hitPoint: hit.point, localPos, zone };
+  }
+
+  applyTactilePinchDelta(pet, zone, dx, dy, clientX, clientY) {
+    if (!pet || !pet.node) return;
+    const col = pet.collectible || {};
+    const m = col.morphs ? { ...col.morphs } : {};
+    const clamp = (v, lo = -0.75, hi = 0.75) => Math.max(lo, Math.min(hi, v));
+    let partLabel = '面部骨相';
+
+    if (zone === 'eyes') {
+      // 上下推拉直接扒开/合拢死人眼皮，左右推拉提拉眼角吊梢/下至
+      m.eyelidOpen = clamp(Number(m.eyelidOpen ?? 0) - dy * 0.007, -0.75, 0.75);
+      m.canthalTilt = clamp(Number(m.canthalTilt ?? 0) + dx * 0.006, -0.70, 0.70);
+      partLabel = `👁️ 扒弄眼皮开合 (${Math.round((m.eyelidOpen + 0.75) / 1.5 * 100)}%) & 眼尾倾角`;
+    } else if (zone === 'mouth') {
+      // 上下推拉直接掰开/合拢死人下颌与双唇，左右推拉提拉嘴角笑意
+      m.jawOpen = clamp(Number(m.jawOpen ?? 0) + dy * 0.007, -0.25, 0.85);
+      m.mouthCorner = clamp(Number(m.mouthCorner ?? 0) + dx * 0.006 - dy * 0.003, -0.75, 0.75);
+      partLabel = `👄 掰弄双唇下颌开合 (${Math.round(Math.max(0, m.jawOpen) * 100)}%) & 嘴角弧度`;
+    } else if (zone === 'brow') {
+      m.browHeight = clamp(Number(m.browHeight ?? 0) - dy * 0.007, -0.75, 0.75);
+      m.browAngle = clamp(Number(m.browAngle ?? 0) + dx * 0.007, -0.75, 0.75);
+      partLabel = `🤨 拨弄眉头高低与蹙眉倾角`;
+    } else if (zone === 'nose') {
+      m.noseTipY = clamp(Number(m.noseTipY ?? 0) - dy * 0.007, -0.70, 0.70);
+      m.noseWidth = clamp(Number(m.noseWidth ?? 0) + dx * 0.006, -0.70, 0.70);
+      partLabel = `👃 捏塑鼻尖翘度与鼻翼宽窄`;
+    } else if (zone === 'cheeks') {
+      m.cheekPlump = clamp(Number(m.cheekPlump ?? 0) - dy * 0.006 + dx * 0.006, -0.75, 0.75);
+      m.jawWidth = clamp(Number(m.jawWidth ?? 0) + dx * 0.006, -0.75, 0.75);
+      partLabel = `🤏 揉捏面颊丰盈度与下颌线`;
+    } else {
+      m.chinLength = clamp(Number(m.chinLength ?? 0) + dy * 0.006, -0.70, 0.70);
+      partLabel = `🤏 捏塑下巴尖翘度与颌颈线`;
+    }
+
+    col.morphs = m;
+    applyHeadMorphsToGroup(pet.node, m);
+    this.wakeRender(1.5, true);
+    this.onTactileManipulate({
+      pet,
+      mode: 'pinch_face',
+      zone,
+      partLabel,
+      clientX,
+      clientY,
+    });
+  }
+
+  applyTactileFluidStroke(pet, zone, step = 0.25, clientX = 0, clientY = 0) {
+    if (!pet || !pet.node) return;
+    const col = pet.collectible || {};
+    const m = col.morphs ? { ...col.morphs } : {};
+    let partLabel = '点涂凄美体液';
+
+    if (zone === 'eyes' || zone === 'brow') {
+      const next = Number(col.tearTrackStrength ?? m.tearTrackStrength ?? 0) + step;
+      if (next > 1.15) {
+        // Cycle tear type: 0 (clear) -> 2 (blood tears) -> 0 (clear wipe)
+        const curType = Number(col.tearType ?? m.tearType ?? 0);
+        const nextType = curType === 0 ? 2 : 0;
+        col.tearType = m.tearType = nextType;
+        col.tearTrackStrength = m.tearTrackStrength = nextType === 2 ? 0.92 : 0.0;
+      } else {
+        col.tearTrackStrength = m.tearTrackStrength = Math.min(1.15, next);
+      }
+      partLabel = (col.tearType === 2)
+        ? `🩸 点染眼角凄美猩红血泪 (${Math.round(col.tearTrackStrength * 100)}%)`
+        : `💧 点染眼角蓄泪与双颊泪痕 (${Math.round(col.tearTrackStrength * 100)}%)`;
+    } else if (zone === 'nose') {
+      const next = Number(col.nosebleedStrength ?? m.nosebleedStrength ?? 0) + step;
+      col.nosebleedStrength = m.nosebleedStrength = next > 1.15 ? 0.0 : Math.min(1.15, next);
+      partLabel = `🩸 点涂鼻孔涌血与人中血痕 (${Math.round(col.nosebleedStrength * 100)}%)`;
+    } else if (zone === 'mouth') {
+      const next = Number(col.mouthBloodStrength ?? m.mouthBloodStrength ?? 0) + step;
+      col.mouthBloodStrength = m.mouthBloodStrength = next > 1.15 ? 0.0 : Math.min(1.15, next);
+      partLabel = `🥀 点涂双侧嘴角溢血 (${Math.round(col.mouthBloodStrength * 100)}%)`;
+    } else if (zone === 'cheeks') {
+      const next = Number(col.faceSplatterStrength ?? m.faceSplatterStrength ?? 0) + step;
+      col.faceSplatterStrength = m.faceSplatterStrength = next > 1.15 ? 0.0 : Math.min(1.15, next);
+      const nextBlush = Number(col.blushIntensity ?? 0.25) + step * 0.65;
+      col.blushIntensity = nextBlush > 0.92 ? 0.04 : Math.min(0.92, nextBlush);
+      partLabel = `💦 点涂面颊血点与揉搓潮红 (血点${Math.round(col.faceSplatterStrength * 100)}% · 充血${Math.round(col.blushIntensity * 100)}%)`;
+    } else {
+      const next = Number(col.neckBloodStrength ?? m.neckBloodStrength ?? 0.85) + step;
+      col.neckBloodStrength = m.neckBloodStrength = next > 1.25 ? 0.25 : Math.min(1.25, next);
+      partLabel = `🔪 点涂颈部C4断口鲜血凝痂 (${Math.round(col.neckBloodStrength * 100)}%)`;
+    }
+
+    col.morphs = m;
+    updateCollectibleMaterialsLive(pet.node, col);
+    this.wakeRender(1.5, true);
+    this.onTactileManipulate({
+      pet,
+      mode: 'paint_fluid',
+      zone,
+      partLabel,
+      clientX,
+      clientY,
+    });
+  }
+
+  applyTactileBowGazeDelta(pet, dx, dy, isInitialClick = false, clientX = 0, clientY = 0) {
+    if (!pet || !pet.node) return;
+    if (isInitialClick) {
+      // 单击头颅在【低眉俯首态】->【歪头贴桌镇纸态】->【抬颏仰视伴读态】三态间轮换
+      const nextIdx = ((pet._bowPostureIdx ?? -1) + 1) % 3;
+      pet._bowPostureIdx = nextIdx;
+      if (nextIdx === 0) {
+        pet.customRot.x = 0.32;
+        pet.customRot.y = 0;
+        pet.customRot.z = 0;
+      } else if (nextIdx === 1) {
+        pet.customRot.x = 0.18;
+        pet.customRot.y = 0.12;
+        pet.customRot.z = 0.28;
+      } else {
+        pet.customRot.x = -0.26;
+        pet.customRot.y = 0;
+        pet.customRot.z = 0;
+      }
+    } else {
+      pet.customRot.x = Math.max(-0.55, Math.min(0.55, (pet.customRot.x || 0) + dy * 0.011));
+      pet.customRot.y = Math.max(-0.85, Math.min(0.85, (pet.customRot.y || 0) + dx * 0.008));
+      pet.customRot.z = Math.max(-0.38, Math.min(0.38, (pet.customRot.z || 0) + dx * 0.005));
+    }
+    const pitchDeg = Math.round((pet.customRot.x || 0) * (180 / Math.PI));
+    const rollDeg = Math.round((pet.customRot.z || 0) * (180 / Math.PI));
+    pet.node.rotation.x = pet.customRot.x;
+    pet.node.rotation.y = pet.customRot.y;
+    pet.node.rotation.z = pet.customRot.z || 0;
+    const postureName = Math.abs(rollDeg) >= 10
+      ? `🪨 歪头贴桌当镇纸态 (侧倾 ${Math.abs(rollDeg)}° 压书)`
+      : (pitchDeg >= 6
+        ? `🙇‍♀️ 低眉顺眼俯首态 (低头 ${pitchDeg}°)`
+        : (pitchDeg <= -6 ? `🥺 抬颏仰视伴读态 (仰头 ${Math.abs(pitchDeg)}°)` : `😐 正视伴读态 (${pitchDeg}°)`));
+
+    this.wakeRender(1.5, true);
+    this.onTactileManipulate({
+      pet,
+      mode: 'bow_gaze',
+      zone: 'neck',
+      partLabel: postureName,
+      clientX,
+      clientY,
+    });
+  }
+
+  /**
+   * Stage 58: Direct 3D Eyeball Rolling & Pupil Dilation (`👁️ 拨弄眼球 / 翻白眼 / 扩缩瞳孔`)
+   */
+  applyTactileEyeballDelta(pet, dx, dy, isInitialClick = false, clientX = 0, clientY = 0) {
+    if (!pet || !pet.node) return;
+    const col = pet.collectible || {};
+    const m = col.morphs ? { ...col.morphs } : {};
+    let partLabel = '👁️ 拨弄眼球与涣散瞳孔';
+
+    if (isInitialClick) {
+      const presets = [
+        { label: '🙄 死不瞑目上翻白眼 (露出微凉眼白)', roll: 0.68, lid: 0.35, pupil: 1.18, bright: 1.15 },
+        { label: '👀 瞳孔涣散放大凝视 (失去神经反射)', roll: 0.05, lid: 0.52, pupil: 1.48, bright: 1.45 },
+        { label: '😌 半阖垂眸失焦态 (顺从低垂眼帘)', roll: -0.25, lid: -0.38, pupil: 0.92, bright: 1.05 },
+        { label: '👁️ 针尖缩瞳惊愕凝视 (瞳仁急剧收缩)', roll: 0.18, lid: 0.62, pupil: 0.68, bright: 1.52 },
+        { label: '✨ 恢复清澈安静标本眸光', roll: 0.0, lid: 0.0, pupil: 1.0, bright: 1.25 },
+      ];
+      const nextIdx = ((pet._eyeballCycleIdx ?? -1) + 1) % presets.length;
+      pet._eyeballCycleIdx = nextIdx;
+      const p = presets[nextIdx];
+      m.eyeRollUp = p.roll;
+      m.eyelidOpen = p.lid;
+      col.pupilSize = p.pupil;
+      col.irisBrightness = p.bright;
+      partLabel = p.label;
+    } else {
+      m.eyeRollUp = Math.max(-0.45, Math.min(0.88, Number(m.eyeRollUp ?? 0) - dy * 0.012));
+      m.eyelidOpen = Math.max(-0.65, Math.min(0.65, Number(m.eyelidOpen ?? 0) - dy * 0.006));
+      col.pupilSize = Math.max(0.65, Math.min(1.55, Number(col.pupilSize ?? 1.0) + dx * 0.008));
+      col.irisBrightness = Math.max(0.75, Math.min(1.65, Number(col.irisBrightness ?? 1.25) + dx * 0.005));
+      partLabel = `👁️ 拨动眼球上翻 (${Math.round(m.eyeRollUp * 100)}%) · 瞳孔扩缩 (${Math.round(col.pupilSize * 100)}%)`;
+    }
+
+    col.morphs = m;
+    applyHeadMorphsToGroup(pet.node, m);
+    updateCollectibleMaterialsLive(pet.node, col);
+    this.wakeRender(1.5, true);
+    this.onTactileManipulate({
+      pet,
+      mode: 'roll_eyeball',
+      zone: 'eyeball',
+      partLabel,
+      clientX,
+      clientY,
+    });
+  }
+
+  /**
+   * Stage 58: Direct 3D Hair Lifting & Bangs Parting (`🪮 拎发掂量 / 拨弄刘海碎发`)
+   */
+  applyTactileHairGroomDelta(pet, dx, dy, isInitialClick = false, clientX = 0, clientY = 0) {
+    if (!pet || !pet.node) return;
+    const col = pet.collectible || {};
+    let partLabel = '🪮 撩拨发丝与拎发掂量';
+
+    if (isInitialClick || dy < -5) {
+      // 揪住头顶发丝将4.5kg断头直接拎起悬空掂量，松手后在重力下重重落回桌面
+      const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+      pet.pos.y = Math.min(bz.maxY - 1.5, pet.pos.y + (isInitialClick ? 9.5 : Math.min(4.5, -dy * 0.35)));
+      pet.vel.y = 0.8;
+      pet.dropDistance = 6.5;
+      pet.isGrounded = false;
+      pet.customRot.x = -0.18;
+      pet.node.position.copy(pet.pos);
+      pet.node.rotation.x = pet.customRot.x;
+      soundEngine.playPickup(0);
+      partLabel = '🪮 揪住发顶拎起4.5kg头颅悬空掂量 (重力坠落桌面)';
+    } else {
+      col.neckClearance = Math.max(0.15, Math.min(0.95, Number(col.neckClearance ?? 0.6) + dx * 0.008));
+      col.hairWispyFeather = Math.max(0.15, Math.min(0.95, Number(col.hairWispyFeather ?? 0.6) + dx * 0.008));
+      col.hairSheen = Math.max(0.35, Math.min(1.15, Number(col.hairSheen ?? 0.85) - dy * 0.006));
+      updateCollectibleMaterialsLive(pet.node, col);
+      partLabel = `🪮 拨开颈侧碎发露出C4断面 (${Math.round(col.neckClearance * 100)}%)`;
+    }
+
+    this.wakeRender(1.8, true);
+    this.onTactileManipulate({
+      pet,
+      mode: 'groom_hair',
+      zone: 'hair',
+      partLabel,
+      clientX,
+      clientY,
+    });
+  }
+
+  /**
+   * Stage 55/57/58: Switch direct 3D desktop tactile play mode
+   * ('move' | 'pinch_face' | 'paint_fluid' | 'bow_gaze' | 'roll_eyeball' | 'groom_hair')
+   */
+  setTactilePlayMode(mode = 'move') {
+    const valid = ['move', 'pinch_face', 'paint_fluid', 'bow_gaze', 'roll_eyeball', 'groom_hair'];
+    this.tactilePlayMode = valid.includes(mode) ? mode : 'move';
+    this.wakeRender(1.2, false);
+    return this.tactilePlayMode;
+  }
+
+  /**
+   * Stage 58: Trigger a synchronized 3D desktop head action from the Comfort & Superiority Handbook
+   * ('bow_all' | 'pry_eyes' | 'roll_eyeball' | 'open_lips' | 'lift_hair_drop' | 'paperweight_tilt' | 'tear_stain' | 'flush_cheeks')
+   */
+  performLinkedComfort3DAction(actionType = 'bow_all', targetPetId = null) {
+    let idx = 0;
+    for (const pet of this.pets.values()) {
+      if (targetPetId && pet.id !== targetPetId) continue;
+      const col = pet.collectible || {};
+      const m = col.morphs ? { ...col.morphs } : {};
+
+      if (actionType === 'bow_all') {
+        pet.customRot.x = 0.32;
+        pet.customRot.y = idx === 0 ? 0 : (idx % 2 === 1 ? 0.14 : -0.14);
+        pet.customRot.z = 0;
+        m.eyelidOpen = -0.36;
+        m.mouthCorner = 0.15;
+      } else if (actionType === 'pry_eyes') {
+        pet.customRot.x = -0.18;
+        m.eyelidOpen = 0.56;
+        m.eyeRollUp = 0.06;
+        col.pupilSize = 1.28;
+      } else if (actionType === 'roll_eyeball') {
+        pet.customRot.x = -0.14;
+        m.eyeRollUp = 0.64;
+        m.eyelidOpen = 0.34;
+        col.pupilSize = 1.38;
+      } else if (actionType === 'open_lips') {
+        pet.customRot.x = -0.16;
+        m.jawOpen = 0.56;
+        m.mouthCorner = 0.24;
+      } else if (actionType === 'lift_hair_drop') {
+        const bz = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+        pet.pos.y = Math.min(bz.maxY - 1.5, pet.pos.y + 10.5);
+        pet.vel.y = 0.6;
+        pet.dropDistance = 7.0;
+        pet.isGrounded = false;
+        pet.customRot.x = -0.15;
+        pet.node.position.copy(pet.pos);
+      } else if (actionType === 'paperweight_tilt') {
+        pet.customRot.x = 0.20;
+        pet.customRot.y = idx % 2 === 0 ? 0.12 : -0.12;
+        pet.customRot.z = idx % 2 === 0 ? 0.28 : -0.28;
+        m.eyelidOpen = -0.28;
+      } else if (actionType === 'tear_stain') {
+        col.tearTrackStrength = m.tearTrackStrength = 0.96;
+        col.tearType = m.tearType = idx % 2 === 0 ? 0 : 2;
+        col.nosebleedStrength = m.nosebleedStrength = 0.52;
+        m.browAngle = -0.35;
+      } else if (actionType === 'flush_cheeks') {
+        col.blushIntensity = 0.72;
+        m.mouthCorner = 0.44;
+        m.cheekPlump = 0.38;
+      }
+
+      pet.node.rotation.x = pet.customRot.x || 0;
+      pet.node.rotation.y = pet.customRot.y || 0;
+      pet.node.rotation.z = pet.customRot.z || 0;
+      col.morphs = m;
+      applyHeadMorphsToGroup(pet.node, m);
+      updateCollectibleMaterialsLive(pet.node, col);
+      idx++;
+    }
+    soundEngine.playPickup(0);
+    this.interactionHighlightTimer = this.softwareRenderer ? 0 : 1.4;
+    this.wakeRender(1.8, true);
+    this.onPetStateUpdate(this.getSummonedList());
+    this.onPlacardsUpdate(this.getPlacardsScreenData());
+  }
+
+  /**
+   * Stage 56/57: One-Click 3D Superiority Relief Wave (`😮‍💨 受挫泄压·活人加冕`)
+   * Bows or tilts all summoned desktop heads into docile study postures, closes/relaxes their lifeless eyelids,
+   * and gives a gentle physical desktop nod so the frustrated player immediately feels living superiority.
+   */
+  triggerDesktopSuperiorityRelief() {
+    let idx = 0;
+    for (const pet of this.pets.values()) {
+      const col = pet.collectible || {};
+      const m = col.morphs ? { ...col.morphs } : {};
+      // Bow forehead into docile study posture (+0.28 rad) or tilt upward on alternating pets
+      pet.customRot.x = idx % 2 === 0 ? 0.30 : -0.22;
+      pet.customRot.y = idx === 0 ? 0.0 : (idx % 2 === 1 ? 0.16 : -0.16);
+      pet.node.rotation.x = pet.customRot.x;
+      pet.node.rotation.y = pet.customRot.y;
+      // Relax lifeless eyelids and corners of the mouth into peaceful obedience
+      m.eyelidOpen = idx % 2 === 0 ? -0.35 : -0.15;
+      m.mouthCorner = 0.14;
+      col.morphs = m;
+      applyHeadMorphsToGroup(pet.node, m);
+      idx++;
+    }
+    soundEngine.playPickup(0);
+    this.interactionHighlightTimer = this.softwareRenderer ? 0 : 1.4;
+    this.wakeRender(1.8, true);
+    this.onPetStateUpdate(this.getSummonedList());
+    this.onPlacardsUpdate(this.getPlacardsScreenData());
+  }
+
+  /**
+   * Stage 57: Toggle High-Angle Dominance Vantage (`👣 居高临下俯视视角`)
+   * Raises the camera above the desk looking downward while tilting the severed heads to gaze up or bow,
+   * giving the player an unmistakable physical sense of looking down from a position of living superiority.
+   */
+  toggleLookdownDominanceView(forceState = null) {
+    this.isLookdownDominance = forceState !== null ? Boolean(forceState) : !this.isLookdownDominance;
+    if (this.isLookdownDominance) {
+      this.camera.position.set(0, 15.5, this.cameraZ || 115);
+      this.camera.lookAt(0, -4.5, -50);
+      let idx = 0;
+      for (const pet of this.pets.values()) {
+        // Tilt heads either to bow meekly (+0.32 rad) or look up at the player (-0.28 rad)
+        pet.customRot.x = idx % 2 === 0 ? 0.32 : -0.28;
+        pet.node.rotation.x = pet.customRot.x;
+        idx++;
+      }
+    } else {
+      this.camera.position.set(0, 0, this.cameraZ || 115);
+      this.camera.lookAt(0, 0, -50);
+      for (const pet of this.pets.values()) {
+        pet.customRot.x = this.settings.enableGravity ? -0.04 : -0.18;
+        pet.customRot.y = 0;
+        pet.node.rotation.x = pet.customRot.x;
+        pet.node.rotation.y = 0;
+      }
+    }
+    this.updateCameraProjection();
+    soundEngine.playPickup(0);
+    this.wakeRender(2.0, true);
+    this.onPetStateUpdate(this.getSummonedList());
+    this.onPlacardsUpdate(this.getPlacardsScreenData());
+    return this.isLookdownDominance;
   }
 
   pickStructureAtCursor() {
@@ -1286,7 +1704,7 @@ export class DesktopBoxSpaceEngine {
     if (document.body.classList.contains('real-desktop-manager')) return true;
     const target = e.target;
     if (!target || !(target instanceof Element)) return false;
-    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud, #structure-floating-hud, #pet-hover-dossier, .specimen-placard-card, #pure-screen-floating-btn')) {
+    if (target.closest('#start-game-overlay, #studio-preview-canvas, #desktop-overlay-bar, #screen-pets-strip, #visual-customizer-drawer, #study-triumph-hud, #structure-floating-hud, #pet-hover-dossier, .specimen-placard-card, #pure-screen-floating-btn, #comfort-reader-drawer, #victor-puzzle-hub-modal')) {
       return true;
     }
     if (target.closest('button, input, select, textarea, label, a, #window-titlebar, .nav-tab, .os-icon, .archive-folder-item')) {
@@ -1365,8 +1783,50 @@ export class DesktopBoxSpaceEngine {
         return;
       }
 
-      const hitPet = this.pickPetAtCursor();
+      const hitDetail = this.pickPetHitDetailAtCursor();
+      const hitPet = hitDetail ? hitDetail.pet : null;
       const hitStructInfo = this.pickStructureAtCursor();
+
+      // Stage 55/58 Direct 3D Tactile Face-Pinching, Eyeball Rolling, Hair Lifting, Fluid Painting & Bow/Gaze Play Mode:
+      const isTactilePlay = Boolean(
+        hitDetail && (
+          this.tactilePlayMode === 'pinch_face' ||
+          this.tactilePlayMode === 'paint_fluid' ||
+          this.tactilePlayMode === 'bow_gaze' ||
+          this.tactilePlayMode === 'roll_eyeball' ||
+          this.tactilePlayMode === 'groom_hair' ||
+          e.shiftKey
+        )
+      );
+      if (isTactilePlay) {
+        e.stopPropagation();
+        this.interactionHighlightTimer = 1.5;
+        this.wakeRender(2.0, true);
+        const mode = this.tactilePlayMode !== 'move' ? this.tactilePlayMode : 'pinch_face';
+        this.pointerDownInfo = {
+          pet: hitPet,
+          structure: null,
+          tactileMode: mode,
+          tactileZone: hitDetail.zone,
+          startX: e.clientX,
+          startY: e.clientY,
+          lastX: e.clientX,
+          lastY: e.clientY,
+          movedDist: 0,
+          grabOffset: new THREE.Vector3(),
+          pickupSoundPlayed: false
+        };
+        if (mode === 'paint_fluid') {
+          this.applyTactileFluidStroke(hitPet, hitDetail.zone, 0.28, e.clientX, e.clientY);
+        } else if (mode === 'bow_gaze') {
+          this.applyTactileBowGazeDelta(hitPet, 0, 0, true, e.clientX, e.clientY);
+        } else if (mode === 'roll_eyeball') {
+          this.applyTactileEyeballDelta(hitPet, 0, 0, true, e.clientX, e.clientY);
+        } else if (mode === 'groom_hair') {
+          this.applyTactileHairGroomDelta(hitPet, 0, 0, true, e.clientX, e.clientY);
+        }
+        return;
+      }
 
       // Stage 28 Fix ("建筑拖动没法移动，没法删除？最好建筑那些都可以删除"):
       // 1. If clicking any Structure/Shelf/Prop directly, OR clicking a head that is inside a Container Structure
@@ -1507,6 +1967,24 @@ export class DesktopBoxSpaceEngine {
           return;
         }
 
+        // Case B0: Direct 3D Tactile Face-Pinching, Eyeball Rolling, Hair Lifting, Fluid Painting or Bow/Gaze on the Desktop Head
+        if (info.tactileMode && info.pet) {
+          if (info.tactileMode === 'pinch_face') {
+            this.applyTactilePinchDelta(info.pet, info.tactileZone, dx, dy, e.clientX, e.clientY);
+          } else if (info.tactileMode === 'paint_fluid' && info.movedDist > 4) {
+            const curDetail = this.pickPetHitDetailAtCursor();
+            const zZone = (curDetail && curDetail.pet === info.pet) ? curDetail.zone : info.tactileZone;
+            this.applyTactileFluidStroke(info.pet, zZone, 0.04, e.clientX, e.clientY);
+          } else if (info.tactileMode === 'bow_gaze' && info.movedDist > 3) {
+            this.applyTactileBowGazeDelta(info.pet, dx, dy, false, e.clientX, e.clientY);
+          } else if (info.tactileMode === 'roll_eyeball' && info.movedDist > 2) {
+            this.applyTactileEyeballDelta(info.pet, dx, dy, false, e.clientX, e.clientY);
+          } else if (info.tactileMode === 'groom_hair' && info.movedDist > 3) {
+            this.applyTactileHairGroomDelta(info.pet, dx, dy, false, e.clientX, e.clientY);
+          }
+          return;
+        }
+
         // Case B: Dragging or Rotating a Severed Head (`只有头`)
         const pet = info.pet;
         if (info.movedDist > 5) {
@@ -1582,6 +2060,10 @@ export class DesktopBoxSpaceEngine {
 
       soundEngine.stopDragWhoosh();
       this.wakeRender(1.8, true);
+
+      if (info.tactileMode) {
+        return;
+      }
 
       if (info.structure) {
         const struct = info.structure;

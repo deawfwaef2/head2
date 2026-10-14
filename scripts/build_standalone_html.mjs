@@ -5,10 +5,11 @@ import os from 'os';
 import { fileURLToPath } from 'url';
 
 const projectDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const cacheBase = path.join(projectDir, '.cache');
+const cacheBase = '/var/tmp/cervix3d-build-cache';
 fs.mkdirSync(cacheBase, { recursive: true });
+process.env.TMPDIR = cacheBase;
 const distDir = fs.mkdtempSync(path.join(cacheBase, 'head2-build-'));
-console.log('1. Building in temporary staging; last playable HTML stays intact...');
+console.log('1. Building in /var/tmp disk staging (avoiding /tmp tmpfs RAM disk); last playable HTML stays intact...');
 execFileSync(process.execPath, [path.join(projectDir, 'node_modules/vite/bin/vite.js'), 'build', '--outDir', distDir, '--emptyOutDir'], { cwd: projectDir, stdio: 'inherit' });
 const assetsDir = path.join(distDir, 'assets');
 const htmlRaw = fs.readFileSync(path.join(distDir, 'index.html'), 'utf8');

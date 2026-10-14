@@ -262,7 +262,7 @@ for ir in range(N_rad + 1):
         cap_pos.append([x, y, z])
         # Tilt cap normal slightly forward (+0.35 Z) so front & side lights illuminate the cross-section brightly!
         cap_norm.append([0.0, -0.93, 0.36])
-        cap_uv.append([0.5 + 0.455 * u_d, 0.5 + 0.455 * v_d])
+        cap_uv.append([0.5 + 0.455 * u_d, 0.5 - 0.455 * v_d])
 
 stride_c = N_ang + 1
 for ir in range(N_rad):

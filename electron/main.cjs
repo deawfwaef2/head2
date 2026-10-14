@@ -1,163 +1,154 @@
-const { app, BrowserWindow, ipcMain, screen, Tray, Menu, globalShortcut, nativeImage } = require('electron');
-const fs = require('fs');
+/**
+ * One renderer, two safe modes: a normal-sized management window and a transparent
+ * desktop-pet layer. The latter is click-through except when the pointer hits a pet.
+ * Emergency recovery: Ctrl/Cmd+Alt+M (or X), or the tray menu, restores manager.
+ */
+const { app, BrowserWindow, screen, ipcMain, globalShortcut, Menu, Tray, nativeImage, shell } = require('electron');
 const path = require('path');
 
-let win = null;
+let window = null;
 let tray = null;
 let mode = 'manager';
-let ignoringMouse = false;
+let ignored = false;
+let managerBounds = null;
 let cursorTimer = null;
 
-// Support starting directly in Pure Transparent Overlay mode via `--overlay` or `CERVIX_START_OVERLAY=1`
-const startInOverlay =
-  process.argv.includes('--overlay') || process.env.CERVIX_START_OVERLAY === '1';
-
-function managerBounds() {
-  const area = screen.getPrimaryDisplay().workArea;
-  const width = Math.min(1260, Math.round(area.width * 0.84));
-  const height = Math.min(820, Math.round(area.height * 0.86));
-  return {
-    x: Math.round(area.x + (area.width - width) / 2),
-    y: Math.round(area.y + (area.height - height) / 2),
-    width,
-    height
-  };
-}
-
-function setIgnoreMouse(ignore) {
-  if (!win || win.isDestroyed() || mode !== 'overlay') return;
-  const next = Boolean(ignore);
-  if (next === ignoringMouse) return;
-  ignoringMouse = next;
-  win.setIgnoreMouseEvents(next, { forward: true });
-}
-
-function sendCursorPoint() {
-  if (!win || win.isDestroyed() || mode !== 'overlay') return;
-  const cursor = screen.getCursorScreenPoint();
-  const bounds = win.getBounds();
-  win.webContents.send('cervix3d:cursor-screen-point', {
-    x: cursor.x - bounds.x,
-    y: cursor.y - bounds.y
-  });
+function setIgnore(ignore) {
+  if (!window || window.isDestroyed() || ignored === ignore) return;
+  ignored = ignore;
+  window.setIgnoreMouseEvents(ignore, { forward: true });
 }
 
 function switchMode(next) {
-  if (!win || win.isDestroyed()) return 'manager';
-  mode = next === 'overlay' ? 'overlay' : 'manager';
-  if (mode === 'overlay') {
-    const area = screen.getPrimaryDisplay().workArea;
-    win.setResizable(false);
-    win.setSkipTaskbar(true);
-    win.setAlwaysOnTop(true, 'screen-saver');
-    win.setBounds(area);
-    ignoringMouse = false;
-    setIgnoreMouse(true);
-    if (!cursorTimer) cursorTimer = setInterval(sendCursorPoint, 33);
-  } else {
-    if (cursorTimer) {
-      clearInterval(cursorTimer);
-      cursorTimer = null;
-    }
-    ignoringMouse = false;
-    win.setIgnoreMouseEvents(false);
-    win.setAlwaysOnTop(false);
-    win.setSkipTaskbar(false);
-    win.setResizable(true);
-    win.setBounds(managerBounds());
-    win.show();
-    win.focus();
+  if (!window || window.isDestroyed() || !['overlay', 'manager'].includes(next)) return mode;
+  if (mode === next) {
+    if (next === 'manager') { setIgnore(false); window.show(); window.focus(); }
+    return mode;
   }
-  win.webContents.send('cervix3d:desktop-mode', mode);
+  if (next === 'overlay') {
+    // Preserve the last *real* window geometry, not the fullscreen overlay geometry.
+    managerBounds = window.getBounds();
+    mode = 'overlay';
+    const bounds = screen.getDisplayMatching(managerBounds).workArea;
+    window.setAlwaysOnTop(false);
+    window.setBounds(bounds);
+    window.setSkipTaskbar(true);
+    window.setAlwaysOnTop(true, 'floating'); // Never 'screen-saver': don't cover full-screen apps.
+    window.showInactive();
+    setIgnore(true); // Fail safe: renderer errors must never block the desktop.
+  } else {
+    mode = 'manager';
+    setIgnore(false);
+    window.setAlwaysOnTop(false);
+    window.setSkipTaskbar(false);
+    window.setBounds(managerBounds || { width: 1180, height: 770, x: 80, y: 80 });
+    window.show();
+    window.focus();
+  }
+  window.webContents.send('cervix3d:desktop-mode', mode);
+  updateTray();
   return mode;
 }
 
-function createTray() {
-  const iconPath = path.join(__dirname, 'tray.png');
-  const icon = nativeImage.createFromPath(iconPath);
-  tray = new Tray(icon);
-  tray.setToolTip('CERVIX-3D 真实屏幕透明穿透桌宠 (Ctrl+Alt+M 切换模式)');
-
-  const hdDemoPath = path.join(__dirname, '..', '画质提升', '画质提升演示.html');
-  const mainHtmlPath = path.join(__dirname, '..', '点击开始游戏_CERVIX3D.html');
-
-  const menuTemplate = [
-    { label: '🗖 展开 CERVIX-3D 软件主窗口', click: () => switchMode('manager') },
-    { label: '🟢 切换纯屏幕透明穿透桌宠层 (Ctrl+Alt+M)', click: () => switchMode('overlay') },
+function updateTray() {
+  if (!tray) return;
+  tray.setToolTip(mode === 'overlay' ? 'CERVIX-3D · 桌宠运行中 · 右键打开管理器' : 'CERVIX-3D · 典藏管理器');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '打开典藏管理器  Ctrl+Alt+M', click: () => switchMode('manager') },
+    { label: '仅显示桌宠（桌面点击穿透）', click: () => switchMode('overlay') },
     { type: 'separator' },
-    {
-      label: '📦 加载主程序 (点击开始游戏_CERVIX3D.html)',
-      click: () => {
-        if (win && !win.isDestroyed() && fs.existsSync(mainHtmlPath)) {
-          switchMode('manager');
-          win.loadFile(mainHtmlPath);
-        }
-      }
-    }
-  ];
-
-  if (fs.existsSync(hdDemoPath)) {
-    menuTemplate.push({
-      label: '✨ 预览【画质提升演示.html】独立高画质舱',
-      click: () => {
-        if (win && !win.isDestroyed()) {
-          switchMode('manager');
-          win.loadFile(hdDemoPath);
-        }
-      }
-    });
-  }
-
-  menuTemplate.push(
-    { type: 'separator' },
-    { label: '✕ 退出 CERVIX-3D 桌面桌宠 (Ctrl+Alt+X)', click: () => app.quit() }
-  );
-
-  tray.setContextMenu(Menu.buildFromTemplate(menuTemplate));
-  tray.on('click', () => switchMode(mode === 'overlay' ? 'manager' : 'overlay'));
+    { label: '退出 CERVIX-3D', click: () => app.quit() }
+  ]));
 }
 
-app.whenReady().then(() => {
-  win = new BrowserWindow({
-    ...managerBounds(),
-    frame: false,
+function createWindow() {
+  const work = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(1180, work.width);
+  const height = Math.min(770, work.height);
+  managerBounds = {
+    x: work.x + Math.floor((work.width - width) / 2),
+    y: work.y + Math.floor((work.height - height) / 2), width, height
+  };
+  window = new BrowserWindow({
+    ...managerBounds,
     transparent: true,
     backgroundColor: '#00000000',
-    hasShadow: false,
-    show: true,
+    frame: false,
+    resizable: true,
+    alwaysOnTop: false,
+    skipTaskbar: false,
+    hasShadow: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: true
     }
   });
-
-  const devUrl = process.env.VITE_DEV_SERVER_URL;
-  if (devUrl) {
-    win.loadURL(devUrl);
+  // Renderer source is local; no arbitrary external navigation inside the privileged window.
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const target = new URL(url);
+      if (target.protocol === 'https:' && target.hostname === 'www.daz3d.com') shell.openExternal(target.href);
+    } catch (_) {}
+    return { action: 'deny' };
+  });
+  window.webContents.on('will-navigate', (event, url) => {
+    const allowed = process.env.VITE_DEV_SERVER_URL || `file://${path.resolve(__dirname, '..', '点击开始游戏_CERVIX3D.html')}`;
+    if (!url.startsWith(allowed)) event.preventDefault();
+  });
+  if (process.env.VITE_DEV_SERVER_URL) {
+    window.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    win.loadFile(path.join(__dirname, '..', '点击开始游戏_CERVIX3D.html'));
+    window.loadFile(path.resolve(__dirname, '..', '点击开始游戏_CERVIX3D.html'));
   }
+  window.on('closed', () => { window = null; });
 
-  win.webContents.on('did-finish-load', () => {
-    if (startInOverlay) {
-      setTimeout(() => switchMode('overlay'), 450);
-    }
-  });
+  // Main-process cursor polling works even when the overlay ignores mouse events.
+  // Forwarded pointermove alone is not available consistently on all platforms.
+  cursorTimer = setInterval(() => {
+    if (mode !== 'overlay' || !window || window.isDestroyed() || window.webContents.isLoading()) return;
+    const point = screen.getCursorScreenPoint();
+    const bounds = window.getBounds();
+    window.webContents.send('cervix3d:cursor-screen-point', {
+      x: point.x - bounds.x, y: point.y - bounds.y
+    });
+  }, 40);
+  cursorTimer.unref?.();
 
-  createTray();
-  globalShortcut.register('CommandOrControl+Alt+M', () =>
-    switchMode(mode === 'overlay' ? 'manager' : 'overlay')
-  );
-  globalShortcut.register('CommandOrControl+Alt+X', () => app.quit());
+  try {
+    tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'tray.png')));
+    tray.on('double-click', () => switchMode('manager'));
+    tray.on('click', () => switchMode('manager'));
+    updateTray();
+  } catch (error) {
+    console.warn('Tray unavailable; use Ctrl+Alt+M to reopen the manager:', error.message);
+  }
+}
 
-  ipcMain.handle('cervix3d:set-mode', (_event, next) => switchMode(next));
-  ipcMain.on('cervix3d:set-ignore-mouse', (_event, ignore) => setIgnoreMouse(ignore));
-  ipcMain.on('cervix3d:center-manager', () => {
-    if (win && !win.isDestroyed() && mode === 'manager') win.setBounds(managerBounds());
-  });
-  ipcMain.on('cervix3d:quit', () => app.quit());
+app.whenReady().then(() => {
+  createWindow();
+  globalShortcut.register('CommandOrControl+Alt+M', () => switchMode('manager'));
+  globalShortcut.register('CommandOrControl+Alt+X', () => switchMode('manager'));
 });
 
-app.on('will-quit', () => globalShortcut.unregisterAll());
-app.on('window-all-closed', () => app.quit());
+function fromOurWindow(event) { return window && !window.isDestroyed() && event.sender === window.webContents; }
+ipcMain.handle('cervix3d:set-mode', (event, next) => {
+  if (!fromOurWindow(event)) return mode;
+  return switchMode(next);
+});
+ipcMain.on('cervix3d:set-ignore-mouse', (event, ignore) => {
+  if (fromOurWindow(event) && mode === 'overlay') setIgnore(Boolean(ignore));
+});
+ipcMain.on('cervix3d:center-manager', event => {
+  if (fromOurWindow(event) && mode === 'manager') window.center();
+});
+ipcMain.on('cervix3d:quit', event => {
+  if (fromOurWindow(event)) app.quit();
+});
+app.on('activate', () => switchMode('manager'));
+app.on('will-quit', () => {
+  if (cursorTimer) clearInterval(cursorTimer);
+  globalShortcut.unregisterAll();
+});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
