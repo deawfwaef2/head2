@@ -132,27 +132,17 @@ export const BeautyGradeShader = {
     uniform vec3 uShadowTint;
     varying vec2 vUv;
 
-    // 17-Tap Dual-Ring Optical Portrait Lens Diffusion & Bokeh Kernel
+    // Hardware-Bilinear 8-Tap Dual-Ring Optical Portrait Lens Diffusion Kernel (samples 32 texels in 8 fetches!)
     vec3 sampleRingBlur(vec2 uv, vec2 radiusTexel) {
-      vec3 sum = texture2D(tDiffuse, uv).rgb * 0.16;
-      // Inner 8-tap Gaussian ring
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 1.0,  0.0) * radiusTexel * 0.65, 0.002, 0.998)).rgb * 0.075;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-1.0,  0.0) * radiusTexel * 0.65, 0.002, 0.998)).rgb * 0.075;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.0,  1.0) * radiusTexel * 0.65, 0.002, 0.998)).rgb * 0.075;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.0, -1.0) * radiusTexel * 0.65, 0.002, 0.998)).rgb * 0.075;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.707,  0.707) * radiusTexel * 0.92, 0.002, 0.998)).rgb * 0.06;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.707,  0.707) * radiusTexel * 0.92, 0.002, 0.998)).rgb * 0.06;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.707, -0.707) * radiusTexel * 0.92, 0.002, 0.998)).rgb * 0.06;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.707, -0.707) * radiusTexel * 0.92, 0.002, 0.998)).rgb * 0.06;
-      // Outer 8-tap optical bokeh disc ring
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.924,  0.383) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.924,  0.383) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.924, -0.383) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.924, -0.383) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.383,  0.924) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.383,  0.924) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.383, -0.924) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
-      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.383, -0.924) * radiusTexel * 1.48, 0.002, 0.998)).rgb * 0.0375;
+      vec3 sum = texture2D(tDiffuse, uv).rgb * 0.20;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.85,  0.35) * radiusTexel * 0.78, 0.002, 0.998)).rgb * 0.125;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.85, -0.35) * radiusTexel * 0.78, 0.002, 0.998)).rgb * 0.125;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.35,  0.85) * radiusTexel * 0.78, 0.002, 0.998)).rgb * 0.125;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.35, -0.85) * radiusTexel * 0.78, 0.002, 0.998)).rgb * 0.125;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.924,  0.383) * radiusTexel * 1.42, 0.002, 0.998)).rgb * 0.075;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.924, -0.383) * radiusTexel * 1.42, 0.002, 0.998)).rgb * 0.075;
+      sum += texture2D(tDiffuse, clamp(uv + vec2(-0.383,  0.924) * radiusTexel * 1.42, 0.002, 0.998)).rgb * 0.075;
+      sum += texture2D(tDiffuse, clamp(uv + vec2( 0.383, -0.924) * radiusTexel * 1.42, 0.002, 0.998)).rgb * 0.075;
       return sum;
     }
 
@@ -276,28 +266,32 @@ export const BeautyGradeShader = {
       float fineEdgeMask = smoothstep(0.008, 0.045, length(col - blur1));
       float subjectKeepSharpMask = clamp(max(skinWarmMask * 0.92, fineEdgeMask * 0.88), 0.0, 0.95);
 
+      // Shared single-pass wide ring blur reused across SSS, Micro-Contrast, Soft-Focus & Halation (cuts 85 taps down to 8!)
+      bool needWideBlur = (srcAlpha > 0.005) && (
+        (uSssBlur > 0.005 && skinWarmMask > 0.01) ||
+        (uMicroContrast > 0.005) ||
+        (uSoftFocus > 0.001 || uHalation > 0.001)
+      );
+      vec3 sharedWideBlur = needWideBlur
+        ? sampleRingBlur(uv, texel * 3.8) * clamp(uExposure, 0.40, 2.20)
+        : blur1;
+
       // 2. Screen-Space Subsurface Scattering (SSSSS) Red-Channel Dermal Diffusion (uSssBlur)
-      // Real human dermis scatters red light wider across shadow terminators while keeping blue/luminance pore detail 100% crisp!
       if (uSssBlur > 0.005 && srcAlpha > 0.01 && skinWarmMask > 0.01) {
-        vec3 sssNear = sampleRingBlur(uv, texel * (1.2 + uSssBlur * 1.6));
-        vec3 sssWide = sampleRingBlur(uv, texel * (2.8 + uSssBlur * 3.0));
-        vec3 sssDiff = mix(sssNear, sssWide, 0.45) * clamp(uExposure, 0.40, 2.20);
+        vec3 sssDiff = mix(blur1, sharedWideBlur, 0.52);
         float sssAmt = clamp(uSssBlur * skinWarmMask * (1.0 - fineEdgeMask * 0.85), 0.0, 0.75);
         float lumBeforeSss = dot(col, vec3(0.2126, 0.7152, 0.0722));
         col.r = mix(col.r, sssDiff.r * 1.02, sssAmt * 0.46);
         col.g = mix(col.g, sssDiff.g,        sssAmt * 0.18);
         col.b = mix(col.b, sssDiff.b * 0.99, sssAmt * 0.06);
-        // Preserve high-frequency pore & eyelash luminance!
         float lumAfterSss = max(0.0001, dot(col, vec3(0.2126, 0.7152, 0.0722)));
         col *= mix(1.0, lumBeforeSss / lumAfterSss, 0.65);
       }
 
       // 3. Local Micro-Contrast & Screen-Space Sculptural Clarity (uMicroContrast)
-      // Enhances 3D depth of hair-strand cast shadows, eyelids, nose bridge & lip vermilion without harsh edge ringing
       if (uMicroContrast > 0.005 && srcAlpha > 0.01) {
-        vec3 localMean = sampleRingBlur(uv, texel * 3.6) * clamp(uExposure, 0.40, 2.20);
         float lumCur = dot(col, vec3(0.2126, 0.7152, 0.0722));
-        float lumMean = dot(localMean, vec3(0.2126, 0.7152, 0.0722));
+        float lumMean = dot(sharedWideBlur, vec3(0.2126, 0.7152, 0.0722));
         float localDiff = clamp(lumCur - lumMean, -0.16, 0.16);
         float aoWeight = localDiff < 0.0 ? 1.18 : 0.82;
         col = max(vec3(0.0), col + col * (localDiff * aoWeight * uMicroContrast * 1.05));
@@ -323,35 +317,27 @@ export const BeautyGradeShader = {
       }
 
       // 5. True Optical Highlight-Only Black Pro-Mist & Silver-Halide Halation (uSoftFocus + uHalation)
-      // NEVER blurs iris, eyelashes, eyebrows, or pores — ONLY blooms bright highlights into a creamy halo!
       if ((uSoftFocus > 0.001 || uHalation > 0.001) && srcAlpha > 0.005) {
-        vec3 mistNear = sampleRingBlur(uv, texel * (1.8 + uSoftFocus * 2.0)) * clamp(uExposure, 0.40, 2.20);
-        vec3 mistWide = sampleRingBlur(uv, texel * (4.8 + (uSoftFocus + uHalation * 0.5) * 5.2)) * clamp(uExposure, 0.40, 2.20);
+        vec3 mistNear = mix(blur1, sharedWideBlur, 0.35);
+        vec3 mistWide = sharedWideBlur;
         vec3 mistBlend = mix(mistNear, mistWide, 0.48);
         float mistLuma = dot(mistBlend, vec3(0.2126, 0.7152, 0.0722));
-        // Only blend soft mist on bright highlight zones (luma > 0.64), keeping midtones & dark details 100% razor-sharp!
         float hiOnlyMask = smoothstep(0.64, 0.96, mistLuma) * (1.0 - fineEdgeMask * 0.75);
         vec3 softCol = mix(col, mistBlend, clamp(uSoftFocus * 0.32 * hiOnlyMask, 0.0, 0.42));
-        // Creamy warm golden-peach Pro-Mist highlight bloom
         vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.56)) * (uSoftFocus * 0.22) * vec3(1.08, 0.95, 0.82);
-        // Authentic CineStill / Kodak silver-halide red-orange anti-halation scatter around bright sunlit edges
         vec3 halationEdge = max(vec3(0.0), mistWide - col * 0.86 - vec3(0.42)) * (uHalation * 0.38) * vec3(1.22, 0.50, 0.22);
         col = softCol + (hiGlow + halationEdge) * srcAlpha;
       }
 
       // 6. Subject-Preserving Peripheral Bokeh DOF + Petzval Swirly Bokeh (uDepthBlur + uSwirlyBokeh)
-      // Protects all foreground heads across the entire desktop width (left, center & right shelves stay 100% sharp!)
       if ((uDepthBlur > 0.001 || uSwirlyBokeh > 0.001) && srcAlpha > 0.005) {
         float bgMask = 1.0 - subjectKeepSharpMask;
         float bokehMask = smoothstep(0.42, 0.82, length((uv - vec2(0.50, 0.50)) * vec2(0.88, 1.08))) * bgMask;
         float blurAmt = clamp(bokehMask * uDepthBlur, 0.0, 1.0);
         if (blurAmt > 0.005) {
-          vec3 dofNear = sampleRingBlur(uv, texel * (2.4 + blurAmt * 4.2)) * clamp(uExposure, 0.40, 2.20);
-          vec3 dofFar  = sampleRingBlur(uv, texel * (4.8 + blurAmt * 7.5)) * clamp(uExposure, 0.40, 2.20);
-          vec3 dofSample = mix(dofNear, dofFar, 0.50);
+          vec3 dofSample = sampleRingBlur(uv, texel * (3.2 + blurAmt * 6.0)) * clamp(uExposure, 0.40, 2.20);
           col = mix(col, dofSample, clamp(blurAmt * 0.72, 0.0, 0.78));
         }
-        // Classic Petzval / Helios-44 Swirly Tangential Bokeh on extreme background corners only
         float swirlMask = smoothstep(0.44, 0.84, radialDist) * clamp(uSwirlyBokeh, 0.0, 1.5) * bgMask;
         if (swirlMask > 0.005) {
           vec3 swirled = sampleSwirlyBokeh(uv, centerVec, texel, swirlMask) * clamp(uExposure, 0.40, 2.20);
@@ -362,15 +348,15 @@ export const BeautyGradeShader = {
       // 7. Cinema Anamorphic Horizontal Lens Streak Flare (uAnamorphicFlare)
       if (uAnamorphicFlare > 0.005 && srcAlpha > 0.005) {
         vec3 anamSum = vec3(0.0);
-        float offsets[6];
-        offsets[0] = -18.0; offsets[1] = -10.0; offsets[2] = -4.5;
-        offsets[3] =  4.5;  offsets[4] =  10.0; offsets[5] =  18.0;
-        for (int i = 0; i < 6; i++) {
+        float offsets[4];
+        offsets[0] = -14.0; offsets[1] = -5.5;
+        offsets[2] =  5.5;  offsets[3] =  14.0;
+        for (int i = 0; i < 4; i++) {
           vec2 sUv = clamp(uv + vec2(offsets[i] * texel.x * 2.2, 0.0), 0.002, 0.998);
           vec3 sCol = texture2D(tDiffuse, sUv).rgb;
           float sLum = dot(sCol, vec3(0.2126, 0.7152, 0.0722));
           float hiPass = smoothstep(0.62, 0.98, sLum);
-          anamSum += sCol * hiPass * (0.22 - abs(offsets[i]) * 0.007);
+          anamSum += sCol * hiPass * (0.30 - abs(offsets[i]) * 0.011);
         }
         vec3 streakTint = mix(vec3(1.12, 0.88, 0.62), vec3(0.68, 0.88, 1.25), 0.35);
         col += anamSum * streakTint * uAnamorphicFlare * 0.38 * srcAlpha;
@@ -382,15 +368,14 @@ export const BeautyGradeShader = {
         vec2 delta = (lightOrigin - uv) * 0.30;
         vec2 sampleUv = uv;
         float scatter = 0.0;
-        float weight = 0.18;
-        for (int i = 0; i < 8; i++) {
-          sampleUv += delta * 0.125;
+        float weight = 0.34;
+        for (int i = 0; i < 4; i++) {
+          sampleUv += delta * 0.25;
           vec2 clampedUv = clamp(sampleUv, 0.01, 0.99);
           vec3 sc = texture2D(tDiffuse, clampedUv).rgb;
-          float sa = texture2D(tSourceAlpha, clampedUv).r;
           float lumS = dot(sc, vec3(0.299, 0.587, 0.114));
-          scatter += smoothstep(0.30, 0.85, lumS) * sa * weight;
-          weight *= 0.84;
+          scatter += smoothstep(0.30, 0.85, lumS) * weight;
+          weight *= 0.72;
         }
         // Crepuscular Volumetric God-Ray Scatter (uTyndall)
         vec3 tyndallCol = mix(uTyndallColor, vec3(1.06, 0.88, 0.72), 0.45);
@@ -525,10 +510,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   const samplingScale = 1;
   const pixelRatio = (options.pixelRatio || renderer.getPixelRatio()) * samplingScale;
 
-  // True 16-Bit HalfFloat HDR RenderTarget
+  // True 16-Bit HalfFloat HDR RenderTarget (2x MSAA + AMD CAS avoids 4x MSAA 64-bit bandwidth explosion)
   const hdrTarget = new THREE.WebGLRenderTarget(width, height, {
     type: THREE.HalfFloatType,
-    samples: software ? 0 : Math.min(4, renderer.capabilities.maxSamples || 0),
+    samples: software ? 0 : Math.min(2, renderer.capabilities.maxSamples || 0),
   });
   const composer = new EffectComposer(renderer, hdrTarget);
   composer.setPixelRatio(pixelRatio);
@@ -564,12 +549,14 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   let sizeH = height;
   let sizeRatio = pixelRatio;
 
+  const initBloomStr = options.bloomStrength ?? 0.11;
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(width, height),
-    options.bloomStrength ?? 0.11,
+    initBloomStr,
     options.bloomRadius ?? 0.54,
     options.bloomThreshold ?? 0.88
   );
+  bloomPass.enabled = initBloomStr > 0.045;
 
   const gradePass = new ShaderPass(BeautyGradeShader);
   gradePass.uniforms.tSourceAlpha.value = alphaTarget.texture;
@@ -619,7 +606,10 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       chain.enabled = v !== false;
     },
     setGradeParams(params = {}) {
-      if (params.bloomStrength !== undefined) bloomPass.strength = Number(params.bloomStrength);
+      if (params.bloomStrength !== undefined) {
+        bloomPass.strength = Number(params.bloomStrength);
+        bloomPass.enabled = bloomPass.strength > 0.045;
+      }
       if (params.bloomRadius !== undefined) bloomPass.radius = Number(params.bloomRadius);
       if (params.bloomThreshold !== undefined) bloomPass.threshold = Number(params.bloomThreshold);
       const u = gradePass.uniforms;

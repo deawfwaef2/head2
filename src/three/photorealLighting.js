@@ -81,7 +81,7 @@ export const VISUAL_STYLE_PRESETS = {
     specularClarity: 0.64,
     eyeClarity: 1.05,
     poreReliefGlobal: 0.52,
-    supersample: 1.75,
+    supersample: 1.0,
     softFocus: 0.02,
     depthBlur: 0.0,
     chromatic: 0.02,
@@ -143,7 +143,7 @@ export const VISUAL_STYLE_PRESETS = {
     specularClarity: 0.90,
     eyeClarity: 1.05,
     poreReliefGlobal: 1.22,
-    supersample: 1.75,
+    supersample: 1.15,
     softFocus: 0.0,
     depthBlur: 0.0,
     chromatic: 0.03,
@@ -205,7 +205,7 @@ export const VISUAL_STYLE_PRESETS = {
     specularClarity: 0.78,
     eyeClarity: 0.96,
     poreReliefGlobal: 1.15,
-    supersample: 1.5,
+    supersample: 1.0,
     softFocus: 0.10,
     depthBlur: 0.0,
     chromatic: 0.06,
@@ -267,7 +267,7 @@ export const VISUAL_STYLE_PRESETS = {
     specularClarity: 0.84,
     eyeClarity: 1.04,
     poreReliefGlobal: 1.15,
-    supersample: 1.65,
+    supersample: 1.0,
     softFocus: 0.06,
     depthBlur: 0.0,
     chromatic: 0.04,
@@ -2143,9 +2143,11 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   const effectiveEnv = baseEnv * Math.max(0.24, 1.04 - chiaroscuro * 0.56);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
-  // Stage 41 Dynamic Supersampling DSR (1.0x - 2.5x)
+  // Stage 41 Dynamic Supersampling DSR (capped at native 1.0x–1.25x on multi-head desktop to prevent 4K+ MSAA GPU fan roar)
   if (m.supersample !== undefined && !engine.softwareRenderer) {
-    const targetPR = Math.max(1.0, Math.min(2.5, Number(m.supersample) || 1.5));
+    const isStudio = Boolean(engine.controls);
+    const rawSS = Number(m.supersample) || 1.0;
+    const targetPR = Math.max(0.85, Math.min(isStudio ? 1.5 : 1.25, rawSS));
     if (Math.abs(engine.renderer.getPixelRatio() - targetPR) > 0.02) {
       engine.renderer.setPixelRatio(targetPR);
       const canvas = engine.renderer.domElement;

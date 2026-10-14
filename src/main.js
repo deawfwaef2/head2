@@ -182,7 +182,7 @@ const state = {
     hemiIntensity: 0.46,
     upIntensity: 0.24,
     exposure: 1.04,
-    supersample: 1.75,
+    supersample: 1.0,
     casSharpen: 0.78,
     shadowLift: 0.36,
     specularClarity: 0.88,

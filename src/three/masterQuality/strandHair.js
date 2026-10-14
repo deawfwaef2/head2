@@ -18,23 +18,23 @@
 import * as THREE from 'three';
 
 export const STRAND_DEFAULTS = {
-  guides: 2200,
-  childrenPerGuide: 14,
+  guides: 820,
+  childrenPerGuide: 9,
   step: 0.0022,
   maxLength: 0.5,
   surfaceSnap: 0.6,
   maxSurfaceDist: 0.0038,
   tipAlpha: 0.1,
-  clumpWidth: 0.0062,
-  clumpThickness: 0.0034,
+  clumpWidth: 0.0068,
+  clumpThickness: 0.0036,
   clump: [0.25, 0.65],
   frizz: 0.00028,
-  strayRatio: 0.022,
+  strayRatio: 0.025,
   subClumps: 4,
-  fuzzPerGuide: 1.6,
+  fuzzPerGuide: 0.85,
   scalpMargin: 0.0013,
-  widthWorld: 0.00007,
-  minPixelWidth: 0.8,
+  widthWorld: 0.00012,
+  minPixelWidth: 0.85,
   seed: 1337,
 };
 
@@ -436,7 +436,7 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 }
 
 function resample(pts, L) {
-  const N = Math.max(6, Math.min(22, Math.round(L / 0.011) + 2));
+  const N = Math.max(5, Math.min(13, Math.round(L / 0.017) + 2));
   const out = new Array(N);
   const cum = new Float64Array(pts.length);
   for (let i = 1; i < pts.length; i++) cum[i] = cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
@@ -502,7 +502,7 @@ function buildChildren(guides, hc, o, rnd) {
   };
 
   // ---- 容量预估：子发 C×N + 绒毛碎发（固定 FUZZ_N 点）----
-  const C = o.childrenPerGuide, FUZZ_N = 6;
+  const C = o.childrenPerGuide, FUZZ_N = 4;
   const fuzzPer = o.fuzzPerGuide;
   let cap = 0; for (let gi = 0; gi < guides.length; gi++) cap += guides[gi].p.length * C + Math.ceil(fuzzPer + 1) * FUZZ_N;
   const pos = new Float32Array(cap * 6), tan = new Float32Array(cap * 6);
@@ -716,7 +716,7 @@ export function createStrandMaterial(headCenter, opts = {}) {
     uPxScale: { value: 0.0003 },
     uGainR: { value: o.gainR }, uGainTT: { value: o.gainTT }, uGainTRT: { value: o.gainTRT }, uGainD: { value: o.gainDiffuse },
     uAlphaR: { value: o.alphaR }, uBetaR: { value: o.betaR },
-    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.6 }, uMinAlpha: { value: 0.82 },
+    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.92 }, uMinAlpha: { value: 0.84 },
     uHairOmbreMix: { value: Number(o.hairOmbreMix ?? 0.0) },
     uHairTipColor: { value: new THREE.Color(o.hairTipColor || '#4a3528') },
     uHairFineTune0: { value: new THREE.Vector4(0, 0, 0, 0) },
@@ -831,27 +831,28 @@ export function createStrandMaterial(headCenter, opts = {}) {
       `void RE_Direct_Physical( const in IncidentLight directLight, const in vec3 geometryPosition, const in vec3 geometryNormal, const in vec3 geometryViewDir, const in vec3 geometryClearcoatNormal, const in PhysicalMaterial material, inout ReflectedLight reflectedLight ) {
         vec3 T = gHairT; vec3 L = directLight.direction; vec3 V = geometryViewDir; vec3 N = geometryNormal;
         float sI = clamp(dot(T, L), -0.999, 0.999), sR = clamp(dot(T, V), -0.999, 0.999);
-        float thI = asin(sI), thR = asin(sR);
+        float thI = fastAsin(sI), thR = fastAsin(sR);
         float thH = 0.5 * (thI + thR), thD = 0.5 * (thR - thI);
-        float cosD = max(cos(thD), 0.2);
+        float cosD = max(1.0 - 0.5 * thD * thD, 0.2);
         vec3 Lp = L - T * sI, Vp = V - T * sR;
         float cosPhi = clamp(dot(Lp, Vp) * inversesqrt(max(dot(Lp, Lp) * dot(Vp, Vp), 1e-6)), -1.0, 1.0);
         float cosHalfPhi = sqrt(clamp(0.5 + 0.5 * cosPhi, 0.0, 1.0));
-        float bR = uBetaR * (0.8 + 0.4 * fract(vRand * 7.31));
-        // 每根发丝表皮鳞片倾角不同 + 沿发长的微小起伏 → 高光碎成一条条闪丝，而不是一整片灰光
-        float aR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.12 + sin(vT * 23.0 + vRand * 61.0) * 0.035;
+        float bR = gHairBR;
+        float aR = gHairAR;
         float MR = hairGauss(thH - aR, bR);
         float MTT = hairGauss(thH + aR * 0.5, bR * 0.5);
         float MTRT = hairGauss(thH + aR * 1.5, bR * 2.0);
-        float f = 0.0465 + (1.0 - 0.0465) * pow(1.0 - sqrt(clamp(0.5 + 0.5 * dot(L, V), 0.0, 1.0)), 5.0);
+        float f1 = 1.0 - sqrt(clamp(0.5 + 0.5 * dot(L, V), 0.0, 1.0));
+        float f2 = f1 * f1;
+        float f = 0.0465 + (1.0 - 0.0465) * (f2 * f2 * f1);
         float NR = 0.25 * cosHalfPhi * f;
         vec3 Tabs = pow(max(gHairBase, vec3(1e-4)), vec3(0.5 / cosD));
-        vec3 NTT = (1.0 - f) * (1.0 - f) * Tabs * exp(-3.65 * cosPhi - 3.98);
-        vec3 NTRT = (1.0 - f) * (1.0 - f) * f * Tabs * Tabs * exp(17.0 * cosPhi - 16.78);
-        float sv = 0.25 + 1.5 * fract(vRand * 3.97);
-        vec3 spec = sv * vec3(MR * NR * uGainR) + MTT * NTT * uGainTT + MTRT * NTRT * uGainTRT;
+        float oneMinusF2 = (1.0 - f) * (1.0 - f);
+        vec3 NTT = oneMinusF2 * Tabs * exp(-3.65 * cosPhi - 3.98);
+        vec3 NTRT = oneMinusF2 * f * Tabs * Tabs * exp(17.0 * cosPhi - 16.78);
+        vec3 spec = gHairSV * vec3(MR * NR * uGainR) + MTT * NTT * uGainTT + MTRT * NTRT * uGainTRT;
         float kd = sqrt(max(0.0, 1.0 - sI * sI));
-        float vol = clamp((dot(N, L) + 0.6) / 1.6, 0.0, 1.0);
+        float vol = clamp((dot(N, L) + 0.6) * 0.625, 0.0, 1.0);
         vec3 diff = BRDF_Lambert(material.diffuseColor) * kd * mix(0.18, 1.0, vol) * uGainD;
         reflectedLight.directDiffuse += directLight.color * diff;
         reflectedLight.directSpecular += directLight.color * spec * gHairAO * gHairAO * mix(0.35, 1.0, vol);
@@ -864,6 +865,8 @@ export function createStrandMaterial(headCenter, opts = {}) {
         varying vec3 vHT; varying float vT, vRand, vAO, vCov, vW;
         uniform float uCovGain, uMinAlpha;
         vec3 gHairT = vec3(0.0, 1.0, 0.0); vec3 gHairBase = vec3(0.03); float gHairAO = 1.0;
+        float gHairBR = 0.085; float gHairAR = -0.07; float gHairSV = 1.0;
+        float fastAsin(float x) { float x2 = x * x; return x * (1.0 + x2 * (0.16667 + 0.075 * x2)); }
         float hairGauss(float x, float b) { return exp(-x * x / (2.0 * b * b)) / (2.5066283 * b); }`)
       .replace('#include <lights_physical_pars_fragment>', lights)
       .replace('#include <color_fragment>', `#include <color_fragment>
@@ -871,6 +874,9 @@ export function createStrandMaterial(headCenter, opts = {}) {
         diffuseColor.rgb *= (1.0 - uColorVar * 0.5 + uColorVar * vRand) * (1.0 + uTipLighten * vT * vT);
         gHairBase = diffuseColor.rgb;
         gHairAO = vAO;
+        gHairBR = uBetaR * (0.8 + 0.4 * fract(vRand * 7.31));
+        gHairAR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.12 + sin(vT * 23.0 + vRand * 61.0) * 0.035;
+        gHairSV = 0.25 + 1.5 * fract(vRand * 3.97);
         diffuseColor.rgb *= vAO;
         // 覆盖率 + 随机抖动（MSAA 只有 4 个样本，alpha < 1/8 会直接消失；抖动让期望值正确）
         float hcov = fract(sin(dot(gl_FragCoord.xy + vRand * 97.0, vec2(12.9898, 78.233))) * 43758.5453);

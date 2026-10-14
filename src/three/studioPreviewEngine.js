@@ -319,19 +319,15 @@ export class StudioPreviewEngine {
     }
 
     const now = performance.now();
-    const dynMode = this._activeVisualState?.dynamicLightMode || 'sunset_cloud_drift';
-    const hasDynLight = !this.softwareRenderer && dynMode !== 'static_locked' && Number(this._activeVisualState?.dynamicLightSpeed ?? 1.0) > 0.001;
     const isIdle = !this.autoRotate && now > this.renderWakeUntil;
+    if (isIdle) {
+      return;
+    }
     const elapsedMs = now - this.lastFrameTime;
-    // Cap Studio Preview at ~60 FPS when active, ~28 FPS when in ambient dynamic-light drift
-    const minIntervalMs = this.softwareRenderer ? 220.0 : (isIdle && hasDynLight ? 35.0 : 15.5);
+    const minIntervalMs = this.softwareRenderer ? 220.0 : 15.5;
     if (elapsedMs < minIntervalMs) return;
     const dt = Math.min(0.05, elapsedMs / 1000);
     this.lastFrameTime = now;
-
-    if (isIdle && !hasDynLight) {
-      return;
-    }
 
     const elapsed = this.clock.getElapsedTime();
     updateDynamicLightingOnEngine(this, elapsed);

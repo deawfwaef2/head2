@@ -2329,14 +2329,16 @@ export class DesktopBoxSpaceEngine {
       }
     }
 
-    // Zero-Fan-Roar Smart Idle Sleep + Slow Dynamic Light & Shadow Cadence:
-    // When dynamic lighting is active ('sunset_cloud_drift', etc.), run a whisper-quiet ~26 FPS ambient cadence
-    // when pets are stationary; if 'static_locked', sleep completely at 0% GPU when stationary.
-    const dynLightActive = !this.softwareRenderer && this._activeVisualState && this._activeVisualState.dynamicLightMode && this._activeVisualState.dynamicLightMode !== 'static_locked';
+    // Zero-Fan-Roar Smart Idle Sleep:
+    // While the user is moving the mouse or interacting, pointermove/wakeRender keeps renderWakeUntil active;
+    // 0.6s after user stops interacting (or while user is inside the foreground Studio 3D tab), sleep at 0% GPU!
+    const studioTabForeground = !document.getElementById('software-window')?.classList.contains('window-hidden')
+      && document.getElementById('tab-studio')?.classList.contains('active');
+    if (studioTabForeground && !this.pointerDownInfo) {
+      return;
+    }
     if (!anyActiveAnimation && now > this.renderWakeUntil) {
-      if (!dynLightActive) return;
-      if (now - (this._lastAmbientRenderAt || 0) < 36) return;
-      this._lastAmbientRenderAt = now;
+      return;
     }
 
     // Stage 15: 仅 rtx2070 档启用动态分辨率（其余档行为不变）

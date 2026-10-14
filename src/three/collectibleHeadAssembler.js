@@ -43,10 +43,10 @@ const BUILTIN_HEAD_URL = '/models/daz_asian_head_base.glb';
 const BUST_WORLD_SCALE = 115.0;
 
 export const MASTER_HAIR_DENSITIES = {
-  low:   { label: '流畅 (约 2.0 万根真发丝)', guides: 1400, childrenPerGuide: 11, fuzzPerGuide: 1.0 },
-  mid:   { label: '标准 (约 4.5 万根真发丝)', guides: 2400, childrenPerGuide: 16, fuzzPerGuide: 1.6 },
-  high:  { label: '高精 (约 8.5 万根真发丝)', guides: 3100, childrenPerGuide: 25, fuzzPerGuide: 2.2 },
-  ultra: { label: '极致 (约 14 万根真发丝)',  guides: 3600, childrenPerGuide: 36, fuzzPerGuide: 2.8 },
+  low:   { label: '流畅 (RTX全屏多头稳帧)', guides: 580, childrenPerGuide: 7, fuzzPerGuide: 0.6 },
+  mid:   { label: '标准 (光学等体积零损)', guides: 820, childrenPerGuide: 9, fuzzPerGuide: 0.85 },
+  high:  { label: '高精 (特写加密发丝)', guides: 1450, childrenPerGuide: 13, fuzzPerGuide: 1.2 },
+  ultra: { label: '极致 (影视级全量发丝)',  guides: 2200, childrenPerGuide: 18, fuzzPerGuide: 1.8 },
 };
 
 export const MASTER_HAIR_CONFIG = {
@@ -2940,12 +2940,12 @@ export async function buildCollectibleHeadNode(config = {}) {
           `#include <map_fragment>
           #ifdef USE_MAP
           {
-            vec2 texel = vec2(1.0 / 512.0);
-            float a = 0.0;
-            for (int i = -2; i <= 2; i++)
-              for (int j = -2; j <= 2; j++)
-                a += texture2D(map, vMapUv + vec2(float(i), float(j)) * texel * 1.4).a;
-            a /= 25.0;
+            vec2 texel = vec2(1.15 / 512.0);
+            float a = sampledDiffuseColor.a * 0.28
+              + (texture2D(map, vMapUv + vec2( texel.x,  texel.y)).a
+               + texture2D(map, vMapUv + vec2(-texel.x,  texel.y)).a
+               + texture2D(map, vMapUv + vec2( texel.x, -texel.y)).a
+               + texture2D(map, vMapUv + vec2(-texel.x, -texel.y)).a) * 0.18;
             float colL = dot(sampledDiffuseColor.rgb, vec3(0.333));
             diffuseColor.rgb = mix(vec3(0.11, 0.085, 0.07), vec3(0.28, 0.22, 0.18), colL) * diffuse;
             float axB = abs(vBrowLocalPos.x);

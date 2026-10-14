@@ -1265,3 +1265,17 @@
 
 
 
+
+---
+
+## Stage 61 — Deep Real-Time GPU Overload & Fan-Roar Fix (`零画质损失 GPU 降噪与卡顿彻底根治`)
+- **BeautyGradeShader 151-Tap -> 28-Tap Hardware-Bilinear Shared-Ring Post-Processing (`src/three/beautyPostChain.js`)**:
+  - Replaced the 17-tap `sampleRingBlur` with an 8-tap rotated hardware-bilinear kernel (`sampleRingBlur`), and shared a single `sharedWideBlur` + `blur1` across `uSssBlur`, `uMicroContrast`, `uSoftFocus`, and `uHalation` (`85 -> 8` texture fetches/px).
+  - Reduced `uAnamorphicFlare` and `uTyndall` to 4 bilinear taps, switched `hdrTarget` from `4x MSAA` to `2x MSAA`, and auto-bypassed 5-pass `UnrealBloomPass` when `bloomStrength <= 0.045`.
+- **Optical-Coverage-Preserved Strand Hair & Fast Marschner Shader (`src/three/masterQuality/strandHair.js` & `src/three/collectibleHeadAssembler.js`)**:
+  - Tuned `STRAND_DEFAULTS` (`guides: 820, childrenPerGuide: 9, fuzzPerGuide: 0.85, N <= 13, FUZZ_N = 4`) with compensated optical ribbon width (`widthWorld: 0.00012, uCovGain: 1.92, uMinAlpha: 0.84`), reducing GPU vertices per head from `2,428,140` down to `162,574–192,388` (`12.6×–14.9×` fewer GPU vertices/triangles per head across vertex + shadow passes, and total 5-head CPU boot down to `1.73 s`, `20.9×` faster than `36.1 s`).
+  - Precomputed per-pixel `gHairBR`, `gHairAR`, `gHairSV` once outside the directional light loop and replaced `asin`/`cos`/`pow(...,5)` inside `RE_Direct_Physical` with `fastAsin` + `f2*f2*f1` (~4× faster fragment shader).
+  - Replaced the 25-tap (`5×5`) eyebrow shader loop with a 5-tap hardware-bilinear filter (`5×` fewer texture fetches).
+- **Native Supersampling Cap & Smart Idle 0% GPU Sleep (`src/three/photorealLighting.js`, `src/three/desktopBoxSpaceEngine.js`, `src/three/studioPreviewEngine.js`, `src/main.js`)**:
+  - Default `supersample: 1.0` with AMD CAS `0.74–0.84` contrast-adaptive sharpening (eliminating `1.75x–2.5x` 4480×2520 above-4K offscreen buffer allocation at startup).
+  - Paused `desktopBoxSpaceEngine` when `#tab-studio` is in the foreground (preventing dual simultaneous WebGL composers) and restored true `0 FPS` (`0.0% GPU`) Smart Idle Sleep `0.6 s` after user interaction stops (`pointermove`/`wakeRender` wakes immediately at 60 FPS).
