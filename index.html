@@ -1554,12 +1554,13 @@
 
                 <div class="hair-quality-note" style="border:1px solid #357b87;border-radius:10px;padding:12px;margin:10px 0;background:#101f2b;line-height:1.7;font-size:12px;color:#d5e4ed">
                   <strong>头发校准 · 先看轮廓，再调反光</strong><br>
-                  <span>内置发型是发片示例，并非照片重建。单层透明覆盖去掉了叠加假高光；粗糙轮廓仍需高质量 GLB / 艺术家梳理。</span>
+                  <span>内置发型仍是发片，并非照片重建。新版沿艺术家 UV 发流响应真实场景灯光；已恢复部分原始 1K 细节，粗糙轮廓仍需精修资产。</span>
                   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
                     <button type="button" class="chip-btn" data-hair-finish="0">消除镜面反光</button>
                     <button type="button" class="chip-btn" data-hair-finish="0.45">自然柔光</button>
                     <button type="button" class="chip-btn" data-hair-finish="0.8">轻微丝光</button>
                   </div>
+                  <details style="font-size:10px;line-height:1.6;margin-top:8px"><summary>原始发丝资产署名与来源</summary>Daisy hair / Elvaerwyn · CC-BY（来源未注明版本），MakeHuman Community hair02；用于长发与空气刘海长发。Bobcut texture / littleright · 官方 hair01 目录标为 CC0，历史 mhclo 头仍标 AGPL3，许可差异保留说明。贴图仅作染色亮度归一化，保留原 Alpha；详细来源及修改见仓库 ASSET_CREDITS_STAGE42.md。</details>
                   <details style="margin-top:8px"><summary>如何真正贴近照片？如何保存外部发型？</summary>
                     ① 使用正面、侧面、后面参考照，在固定光照下对齐发际线、分缝、刘海长度及外轮廓。单张照片看不到后脑结构。<br>
                     ② 在 Blender 制作/梳理 guide curves，导出带透明纹理的发片 GLB；近景可用适量曲线转网格。OBJ 不含贴图材质，优先 GLB。<br>

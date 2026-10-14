@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
@@ -680,6 +681,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       geo.attributes.normal.array.set(geo.userData.baseHairNormals);
       geo.attributes.normal.needsUpdate = true;
     }
+    if (geo.attributes.artistHairFlow) updateArtistHairFlow(geo, geo.userData.hairFlowHorizontal);
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
   });
@@ -1015,12 +1017,12 @@ export function disposeHeadNode(node) {
 function configureHairSheen(material, value) {
   const n = Number(value);
   const sheen = Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0.45;
-  material.roughness = 0.82 - sheen * 0.24;
-  material.specularIntensity = sheen * 0.32;
+  material.roughness = 0.58 - sheen * 0.18;
+  material.specularIntensity = sheen * 0.90;
   material.anisotropy = 0; // No metal-like GGX streaks with unknown/mirrored card tangents.
   material.sheen = 0;
   material.clearcoat = 0;
-  material.envMapIntensity = 0.22;
+  material.envMapIntensity = 0.30;
 }
 
 export function updateHairSheen(node, value) {
@@ -1069,13 +1071,14 @@ function fitImportedHairScene(scene) {
 function injectArtistHairColor(material, hairShaderParams = {}) {
   const uniforms = {
     uHairWispyFeather: { value: Number(hairShaderParams.hairWispyFeather ?? 0.45) },
+    uHairFlowHorizontal: { value: hairShaderParams.flowHorizontal ? 1 : 0 },
     uHairOmbreMix: { value: Number(hairShaderParams.hairOmbreMix ?? 0) },
     uHairTipColor: { value: new THREE.Color(hairShaderParams.hairTipColor || '#4a3528') },
     uHairHighlightColor: { value: new THREE.Color('#9e6b52') },
     uHairHighlightStrength: { value: 0 },
   };
   material.userData.hairShaderUniforms = uniforms;
-  material.customProgramCacheKey = () => 'artist-hair-stable-v39';
+  material.customProgramCacheKey = () => 'artist-hair-scene-fiber-v42';
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = 'varying vec3 vHairLocalPos;\n' + shader.vertexShader;
@@ -1084,6 +1087,7 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
     shader.fragmentShader = `
       varying vec3 vHairLocalPos;
       uniform float uHairWispyFeather;
+      uniform float uHairFlowHorizontal;
       uniform float uHairOmbreMix;
       uniform vec3 uHairTipColor;
       uniform vec3 uHairHighlightColor;
@@ -1097,14 +1101,14 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
         float tips = smoothstep(0.12, 0.88, clamp((0.038-vHairLocalPos.y)/0.095,0.0,1.0));
         vec3 tint = mix(diffuse, uHairTipColor, tips * uHairOmbreMix);
         tint = mix(tint, uHairHighlightColor, smoothstep(0.55,0.9,lockValue)*uHairHighlightStrength);
-        diffuseColor.rgb = tint * mix(0.65, 1.65, lockValue);
+        diffuseColor.rgb = tint * mix(0.48, 2.05, lockValue);
         // Thinning follows the existing strand coverage, never a screen-space noise mask.
         float coverage = hairTexel.a;
         coverage *= 1.0 - 0.25 * uHairWispyFeather * (1.0 - coverage);
         diffuseColor.a *= coverage;
       #endif
     `);
-
+    injectArtistHairLighting(shader);
   };
 }
 
@@ -1374,6 +1378,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         totalVerts += g.attributes.position.count;
         totalTris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
       }
+      if (!customAsset) updateArtistHairFlow(g, resolvedStyle === 'daz_hair_asym_short');
       const configureMaterial = original => {
         // Imported GLBs retain artist PBR textures, material slots and alpha modes.
         // Never turn an imported multi-material groom into one black material.
@@ -1400,7 +1405,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         });
         material.userData.builtInHair = true;
         configureHairSheen(material, sheenIntensity);
-        injectArtistHairColor(material, hairShaderParams);
+        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: resolvedStyle === 'daz_hair_asym_short' });
         return material;
       };
       child.material = Array.isArray(child.material)
