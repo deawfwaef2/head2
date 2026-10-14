@@ -2383,11 +2383,20 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
 
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir.value.copy(rig.key.position).normalize();
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboPhase.value = goboPhase;
-  engine.scene.traverse((obj) => {
-    if (obj.isMesh && obj.material?.userData?.eyeUniforms?.uWindowGoboPhase) {
-      obj.material.userData.eyeUniforms.uWindowGoboPhase.value = goboPhase;
-    }
-  });
+  const sceneChildCount = engine.scene.children.length;
+  if (engine._lastEyeUniformChildCount !== sceneChildCount || !engine._cachedEyeUniforms) {
+    const eyeList = [];
+    engine.scene.traverse((obj) => {
+      if (obj.isMesh && obj.material?.userData?.eyeUniforms?.uWindowGoboPhase) {
+        eyeList.push(obj.material.userData.eyeUniforms);
+      }
+    });
+    engine._lastEyeUniformChildCount = sceneChildCount;
+    engine._cachedEyeUniforms = eyeList;
+  }
+  for (let i = 0; i < engine._cachedEyeUniforms.length; i++) {
+    engine._cachedEyeUniforms[i].uWindowGoboPhase.value = goboPhase;
+  }
 
   // Update Tyndall ray direction & breathing intensity
   const tyndallAngleRad = -THREE.MathUtils.clamp(curAzDeg / 58.0, -0.82, 0.82);
@@ -2405,9 +2414,9 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
     if (u.uTyndall) u.uTyndall.value = curTyndall;
   }
 
-  // Throttle shadow map rebuilds during slow ambient light drift (every ~120ms is silky smooth & saves GPU!)
+  // Throttle shadow map rebuilds during slow ambient light drift (every ~200ms is silky smooth & saves GPU!)
   const nowMs = performance.now();
-  if (!engine._lastDynShadowMs || nowMs - engine._lastDynShadowMs > 110) {
+  if (!engine._lastDynShadowMs || nowMs - engine._lastDynShadowMs > 200) {
     engine._lastDynShadowMs = nowMs;
     requestShadowUpdate(engine.renderer);
   }

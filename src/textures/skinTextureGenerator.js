@@ -458,95 +458,125 @@ export function createRealisticHairStrandTexture(hairColorHex = '#141116', sheen
  * 注意：数据贴图必须保持线性色彩空间（不设 SRGB），否则粗糙度会偏亮失真。
  */
 let _skinMicroCache = null;
-export function createSkinMicroMaps(size = 1024) {
+export function createSkinMicroMaps(size = 512) {
   if (_skinMicroCache) return _skinMicroCache;
-  const unit = size / 512;
+  const sz = Math.min(512, Math.max(256, size | 0));
+  const mask = sz - 1;
   const roughCanvas = document.createElement('canvas');
-  roughCanvas.width = size;
-  roughCanvas.height = size;
+  roughCanvas.width = sz;
+  roughCanvas.height = sz;
   const rctx = roughCanvas.getContext('2d');
 
   const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = size;
-  bumpCanvas.height = size;
+  bumpCanvas.width = sz;
+  bumpCanvas.height = sz;
   const bctx = bumpCanvas.getContext('2d');
 
-  // 1. Matte-velvet human dermal baseline (#dcdcdc ≈ 0.86 multiplier so skin never looks like shiny silicone/plastic!)
-  rctx.fillStyle = '#dcdcdc';
-  rctx.fillRect(0, 0, size, size);
-  bctx.fillStyle = '#808080';
-  bctx.fillRect(0, 0, size, size);
+  const rImg = rctx.createImageData(sz, sz);
+  const bImg = bctx.createImageData(sz, sz);
+  const rData = rImg.data;
+  const bData = bImg.data;
 
-  // Subtle anatomical T-zone vs cheek matte zones
-  const zones = [
-    [0.50, 0.44, 0.24, 'rgba(165,165,165,0.22)'], // Nasal bridge / forehead T-zone: natural lipid sheen
-    [0.24, 0.55, 0.28, 'rgba(248,248,248,0.24)'], // Left cheek: velvety matte dermis
-    [0.76, 0.55, 0.28, 'rgba(248,248,248,0.24)'], // Right cheek: velvety matte dermis
-  ];
-  for (const [zx, zy, zr, col] of zones) {
-    const g = rctx.createRadialGradient(size * zx, size * zy, 4, size * zx, size * zy, size * zr);
-    g.addColorStop(0, col);
-    g.addColorStop(1, 'rgba(220,220,220,0)');
-    rctx.fillStyle = g;
-    rctx.fillRect(0, 0, size, size);
+  // Grayscale accumulators: 220 (#dcdcdc) matte dermal baseline for roughness, 128 (#808080) for bump
+  const rBuf = new Float32Array(sz * sz);
+  const bBuf = new Float32Array(sz * sz);
+  const invSz = 1.0 / sz;
+
+  for (let y = 0; y < sz; y++) {
+    const ny = y * invSz;
+    const row = y * sz;
+    const dyT = ny - 0.44;
+    const dyC = ny - 0.55;
+    for (let x = 0; x < sz; x++) {
+      const nx = x * invSz;
+      let rVal = 220.0;
+      const dT = Math.sqrt((nx - 0.50) * (nx - 0.50) + dyT * dyT) / 0.24;
+      if (dT < 1.0) rVal += (165.0 - rVal) * (1.0 - dT) * 0.22;
+      const dCL = Math.sqrt((nx - 0.24) * (nx - 0.24) + dyC * dyC) / 0.28;
+      if (dCL < 1.0) rVal += (248.0 - rVal) * (1.0 - dCL) * 0.24;
+      const dCR = Math.sqrt((nx - 0.76) * (nx - 0.76) + dyC * dyC) / 0.28;
+      if (dCR < 1.0) rVal += (248.0 - rVal) * (1.0 - dCR) * 0.24;
+      rBuf[row + x] = rVal;
+      bBuf[row + x] = 128.0;
+    }
   }
 
-  // 2. Crisscross Langer's dermal tension micro-grooves (真实人类皮沟/皮嵴菱形微网格，彻底击碎硅胶假皮高光)
-  bctx.lineWidth = 0.65 * unit;
-  rctx.lineWidth = 0.65 * unit;
-  for (let i = 0; i < Math.round(3200 * unit * unit); i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const a = (Math.random() < 0.5 ? 0.62 : -0.62) + (Math.random() - 0.5) * 0.45;
-    const len = (2.5 + Math.random() * 5.5) * unit;
-    bctx.strokeStyle = 'rgba(38,38,38,0.22)';
-    bctx.beginPath();
-    bctx.moveTo(x, y);
-    bctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
-    bctx.stroke();
+  let seed = 0x243f6a88;
+  const rnd = () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 
-    rctx.strokeStyle = 'rgba(250,250,250,0.20)';
-    rctx.beginPath();
-    rctx.moveTo(x, y);
-    rctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
-    rctx.stroke();
+  // 2. Crisscross Langer's dermal tension micro-grooves
+  const nGrooves = 3200;
+  for (let i = 0; i < nGrooves; i++) {
+    const x0 = rnd() * sz;
+    const y0 = rnd() * sz;
+    const a = (rnd() < 0.5 ? 0.62 : -0.62) + (rnd() - 0.5) * 0.45;
+    const len = 2.5 + rnd() * 5.5;
+    const dx = Math.cos(a), dy = Math.sin(a);
+    const steps = Math.ceil(len);
+    for (let s = 0; s <= steps; s++) {
+      const px = ((x0 + dx * s) | 0) & mask;
+      const py = ((y0 + dy * s) | 0) & mask;
+      const idx = py * sz + px;
+      bBuf[idx] += (38.0 - bBuf[idx]) * 0.22;
+      rBuf[idx] += (250.0 - rBuf[idx]) * 0.20;
+    }
   }
 
   // 3. High-definition follicular pores & epidermal micro-relief
-  for (let i = 0; i < Math.round(16000 * unit * unit); i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const isPore = Math.random() < 0.42;
-    const r = (isPore ? 0.65 + Math.random() * 0.95 : 1.1 + Math.random() * 1.4) * unit;
+  const nPores = 16000;
+  for (let i = 0; i < nPores; i++) {
+    const cx = (rnd() * sz) | 0;
+    const cy = (rnd() * sz) | 0;
+    const isPore = rnd() < 0.42;
     if (isPore) {
-      // Pore crater: dark in bumpMap (indented), high roughness in roughnessMap (no specular inside pore)
-      bctx.fillStyle = `rgba(22,22,22,${0.25 + Math.random() * 0.24})`;
-      bctx.beginPath();
-      bctx.arc(x, y, r, 0, Math.PI * 2);
-      bctx.fill();
-
-      rctx.fillStyle = `rgba(252,252,252,${0.24 + Math.random() * 0.20})`;
-      rctx.beginPath();
-      rctx.arc(x, y, r, 0, Math.PI * 2);
-      rctx.fill();
+      const wB = 0.25 + rnd() * 0.24;
+      const wR = 0.24 + rnd() * 0.20;
+      const cIdx = (cy & mask) * sz + (cx & mask);
+      bBuf[cIdx] += (22.0 - bBuf[cIdx]) * wB;
+      rBuf[cIdx] += (252.0 - rBuf[cIdx]) * wR;
+      const wEdge = wB * 0.45;
+      const iL = (cy & mask) * sz + ((cx - 1) & mask);
+      const iR = (cy & mask) * sz + ((cx + 1) & mask);
+      const iU = ((cy - 1) & mask) * sz + (cx & mask);
+      const iD = ((cy + 1) & mask) * sz + (cx & mask);
+      bBuf[iL] += (22.0 - bBuf[iL]) * wEdge; rBuf[iL] += (252.0 - rBuf[iL]) * wEdge;
+      bBuf[iR] += (22.0 - bBuf[iR]) * wEdge; rBuf[iR] += (252.0 - rBuf[iR]) * wEdge;
+      bBuf[iU] += (22.0 - bBuf[iU]) * wEdge; rBuf[iU] += (252.0 - rBuf[iU]) * wEdge;
+      bBuf[iD] += (22.0 - bBuf[iD]) * wEdge; rBuf[iD] += (252.0 - rBuf[iD]) * wEdge;
     } else {
-      // Micro-ridge peak between pores
-      bctx.fillStyle = `rgba(218,218,218,${0.14 + Math.random() * 0.14})`;
-      bctx.beginPath();
-      bctx.arc(x, y, r, 0, Math.PI * 2);
-      bctx.fill();
-
-      rctx.fillStyle = `rgba(175,175,175,${0.12 + Math.random() * 0.12})`;
-      rctx.beginPath();
-      rctx.arc(x, y, r, 0, Math.PI * 2);
-      rctx.fill();
+      const wB = 0.14 + rnd() * 0.14;
+      const wR = 0.12 + rnd() * 0.12;
+      for (let dy = -1; dy <= 1; dy++) {
+        const row = ((cy + dy) & mask) * sz;
+        for (let dx = -1; dx <= 1; dx++) {
+          const atten = (dx === 0 && dy === 0) ? 1.0 : 0.55;
+          const idx = row + ((cx + dx) & mask);
+          bBuf[idx] += (218.0 - bBuf[idx]) * (wB * atten);
+          rBuf[idx] += (175.0 - rBuf[idx]) * (wR * atten);
+        }
+      }
     }
   }
+
+  const totalPx = sz * sz;
+  for (let i = 0; i < totalPx; i++) {
+    const rv = Math.max(0, Math.min(255, rBuf[i] | 0));
+    const bv = Math.max(0, Math.min(255, bBuf[i] | 0));
+    const p4 = i * 4;
+    rData[p4] = rv; rData[p4 + 1] = rv; rData[p4 + 2] = rv; rData[p4 + 3] = 255;
+    bData[p4] = bv; bData[p4 + 1] = bv; bData[p4 + 2] = bv; bData[p4 + 3] = 255;
+  }
+  rctx.putImageData(rImg, 0, 0);
+  bctx.putImageData(bImg, 0, 0);
 
   const roughTex = new THREE.CanvasTexture(roughCanvas);
   roughTex.wrapS = THREE.RepeatWrapping;
   roughTex.wrapT = THREE.RepeatWrapping;
-  // Face UV island occupies ~16% of MakeHuman's body UV; repeat(38, 38) yields ~6x 1024px tiles (~6K pore density) across the face!
   roughTex.repeat.set(38, 38);
   roughTex.anisotropy = 16;
   roughTex.needsUpdate = true;

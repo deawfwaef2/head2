@@ -43,34 +43,150 @@ function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; 
 
 class TriGrid {
   constructor(tri, cell) {
-    this.tri = tri; this.cell = cell;
-    const n = tri.length / 9;
-    let mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
-    for (let i = 0; i < tri.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], tri[i + k]); mx[k] = Math.max(mx[k], tri[i + k]); }
-    this.min = mn.map((v) => v - cell);
-    this.dim = mx.map((v, k) => Math.max(1, Math.ceil((v + cell - this.min[k]) / cell)));
-    this.map = new Map();
+    this.tri = tri; this.cell = cell; this.invCell = 1.0 / cell;
+    const n = (tri.length / 9) | 0;
+    let mnx = Infinity, mny = Infinity, mnz = Infinity;
+    let mxx = -Infinity, mxy = -Infinity, mxz = -Infinity;
+    const triBox = new Float32Array(n * 6);
     for (let t = 0; t < n; t++) {
-      const o = t * 9;
-      const lo = [0, 1, 2].map((k) => Math.floor((Math.min(tri[o + k], tri[o + 3 + k], tri[o + 6 + k]) - this.min[k]) / cell));
-      const hi = [0, 1, 2].map((k) => Math.floor((Math.max(tri[o + k], tri[o + 3 + k], tri[o + 6 + k]) - this.min[k]) / cell));
-      for (let x = lo[0]; x <= hi[0]; x++) for (let y = lo[1]; y <= hi[1]; y++) for (let z = lo[2]; z <= hi[2]; z++) {
-        const key = (x * this.dim[1] + y) * this.dim[2] + z;
-        let a = this.map.get(key); if (!a) { a = []; this.map.set(key, a); } a.push(t);
+      const o = t * 9, b = t * 6;
+      const ax = tri[o], ay = tri[o + 1], az = tri[o + 2];
+      const bx = tri[o + 3], by = tri[o + 4], bz = tri[o + 5];
+      const cx = tri[o + 6], cy = tri[o + 7], cz = tri[o + 8];
+      const lx = ax < bx ? (ax < cx ? ax : cx) : (bx < cx ? bx : cx);
+      const ly = ay < by ? (ay < cy ? ay : cy) : (by < cy ? by : cy);
+      const lz = az < bz ? (az < cz ? az : cz) : (bz < cz ? bz : cz);
+      const hx = ax > bx ? (ax > cx ? ax : cx) : (bx > cx ? bx : cx);
+      const hy = ay > by ? (ay > cy ? ay : cy) : (by > cy ? by : cy);
+      const hz = az > bz ? (az > cz ? az : cz) : (bz > cz ? bz : cz);
+      triBox[b] = lx; triBox[b + 1] = ly; triBox[b + 2] = lz;
+      triBox[b + 3] = hx; triBox[b + 4] = hy; triBox[b + 5] = hz;
+      if (lx < mnx) mnx = lx; if (ly < mny) mny = ly; if (lz < mnz) mnz = lz;
+      if (hx > mxx) mxx = hx; if (hy > mxy) mxy = hy; if (hz > mxz) mxz = hz;
+    }
+    this.triBox = triBox;
+    this.minX = mnx - cell; this.minY = mny - cell; this.minZ = mnz - cell;
+    const dimX = Math.max(1, Math.ceil((mxx + cell - this.minX) * this.invCell));
+    const dimY = Math.max(1, Math.ceil((mxy + cell - this.minY) * this.invCell));
+    const dimZ = Math.max(1, Math.ceil((mxz + cell - this.minZ) * this.invCell));
+    this.dimX = dimX; this.dimY = dimY; this.dimZ = dimZ;
+    const numCells = dimX * dimY * dimZ;
+    const cellCount = new Int32Array(numCells);
+    const triBounds = new Int32Array(n * 6);
+    let totalRefs = 0;
+    for (let t = 0; t < n; t++) {
+      const b = t * 6;
+      const x0 = Math.max(0, Math.min(dimX - 1, Math.floor((triBox[b] - this.minX) * this.invCell)));
+      const y0 = Math.max(0, Math.min(dimY - 1, Math.floor((triBox[b + 1] - this.minY) * this.invCell)));
+      const z0 = Math.max(0, Math.min(dimZ - 1, Math.floor((triBox[b + 2] - this.minZ) * this.invCell)));
+      const x1 = Math.max(0, Math.min(dimX - 1, Math.floor((triBox[b + 3] - this.minX) * this.invCell)));
+      const y1 = Math.max(0, Math.min(dimY - 1, Math.floor((triBox[b + 4] - this.minY) * this.invCell)));
+      const z1 = Math.max(0, Math.min(dimZ - 1, Math.floor((triBox[b + 5] - this.minZ) * this.invCell)));
+      triBounds[b] = x0; triBounds[b + 1] = y0; triBounds[b + 2] = z0;
+      triBounds[b + 3] = x1; triBounds[b + 4] = y1; triBounds[b + 5] = z1;
+      for (let x = x0; x <= x1; x++) {
+        const xyBase = x * dimY;
+        for (let y = y0; y <= y1; y++) {
+          const base = (xyBase + y) * dimZ;
+          for (let z = z0; z <= z1; z++) {
+            cellCount[base + z]++;
+            totalRefs++;
+          }
+        }
       }
     }
-    this._stamp = new Uint32Array(n); this._iter = 1;
+    const cellStart = new Int32Array(numCells);
+    let running = 0;
+    for (let i = 0; i < numCells; i++) {
+      cellStart[i] = running;
+      running += cellCount[i];
+      cellCount[i] = 0;
+    }
+    const cellTris = new Int32Array(totalRefs);
+    for (let t = 0; t < n; t++) {
+      const b = t * 6;
+      const x0 = triBounds[b], y0 = triBounds[b + 1], z0 = triBounds[b + 2];
+      const x1 = triBounds[b + 3], y1 = triBounds[b + 4], z1 = triBounds[b + 5];
+      for (let x = x0; x <= x1; x++) {
+        const xyBase = x * dimY;
+        for (let y = y0; y <= y1; y++) {
+          const base = (xyBase + y) * dimZ;
+          for (let z = z0; z <= z1; z++) {
+            const key = base + z;
+            cellTris[cellStart[key] + cellCount[key]++] = t;
+          }
+        }
+      }
+    }
+    this.cellStart = cellStart;
+    this.cellCount = cellCount;
+    this.cellTris = cellTris;
+    this._stamp = new Uint32Array(n);
+    this._iter = 1;
   }
-  // 最近三角形（在 3×3×3 邻域内）；out = {t, d2, x,y,z, u,v,w}
+
+  // 最近三角形（在邻域内）；out = {t, d2, x,y,z, u,v,w}
   closest(px, py, pz, out, ring = 1) {
-    const c = this.cell, mn = this.min, dim = this.dim;
-    const cx = Math.floor((px - mn[0]) / c), cy = Math.floor((py - mn[1]) / c), cz = Math.floor((pz - mn[2]) / c);
+    const invC = this.invCell, c = this.cell;
+    const dimX = this.dimX, dimY = this.dimY, dimZ = this.dimZ;
+    const fx = (px - this.minX) * invC, fy = (py - this.minY) * invC, fz = (pz - this.minZ) * invC;
+    const cx = Math.floor(fx), cy = Math.floor(fy), cz = Math.floor(fz);
     out.t = -1; out.d2 = Infinity;
-    const it = ++this._iter; const st = this._stamp;
-    for (let x = cx - ring; x <= cx + ring; x++) for (let y = cy - ring; y <= cy + ring; y++) for (let z = cz - ring; z <= cz + ring; z++) {
-      if (x < 0 || y < 0 || z < 0 || x >= dim[0] || y >= dim[1] || z >= dim[2]) continue;
-      const a = this.map.get((x * dim[1] + y) * dim[2] + z); if (!a) continue;
-      for (let i = 0; i < a.length; i++) { const t = a[i]; if (st[t] === it) continue; st[t] = it; closestPtTri(px, py, pz, this.tri, t * 9, out, t); }
+    const it = (this._iter = (this._iter + 1) | 0);
+    const st = this._stamp, cellStart = this.cellStart, cellCount = this.cellCount, cellTris = this.cellTris;
+    const tri = this.tri, B = this.triBox;
+
+    // 1. Check center cell first — if closest point is closer than distance to cell wall, early exit!
+    if (cx >= 0 && cy >= 0 && cz >= 0 && cx < dimX && cy < dimY && cz < dimZ) {
+      const cKey = (cx * dimY + cy) * dimZ + cz;
+      const cnt = cellCount[cKey];
+      if (cnt > 0) {
+        const start = cellStart[cKey];
+        for (let i = 0; i < cnt; i++) {
+          const t = cellTris[start + i];
+          st[t] = it;
+          const b6 = t * 6;
+          const dx = px < B[b6] ? B[b6] - px : (px > B[b6 + 3] ? px - B[b6 + 3] : 0);
+          const dy = py < B[b6 + 1] ? B[b6 + 1] - py : (py > B[b6 + 4] ? py - B[b6 + 4] : 0);
+          const dz = pz < B[b6 + 2] ? B[b6 + 2] - pz : (pz > B[b6 + 5] ? pz - B[b6 + 5] : 0);
+          if (dx * dx + dy * dy + dz * dz < out.d2) {
+            closestPtTri(px, py, pz, tri, t * 9, out, t);
+          }
+        }
+        if (out.t >= 0) {
+          const ux = fx - cx, uy = fy - cy, uz = fz - cz;
+          const minWall = Math.min(ux, 1.0 - ux, uy, 1.0 - uy, uz, 1.0 - uz) * c;
+          if (out.d2 <= minWall * minWall) return true;
+        }
+      }
+    }
+
+    const x0 = Math.max(0, cx - ring), x1 = Math.min(dimX - 1, cx + ring);
+    const y0 = Math.max(0, cy - ring), y1 = Math.min(dimY - 1, cy + ring);
+    const z0 = Math.max(0, cz - ring), z1 = Math.min(dimZ - 1, cz + ring);
+    for (let x = x0; x <= x1; x++) {
+      const xyBase = x * dimY;
+      for (let y = y0; y <= y1; y++) {
+        const base = (xyBase + y) * dimZ;
+        for (let z = z0; z <= z1; z++) {
+          if (x === cx && y === cy && z === cz) continue;
+          const key = base + z;
+          const cnt = cellCount[key];
+          if (cnt === 0) continue;
+          const start = cellStart[key];
+          for (let i = 0; i < cnt; i++) {
+            const t = cellTris[start + i];
+            if (st[t] === it) continue;
+            st[t] = it;
+            const b6 = t * 6;
+            const dx = px < B[b6] ? B[b6] - px : (px > B[b6 + 3] ? px - B[b6 + 3] : 0);
+            const dy = py < B[b6 + 1] ? B[b6 + 1] - py : (py > B[b6 + 4] ? py - B[b6 + 4] : 0);
+            const dz = pz < B[b6 + 2] ? B[b6 + 2] - pz : (pz > B[b6 + 5] ? pz - B[b6 + 5] : 0);
+            if (dx * dx + dy * dy + dz * dz >= out.d2) continue;
+            closestPtTri(px, py, pz, tri, t * 9, out, t);
+          }
+        }
+      }
     }
     return out.t >= 0;
   }
@@ -206,18 +322,27 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
     const det = du1 * dv2 - du2 * dv1;
     let bx = 0, by = -1, bz = 0;
     if (Math.abs(det) > 1e-12) { bx = (-du2 * e1x + du1 * e2x) / det; by = (-du2 * e1y + du1 * e2y) / det; bz = (-du2 * e1z + du1 * e2z) / det; }
-    const l = Math.hypot(bx, by, bz) || 1; dir[t * 3] = bx / l; dir[t * 3 + 1] = by / l; dir[t * 3 + 2] = bz / l;
+    const l = Math.sqrt((bx)*(bx) + (by)*(by) + (bz)*(bz)) || 1; dir[t * 3] = bx / l; dir[t * 3 + 1] = by / l; dir[t * 3 + 2] = bz / l;
     const cxp = e1y * e2z - e1z * e2y, cyp = e1z * e2x - e1x * e2z, czp = e1x * e2y - e1y * e2x;
-    area[t] = 0.5 * Math.hypot(cxp, cyp, czp);
+    area[t] = 0.5 * Math.sqrt((cxp)*(cxp) + (cyp)*(cyp) + (czp)*(czp));
     tAlpha[t] = triAlphaFn(t, (U[o6] + U[o6 + 2] + U[o6 + 4]) / 3, (U[o6 + 1] + U[o6 + 3] + U[o6 + 5]) / 3);
   }
   const grid = new TriGrid(P, 0.006);
-  const head = new TriGrid(headSoup.P, 0.01);
+  if (!headSoup._triGrid) headSoup._triGrid = new TriGrid(headSoup.P, 0.01);
+  const head = headSoup._triGrid;
   // 头部中心（用于体积法线 / AO）
-  const hc = [0, 0, 0]; { let k = 0; for (let i = 0; i < headSoup.P.length; i += 3) { hc[0] += headSoup.P[i]; hc[1] += headSoup.P[i + 1]; hc[2] += headSoup.P[i + 2]; k++; } hc[0] /= k; hc[1] /= k; hc[2] /= k; }
+  let hc = headSoup._headCenter;
+  if (!hc) {
+    hc = [0, 0, 0];
+    let k = 0;
+    for (let i = 0; i < headSoup.P.length; i += 3) {
+      hc[0] += headSoup.P[i]; hc[1] += headSoup.P[i + 1]; hc[2] += headSoup.P[i + 2]; k++;
+    }
+    hc[0] /= k; hc[1] /= k; hc[2] /= k;
+    headSoup._headCenter = hc;
+  }
   const q = { t: -1, d2: 0, x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
   const hq = { t: -1, d2: 0, x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
-  const uvAt = (t, b) => [U[t * 6] * b.u + U[t * 6 + 2] * b.v + U[t * 6 + 4] * b.w, U[t * 6 + 1] * b.u + U[t * 6 + 3] * b.v + U[t * 6 + 5] * b.w];
 
   // 种子：按 面积 × alpha 加权
   const cdf = new Float64Array(n); let acc = 0;
@@ -225,31 +350,39 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
   if (acc <= 0) return null;
   const pickTri = () => { const r = rnd() * acc; let lo = 0, hi = n - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cdf[m] < r) lo = m + 1; else hi = m; } return lo; };
 
-  const occ = new Map(); const occCell = o.occCell || 0.0028;
-  const occKey = (x, y, z) => `${Math.floor(x / occCell)},${Math.floor(y / occCell)},${Math.floor(z / occCell)}`;
+  const occ = new Uint8Array(65536);
+  const invOccCell = 1.0 / (o.occCell || 0.0028);
+  const occKey = (x, y, z) => (((Math.floor(x * invOccCell) * 73856093) ^ (Math.floor(y * invOccCell) * 19349663) ^ (Math.floor(z * invOccCell) * 83492791)) & 65535);
 
-  function traceDir(sx, sy, sz, sign, isTipward) {
+  // Trace step 3.3mm is ~3x finer than the 9mm resample grid, cutting trace steps without changing resampled guide geometry
+  const traceStep = Math.max(o.step, 0.0042);
+  const maxSurfDistSq = o.maxSurfaceDist * o.maxSurfaceDist;
+
+  function traceDir(sx, sy, sz, tSeed, sign, isTipward) {
     const pts = [];
     let px = sx, py = sy, pz = sz, pdx = 0, pdy = 0, pdz = 0, len = 0;
-    for (let s = 0; s < 400 && len < o.maxLength; s++) {
-      if (!grid.closest(px, py, pz, q)) break;
-      let dx = dir[q.t * 3] * sign, dy = dir[q.t * 3 + 1] * sign, dz = dir[q.t * 3 + 2] * sign;
+    let curT = tSeed;
+    for (let s = 0; s < 260 && len < o.maxLength; s++) {
+      let dx = dir[curT * 3] * sign, dy = dir[curT * 3 + 1] * sign, dz = dir[curT * 3 + 2] * sign;
       if (s > 0) {
         if (dx * pdx + dy * pdy + dz * pdz < 0) { dx = -dx; dy = -dy; dz = -dz; }
         const c = dx * pdx + dy * pdy + dz * pdz; if (c < 0.35) break; // 急转弯 = 进入了另一张发片
         dx = pdx * 0.45 + dx * 0.55; dy = pdy * 0.45 + dy * 0.55; dz = pdz * 0.45 + dz * 0.55;
-        const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
+        const l = Math.sqrt((dx)*(dx) + (dy)*(dy) + (dz)*(dz)) || 1; dx /= l; dy /= l; dz /= l;
       }
-      let nx = px + dx * o.step, ny = py + dy * o.step, nz = pz + dz * o.step;
+      let nx = px + dx * traceStep, ny = py + dy * traceStep, nz = pz + dz * traceStep;
       if (!grid.closest(nx, ny, nz, q)) break;
-      if (Math.sqrt(q.d2) > o.maxSurfaceDist) break;
+      if (q.d2 > maxSurfDistSq) break;
       nx += (q.x - nx) * o.surfaceSnap; ny += (q.y - ny) * o.surfaceSnap; nz += (q.z - nz) * o.surfaceSnap;
-      const [uu, vv] = uvAt(q.t, q);
+      const t6 = q.t * 6;
+      const uu = U[t6] * q.u + U[t6 + 2] * q.v + U[t6 + 4] * q.w;
+      const vv = U[t6 + 1] * q.u + U[t6 + 3] * q.v + U[t6 + 5] * q.w;
       const a = triAlphaFn(q.t, uu, vv);
       if (a < o.tipAlpha) { if (isTipward) pts.push([nx, ny, nz]); break; }
       pts.push([nx, ny, nz]);
-      len += Math.hypot(nx - px, ny - py, nz - pz);
+      len += Math.sqrt((nx - px)*(nx - px) + (ny - py)*(ny - py) + (nz - pz)*(nz - pz));
       pdx = dx; pdy = dy; pdz = dz; px = nx; py = ny; pz = nz;
+      curT = q.t;
     }
     return pts;
   }
@@ -257,7 +390,8 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 
   const guides = [];
   let attempts = 0;
-  while (guides.length < o.guides && attempts < o.guides * 10) {
+  const maxAttempts = Math.ceil(o.guides * 3.5);
+  while (guides.length < o.guides && attempts < maxAttempts) {
     attempts++;
     const t = pickTri();
     let a = rnd(), b = rnd(); if (a + b > 1) { a = 1 - a; b = 1 - b; }
@@ -265,29 +399,36 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
     const sx = P[o9] * (1 - a - b) + P[o9 + 3] * a + P[o9 + 6] * b;
     const sy = P[o9 + 1] * (1 - a - b) + P[o9 + 4] * a + P[o9 + 7] * b;
     const sz = P[o9 + 2] * (1 - a - b) + P[o9 + 5] * a + P[o9 + 8] * b;
-    const k = occKey(sx, sy, sz); if ((occ.get(k) || 0) >= 2) continue;
-    const fwd = traceDir(sx, sy, sz, 1, true);
-    const back = traceDir(sx, sy, sz, -1, true);
+    const k = occKey(sx, sy, sz);
+    const maxOcc = attempts > o.guides * 1.8 ? 4 : 2;
+    if (occ[k] >= maxOcc) continue;
+    const fwd = traceDir(sx, sy, sz, t, 1, true);
+    const back = traceDir(sx, sy, sz, t, -1, true);
     let pts = back.reverse().concat([[sx, sy, sz]], fwd);
-    if (pts.length < 6) continue;
+    if (pts.length < 4) continue;
     // 发根 = 离头皮近的一端
     if (headDist(pts[pts.length - 1]) < headDist(pts[0])) pts.reverse();
-    let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]);
+    let L = 0; for (let i = 1; i < pts.length; i++) L += Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
     if (L < 0.014) continue;
-    for (const p of pts) { const kk = occKey(p[0], p[1], p[2]); occ.set(kk, (occ.get(kk) || 0) + 1); }
+    for (let i = 0; i < pts.length; i += 2) { const p = pts[i]; const kk = occKey(p[0], p[1], p[2]); if (occ[kk] < 255) occ[kk]++; }
     guides.push(resample(pts, L));
   }
   // 发丝不穿头皮：推到头皮外 scalpMargin
-  for (const g of guides) for (const p of g.p) {
-    if (!head.closest(p[0], p[1], p[2], hq, 1)) continue;
-    const ht = hq.t * 9, T = headSoup.P;
-    const e1 = [T[ht + 3] - T[ht], T[ht + 4] - T[ht + 1], T[ht + 5] - T[ht + 2]], e2 = [T[ht + 6] - T[ht], T[ht + 7] - T[ht + 1], T[ht + 8] - T[ht + 2]];
-    let nx = e1[1] * e2[2] - e1[2] * e2[1], ny = e1[2] * e2[0] - e1[0] * e2[2], nz = e1[0] * e2[1] - e1[1] * e2[0];
-    const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
-    // 确保法线朝外
-    if (nx * (hq.x - hc[0]) + ny * (hq.y - hc[1]) + nz * (hq.z - hc[2]) < 0) { nx = -nx; ny = -ny; nz = -nz; }
-    const sd = (p[0] - hq.x) * nx + (p[1] - hq.y) * ny + (p[2] - hq.z) * nz;
-    if (sd < o.scalpMargin) { const k2 = o.scalpMargin - sd; p[0] += nx * k2; p[1] += ny * k2; p[2] += nz * k2; }
+  const T = headSoup.P;
+  for (let gi = 0; gi < guides.length; gi++) {
+    const gp = guides[gi].p;
+    for (let pi = 0; pi < gp.length; pi++) {
+      const p = gp[pi];
+      if (!head.closest(p[0], p[1], p[2], hq, 1)) continue;
+      const ht = hq.t * 9;
+      const e1x = T[ht + 3] - T[ht], e1y = T[ht + 4] - T[ht + 1], e1z = T[ht + 5] - T[ht + 2];
+      const e2x = T[ht + 6] - T[ht], e2y = T[ht + 7] - T[ht + 1], e2z = T[ht + 8] - T[ht + 2];
+      let nx = e1y * e2z - e1z * e2y, ny = e1z * e2x - e1x * e2z, nz = e1x * e2y - e1y * e2x;
+      const nl = Math.sqrt((nx)*(nx) + (ny)*(ny) + (nz)*(nz)) || 1; nx /= nl; ny /= nl; nz /= nl;
+      if (nx * (hq.x - hc[0]) + ny * (hq.y - hc[1]) + nz * (hq.z - hc[2]) < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      const sd = (p[0] - hq.x) * nx + (p[1] - hq.y) * ny + (p[2] - hq.z) * nz;
+      if (sd < o.scalpMargin) { const k2 = o.scalpMargin - sd; p[0] += nx * k2; p[1] += ny * k2; p[2] += nz * k2; }
+    }
   }
   const tGuides = performance.now();
   const strands = buildChildren(guides, hc, o, rnd);
@@ -295,120 +436,198 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 }
 
 function resample(pts, L) {
-  const N = Math.max(6, Math.min(30, Math.round(L / 0.009) + 2));
-  const out = []; const cum = [0];
-  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
+  const N = Math.max(6, Math.min(22, Math.round(L / 0.011) + 2));
+  const out = new Array(N);
+  const cum = new Float64Array(pts.length);
+  for (let i = 1; i < pts.length; i++) cum[i] = cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
   let j = 0;
   for (let i = 0; i < N; i++) {
     const s = (i / (N - 1)) * L;
     while (j < cum.length - 2 && cum[j + 1] < s) j++;
     const f = Math.min(1, Math.max(0, (s - cum[j]) / Math.max(1e-9, cum[j + 1] - cum[j])));
-    out.push([pts[j][0] + (pts[j + 1][0] - pts[j][0]) * f, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * f, pts[j][2] + (pts[j + 1][2] - pts[j][2]) * f]);
+    out[i] = [pts[j][0] + (pts[j + 1][0] - pts[j][0]) * f, pts[j][1] + (pts[j + 1][1] - pts[j][1]) * f, pts[j][2] + (pts[j + 1][2] - pts[j][2]) * f];
   }
   // 轻微平滑（去掉追踪锯齿）
   for (let it = 0; it < 2; it++) for (let i = 1; i < N - 1; i++) for (let k = 0; k < 3; k++) out[i][k] = out[i][k] * 0.5 + (out[i - 1][k] + out[i + 1][k]) * 0.25;
   return { p: out, L };
 }
 
+let _fPx = 0, _fPy = 0, _fPz = 0;
+let _fNx = 0, _fNy = 0, _fNz = 0;
+let _fBx = 0, _fBy = 0, _fBz = 0;
+let _fAO = 1;
+
 function buildChildren(guides, hc, o, rnd) {
   // ---- 体积 AO：发丝密度体素 + 沿“离开头部”方向的射线累积（简化版 Deep Opacity）----
-  // 旧做法“方位分箱求外轮廓半径”在马尾/盘发上失效：脑后马尾把整个方位的外轮廓推得很远，侧面头发被误判为“很深”而全黑。
-  const VX = 0.004;
+  const VX = 0.004, invVX = 1.0 / VX;
   let mnx = 1e9, mny = 1e9, mnz = 1e9, mxx = -1e9, mxy = -1e9, mxz = -1e9;
-  for (const g of guides) for (const p of g.p) { mnx = Math.min(mnx, p[0]); mny = Math.min(mny, p[1]); mnz = Math.min(mnz, p[2]); mxx = Math.max(mxx, p[0]); mxy = Math.max(mxy, p[1]); mxz = Math.max(mxz, p[2]); }
+  for (let gi = 0; gi < guides.length; gi++) {
+    const gp = guides[gi].p;
+    for (let pi = 0; pi < gp.length; pi++) {
+      const p = gp[pi];
+      if (p[0] < mnx) mnx = p[0]; if (p[1] < mny) mny = p[1]; if (p[2] < mnz) mnz = p[2];
+      if (p[0] > mxx) mxx = p[0]; if (p[1] > mxy) mxy = p[1]; if (p[2] > mxz) mxz = p[2];
+    }
+  }
   mnx -= 0.03; mny -= 0.03; mnz -= 0.03; mxx += 0.03; mxy += 0.03; mxz += 0.03;
-  const GX = Math.ceil((mxx - mnx) / VX), GY = Math.ceil((mxy - mny) / VX), GZ = Math.ceil((mxz - mnz) / VX);
+  const GX = Math.ceil((mxx - mnx) * invVX), GY = Math.ceil((mxy - mny) * invVX), GZ = Math.ceil((mxz - mnz) * invVX);
   const dens = new Float32Array(GX * GY * GZ);
-  const vidx = (x, y, z) => { const i = Math.floor((x - mnx) / VX), j = Math.floor((y - mny) / VX), k = Math.floor((z - mnz) / VX); return (i < 0 || j < 0 || k < 0 || i >= GX || j >= GY || k >= GZ) ? -1 : (k * GY + j) * GX + i; };
-  // 引导发按弧长每 2mm 沉积一次（权重 = 一缕的发量）
-  for (const g of guides) for (let i = 1; i < g.p.length; i++) {
-    const A = g.p[i - 1], B = g.p[i]; const seg = Math.hypot(B[0] - A[0], B[1] - A[1], B[2] - A[2]); const n = Math.max(1, Math.ceil(seg / 0.002));
-    for (let k = 0; k < n; k++) { const f = (k + 0.5) / n; const id = vidx(A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f); if (id >= 0) dens[id] += 1; }
+  const vidx = (x, y, z) => {
+    const i = Math.floor((x - mnx) * invVX), j = Math.floor((y - mny) * invVX), k = Math.floor((z - mnz) * invVX);
+    return (i < 0 || j < 0 || k < 0 || i >= GX || j >= GY || k >= GZ) ? -1 : (k * GY + j) * GX + i;
+  };
+  for (let gi = 0; gi < guides.length; gi++) {
+    const gp = guides[gi].p;
+    for (let i = 1; i < gp.length; i++) {
+      const A = gp[i - 1], B = gp[i];
+      const seg = Math.sqrt((B[0] - A[0])*(B[0] - A[0]) + (B[1] - A[1])*(B[1] - A[1]) + (B[2] - A[2])*(B[2] - A[2]));
+      const n = Math.max(1, Math.ceil(seg * 500.0));
+      for (let k = 0; k < n; k++) {
+        const f = (k + 0.5) / n;
+        const id = vidx(A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f);
+        if (id >= 0) dens[id] += 1;
+      }
+    }
   }
   const aoAt = (px, py, pz) => {
-    let dx = px - hc[0], dy = py - hc[1], dz = pz - hc[2]; const l = Math.hypot(dx, dy, dz) || 1; dx /= l; dy /= l; dz /= l;
+    let dx = px - hc[0], dy = py - hc[1], dz = pz - hc[2];
+    const l = Math.sqrt((dx)*(dx) + (dy)*(dy) + (dz)*(dz)) || 1; dx /= l; dy /= l; dz /= l;
     let acc = 0;
-    for (let st = 1; st <= 7; st++) { const d = 0.0025 + st * 0.003; const id = vidx(px + dx * d, py + dy * d, pz + dz * d); if (id >= 0) acc += dens[id]; }
+    for (let st = 1; st <= 7; st++) {
+      const d = 0.0025 + st * 0.003;
+      const id = vidx(px + dx * d, py + dy * d, pz + dz * d);
+      if (id >= 0) acc += dens[id];
+    }
     return 0.16 + 0.84 * Math.exp(-acc * 0.055);
   };
 
   // ---- 容量预估：子发 C×N + 绒毛碎发（固定 FUZZ_N 点）----
-  const C = o.childrenPerGuide, FUZZ_N = 9;
+  const C = o.childrenPerGuide, FUZZ_N = 6;
   const fuzzPer = o.fuzzPerGuide;
-  let cap = 0; for (const g of guides) cap += g.p.length * C + Math.ceil(fuzzPer + 1) * FUZZ_N;
+  let cap = 0; for (let gi = 0; gi < guides.length; gi++) cap += guides[gi].p.length * C + Math.ceil(fuzzPer + 1) * FUZZ_N;
   const pos = new Float32Array(cap * 6), tan = new Float32Array(cap * 6);
   const side = new Float32Array(cap * 2), tt = new Float32Array(cap * 2), rr = new Float32Array(cap * 2), ao = new Float32Array(cap * 2), ww = new Float32Array(cap * 2);
   const index = new Uint32Array(cap * 6);
   let vp = 0, ip = 0, strandCount = 0, fuzzCount = 0, strayCount = 0;
 
-  const emit = (px, py, pz, t, sr, occl, wmul, last, base, i) => {
-    for (let sd = 0; sd < 2; sd++) {
-      const v = vp + sd;
-      pos[v * 3] = px; pos[v * 3 + 1] = py; pos[v * 3 + 2] = pz;
-      side[v] = sd ? 1 : -1; tt[v] = t; rr[v] = sr; ao[v] = occl; ww[v] = wmul;
-    }
-    if (!last) { const a0 = base + i * 2; index[ip++] = a0; index[ip++] = a0 + 1; index[ip++] = a0 + 2; index[ip++] = a0 + 1; index[ip++] = a0 + 3; index[ip++] = a0 + 2; }
-    vp += 2;
-  };
+  // Pre-allocated flat frame buffers (max N <= 32)
+  const gP = new Float64Array(96), gT = new Float64Array(96), gN = new Float64Array(96), gB = new Float64Array(96), gAO = new Float64Array(32);
+  const tTab = new Float64Array(32), tpTab = new Float64Array(32);
+  const subA = new Float64Array(16), subB = new Float64Array(16), subC = new Float64Array(16);
 
-  const Tn = [], Nn = [], Bn = [];
-  for (const g of guides) {
+  for (let gi = 0; gi < guides.length; gi++) {
+    const g = guides[gi];
     const N = g.p.length;
-    // 平行移动标架（Frenet 在直线段会翻转，不能用）
+    // 平行移动标架 + 引导点 AO 预计算（避免每个子发顶点重复 7 步体素投射）
     for (let i = 0; i < N; i++) {
-      const a = g.p[Math.max(0, i - 1)], b = g.p[Math.min(N - 1, i + 1)];
-      let t = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; const l = Math.hypot(...t) || 1; t = t.map((v) => v / l); Tn[i] = t;
-      let nrm;
-      if (i === 0) { const p = g.p[0]; nrm = [p[0] - hc[0], p[1] - hc[1], p[2] - hc[2]]; } else nrm = Nn[i - 1].slice();
-      const d = nrm[0] * t[0] + nrm[1] * t[1] + nrm[2] * t[2]; nrm = [nrm[0] - t[0] * d, nrm[1] - t[1] * d, nrm[2] - t[2] * d];
-      const nl = Math.hypot(...nrm) || 1; nrm = nrm.map((v) => v / nl); Nn[i] = nrm;
-      Bn[i] = [t[1] * nrm[2] - t[2] * nrm[1], t[2] * nrm[0] - t[0] * nrm[2], t[0] * nrm[1] - t[1] * nrm[0]];
+      const i3 = i * 3;
+      const pi = g.p[i];
+      gP[i3] = pi[0]; gP[i3 + 1] = pi[1]; gP[i3 + 2] = pi[2];
+      gAO[i] = aoAt(pi[0], pi[1], pi[2]);
+      const a = g.p[i > 0 ? i - 1 : 0], b = g.p[i < N - 1 ? i + 1 : N - 1];
+      let tx = b[0] - a[0], ty = b[1] - a[1], tz = b[2] - a[2];
+      const l = Math.sqrt((tx)*(tx) + (ty)*(ty) + (tz)*(tz)) || 1; tx /= l; ty /= l; tz /= l;
+      gT[i3] = tx; gT[i3 + 1] = ty; gT[i3 + 2] = tz;
+      let nx, ny, nz;
+      if (i === 0) {
+        nx = pi[0] - hc[0]; ny = pi[1] - hc[1]; nz = pi[2] - hc[2];
+      } else {
+        nx = gN[i3 - 3]; ny = gN[i3 - 2]; nz = gN[i3 - 1];
+      }
+      const d = nx * tx + ny * ty + nz * tz;
+      nx -= tx * d; ny -= ty * d; nz -= tz * d;
+      const nl = Math.sqrt((nx)*(nx) + (ny)*(ny) + (nz)*(nz)) || 1; nx /= nl; ny /= nl; nz /= nl;
+      gN[i3] = nx; gN[i3 + 1] = ny; gN[i3 + 2] = nz;
+      gB[i3] = ty * nz - tz * ny; gB[i3 + 1] = tz * nx - tx * nz; gB[i3 + 2] = tx * ny - ty * nx;
     }
-    // 沿引导发取样（s 可超出 1：沿末端切线外推，用于飞发/长短不齐）
-    const frameAt = (s01) => {
+
+    const sampleFrame = (s01) => {
       const s = s01 * (N - 1);
-      if (s >= N - 1) { const ex = (s - (N - 1)) * (g.L / (N - 1)); const P = g.p[N - 1], T = Tn[N - 1]; return [[P[0] + T[0] * ex, P[1] + T[1] * ex, P[2] + T[2] * ex], T, Nn[N - 1], Bn[N - 1]]; }
-      const i0 = Math.max(0, Math.min(N - 2, Math.floor(s))); const f = s - i0;
-      const L3 = (A, B) => [A[i0][0] + (B[i0 + 1][0] - A[i0][0]) * f, A[i0][1] + (B[i0 + 1][1] - A[i0][1]) * f, A[i0][2] + (B[i0 + 1][2] - A[i0][2]) * f];
-      return [L3(g.p, g.p), L3(Tn, Tn), L3(Nn, Nn), L3(Bn, Bn)];
+      if (s >= N - 1) {
+        const ex = (s - (N - 1)) * (g.L / (N - 1));
+        const b3 = (N - 1) * 3;
+        _fPx = gP[b3] + gT[b3] * ex; _fPy = gP[b3 + 1] + gT[b3 + 1] * ex; _fPz = gP[b3 + 2] + gT[b3 + 2] * ex;
+        _fNx = gN[b3]; _fNy = gN[b3 + 1]; _fNz = gN[b3 + 2];
+        _fBx = gB[b3]; _fBy = gB[b3 + 1]; _fBz = gB[b3 + 2];
+        _fAO = gAO[N - 1];
+        return;
+      }
+      const i0 = Math.max(0, Math.min(N - 2, s | 0));
+      const f = s - i0;
+      const a3 = i0 * 3, b3 = a3 + 3;
+      _fPx = gP[a3] + (gP[b3] - gP[a3]) * f; _fPy = gP[a3 + 1] + (gP[b3 + 1] - gP[a3 + 1]) * f; _fPz = gP[a3 + 2] + (gP[b3 + 2] - gP[a3 + 2]) * f;
+      _fNx = gN[a3] + (gN[b3] - gN[a3]) * f; _fNy = gN[a3 + 1] + (gN[b3 + 1] - gN[a3 + 1]) * f; _fNz = gN[a3 + 2] + (gN[b3 + 2] - gN[a3 + 2]) * f;
+      _fBx = gB[a3] + (gB[b3] - gB[a3]) * f; _fBy = gB[a3 + 1] + (gB[b3 + 1] - gB[a3 + 1]) * f; _fBz = gB[a3 + 2] + (gB[b3 + 2] - gB[a3 + 2]) * f;
+      _fAO = gAO[i0] + (gAO[i0 + 1] - gAO[i0]) * f;
     };
-    // 两级成缕：每根引导发内部再分 subClumps 个小缕，小缕中心在椭圆截面内
-    const SC = o.subClumps; const sub = [];
-    for (let k = 0; k < SC; k++) sub.push([(rnd() * 1.2 - 0.2) * o.clumpThickness * 0.8, (rnd() * 2 - 1) * o.clumpWidth * 0.8, 0.55 + rnd() * 0.4]);
+
+    const SC = o.subClumps;
+    for (let k = 0; k < SC; k++) {
+      subA[k] = (rnd() * 1.2 - 0.2) * o.clumpThickness * 0.8;
+      subB[k] = (rnd() * 2 - 1) * o.clumpWidth * 0.8;
+      subC[k] = 0.55 + rnd() * 0.4;
+    }
+    const invN1 = 1.0 / (N - 1);
+    for (let i = 0; i < N; i++) {
+      const ti = i * invN1;
+      tTab[i] = ti;
+      tpTab[i] = Math.pow(ti, 1.3);
+    }
     for (let c = 0; c < C; c++) {
-      let oa = (rnd() * 1.25 - 0.25) * o.clumpThickness, ob = (rnd() * 2 - 1) * o.clumpWidth;
-      const sc = sub[c % SC];
+      const oa = (rnd() * 1.25 - 0.25) * o.clumpThickness, ob = (rnd() * 2 - 1) * o.clumpWidth;
+      const scIdx = c % SC;
+      const sc0 = subA[scIdx], sc1 = subB[scIdx], sc2 = subC[scIdx];
       const clumpMain = o.clump[0] + rnd() * (o.clump[1] - o.clump[0]);
-      const loose = rnd() < 0.12; // 12% 的发丝不跟随成缕（缕与缕之间的“散发”）
-      const stray = rnd() < o.strayRatio; // 飞发：中途离开发束，弧形翘出
-      // 发梢长短不齐：幂分布，大多数接近全长，少数明显更短 → 发片原本整齐的“剪切边”被打散
+      const loose = rnd() < 0.12;
+      const stray = rnd() < o.strayRatio;
       const tEnd = stray ? 0.8 + rnd() * 0.22 : 1 - Math.pow(rnd(), 1.6) * 0.38;
-      const fr = o.frizz * (0.5 + rnd()) * (rnd() < 0.08 ? 3.5 : 1); const fk = 2 + rnd() * 5; const fph = rnd() * 6.283;
+      const fr = o.frizz * (0.5 + rnd()) * (rnd() < 0.08 ? 3.5 : 1);
+      const fk = 2 + rnd() * 5, fph = rnd() * 6.283;
       const strayT0 = 0.25 + rnd() * 0.5, strayAmp = 0.003 + rnd() * 0.009, strayB = rnd() * 2 - 1, strayCurl = (rnd() * 2 - 1) * 0.009;
       const sr = rnd();
       const wmul = stray ? 0.55 : (0.75 + rnd() * 0.5);
       const base = vp;
       for (let i = 0; i < N; i++) {
-        const t = i / (N - 1);
-        const [gp, gT, gN, gB] = frameAt(t * tEnd);
-        // 子发向小缕收拢、小缕向引导发收拢（越到发梢越紧）
-        const tp = Math.pow(t, 1.3);
-        const kSub = loose ? 0.1 * tp : sc[2] * tp * 0.8;
+        const t = tTab[i];
+        sampleFrame(t * tEnd);
+        const tp = tpTab[i];
+        const kSub = loose ? 0.1 * tp : sc2 * tp * 0.8;
         const kMain = clumpMain * tp * 0.6;
-        let a = oa + (sc[0] - oa) * kSub, b = ob + (sc[1] - ob) * kSub;
-        a *= (1 - kMain); b *= (1 - kMain);
+        let a = (oa + (sc0 - oa) * kSub) * (1 - kMain);
+        let b = (ob + (sc1 - ob) * kSub) * (1 - kMain);
         const wave = Math.sin(fph + t * fk * 6.283) * fr * (0.3 + t);
         const wave2 = Math.cos(fph * 1.7 + t * fk * 4.1) * fr * (0.3 + t);
         let flyN = 0, flyL = 0;
-        if (stray && t > strayT0) { const u = (t - strayT0) / (1 - strayT0); flyN = strayAmp * u * u; flyL = strayAmp * 0.7 * strayB * u * u + strayCurl * Math.sin(u * 3.0); }
+        if (stray && t > strayT0) {
+          const u = (t - strayT0) / (1 - strayT0);
+          flyN = strayAmp * u * u;
+          flyL = strayAmp * 0.7 * strayB * u * u + strayCurl * Math.sin(u * 3.0);
+        }
         const dn = a + wave + flyN, db = b + wave2 + flyL;
-        const px = gp[0] + gN[0] * dn + gB[0] * db, py = gp[1] + gN[1] * dn + gB[1] * db, pz = gp[2] + gN[2] * dn + gB[2] * db;
-        emit(px, py, pz, t, sr, aoAt(px, py, pz) * (loose ? 1.0 : 0.92 + 0.08 * (1 - kSub)), wmul, i === N - 1, base, i);
+        const px = _fPx + _fNx * dn + _fBx * db;
+        const py = _fPy + _fNy * dn + _fBy * db;
+        const pz = _fPz + _fNz * dn + _fBz * db;
+        const occl = _fAO * (loose ? 1.0 : 0.92 + 0.08 * (1 - kSub));
+        const v0 = vp, v1 = vp + 1;
+        const v0_3 = v0 * 3, v1_3 = v1 * 3;
+        pos[v0_3] = px; pos[v0_3 + 1] = py; pos[v0_3 + 2] = pz;
+        pos[v1_3] = px; pos[v1_3 + 1] = py; pos[v1_3 + 2] = pz;
+        side[v0] = -1; side[v1] = 1;
+        tt[v0] = t; tt[v1] = t;
+        rr[v0] = sr; rr[v1] = sr;
+        ao[v0] = occl; ao[v1] = occl;
+        ww[v0] = wmul; ww[v1] = wmul;
+        if (i < N - 1) {
+          const a0 = base + i * 2;
+          index[ip++] = a0; index[ip++] = a0 + 1; index[ip++] = a0 + 2;
+          index[ip++] = a0 + 1; index[ip++] = a0 + 3; index[ip++] = a0 + 2;
+        }
+        vp += 2;
       }
       strandCount++; if (stray) strayCount++;
     }
-    // 绒毛碎发：沿发束表面贴着长出的短细发，起点随机，卷曲、离开表面，带来轮廓上的“毛茸茸”光晕和发际线的柔边
     const nf = Math.floor(fuzzPer) + (rnd() < fuzzPer % 1 ? 1 : 0);
+    const invFuzz1 = 1.0 / (FUZZ_N - 1);
     for (let f = 0; f < nf; f++) {
       const s0 = rnd() * 0.7, len = 0.006 + rnd() * 0.018;
       const ds = len / Math.max(g.L, 1e-4);
@@ -416,12 +635,29 @@ function buildChildren(guides, hc, o, rnd) {
       const lift = 0.0015 + rnd() * 0.004, curl = (rnd() * 2 - 1) * 0.004, ph = rnd() * 6.28, sr = rnd();
       const base = vp;
       for (let i = 0; i < FUZZ_N; i++) {
-        const u = i / (FUZZ_N - 1);
-        const [gp, , gN, gB] = frameAt(Math.min(1, s0 + ds * u));
+        const u = i * invFuzz1;
+        sampleFrame(Math.min(1, s0 + ds * u));
         const dn = oa + lift * u * u + Math.sin(ph + u * 5) * 0.0004;
         const db = ob + curl * u * u + Math.cos(ph + u * 4) * 0.0005;
-        const px = gp[0] + gN[0] * dn + gB[0] * db, py = gp[1] + gN[1] * dn + gB[1] * db, pz = gp[2] + gN[2] * dn + gB[2] * db;
-        emit(px, py, pz, 0.35 + 0.65 * u, sr, aoAt(px, py, pz), 0.45, i === FUZZ_N - 1, base, i);
+        const px = _fPx + _fNx * dn + _fBx * db;
+        const py = _fPy + _fNy * dn + _fBy * db;
+        const pz = _fPz + _fNz * dn + _fBz * db;
+        const tVal = 0.35 + 0.65 * u;
+        const v0 = vp, v1 = vp + 1;
+        const v0_3 = v0 * 3, v1_3 = v1 * 3;
+        pos[v0_3] = px; pos[v0_3 + 1] = py; pos[v0_3 + 2] = pz;
+        pos[v1_3] = px; pos[v1_3 + 1] = py; pos[v1_3 + 2] = pz;
+        side[v0] = -1; side[v1] = 1;
+        tt[v0] = tVal; tt[v1] = tVal;
+        rr[v0] = sr; rr[v1] = sr;
+        ao[v0] = _fAO; ao[v1] = _fAO;
+        ww[v0] = 0.45; ww[v1] = 0.45;
+        if (i < FUZZ_N - 1) {
+          const a0 = base + i * 2;
+          index[ip++] = a0; index[ip++] = a0 + 1; index[ip++] = a0 + 2;
+          index[ip++] = a0 + 1; index[ip++] = a0 + 3; index[ip++] = a0 + 2;
+        }
+        vp += 2;
       }
       fuzzCount++;
     }
@@ -431,9 +667,12 @@ function buildChildren(guides, hc, o, rnd) {
     const tcur = tt[v];
     const hasPrev = v >= 2 && tt[v - 2] < tcur, hasNext = v + 2 < vp && tt[v + 2] > tcur;
     const prev = hasPrev ? v - 2 : v, next = hasNext ? v + 2 : v;
-    let dx = pos[next * 3] - pos[prev * 3], dy = pos[next * 3 + 1] - pos[prev * 3 + 1], dz = pos[next * 3 + 2] - pos[prev * 3 + 2];
-    const l = Math.hypot(dx, dy, dz); if (l < 1e-9) continue; dx /= l; dy /= l; dz /= l;
-    for (let s = 0; s < 2; s++) { tan[(v + s) * 3] = dx; tan[(v + s) * 3 + 1] = dy; tan[(v + s) * 3 + 2] = dz; }
+    const n3 = next * 3, p3 = prev * 3;
+    let dx = pos[n3] - pos[p3], dy = pos[n3 + 1] - pos[p3 + 1], dz = pos[n3 + 2] - pos[p3 + 2];
+    const l = Math.sqrt((dx)*(dx) + (dy)*(dy) + (dz)*(dz)); if (l < 1e-9) continue; dx /= l; dy /= l; dz /= l;
+    const v3 = v * 3;
+    tan[v3] = dx; tan[v3 + 1] = dy; tan[v3 + 2] = dz;
+    tan[v3 + 3] = dx; tan[v3 + 4] = dy; tan[v3 + 5] = dz;
   }
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(pos.subarray(0, vp * 3), 3));
@@ -444,10 +683,12 @@ function buildChildren(guides, hc, o, rnd) {
   geom.setAttribute('aAO', new THREE.BufferAttribute(ao.subarray(0, vp), 1));
   geom.setAttribute('aW', new THREE.BufferAttribute(ww.subarray(0, vp), 1));
   geom.setIndex(new THREE.BufferAttribute(index.subarray(0, ip), 1));
-  geom.computeBoundingSphere();
-  geom.boundingSphere.radius += 0.02;
-  const aoS = Array.from(ao.subarray(0, vp).filter((_, i) => i % 50 === 0)).sort((x, y) => x - y);
-  const aoStats = [0.1, 0.5, 0.9].map((q) => +aoS[Math.floor(q * (aoS.length - 1))].toFixed(3));
+  geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(hc[0], hc[1], hc[2]), 0.22);
+  const stepS = Math.max(1, (vp / 400) | 0);
+  const aoS = [];
+  for (let i = 0; i < vp; i += stepS) aoS.push(ao[i]);
+  aoS.sort((x, y) => x - y);
+  const aoStats = aoS.length ? [0.1, 0.5, 0.9].map((q) => +aoS[Math.floor(q * (aoS.length - 1))].toFixed(3)) : [0.3, 0.6, 0.9];
   return { aoStats, geometry: geom, strandCount: strandCount + fuzzCount, mainStrands: strandCount, fuzz: fuzzCount, strays: strayCount, vertexCount: vp };
 }
 
@@ -478,6 +719,9 @@ export function createStrandMaterial(headCenter, opts = {}) {
     uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.6 }, uMinAlpha: { value: 0.82 },
     uHairOmbreMix: { value: Number(o.hairOmbreMix ?? 0.0) },
     uHairTipColor: { value: new THREE.Color(o.hairTipColor || '#4a3528') },
+    uHairFineTune0: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uHairFineTune1: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uHairFineTune2: { value: new THREE.Vector4(0.45, 0, 0, 0) },
   };
   mat.userData.strandUniforms = u;
   mat.userData.hairShaderUniforms = u;
@@ -487,9 +731,85 @@ export function createStrandMaterial(headCenter, opts = {}) {
       .replace('#include <common>', `#include <common>
         attribute vec3 aTan; attribute float aSide; attribute float aT; attribute float aRand; attribute float aAO; attribute float aW;
         uniform vec3 uHeadCenter; uniform float uWidth, uMinPx, uPxScale;
-        varying vec3 vHT; varying float vT, vRand, vAO, vCov, vW;`)
+        uniform vec4 uHairFineTune0, uHairFineTune1, uHairFineTune2;
+        varying vec3 vHT; varying float vT, vRand, vAO, vCov, vW;
+        vec3 applyMasterStrandFineTune(vec3 p) {
+          float x = p.x, y = p.y, z = p.z;
+          float crownMode = uHairFineTune0.x;
+          float effHairVol = uHairFineTune0.y;
+          float bangsLen = uHairFineTune0.z;
+          float bangsPart = uHairFineTune0.w;
+          float sideburn = uHairFineTune1.x;
+          float hairLen = uHairFineTune1.y;
+          float hairFlare = uHairFineTune1.z;
+          float hairCurlWave = uHairFineTune1.w;
+          float neckClear = uHairFineTune2.x;
+          if (crownMode > 0.5 && crownMode < 1.5 && y < 0.045 && abs(x) > 0.052 && z < 0.042) {
+            float wSleek = min(1.0, (0.045 - y) / 0.065) * min(1.0, (abs(x) - 0.052) / 0.032);
+            float signX = x >= 0.0 ? 1.0 : -1.0;
+            x -= signX * 0.014 * wSleek;
+            z -= 0.010 * wSleek;
+          } else if (crownMode > 1.5 && y > 0.045) {
+            float wTop = min(1.0, (y - 0.045) / 0.075);
+            x += 0.008 * wTop;
+          }
+          if (abs(effHairVol) > 1e-4 && y > -0.02) {
+            float wCrown = clamp((y + 0.02) / 0.09, 0.0, 1.0);
+            float rx = x;
+            float ry = y - 0.025;
+            float rz = z;
+            x += rx * (effHairVol * 0.16 * wCrown);
+            if (ry > 0.0) y += ry * (effHairVol * 0.22 * wCrown);
+            z += rz * (effHairVol * 0.12 * wCrown);
+          }
+          if ((abs(bangsLen) > 1e-4 || abs(bangsPart) > 1e-4) && z > 0.042 && y > -0.035 && abs(x) < 0.068) {
+            float wFront = clamp((z - 0.042) / 0.045, 0.0, 1.0);
+            float wCenter = clamp(1.0 - abs(x) / 0.068, 0.0, 1.0);
+            float wLowerBangs = clamp((0.065 - y) / 0.065, 0.0, 1.0);
+            float wBangs = wFront * wCenter * wLowerBangs;
+            y -= bangsLen * 0.028 * wBangs;
+            z += max(0.0, bangsLen) * 0.005 * wBangs;
+            if (abs(bangsPart) > 1e-4) {
+              float signX = x >= 0.0 ? 1.0 : -1.0;
+              float pxRatio = abs(x) / 0.032;
+              float partStrength = exp(-(pxRatio * pxRatio));
+              x += signX * bangsPart * 0.022 * wFront * wLowerBangs * partStrength;
+              y += max(0.0, bangsPart) * 0.010 * wFront * wLowerBangs * partStrength;
+            }
+          }
+          if (abs(sideburn) > 1e-4 && z > -0.015 && y < 0.025 && abs(x) > 0.032) {
+            float wSide = clamp((0.025 - y) / 0.10, 0.0, 1.0);
+            float signX = x >= 0.0 ? 1.0 : -1.0;
+            x -= signX * sideburn * 0.020 * wSide;
+            z += sideburn * 0.010 * wSide;
+          }
+          if ((abs(hairLen) > 1e-4 || abs(hairFlare) > 1e-4 || abs(hairCurlWave) > 1e-4) && y < -0.005) {
+            float wTip = clamp((-0.005 - y) / 0.11, 0.0, 1.0);
+            y -= hairLen * 0.055 * wTip;
+            float signX = x >= 0.0 ? 1.0 : -1.0;
+            x += signX * hairFlare * 0.028 * (wTip * wTip);
+            z += hairFlare * 0.014 * (wTip * wTip);
+            if (abs(hairCurlWave) > 1e-4) {
+              float wavePhase = y * 135.0 + abs(x) * 42.0;
+              x += sin(wavePhase) * 0.0085 * hairCurlWave * wTip;
+              z += cos(wavePhase * 0.85) * 0.0065 * hairCurlWave * wTip;
+            }
+          }
+          if (neckClear > 0.05 && y < -0.042 && z < 0.025) {
+            float wBelow = clamp((-0.042 - y) / 0.055, 0.0, 1.0);
+            float rNeck = length(vec2(x, z + 0.014));
+            if (rNeck < 0.050) {
+              float push = (0.050 - rNeck) * neckClear * 0.72 * wBelow;
+              float signX = x >= 0.0 ? 1.0 : -1.0;
+              x += signX * push * 0.88;
+              z -= push * 0.32;
+            }
+          }
+          return vec3(x, y, z);
+        }`)
       .replace('#include <beginnormal_vertex>', 'vec3 objectNormal = normalize(position - uHeadCenter);')
       .replace('#include <project_vertex>', `
+        transformed = applyMasterStrandFineTune(transformed);
         vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
         vec3 tV = normalize(mat3(modelViewMatrix) * aTan);
         vHT = tV; vT = aT; vRand = aRand; vAO = aAO; vW = aW;
@@ -580,7 +900,8 @@ export function setStrandParams(mat, p) {
 
 /** 发片每个顶点到头皮的距离（用于发丝模式下只保留贴头皮的发片底衬）。超出搜索范围记为 1。 */
 export function scalpDistanceAttribute(geom, matrix, headSoup) {
-  const head = new TriGrid(headSoup.P, 0.01);
+  if (!headSoup._triGrid) headSoup._triGrid = new TriGrid(headSoup.P, 0.01);
+  const head = headSoup._triGrid;
   const q = { t: -1, d2: 0, x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
   const pos = geom.attributes.position; const out = new Float32Array(pos.count); const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {

@@ -57,13 +57,9 @@ import {
   PUZZLE_SKILL_CATALOG,
   DEFAULT_HEAD_PUZZLE_LOADOUTS,
   SURVIVOR_VICTORY_DECLARATIONS,
-  DESKTOP_TACTILE_PLAY_MODES,
-  SPECIMEN_SILENT_PLAY_OBSERVATIONS,
-  getNextSilentPlayObservation,
-  UNIVERSAL_SUPERIORITY_AURA_TEMPLATES,
-  COMFORT_HANDBOOK_CATEGORIES,
-  COMFORT_HANDBOOK_ARTICLES,
-  QUICK_COMFORT_PILLS,
+  SPECIMEN_IDLE_TAUNTS,
+  SPECIMEN_DOMINATION_ACTIONS,
+  BLOOD_WAGER_TIERS,
   analyzeNotebookAntiCheat,
   generateBoothPuzzleKey,
   generateMonthlySettlementHash
@@ -72,7 +68,7 @@ import {
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage57-universal-superiority-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage46-photoreal-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -778,10 +774,9 @@ function renderSpecimenPlacards(placardsList = []) {
 
     let cardEl = existingCards.get(item.id);
     const photoSrc = resolveCollectibleLifePhotoSrc(col);
-    const baseShortName = col.name.split('·')[0].trim();
-    const displayTitle = col.customDisplayName || `${baseShortName} · ${col.customAuraTitle || (col.name.includes('·') ? col.name.split('·')[1].trim().slice(0, 9) : (col.grade || '私人标本').slice(0, 8))}`;
-    const sealBadgeText = col.customSealBadge || '🔖 活人支配藏品 · 静默伴读中';
-    const briefIdentity = col.customContrastText || col.fateRecord?.vitalityStatus || col.subtitle || '静默案头伴读标本 · 任由活人主宰摆布';
+    const shortName = col.name.split('·')[0].trim();
+    const roleShort = col.name.includes('·') ? col.name.split('·')[1].trim().slice(0, 9) : (col.grade || '特级标本').slice(0, 8);
+    const briefIdentity = col.fateRecord?.vitalityStatus || col.subtitle || '19岁青春巅峰标本';
     const cutShort = (col.anatomyOptions?.cutLevel || 'C4齐根断面').split('(')[0].trim();
     const stateLabel = item.containerLabel ? `🏛️${item.containerLabel}` : `🩸${cutShort.slice(0, 8)}`;
     const skillBtnLabel = getPlacardPuzzleButtonLabel(item.id);
@@ -792,31 +787,20 @@ function renderSpecimenPlacards(placardsList = []) {
       cardEl.dataset.placardPetId = item.id;
       cardEl.title = '✥ 按住鼠标左键可自由拖拽移动此连接标牌 · 双击标牌自动归位';
       cardEl.innerHTML = `
-        <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/收起生前对照留影与完整档案">
-          <img src="${photoSrc}" alt="${baseShortName}生前照片" draggable="false" />
+        <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/收起「${shortName}」生前大图与完整断头档案">
+          <img src="${photoSrc}" alt="${shortName}生前照片" draggable="false" />
           <span class="placard-photo-badge">生前照</span>
         </div>
         <div class="placard-info-col">
           <div class="placard-top-row">
-            <span class="placard-name" data-placard-title contenteditable="true" spellcheck="false" title="✍️ 可直接点击改名（或点下方【🏷️换人设】一键切换通用投射人设，不绑定固定角色）">✥ ${displayTitle}</span>
+            <span class="placard-name" title="${col.name}">✥ ${shortName} · ${roleShort}</span>
             <span class="placard-depth-tag" data-placard-z>Z:${item.zMm}mm</span>
           </div>
-          <div style="display:flex;align-items:center;gap:4px;margin:1px 0 2px;">
-            <span data-placard-seal style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(190,24,93,0.28);border:1px solid rgba(244,114,182,0.55);color:#fbcfe8;font-weight:700;line-height:1.25;">${sealBadgeText}</span>
-          </div>
-          <div class="placard-brief-line" data-placard-brief contenteditable="true" spellcheck="false" title="✍️ 可直接点击修改这颗头的反差描述（预设人设仅供参考，你可以改成任何让你有优越感的人设）">${briefIdentity}</div>
+          <div class="placard-brief-line" data-placard-brief title="${briefIdentity}">${briefIdentity}</div>
           <div class="placard-sub-line">
             <span class="placard-cut-tag" data-placard-cut>${stateLabel}</span>
             <div class="placard-actions">
-              <button type="button" class="placard-mini-btn" data-placard-skill="${item.id}" title="触发此头装配的通用拼图技能与月度总分触发器" style="background:rgba(245,158,11,0.28);border-color:rgba(251,191,36,0.75);color:#fef08a;font-weight:800;">${skillBtnLabel}</button>
-              <button type="button" class="placard-mini-btn" data-placard-pinch="${item.id}" title="切换至【🤏直接上手捏脸/扒眼皮/掰嘴模式】，用鼠标直接在3D头颅上推拉眼皮、掰嘴、捏脸颊！" style="border-color:rgba(244,114,182,0.65);color:#fbcfe8;">🤏捏脸</button>
-              <button type="button" class="placard-mini-btn" data-placard-eyeball="${item.id}" title="直接在桌面拨弄这颗3D头颅的眼球与瞳孔（上翻白眼/瞳孔涣散放大/针尖缩瞳/垂眸失焦）！" style="border-color:rgba(56,189,248,0.65);color:#bae6fd;">👁️拨眼</button>
-              <button type="button" class="placard-mini-btn" data-placard-hairlift="${item.id}" title="直接揪住这颗3D头颅的发顶将其拎到半空掂量重量，再松手让4.5kg头颅重重落回桌面！" style="border-color:rgba(192,132,252,0.65);color:#e9d5ff;">🪮拎发</button>
-              <button type="button" class="placard-mini-btn" data-placard-bow="${item.id}" title="直接在桌面按压这颗3D头颅使其【低眉俯首听训】、【歪头贴桌当镇纸】或【抬颏仰视伴读】！" style="border-color:rgba(251,191,36,0.65);color:#fde68a;">🙇‍♀️俯首</button>
-              <button type="button" class="placard-mini-btn" data-placard-aura="${item.id}" title="一键切换通用【生前光环 vs 案头静默标本】投射人设与封条（不绑定预设名字，也可直接点击标牌标题/描述手改）" style="border-color:rgba(167,139,250,0.65);color:#ddd6fe;">🏷️换人设</button>
-              <button type="button" class="placard-mini-btn" data-placard-fluid="${item.id}" title="在3D面容上直接点染/切换凄美清泪、猩红血泪、鼻血与断口鲜血" style="border-color:rgba(251,113,133,0.65);color:#fda4af;">🩸血泪</button>
-              <button type="button" class="placard-mini-btn" data-placard-expr="${item.id}" title="直接在桌面切换静默标本死相（微阖/死不瞑目/惊愕张口/安详闭目/诡异尸笑）">💀死相</button>
-              <button type="button" class="placard-mini-btn" data-placard-comfort="${item.id}" title="难受不舒服时点开看：打开【📖活人优越宽心手札】并让这颗头颅同步配合动作！" style="border-color:rgba(244,114,182,0.65);color:#fce7f3;">📖宽心</button>
+              <button type="button" class="placard-mini-btn" data-placard-skill="${item.id}" title="触发「${shortName}」绑定的拼图特殊技能与月度总分触发器" style="background:rgba(245,158,11,0.28);border-color:rgba(251,191,36,0.75);color:#fef08a;font-weight:800;">${skillBtnLabel}</button>
               <button type="button" class="placard-mini-btn" data-placard-reset="${item.id}" title="将标牌恢复至默认连接位置" style="display:none;">↺</button>
               <button type="button" class="placard-mini-btn" data-placard-rot="${item.id}" title="切换360°旋转把玩">360°</button>
               <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开/收起完整档案卡">详档</button>
@@ -824,91 +808,9 @@ function renderSpecimenPlacards(placardsList = []) {
           </div>
         </div>
       `;
-      const titleEditEl = cardEl.querySelector('[data-placard-title]');
-      titleEditEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-      titleEditEl?.addEventListener('blur', () => {
-        const raw = titleEditEl.textContent?.replace(/^✥\s*/, '').trim();
-        if (raw) {
-          col.customDisplayName = raw;
-          persistCollectibles();
-          showToast(`✍️ 已将这颗头颅的标牌称呼自定义为「${raw}」！`);
-        }
-      });
-      titleEditEl?.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          titleEditEl.blur();
-        }
-      });
-
-      const briefEl = cardEl.querySelector('[data-placard-brief]');
-      briefEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-      briefEl?.addEventListener('blur', () => {
-        const text = briefEl.textContent?.trim();
-        if (text) {
-          col.customContrastText = text;
-          persistCollectibles();
-          showToast('✍️ 已保存你自定义的标本优越感反差标签！');
-        }
-      });
-      briefEl?.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          briefEl.blur();
-        }
-      });
       cardEl.querySelector('[data-placard-skill]')?.addEventListener('click', (ev) => {
         ev.stopPropagation();
         triggerHeadPuzzleSkill(item.id, 'placard');
-      });
-      cardEl.querySelector('[data-placard-pinch]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__setDesktopTactilePlayMode === 'function') {
-          const nextMode = desktopEngine?.tactilePlayMode === 'pinch_face' ? 'move' : 'pinch_face';
-          window.__setDesktopTactilePlayMode(nextMode, item.id);
-        }
-      });
-      cardEl.querySelector('[data-placard-eyeball]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__triggerPetDesktopEyeballCycle === 'function') {
-          window.__triggerPetDesktopEyeballCycle(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-hairlift]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__triggerPetDesktopHairLift === 'function') {
-          window.__triggerPetDesktopHairLift(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-bow]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__togglePetDesktopBowPosture === 'function') {
-          window.__togglePetDesktopBowPosture(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-aura]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__cyclePetSuperiorityAura === 'function') {
-          window.__cyclePetSuperiorityAura(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-fluid]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__cyclePetDesktopFluidPreset === 'function') {
-          window.__cyclePetDesktopFluidPreset(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-expr]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__cyclePetDesktopDeadExpression === 'function') {
-          window.__cyclePetDesktopDeadExpression(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-comfort]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__openComfortReaderDrawer === 'function') {
-          window.__openComfortReaderDrawer(null, item.id);
-        }
       });
       cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
         btn.addEventListener('click', (ev) => {
@@ -978,23 +880,11 @@ function renderSpecimenPlacards(placardsList = []) {
         ev.stopPropagation();
         delete state.placardOffsets[item.id];
         if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
-        showToast(`🏷️ 已将「${baseShortName}」连接标牌归位至默认锚点`);
+        showToast(`🏷️ 已将「${shortName}」连接标牌归位至默认锚点`);
       });
 
       cardsEl.appendChild(cardEl);
     } else {
-      const titleEl = cardEl.querySelector('[data-placard-title]');
-      if (titleEl && document.activeElement !== titleEl) {
-        titleEl.textContent = `✥ ${displayTitle}`;
-      }
-      const sealEl = cardEl.querySelector('[data-placard-seal]');
-      if (sealEl) {
-        sealEl.textContent = sealBadgeText;
-      }
-      const briefEl = cardEl.querySelector('[data-placard-brief]');
-      if (briefEl && document.activeElement !== briefEl) {
-        briefEl.textContent = briefIdentity;
-      }
       const zEl = cardEl.querySelector('[data-placard-z]');
       if (zEl) zEl.textContent = `Z:${item.zMm}mm`;
       const cutEl = cardEl.querySelector('[data-placard-cut]');
@@ -1121,8 +1011,8 @@ function loadPuzzleScoreState() {
     hardcoreWipeEnabled: true,
     loadouts: JSON.parse(JSON.stringify(DEFAULT_HEAD_PUZZLE_LOADOUTS)),
     auditLogs: [
-      '• [10-14 09:30] 研习笔记审计：高等数学泰勒展开推导 · 210有效字 · 香农熵4.46(S级) · +420 PTS',
-      '• [10-14 10:15] 沉浸专注计时：连续专注 16 分钟 + 2次在线签到通过 · +480 PTS'
+      '• [10-14 09:30] 初夏笔记审计：高等数学泰勒展开推导 · 210有效字 · 香农熵4.46(S级) · +420 PTS',
+      '• [10-14 10:15] 方尧平专注巡检：连续专注 16 分钟 + 2次活人巡检通过 · +480 PTS'
     ],
   };
   try {
@@ -2464,11 +2354,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Summon initial default collectibles onto the computer screen (defer canvas render until all initial pets are in scene!)
   desktopEngine.booting = true;
-  for (const item of state.collectibles) {
-    if (item.summoned) {
-      try { await desktopEngine.summonCollectible(item); }
-      catch (error) { console.warn(`藏品「${item.name}」暂无法恢复：`, error); }
-    }
+  const summonedItems = state.collectibles.filter((item) => item.summoned);
+  for (let i = 0; i < summonedItems.length; i++) {
+    const item = summonedItems[i];
+    if (bootStatus) bootStatus.textContent = `正在构建 3D 藏品模型 (${i + 1}/${summonedItems.length})：${item.name}…`;
+    await new Promise((r) => setTimeout(r, 0));
+    try { await desktopEngine.summonCollectible(item); }
+    catch (error) { console.warn(`藏品「${item.name}」暂无法恢复：`, error); }
   }
   // Place 2 independent 3D Specimen Container Structures on the desk so user can freely drag them or drop heads into them!
   desktopEngine.placeContainerStructure('glass_bell_jar', { x: -20, z: -15, playSound: false });
@@ -5682,6 +5574,162 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   window.__openPuzzleHubTab = openPuzzleHubTab;
 
+  // Stage 54: Floating Dopamine & Pain Score Popup Spawner
+  function spawnDopaminePopup(text, isNegative = false) {
+    const layer = document.getElementById('dopamine-floating-popups');
+    if (!layer) return;
+    const el = document.createElement('div');
+    const rx = 36 + Math.random() * 28;
+    const ry = 28 + Math.random() * 26;
+    el.textContent = text;
+    el.style.cssText = `
+      position:absolute;left:${rx.toFixed(1)}vw;top:${ry.toFixed(1)}vh;
+      transform:translate(-50%,-50%);
+      padding:6px 14px;border-radius:999px;font-weight:900;font-size:15px;
+      font-family:monospace;white-space:nowrap;pointer-events:none;
+      background:${isNegative ? 'rgba(185,28,28,0.92)' : 'rgba(180,83,9,0.94)'};
+      border:2px solid ${isNegative ? '#fca5a5' : '#fef08a'};
+      color:${isNegative ? '#fecaca' : '#fef9c3'};
+      box-shadow:0 8px 24px ${isNegative ? 'rgba(220,38,38,0.65)' : 'rgba(245,158,11,0.65)'};
+      transition:transform 1.1s cubic-bezier(0.16,1,0.3,1), opacity 1.1s ease;
+      opacity:1;
+    `;
+    layer.appendChild(el);
+    requestAnimationFrame(() => {
+      el.style.transform = `translate(-50%, -145%) scale(1.12)`;
+      el.style.opacity = '0';
+    });
+    setTimeout(() => el.remove(), 1150);
+  }
+  window.__spawnDopaminePopup = spawnDopaminePopup;
+
+  // Stage 54: 3D Physical Domination Actions ("更多爽") & Specimen Reverse Taunt / Blood Wager ("更多不爽")
+  let tauntIdx = 0;
+  let activeWagerPts = 0;
+  const provBanner = document.getElementById('specimen-provocation-banner');
+
+  function execute3DDominationAction(actionId) {
+    const act = SPECIMEN_DOMINATION_ACTIONS.find(a => a.id === actionId) || SPECIMEN_DOMINATION_ACTIONS[0];
+    const gain = Math.round(act.pts * getActivePuzzleMultiplier());
+    puzzleState.monthlyVictorScore += gain;
+    puzzleState.auditLogs.unshift(`• [3D物理支配] ${act.label} · +${gain} PTS`);
+    savePuzzleScoreState();
+
+    // Drive physical 3D head reaction on desktopEngine!
+    if (desktopEngine && desktopEngine.pets.size > 0) {
+      for (const pet of desktopEngine.pets.values()) {
+        if (actionId === 'dom_flick_forehead') {
+          pet.vel.y += 4.5;
+          pet.vel.z -= 5.0;
+          if (pet.node) {
+            pet.node.rotation.x = -0.34;
+            pet.node.rotation.y += (Math.random() - 0.5) * 0.45;
+          }
+        } else if (actionId === 'dom_force_kneel_gaze') {
+          if (pet.node) {
+            pet.node.rotation.x = 0.28; // 低头俯首臣服
+            pet.node.rotation.y = 0;
+          }
+        } else if (actionId === 'dom_shame_expression') {
+          const shameExprs = ['dead_shock_gaze', 'dead_half_open', 'dead_serene_sleep'];
+          const nextE = shameExprs[Math.floor(Math.random() * shameExprs.length)];
+          desktopEngine.setPetExpression(pet.id, nextE);
+        } else if (actionId === 'dom_harvest_jackpot') {
+          pet.vel.y += 6.2;
+        }
+      }
+      desktopEngine.wakeRender(2.2, true);
+    }
+
+    const fbEl = document.getElementById('dom-reaction-feedback');
+    if (fbEl) {
+      fbEl.innerHTML = `<strong style="color:#4ade80;">⚡ 已执行【${act.label}】 (+${gain} PTS)：</strong><br/>${act.submissiveQuote}`;
+    }
+    if (provBanner) provBanner.classList.add('hidden');
+    soundEngine.playSummon(true);
+    spawnDopaminePopup(`+${gain} PTS 🔥 ${act.label.split('·')[0].trim()}!`, false);
+    refreshPuzzleHubUI();
+    showToast(`👑 ${act.label} 成功！获得支配快感积分 +${gain} PTS！`);
+  }
+
+  document.querySelectorAll('[data-dom-action]').forEach(btn => {
+    btn.addEventListener('click', () => execute3DDominationAction(btn.dataset.domAction));
+  });
+
+  function triggerSpecimenIdleTaunt() {
+    const t = SPECIMEN_IDLE_TAUNTS[tauntIdx % SPECIMEN_IDLE_TAUNTS.length];
+    tauntIdx += 1;
+    puzzleState.monthlyVictorScore = Math.max(0, (puzzleState.monthlyVictorScore || 0) - t.bleedPts);
+    puzzleState.auditLogs.unshift(`• [💸摸鱼失血挑衅] 被「${t.speaker}」反向毒舌嘲讽 · -${t.bleedPts} PTS`);
+    savePuzzleScoreState();
+
+    const spkEl = document.getElementById('taunt-speaker-name');
+    const bldEl = document.getElementById('taunt-bleed-badge');
+    const qEl = document.getElementById('taunt-quote-body');
+    if (spkEl) spkEl.textContent = `💀【死人反向嘲讽 · ${t.speaker}】`;
+    if (bldEl) bldEl.textContent = `💸 摸鱼失血 -${t.bleedPts} PTS (分红被抢 ${t.bleedRmb})`;
+    if (qEl) qEl.textContent = t.taunt;
+    if (provBanner) provBanner.classList.remove('hidden');
+
+    spawnDopaminePopup(`💸 -${t.bleedPts} PTS 摸鱼失血！分红被抢 ${t.bleedRmb}!`, true);
+    refreshPuzzleHubUI();
+    showToast(`😤【被死人嘲讽了！】${t.speaker}正在嘲笑你摸鱼，你的月底分红刚被抢走 ${t.bleedRmb}！快拍头镇压反击！`);
+  }
+
+  document.getElementById('btn-trigger-idle-taunt-now')?.addEventListener('click', () => triggerSpecimenIdleTaunt());
+  document.getElementById('btn-taunt-slap-counter')?.addEventListener('click', () => {
+    execute3DDominationAction('dom_flick_forehead');
+    if (!puzzleRuntime.focusRunning) {
+      togglePuzzleFocusTimer('counter');
+    }
+  });
+  document.getElementById('btn-taunt-dismiss')?.addEventListener('click', () => {
+    provBanner?.classList.add('hidden');
+  });
+
+  // Blood Wager Stakes
+  const wagerBadgeEl = document.getElementById('wager-timer-badge');
+  document.getElementById('btn-wager-start-300')?.addEventListener('click', () => {
+    if (getMonthlyTotalScore() < 300) {
+      showToast('⚠️ 当前总分不足 300 PTS，请先通过专注或笔记赚取筹码！');
+      return;
+    }
+    activeWagerPts = 300;
+    puzzleState.monthlyVictorScore -= 300;
+    savePuzzleScoreState();
+    if (wagerBadgeEl) wagerBadgeEl.textContent = '🔥 押注 300 分对赌中';
+    spawnDopaminePopup('🩸 已押注 -300 PTS 开启生死血契！', true);
+    refreshPuzzleHubUI();
+    showToast('🩸 血契赌局已开启！已冻结 300 PTS 筹码，完成后点击「翻倍收米」狂揽 +660 PTS！');
+  });
+
+  document.getElementById('btn-wager-win-claim')?.addEventListener('click', () => {
+    const winPts = activeWagerPts > 0 ? Math.round(activeWagerPts * 2.2) : 660;
+    activeWagerPts = 0;
+    puzzleState.monthlyVictorScore += winPts;
+    puzzleState.auditLogs.unshift(`• [🎰血契赌局大胜] 生死对赌翻倍暴富收米 · +${winPts} PTS`);
+    savePuzzleScoreState();
+    if (wagerBadgeEl) wagerBadgeEl.textContent = `🏆 已狂赢 +${winPts} PTS`;
+    soundEngine.playSummon(true);
+    spawnDopaminePopup(`🎰 血契暴富 +${winPts} PTS (×2.2倍)!`, false);
+    refreshPuzzleHubUI();
+    showToast(`🎰【血契豪赌大胜！】连本带利狂揽 +${winPts} PTS，排名与月底分红暴涨！`);
+  });
+
+  document.getElementById('btn-wager-bust-now')?.addEventListener('click', () => {
+    const lost = activeWagerPts > 0 ? activeWagerPts : 300;
+    if (activeWagerPts === 0) {
+      puzzleState.monthlyVictorScore = Math.max(0, puzzleState.monthlyVictorScore - lost);
+    }
+    activeWagerPts = 0;
+    puzzleState.auditLogs.unshift(`• [💥血契赌局爆仓] 半途摸鱼/切屏导致赌局败北，筹码灰飞烟灭 · -${lost} PTS`);
+    savePuzzleScoreState();
+    if (wagerBadgeEl) wagerBadgeEl.textContent = `💀 爆仓惨败 (-${lost} PTS)`;
+    spawnDopaminePopup(`💥 血契爆仓 -${lost} PTS 筹码归零！`, true);
+    triggerSpecimenIdleTaunt();
+    refreshPuzzleHubUI();
+  });
+
   document.getElementById('btn-open-puzzle-hub')?.addEventListener('click', () => {
     if (puzzleHubModal?.classList.contains('hidden')) {
       openPuzzleHubTab('focus');
@@ -5721,12 +5769,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (toggleBtn) {
       toggleBtn.textContent = puzzleRuntime.focusRunning
         ? '⏸️ 暂停专注计时 (安全保留已得积分)'
-        : '▶️ 开启沉浸专注计时 (每秒自动累加赛季总分)';
+        : '▶️ 点头开启专注计时 (开始吸取状元脑力)';
     }
     if (nextHbEl) {
       nextHbEl.textContent = puzzleRuntime.hbActive
-        ? `🚨 正在倒计时签到 (${puzzleRuntime.hbCountdownSec}s)！点击立得 +150 PTS！`
-        : (puzzleRuntime.focusRunning ? `将在随机时刻触发签到奖励 (约 ${puzzleRuntime.nextHeartbeatInSec}s 内)` : '开启专注后随机降临');
+        ? `🚨 正在倒计时抽查 (${puzzleRuntime.hbCountdownSec}s)！快点确认！`
+        : (puzzleRuntime.focusRunning ? `将在随机时刻突袭抽查 (约 ${puzzleRuntime.nextHeartbeatInSec}s 内)` : '开启专注后随机降临');
     }
   }
 
@@ -5739,7 +5787,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     soundEngine.playSummon(true);
     updateFocusClockUI();
     refreshPuzzleHubUI();
-    showToast('🚨【活人专注签到奖励】请在 25 秒内点击确认或点击桌面任意头颅，立得 +150 PTS 暴击分！');
+    showToast('🚨【防挂机活人巡检】请在 25 秒内点击确认或点击方尧平头颅，逾期未点本月专注分清零！');
   }
 
   function confirmHeartbeatCheck() {
@@ -5751,12 +5799,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     puzzleState.monthlyFocusScore += bonus;
     puzzleRuntime.focusSessionPendingPts += bonus;
     puzzleState.heartbeatPassedCount += 1;
-    puzzleState.auditLogs.unshift(`• [在线签到通过] 专注在线核验成功 (剩余${puzzleRuntime.hbCountdownSec}s) · +${bonus} PTS`);
+    puzzleState.auditLogs.unshift(`• [活人巡检通过] 方尧平防挂机签到成功 (剩余${puzzleRuntime.hbCountdownSec}s) · +${bonus} PTS`);
     savePuzzleScoreState();
     soundEngine.playSummon(true);
     updateFocusClockUI();
     refreshPuzzleHubUI();
-    showToast(`✅ 专注在线签到通过！获得暴击奖励 +${bonus} PTS（本月总分 ${getMonthlyTotalScore()} PTS）`);
+    showToast(`✅ 活人专注巡检通过！获得防挂机暴击奖励 +${bonus} PTS（本月总分 ${getMonthlyTotalScore()} PTS）`);
   }
   window.__confirmPuzzleHeartbeatCheck = confirmHeartbeatCheck;
 
@@ -5769,7 +5817,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (puzzleRuntime.focusRunning) {
       puzzleRuntime.nextHeartbeatInSec = 40 + Math.floor(Math.random() * 45);
       soundEngine.playSummon(true);
-      showToast('⏱️ 已开启【沉浸专注计时器】！桌上的静默标本陪你专心研习，每秒实时累加月度总分！');
+      showToast('⏱️ 已开启【方尧平·生死心跳专注计时器】！每秒实时累加月度总分，注意随时响应活人抽查！');
     } else {
       const settled = Math.round(puzzleRuntime.focusSessionPendingPts);
       puzzleRuntime.focusSessionPendingPts = 0;
@@ -5962,13 +6010,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const grdSel = document.getElementById('puzzle-slot-guard');
     if (!headSel || !actSel || !pasSel || !grdSel) return;
 
-    const prevVal = headSel.value;
-    headSel.innerHTML = state.collectibles.map(c => {
-      const shortN = c.name.split('·')[0].trim();
-      const auraN = c.customAuraTitle || '可自由定义反差人设';
-      return `<option value="${c.id}" ${c.id === prevVal ? 'selected' : ''}>${c.id} · ${shortN} (${auraN})</option>`;
-    }).join('');
-    const curHeadId = headSel.value || state.collectibles[0]?.id || 'SPEC-2026-FYP';
+    const curHeadId = headSel.value || 'SPEC-2026-FYP';
     const loadout = getHeadLoadout(curHeadId);
 
     actSel.innerHTML = PUZZLE_SKILL_CATALOG.filter(p => p.slot === PUZZLE_SKILL_SLOTS.ACTIVE_TRIGGER)
@@ -6008,474 +6050,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   refreshPuzzleHubUI();
   updateFocusClockUI();
 
-  // ==========================================================================
-  // STAGE 55: DIRECT 3D DESKTOP TACTILE PLAYABILITY ("更多爽，不要不爽，死人不要说话，直接设计为捏脸/扒眼皮/掰嘴/点涂体液把玩玩法")
-  // ==========================================================================
-  const popupLayer = document.getElementById('dopamine-floating-popups');
-  const tactileToast = document.getElementById('tactile-sculpt-hud-toast');
-  let tactileToastTimer = null;
-  let lastTactilePtsTime = 0;
-
-  function spawnDopaminePopup(text, x, y) {
-    if (!popupLayer) return;
-    const el = document.createElement('div');
-    const px = x || (window.innerWidth * 0.42 + (Math.random() - 0.5) * 180);
-    const py = y || (window.innerHeight * 0.42 + (Math.random() - 0.5) * 120);
-    el.style.cssText = `
-      position:absolute;left:${px}px;top:${py}px;transform:translate(-50%,-50%);
-      padding:4px 12px;border-radius:999px;font-weight:900;font-size:13.5px;
-      color:#fef08a;
-      background:rgba(120,53,15,0.92);
-      border:1.5px solid #fbbf24;
-      box-shadow:0 6px 20px rgba(0,0,0,0.65);pointer-events:none;white-space:nowrap;
-      transition:transform 0.85s cubic-bezier(0.16,1,0.3,1), opacity 0.85s ease;
-    `;
-    el.textContent = text;
-    popupLayer.appendChild(el);
-    requestAnimationFrame(() => {
-      el.style.transform = 'translate(-50%, -145%) scale(1.08)';
-      el.style.opacity = '0';
-    });
-    setTimeout(() => el.remove(), 900);
-  }
-
-  function showTactileToast(title, desc, ptsText = '+15 PTS ✨') {
-    if (!tactileToast) return;
-    const tEl = document.getElementById('tactile-toast-title');
-    const dEl = document.getElementById('tactile-toast-desc');
-    const pEl = document.getElementById('tactile-toast-pts');
-    if (tEl) tEl.textContent = title;
-    if (dEl) dEl.textContent = desc;
-    if (pEl) pEl.textContent = ptsText;
-    tactileToast.classList.remove('hidden');
-    if (tactileToastTimer) clearTimeout(tactileToastTimer);
-    tactileToastTimer = setTimeout(() => {
-      tactileToast.classList.add('hidden');
-    }, 3400);
-  }
-
-  function setDesktopTactilePlayMode(mode = 'move', focusPetId = null) {
-    if (!desktopEngine) return;
-    desktopEngine.tactilePlayMode = mode;
-    document.querySelectorAll('[data-tactile-mode]').forEach(btn => {
-      btn.classList.toggle('active-top', btn.dataset.tactileMode === mode);
-    });
-    document.querySelectorAll('[data-placard-pinch]').forEach(btn => {
-      const active = mode === 'pinch_face' && (!focusPetId || btn.dataset.placardPinch === focusPetId);
-      btn.style.background = active ? 'rgba(236,72,153,0.35)' : '';
-    });
-    const modeMeta = DESKTOP_TACTILE_PLAY_MODES.find(m => m.id === mode) || DESKTOP_TACTILE_PLAY_MODES[0];
-    showTactileToast(
-      `🎮 已切换桌面鼠标模式：${modeMeta.label}`,
-      modeMeta.desc,
-      '桌面直接把玩 ✨'
-    );
-  }
-  window.__setDesktopTactilePlayMode = setDesktopTactilePlayMode;
-
-  document.querySelectorAll('[data-tactile-mode]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      setDesktopTactilePlayMode(btn.dataset.tactileMode || 'move');
-    });
-  });
-
-  if (desktopEngine) {
-    desktopEngine.onTactileManipulate = ({ pet, mode, zone, partLabel, clientX, clientY }) => {
-      const shortName = (pet?.collectible?.name || '标本').split('·')[0].trim();
-      const now = performance.now();
-      let pts = 0;
-      if (now - lastTactilePtsTime > 260) {
-        lastTactilePtsTime = now;
-        pts = Math.round(15 * getActivePuzzleMultiplier());
-        puzzleState.monthlyVictorScore += pts;
-        savePuzzleScoreState();
-        refreshPuzzleHubUI();
-        spawnDopaminePopup(`⚡ ${partLabel.split(' ')[0]} +${pts} PTS ✨`, clientX, clientY);
-      }
-      const silentNote = getNextSilentPlayObservation(zone);
-      const modeIcon = mode === 'paint_fluid' ? '🩸' : (mode === 'roll_eyeball' ? '👁️' : (mode === 'groom_hair' ? '🪮' : (mode === 'bow_gaze' ? '🙇‍♀️' : '🤏')));
-      showTactileToast(
-        `${modeIcon} 正在把玩【${shortName}】：${partLabel}`,
-        silentNote,
-        pts > 0 ? `+${pts} PTS ✨` : '实时把玩中 ✨'
-      );
-      // Persist updated morphs to state.collectibles
-      const col = state.collectibles.find(c => c.id === pet?.id);
-      if (col && pet?.collectible?.morphs) {
-        col.morphs = { ...col.morphs, ...pet.collectible.morphs };
-      }
-    };
-  }
-
-  window.__triggerPetDesktopEyeballCycle = (petId, clientX, clientY) => {
-    const pet = desktopEngine?.pets?.get(petId);
-    if (!pet) return;
-    desktopEngine.applyTactileEyeballDelta(pet, 0, 0, true, clientX, clientY);
-  };
-
-  window.__triggerPetDesktopHairLift = (petId, clientX, clientY) => {
-    const pet = desktopEngine?.pets?.get(petId);
-    if (!pet) return;
-    desktopEngine.applyTactileHairGroomDelta(pet, 0, 0, true, clientX, clientY);
-  };
-
-  const FLUID_PLAY_PRESETS = [
-    { label: '💧 梨花带雨 (清泪+哭红眼鼻)', neck: 0.85, tear: 0.92, tearType: 0, nose: 0.0, mouth: 0.0, splat: 0.0 },
-    { label: '🥀 凄美鼻血+眼角清泪', neck: 0.90, tear: 0.78, tearType: 0, nose: 0.88, mouth: 0.0, splat: 0.0 },
-    { label: '🩸 猩红血泪+双侧嘴角溢血', neck: 0.98, tear: 0.96, tearType: 2, nose: 0.45, mouth: 0.86, splat: 0.28 },
-    { label: '⚔️ 重度断首战损 (鼻血+血泪+溅血)', neck: 1.22, tear: 1.05, tearType: 2, nose: 1.02, mouth: 0.96, splat: 0.90 },
-    { label: '✨ 擦拭干净 (仅保留C4断面微血)', neck: 0.65, tear: 0.0, tearType: 0, nose: 0.0, mouth: 0.0, splat: 0.0 },
-  ];
-  const petFluidCycleIdx = {};
-
-  window.__cyclePetDesktopFluidPreset = (petId, clientX, clientY) => {
-    const pet = desktopEngine?.pets?.get(petId);
-    const col = state.collectibles.find(c => c.id === petId);
-    if (!pet || !col) return;
-    const idx = ((petFluidCycleIdx[petId] ?? -1) + 1) % FLUID_PLAY_PRESETS.length;
-    petFluidCycleIdx[petId] = idx;
-    const p = FLUID_PLAY_PRESETS[idx];
-
-    col.neckBloodStrength = pet.collectible.neckBloodStrength = p.neck;
-    col.tearTrackStrength = pet.collectible.tearTrackStrength = p.tear;
-    col.tearType = pet.collectible.tearType = p.tearType;
-    col.nosebleedStrength = pet.collectible.nosebleedStrength = p.nose;
-    col.mouthBloodStrength = pet.collectible.mouthBloodStrength = p.mouth;
-    col.faceSplatterStrength = pet.collectible.faceSplatterStrength = p.splat;
-    col.morphs = {
-      ...(col.morphs || {}),
-      neckBloodStrength: p.neck,
-      tearTrackStrength: p.tear,
-      tearType: p.tearType,
-      nosebleedStrength: p.nose,
-      mouthBloodStrength: p.mouth,
-      faceSplatterStrength: p.splat,
-    };
-    pet.collectible.morphs = { ...col.morphs };
-    updateCollectibleMaterialsLive(pet.node, pet.collectible);
-    desktopEngine.wakeRender(1.5, true);
-
-    const pts = Math.round(45 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    const shortName = col.name.split('·')[0].trim();
-    spawnDopaminePopup(`🩸 ${shortName}·${p.label.split(' ')[1]} +${pts} PTS ✨`, clientX, clientY);
-    showTactileToast(
-      `🩸 桌面直接点染【${shortName}】：${p.label}`,
-      '【静默标本 · 凄美体液】已直接在 3D 头颅表面更新泪痕、血泪、鼻血与颈部断面鲜血度（也可点击顶部【🩸点涂鼻血/泪痕】用鼠标亲手点涂具体五官）。',
-      `+${pts} PTS ✨`
-    );
-  };
-
-  window.__cyclePetDesktopDeadExpression = (petId, clientX, clientY) => {
-    const pet = desktopEngine?.pets?.get(petId);
-    const col = state.collectibles.find(c => c.id === petId);
-    if (!pet || !col) return;
-    const exprList = FORENSIC_EXPRESSION_PRESETS;
-    const curExpr = col.deadExpression || col.morphs?.deadExpression || 'dead_calm';
-    const curIdx = exprList.findIndex(e => e.id === curExpr);
-    const nextPreset = exprList[(curIdx + 1) % exprList.length] || exprList[0];
-
-    col.deadExpression = nextPreset.id;
-    col.morphs = {
-      ...(col.morphs || {}),
-      deadExpression: nextPreset.id,
-      jawOpen: nextPreset.jawOpen,
-      eyeRollUp: nextPreset.eyeRollUp,
-      tongueOut: nextPreset.tongueOut,
-      jawSide: nextPreset.jawSide,
-      eyelidOpen: nextPreset.eyelidOpen,
-      browAngle: nextPreset.browAngle,
-      mouthCorner: nextPreset.mouthCorner,
-    };
-    pet.collectible.deadExpression = nextPreset.id;
-    pet.collectible.morphs = { ...col.morphs };
-    applyHeadMorphsToGroup(pet.node, col.morphs);
-    desktopEngine.wakeRender(1.5, true);
-
-    const pts = Math.round(45 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    const shortName = col.name.split('·')[0].trim();
-    spawnDopaminePopup(`💀 ${shortName}·${nextPreset.shortLabel} +${pts} PTS ✨`, clientX, clientY);
-    showTactileToast(
-      `💀 桌面直接摆弄【${shortName}】死相：${nextPreset.label}`,
-      `【静默标本 · 任由摆布】${nextPreset.desc}——她毫无知觉地保持着你设定的眼皮与唇齿开合度。`,
-      `+${pts} PTS ✨`
-    );
-  };
-
-  window.__togglePetDesktopBowPosture = (petId, clientX, clientY) => {
-    const pet = desktopEngine?.pets?.get(petId);
-    const col = state.collectibles.find(c => c.id === petId);
-    if (!pet || !col) return;
-    desktopEngine.applyTactileBowGazeDelta(pet, 0, 0, true, clientX, clientY);
-  };
-
-  const petAuraCycleIdx = {};
-  window.__cyclePetSuperiorityAura = (petId, clientX, clientY) => {
-    const col = state.collectibles.find(c => c.id === petId);
-    if (!col) return;
-    const idx = ((petAuraCycleIdx[petId] ?? -1) + 1) % UNIVERSAL_SUPERIORITY_AURA_TEMPLATES.length;
-    petAuraCycleIdx[petId] = idx;
-    const tpl = UNIVERSAL_SUPERIORITY_AURA_TEMPLATES[idx];
-    col.customDisplayName = tpl.aliasName ? `${tpl.aliasName} · ${tpl.tagTitle}` : null;
-    col.customAuraTitle = tpl.tagTitle;
-    col.customSealBadge = tpl.sealBadge || '🔖 活人支配藏品 · 静默伴读中';
-    col.customContrastText = tpl.contrastText;
-    persistCollectibles();
-    if (desktopEngine) {
-      renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
-    }
-    populatePuzzleSelectors();
-
-    const pts = Math.round(45 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    const displayHeadName = tpl.aliasName || col.name.split('·')[0].trim();
-    spawnDopaminePopup(`🏷️ ${tpl.tagTitle} +${pts} PTS ✨`, clientX, clientY);
-    showTactileToast(
-      `🏷️ 已切换【${displayHeadName}】投射人设与封条：${tpl.sealBadge || tpl.tagTitle}`,
-      `【${tpl.contrastText}】（预设名字与人设并非固定绑定，你也可以直接点击标牌上的名字或文字输入任何你想投射的人设！）`,
-      `+${pts} PTS ✨`
-    );
-  };
-
-  document.getElementById('btn-desktop-superiority-pulse')?.addEventListener('click', (ev) => {
-    if (desktopEngine) {
-      desktopEngine.triggerDesktopSuperiorityRelief();
-    }
-    const decl = SURVIVOR_VICTORY_DECLARATIONS[puzzleRuntime.declIdx % SURVIVOR_VICTORY_DECLARATIONS.length];
-    puzzleRuntime.declIdx += 1;
-    const pts = Math.round(120 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    puzzleRuntime.victorBuffUntilMs = Date.now() + 15 * 60 * 1000;
-    // Automatically start or boost the calm focus study timer so superiority converts into study focus!
-    let focusStartedMsg = '';
-    if (!puzzleRuntime.focusRunning) {
-      puzzleRuntime.focusRunning = true;
-      puzzleRuntime.nextHeartbeatInSec = 55;
-      updateFocusClockUI();
-      focusStartedMsg = '（⏱️ 已同步为你开启沉浸专注计时，把优越感化为翻书动力！）';
-    }
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    soundEngine.playSummon(true);
-    spawnDopaminePopup(`😮‍💨 全场俯首 · 活人优越感 +${pts} PTS ✨`, ev.clientX, ev.clientY);
-    showTactileToast(
-      `👑 ${decl.title}`,
-      `${decl.quote}${focusStartedMsg}`,
-      `+${pts} PTS & ×1.40 专注加成 ✨`
-    );
-  });
-
-  document.getElementById('btn-desktop-lookdown-view')?.addEventListener('click', (ev) => {
-    if (!desktopEngine) return;
-    const isLookdown = desktopEngine.toggleLookdownDominanceView();
-    const btn = document.getElementById('btn-desktop-lookdown-view');
-    btn?.classList.toggle('active-top', isLookdown);
-    if (btn) {
-      btn.textContent = isLookdown ? '👣 俯视主宰: 开' : '👣 居高临下俯视';
-    }
-    const pts = Math.round(60 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    spawnDopaminePopup(isLookdown ? `👣 居高临下俯视 +${pts} PTS ✨` : `👀 平视伴读视角 +${pts} PTS ✨`, ev.clientX, ev.clientY);
-    showTactileToast(
-      isLookdown ? '👣 已开启【居高临下·上位者俯视视角】' : '👀 已恢复【书桌平视伴读视角】',
-      isLookdown
-        ? '镜头已抬升至你的视线高度俯视桌面，案头的3D断头藏品或低眉俯首、或从下方仰望你——生前再心高气傲的人，如今也只能在你的眼皮底下安静陪读。'
-        : '镜头已恢复平视高度，可近距离端详或用鼠标捏脸把玩桌面上的3D头颅。',
-      `+${pts} PTS ✨`
-    );
-  });
-
-  // ==========================================================================
-  // STAGE 58: 难受不舒服时随时点开看的【活人优越感 · 宽心手札】(#comfort-reader-drawer)
-  // ==========================================================================
-  const comfortDrawer = document.getElementById('comfort-reader-drawer');
-  const comfortCatTabsEl = document.getElementById('comfort-category-tabs');
-  const comfortArticleListEl = document.getElementById('comfort-article-list');
-  const comfortTitleEl = document.getElementById('comfort-article-title');
-  const comfortMoodEl = document.getElementById('comfort-article-mood');
-  const comfortBodyEl = document.getElementById('comfort-article-body');
-  const comfortAffirmEl = document.getElementById('comfort-article-affirmation');
-  const comfortActionBtn = document.getElementById('btn-comfort-trigger-3d');
-  const comfortPillTextEl = document.getElementById('comfort-quick-pill-text');
-
-  let curComfortCatId = COMFORT_HANDBOOK_CATEGORIES[0]?.id || 'mocked';
-  let curComfortArticleId = COMFORT_HANDBOOK_ARTICLES[0]?.id || 'mk_01';
-  let curComfortPillIdx = 0;
-  let curComfortTargetPetId = null;
-
-  function renderComfortReader() {
-    if (!comfortCatTabsEl || !comfortArticleListEl) return;
-    comfortCatTabsEl.innerHTML = COMFORT_HANDBOOK_CATEGORIES.map(cat => {
-      const active = cat.id === curComfortCatId;
-      return `<button type="button" data-comfort-cat="${cat.id}" title="${cat.desc}" style="padding:4px 8px;border-radius:7px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid ${active ? '#f472b6' : 'rgba(255,255,255,0.16)'};background:${active ? 'rgba(236,72,153,0.32)' : 'rgba(255,255,255,0.05)'};color:${active ? '#fdf2f8' : '#cbd5e1'};">${cat.label}</button>`;
-    }).join('');
-
-    comfortCatTabsEl.querySelectorAll('[data-comfort-cat]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        curComfortCatId = btn.dataset.comfortCat;
-        const firstArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.category === curComfortCatId);
-        if (firstArt) curComfortArticleId = firstArt.id;
-        renderComfortReader();
-      });
-    });
-
-    const catArticles = COMFORT_HANDBOOK_ARTICLES.filter(a => a.category === curComfortCatId);
-    comfortArticleListEl.innerHTML = catArticles.map((art, i) => {
-      const active = art.id === curComfortArticleId;
-      return `<button type="button" data-comfort-art="${art.id}" style="text-align:left;padding:5px 9px;border-radius:6px;font-size:11.8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;border:1px solid ${active ? 'rgba(251,191,36,0.65)' : 'rgba(255,255,255,0.08)'};background:${active ? 'rgba(180,83,9,0.32)' : 'rgba(255,255,255,0.03)'};color:${active ? '#fef08a' : '#e2e8f0'};font-weight:${active ? '700' : '500'};">
-        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i + 1}. ${art.title}</span>
-        <span style="font-size:10px;opacity:0.85;white-space:nowrap;color:#f9a8d4;">${art.moodTag}</span>
-      </button>`;
-    }).join('');
-
-    comfortArticleListEl.querySelectorAll('[data-comfort-art]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        curComfortArticleId = btn.dataset.comfortArt;
-        renderComfortReader();
-        const art = COMFORT_HANDBOOK_ARTICLES.find(a => a.id === curComfortArticleId);
-        if (art && desktopEngine) {
-          desktopEngine.performLinkedComfort3DAction(art.linked3DAction, curComfortTargetPetId);
-        }
-      });
-    });
-
-    const curArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.id === curComfortArticleId) || COMFORT_HANDBOOK_ARTICLES[0];
-    if (curArt) {
-      if (comfortTitleEl) comfortTitleEl.textContent = curArt.title;
-      if (comfortMoodEl) comfortMoodEl.textContent = curArt.moodTag;
-      if (comfortBodyEl) {
-        comfortBodyEl.innerHTML = curArt.paragraphs.map(p => `<p style="margin:0;text-indent:0;">${p}</p>`).join('');
-      }
-      if (comfortAffirmEl) comfortAffirmEl.textContent = curArt.affirmation;
-      if (comfortActionBtn) comfortActionBtn.textContent = curArt.actionBtnLabel || '🎭 让桌上3D头颅配合本文动作 (+60 PTS)';
-    }
-  }
-  renderComfortReader();
-
-  function openComfortReaderDrawer(categoryId = null, targetPetId = null) {
-    if (!comfortDrawer) return;
-    curComfortTargetPetId = targetPetId || null;
-    if (categoryId) {
-      curComfortCatId = categoryId;
-      const firstArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.category === curComfortCatId);
-      if (firstArt) curComfortArticleId = firstArt.id;
-    }
-    renderComfortReader();
-    comfortDrawer.classList.remove('hidden');
-    const curArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.id === curComfortArticleId) || COMFORT_HANDBOOK_ARTICLES[0];
-    if (curArt && desktopEngine) {
-      desktopEngine.performLinkedComfort3DAction(curArt.linked3DAction, curComfortTargetPetId);
-    }
-  }
-  window.__openComfortReaderDrawer = openComfortReaderDrawer;
-
-  document.getElementById('btn-open-comfort-reader')?.addEventListener('click', () => {
-    if (!comfortDrawer) return;
-    if (comfortDrawer.classList.contains('hidden')) {
-      openComfortReaderDrawer();
-    } else {
-      comfortDrawer.classList.add('hidden');
-    }
-  });
-
-  document.getElementById('btn-close-comfort-reader')?.addEventListener('click', () => {
-    comfortDrawer?.classList.add('hidden');
-  });
-
-  comfortActionBtn?.addEventListener('click', (ev) => {
-    const curArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.id === curComfortArticleId) || COMFORT_HANDBOOK_ARTICLES[0];
-    if (curArt && desktopEngine) {
-      desktopEngine.performLinkedComfort3DAction(curArt.linked3DAction, curComfortTargetPetId);
-    }
-    const pts = Math.round(60 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    spawnDopaminePopup(`🎭 头颅配合动作 +${pts} PTS ✨`, ev.clientX, ev.clientY);
-    showTactileToast(
-      `🎭 桌上3D头颅已配合执行：${curArt?.title || '宽心手札'}`,
-      curArt?.affirmation || '在静默的标本面前，活着的你拥有绝对支配权。',
-      `+${pts} PTS ✨`
-    );
-  });
-
-  document.getElementById('btn-comfort-random-article')?.addEventListener('click', (ev) => {
-    const others = COMFORT_HANDBOOK_ARTICLES.filter(a => a.id !== curComfortArticleId);
-    const pick = others[Math.floor(Math.random() * others.length)] || COMFORT_HANDBOOK_ARTICLES[0];
-    curComfortCatId = pick.category;
-    curComfortArticleId = pick.id;
-    renderComfortReader();
-    if (desktopEngine) {
-      desktopEngine.performLinkedComfort3DAction(pick.linked3DAction, curComfortTargetPetId);
-    }
-    const pts = Math.round(80 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    if (!puzzleRuntime.focusRunning) {
-      puzzleRuntime.focusRunning = true;
-      puzzleRuntime.nextHeartbeatInSec = 55;
-      updateFocusClockUI();
-    }
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    spawnDopaminePopup(`📖 宽心爽文赋能 +${pts} PTS ✨`, ev.clientX, ev.clientY);
-    showTactileToast(
-      `📖 已为你翻开：${pick.title}`,
-      pick.affirmation,
-      `+${pts} PTS ✨`
-    );
-  });
-
-  document.getElementById('btn-comfort-next-pill')?.addEventListener('click', (ev) => {
-    curComfortPillIdx = (curComfortPillIdx + 1) % QUICK_COMFORT_PILLS.length;
-    const pill = QUICK_COMFORT_PILLS[curComfortPillIdx];
-    if (comfortPillTextEl) comfortPillTextEl.textContent = pill;
-    const pts = Math.round(30 * getActivePuzzleMultiplier());
-    puzzleState.monthlyVictorScore += pts;
-    savePuzzleScoreState();
-    refreshPuzzleHubUI();
-    spawnDopaminePopup(`💊 速效强心针 +${pts} PTS ✨`, ev.clientX, ev.clientY);
-  });
-
-  // Make #comfort-reader-drawer draggable by its header
-  const comfortDragHeader = document.getElementById('comfort-reader-drag-header');
-  if (comfortDragHeader && comfortDrawer) {
-    let isDraggingComfort = false;
-    let cStartX = 0, cStartY = 0, cInitLeft = 0, cInitTop = 0;
-    comfortDragHeader.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('button')) return;
-      isDraggingComfort = true;
-      const rect = comfortDrawer.getBoundingClientRect();
-      cStartX = e.clientX;
-      cStartY = e.clientY;
-      cInitLeft = rect.left;
-      cInitTop = rect.top;
-      comfortDrawer.style.right = 'auto';
-      comfortDrawer.style.left = `${cInitLeft}px`;
-      comfortDrawer.style.top = `${cInitTop}px`;
-      comfortDragHeader.setPointerCapture(e.pointerId);
-    });
-    comfortDragHeader.addEventListener('pointermove', (e) => {
-      if (!isDraggingComfort) return;
-      const nx = Math.max(8, Math.min(window.innerWidth - 320, cInitLeft + (e.clientX - cStartX)));
-      const ny = Math.max(48, Math.min(window.innerHeight - 160, cInitTop + (e.clientY - cStartY)));
-      comfortDrawer.style.left = `${nx}px`;
-      comfortDrawer.style.top = `${ny}px`;
-    });
-    comfortDragHeader.addEventListener('pointerup', () => { isDraggingComfort = false; });
-  }
-
   // Live 1-second Study Companion Timer, Focus Heartbeat Check & Energy Accumulation (zero GPU overhead)
   setInterval(() => {
-    // 1. Focus Timer & Anti-AFK Random Heartbeat Countdown (Zero point wipe/deduction — pure positive reward!)
+    // 1. Focus Timer & Anti-AFK Random Heartbeat Countdown
     if (puzzleRuntime.hbActive) {
       puzzleRuntime.hbCountdownSec -= 1;
       const cdEl = document.getElementById('hb-countdown-badge');
@@ -6484,10 +6061,25 @@ window.addEventListener('DOMContentLoaded', async () => {
         puzzleRuntime.hbActive = false;
         puzzleRuntime.focusRunning = false;
         if (hbBanner) hbBanner.classList.add('hidden');
+        puzzleState.heartbeatFailedCount += 1;
+        if (puzzleState.hardcoreWipeEnabled) {
+          const wiped = Math.round(puzzleState.monthlyFocusScore);
+          puzzleState.monthlyFocusScore = 0;
+          puzzleRuntime.focusSessionPendingPts = 0;
+          puzzleRuntime.focusSessionSec = 0;
+          puzzleState.auditLogs.unshift(`• [💀挂机熔断清零] 活人抽查25秒超时未点！已扣光本月全部专注分 (-${wiped} PTS)`);
+          showToast(`💀【活人巡检超时未点】判定挂机作弊！已按规则扣光本月全部专注分 (-${wiped} PTS)！`);
+        } else {
+          const wipedSession = Math.round(puzzleRuntime.focusSessionPendingPts);
+          puzzleState.monthlyFocusScore = Math.max(0, puzzleState.monthlyFocusScore - wipedSession);
+          puzzleRuntime.focusSessionPendingPts = 0;
+          puzzleRuntime.focusSessionSec = 0;
+          puzzleState.auditLogs.unshift(`• [⚠️巡检超时扣分] 演示安全锁生效，已扣除本轮专注分 (-${wipedSession} PTS)`);
+          showToast(`⚠️ 活人抽查超时未点！已扣除本轮未结算专注分 (-${wipedSession} PTS)`);
+        }
         savePuzzleScoreState();
         updateFocusClockUI();
         refreshPuzzleHubUI();
-        showToast('⏸️ 专注巡检未点击，已自动为你暂停计时并 100% 保留全部已得积分（零扣分）！');
       } else {
         updateFocusClockUI();
       }
@@ -6508,7 +6100,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    // 2. Deadline Guillotine Bounty Countdown (Zero point deduction!)
+    // 2. Deadline Guillotine Bounty Countdown
     if (puzzleRuntime.bountyRunning && puzzleRuntime.bountyRemainingSec > 0) {
       puzzleRuntime.bountyRemainingSec -= 1;
       const bMin = String(Math.floor(puzzleRuntime.bountyRemainingSec / 60)).padStart(2, '0');
@@ -6517,10 +6109,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (bValEl) bValEl.textContent = `${bMin}:${bSec}`;
       if (puzzleRuntime.bountyRemainingSec <= 0) {
         puzzleRuntime.bountyRunning = false;
+        puzzleState.monthlyVictorScore = Math.max(0, puzzleState.monthlyVictorScore - 100);
         const tagEl = document.getElementById('bounty-status-tag');
-        if (tagEl) tagEl.textContent = '⏸️ 本轮计时结束 (点击可随时领赏)';
+        if (tagEl) tagEl.textContent = '💀 死线超时失败 (-100 PTS)';
         savePuzzleScoreState();
         refreshPuzzleHubUI();
+        showToast('💀 死线斩首任务超时未完成！已扣除押金 -100 PTS！');
       }
     }
 

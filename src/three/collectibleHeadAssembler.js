@@ -81,11 +81,22 @@ export function updateMasterStrandHairPxScale(scene, renderer, camera) {
   if (!scene || !renderer || !camera) return;
   const hpx = renderer.getDrawingBufferSize(_strandDbs).y;
   const pxScale = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov || 24) / 2)) / Math.max(1, hpx);
+  const childCount = scene.children.length;
+  if (scene.userData._lastStrandPxScale === pxScale && scene.userData._lastStrandChildCount === childCount && scene.userData._cachedStrandUniforms) {
+    const list = scene.userData._cachedStrandUniforms;
+    for (let i = 0; i < list.length; i++) list[i].uPxScale.value = pxScale;
+    return;
+  }
+  const list = [];
   scene.traverse((obj) => {
     if (obj.isMesh && obj.material?.userData?.strandUniforms) {
       obj.material.userData.strandUniforms.uPxScale.value = pxScale;
+      list.push(obj.material.userData.strandUniforms);
     }
   });
+  scene.userData._lastStrandPxScale = pxScale;
+  scene.userData._lastStrandChildCount = childCount;
+  scene.userData._cachedStrandUniforms = list;
 }
 
 function hexToMasterStrandRgb(hairColorHex = '#121216') {
@@ -756,17 +767,19 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     const isStrandMesh = child.name === 'MasterStrandHairMesh';
     const crownBoost = topCrownStyle === 'fluffy_high_crown' ? 0.28 : (topCrownStyle === 'photo_sleek_crown' ? -0.12 : 0.0);
     const effHairVol = hairVol + crownBoost;
-    const hasCustomHairShape = Math.abs(bangsLen) > 1e-4 || Math.abs(bangsPart) > 1e-4 || Math.abs(effHairVol) > 1e-4 || Math.abs(hairLen) > 1e-4 || Math.abs(sideburn) > 1e-4 || Math.abs(hairFlare) > 1e-4 || Math.abs(hairCurlWave) > 1e-4 || topCrownStyle !== 'default';
-    if (isStrandMesh && !hasCustomHairShape && !child.geometry.userData.hasDeformedStrands) return;
+    if (isStrandMesh) {
+      const u = child.material?.userData?.strandUniforms;
+      if (u?.uHairFineTune0 && u?.uHairFineTune1 && u?.uHairFineTune2) {
+        const crownMode = topCrownStyle === 'photo_sleek_crown' ? 1.0 : (topCrownStyle === 'side_part_crown' ? 2.0 : 0.0);
+        u.uHairFineTune0.value.set(crownMode, effHairVol, bangsLen, bangsPart);
+        u.uHairFineTune1.value.set(sideburn, hairLen, hairFlare, hairCurlWave);
+        u.uHairFineTune2.value.set(neckClear, 0, 0, 0);
+      }
+      return;
+    }
     const geo = child.geometry;
     if (visitedGeos.has(geo)) return;
     visitedGeos.add(geo);
-
-    if (isStrandMesh && !geo.userData.hasLocalPosClone) {
-      geo.setAttribute('position', geo.attributes.position.clone());
-      geo.userData.hasLocalPosClone = true;
-    }
-    if (isStrandMesh) geo.userData.hasDeformedStrands = true;
 
     const posAttr = geo.attributes.position;
     if (!geo.userData.basePositions) {
@@ -1720,7 +1733,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   rootGroup.userData.customHairType = config.customHairType || null;
   const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
   const isCustomObj = Boolean(config.customHairUrl && (config.customHairType === 'obj' || String(config.customHairUrl).toLowerCase().endsWith('.obj')));
-  const useStrandMode = !config.customHairUrl && hairRenderMode === 'strand' && (!config.groomSoftware || Boolean(config.hairRenderMode));
+  const useStrandMode = !config.customHairUrl && hairRenderMode === 'strand';
 
   try {
     let loadedScene = null;
@@ -1829,28 +1842,43 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     let guideCount = 0;
     const customAsset = Boolean(config.customHairUrl);
     const strandRgb = hexToMasterStrandRgb(hairColorHex);
+    const strandCacheKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${strandDensity}`;
+    let strandRes = useStrandMode ? masterStrandGeometryCache.get(strandCacheKey) : null;
     const headSkinMesh = modelContainer.getObjectByName('HeadSkinMesh');
-    const headSoup = (useStrandMode && headSkinMesh) ? morphedHeadSoup(headSkinMesh, true) : null;
+    const headSoup = (useStrandMode && !strandRes && headSkinMesh) ? morphedHeadSoup(headSkinMesh, true) : null;
     const strandEntries = [];
+    let hairMeshIdx = 0;
 
     loadedScene.traverse(child => {
       if (!child.isMesh) return;
       const g = child.geometry;
+      const curMeshIdx = hairMeshIdx++;
       if (g?.attributes?.position) {
         totalVerts += g.attributes.position.count;
         totalTris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
       }
       child.updateMatrix();
-      if (useStrandMode && headSoup && g?.attributes?.position && g?.attributes?.uv) {
+      if (useStrandMode && g?.attributes?.position && g?.attributes?.uv) {
         if (!g.attributes.aScalpD) {
-          scalpDistanceAttribute(g, child.matrix, headSoup);
+          const scalpKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${curMeshIdx}|${g.attributes.position.count}`;
+          let cachedScalpAttr = masterStrandGeometryCache.get(`scalp:${scalpKey}`);
+          if (!cachedScalpAttr && (headSoup || headSkinMesh)) {
+            const soup = headSoup || morphedHeadSoup(headSkinMesh, true);
+            scalpDistanceAttribute(g, child.matrix, soup);
+            cachedScalpAttr = g.attributes.aScalpD;
+            masterStrandGeometryCache.set(`scalp:${scalpKey}`, cachedScalpAttr);
+          } else if (cachedScalpAttr) {
+            g.setAttribute('aScalpD', cachedScalpAttr);
+          }
         }
-        const origMat = Array.isArray(child.material) ? child.material[0] : child.material;
-        strandEntries.push({
-          geom: g,
-          matrix: child.matrix.clone(),
-          alphaAt: alphaSamplerFromTexture(origMat?.map),
-        });
+        if (!strandRes) {
+          const origMat = Array.isArray(child.material) ? child.material[0] : child.material;
+          strandEntries.push({
+            geom: g,
+            matrix: child.matrix.clone(),
+            alphaAt: alphaSamplerFromTexture(origMat?.map),
+          });
+        }
       }
       if (!customAsset && !useStrandMode) updateArtistHairFlow(g, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
       const configureMaterial = original => {
@@ -1899,9 +1927,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       child.renderOrder = 0;
     });
 
-    if (useStrandMode && headSoup && strandEntries.length > 0) {
-      const strandCacheKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${strandDensity}`;
-      let strandRes = masterStrandGeometryCache.get(strandCacheKey);
+    if (useStrandMode && (strandRes || (headSoup && strandEntries.length > 0))) {
       if (!strandRes) {
         const densitySpec = MASTER_HAIR_DENSITIES[strandDensity] || MASTER_HAIR_DENSITIES.mid;
         strandRes = generateStrands(strandEntries, null, null, headSoup, densitySpec);
