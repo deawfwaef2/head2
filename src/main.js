@@ -20,6 +20,7 @@ import {
   FORENSIC_EXPRESSION_PRESETS,
   updateHairSheen,
   updateHairDesignOnGroup,
+  updateCollectibleMaterialsLive,
   attachSpecimenContainerAndDecor,
   resolveRealHairStyle,
   setHeadFaceArchetype,
@@ -281,6 +282,15 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
         const octx = overlayCanvas.getContext('2d');
         octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
         octx.drawImage(canvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
+      }
+      state.studioDraft.photoElement = img;
+      state.studioDraft.lifePhotoDataUrl = img.src;
+      if (studioEngine?.headNode && Number(state.studioDraft.photoBlend || 0) > 0.005) {
+        studioEngine.updateMaterialsFast({
+          photoElement: img,
+          lifePhotoUrl: img.src,
+          photoBlend: state.studioDraft.photoBlend,
+        });
       }
     };
     if (preset === 'fangyaoping') {
@@ -714,6 +724,22 @@ function updateStructureFloatingHUD(info) {
     hud.classList.add('hidden');
     hud.dataset.structId = '';
     return;
+  }
+  // Never overlap the open Studio / Manager window!
+  const win = document.getElementById('software-window');
+  const studioActive = document.getElementById('tab-studio')?.classList.contains('active');
+  if (win && !win.classList.contains('window-hidden')) {
+    if (studioActive) {
+      hud.classList.add('hidden');
+      return;
+    }
+    const rect = win.getBoundingClientRect();
+    const sx = info.screenX || window.innerWidth * 0.5;
+    const sy = info.screenY || window.innerHeight * 0.5;
+    if (sx >= rect.left - 180 && sx <= rect.right + 180 && sy >= rect.top - 50 && sy <= rect.bottom + 50) {
+      hud.classList.add('hidden');
+      return;
+    }
   }
   hud.dataset.structId = info.id;
   const titleEl = document.getElementById('struct-hud-title');
@@ -1557,8 +1583,16 @@ function switchSoftwareTab(tabId) {
   document.querySelectorAll('.tab-panel').forEach(panel => {
     panel.classList.toggle('active', panel.id === `tab-${tabId}`);
   });
-  if (tabId === 'studio' && studioEngine) {
-    setTimeout(() => studioEngine.resize(), 40);
+  const win = document.getElementById('software-window');
+  if (win) {
+    win.classList.toggle('studio-active-wide', tabId === 'studio');
+  }
+  if (tabId === 'studio') {
+    document.getElementById('structure-floating-hud')?.classList.add('hidden');
+    if (studioEngine) {
+      setTimeout(() => studioEngine.resize(), 40);
+      setTimeout(() => studioEngine.resize(), 250);
+    }
   }
   if (tabId === 'archives') {
     fetchAndRenderArchives();
@@ -1835,7 +1869,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       ? '🏷️ 已开启断头标本连接标牌（常驻显示角色生前照片与简要信息，无需手动关闭）'
       : '🏷️ 已隐藏断头标本连接标牌（鼠标悬停人头将显示传统悬浮卡片）');
   });
-
   if (window.cervixDesktopBridge?.isDesktop) {
     desktopEngine.updateSettings({ showBoxGrid: 'hidden' });
     // The main process polls the real cursor while the transparent OS window
@@ -1983,22 +2016,46 @@ window.addEventListener('DOMContentLoaded', async () => {
         state.studioDraft.photoElement = img;
         state.studioDraft.lifePhotoDataUrl = ev.target.result;
         document.getElementById('photo-status-badge').textContent = `已载入生前照片：${file.name}`;
-        showToast(`📸 已载入角色生前照片「${file.name}」，保存后鼠标悬停在桌宠上即可查看生前真容！`);
+        // Automatically enable 3D reference photo projection at 35% when user uploads a photo!
+        state.studioDraft.photoBlend = Math.max(0.35, Number(state.studioDraft.photoBlend || 0));
+        const projSlider = document.getElementById('slider-photo-proj');
+        const projVal = document.getElementById('val-photo-proj');
+        if (projSlider) projSlider.value = String(state.studioDraft.photoBlend);
+        if (projVal) projVal.textContent = `${Math.round(state.studioDraft.photoBlend * 100)}%`;
+        studioEngine.updateMaterialsFast({
+          photoElement: img,
+          lifePhotoUrl: ev.target.result,
+          photoBlend: state.studioDraft.photoBlend,
+        });
+        showToast(`📸 已载入角色生前照片「${file.name}」，并已同步开启 3D 照片正交投射！`);
       };
       img.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   });
 
-  document.getElementById('btn-auto-sample-photo').addEventListener('click', async () => {
+  document.getElementById('btn-auto-sample-photo').addEventListener('click', () => {
     const srcEl = state.studioDraft.photoElement || refPhotoCanvas;
     const sampled = samplePhotoColors(srcEl);
     state.studioDraft.skinTone = sampled.skinTone;
+    state.studioDraft.lipColor = sampled.lipColor || state.studioDraft.lipColor;
+    state.studioDraft.hairColor = sampled.hairColor || state.studioDraft.hairColor;
     document.getElementById('col-skin').value = sampled.skinTone;
+    if (sampled.lipColor && document.getElementById('col-lip')) {
+      document.getElementById('col-lip').value = sampled.lipColor;
+    }
+    if (sampled.hairColor && document.getElementById('col-hair')) {
+      document.getElementById('col-hair').value = sampled.hairColor;
+    }
     studioEngine.setCameraPreset('front');
-    await refreshStudio3DModel();
+    studioEngine.updateMaterialsFast({
+      skinTone: state.studioDraft.skinTone,
+      lipColor: state.studioDraft.lipColor,
+      hairColor: state.studioDraft.hairColor,
+      photoElement: srcEl,
+    });
     soundEngine.playSummon(true);
-    showToast(`✨ 已从参考照片智能提取肤色 (${sampled.skinTone}) 并对齐正面骨相机位！`);
+    showToast(`✨ 已从参考照片智能提取肤色 (${sampled.skinTone})、唇色 (${sampled.lipColor}) 与发色 (${sampled.hairColor}) 并对齐正面机位！`);
   });
 
   document.getElementById('chk-photo-overlay').addEventListener('change', (e) => {
@@ -2390,6 +2447,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     await refreshStudio3DModel();
   });
 
+  // Stage 36: Clean 6-Sub-Tab Categorized Workbench Switching in Studio Right Column
+  const studioColRight = document.querySelector('.studio-col-right');
+  const expandAllBtn = document.getElementById('btn-studio-expand-all');
+  document.querySelectorAll('[data-studio-subtab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subId = btn.dataset.studioSubtab;
+      if (studioColRight) studioColRight.classList.remove('expand-all-mode');
+      if (expandAllBtn) expandAllBtn.textContent = '📑 全部展开';
+      document.querySelectorAll('[data-studio-subtab]').forEach(b => {
+        b.classList.toggle('active', b.dataset.studioSubtab === subId);
+      });
+      document.querySelectorAll('.studio-subtab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.subtabPanel === subId);
+      });
+    });
+  });
+  if (expandAllBtn && studioColRight) {
+    expandAllBtn.addEventListener('click', () => {
+      const expanded = studioColRight.classList.toggle('expand-all-mode');
+      expandAllBtn.textContent = expanded ? '🗂️ 分页收起' : '📑 全部展开';
+      showToast(expanded ? '📑 已展开右侧工作台全部 6 大微调面板' : '🗂️ 已切换回清爽分类子页签模式');
+    });
+  }
+
   const bindMorphSlider = (id, valId, key, unit = '') => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2418,14 +2499,49 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindMorphSlider('morph-hair-len', 'val-morph-hair-len', 'hairLength');
   bindMorphSlider('morph-sideburn-lock', 'val-morph-sideburn-lock', 'sideburnLock');
   bindMorphSlider('morph-hair-flare', 'val-morph-hair-flare', 'hairFlare');
+  bindMorphSlider('morph-hair-curl', 'val-morph-hair-curl', 'hairCurlWave');
   bindMorphSlider('morph-hair-off-y', 'val-morph-hair-off-y', 'hairOffsetY');
   bindMorphSlider('morph-hair-off-z', 'val-morph-hair-off-z', 'hairOffsetZ');
   bindMorphSlider('morph-hair-scale', 'val-morph-hair-scale', 'hairScale', '%');
-  bindMorphSlider('morph-jaw', 'val-morph-jaw', 'jawVLine');
-  bindMorphSlider('morph-cheek', 'val-morph-cheek', 'cheekSoftness');
-  bindMorphSlider('morph-nose', 'val-morph-nose', 'noseBridge');
-  bindMorphSlider('morph-eye', 'val-morph-eye', 'eyeAlmond');
-  bindMorphSlider('morph-lip', 'val-morph-lip', 'lipFullness');
+
+  // Stage 36: Full-Range 19-Axis Facial & Cranial Shape Sliders
+  const SHAPE_MORPH_SLIDERS = [
+    ['morph-jaw', 'val-morph-jaw', 'jawVLine'],
+    ['morph-chin', 'val-morph-chin', 'chinLength'],
+    ['morph-cheek', 'val-morph-cheek', 'cheekSoftness'],
+    ['morph-nose', 'val-morph-nose', 'noseBridge'],
+    ['morph-nose-width', 'val-morph-nose-width', 'noseWidth'],
+    ['morph-eye', 'val-morph-eye', 'eyeAlmond'],
+    ['morph-eye-tilt', 'val-morph-eye-tilt', 'eyeTilt'],
+    ['morph-eyelid-open', 'val-morph-eyelid-open', 'eyelidOpen'],
+    ['morph-brow-height', 'val-morph-brow-height', 'browHeight'],
+    ['morph-brow-tilt', 'val-morph-brow-tilt', 'browTilt'],
+    ['morph-brow-thick', 'val-morph-brow-thick', 'browThickness'],
+    ['morph-lip', 'val-morph-lip', 'lipFullness'],
+    ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile'],
+    ['morph-forehead', 'val-morph-forehead', 'foreheadHeight'],
+    ['morph-ear', 'val-morph-ear', 'earSize'],
+    ['morph-head-width', 'val-morph-head-width', 'headWidth'],
+    ['morph-head-length', 'val-morph-head-length', 'headLength'],
+    ['morph-gaze-yaw', 'val-morph-gaze-yaw', 'gazeYaw'],
+    ['morph-gaze-pitch', 'val-morph-gaze-pitch', 'gazePitch'],
+  ];
+  for (const [sId, vId, mKey] of SHAPE_MORPH_SLIDERS) {
+    bindMorphSlider(sId, vId, mKey);
+  }
+
+  document.getElementById('btn-reset-shape-morphs')?.addEventListener('click', () => {
+    for (const [sId, vId, mKey] of SHAPE_MORPH_SLIDERS) {
+      state.studioDraft.morphs[mKey] = 0.0;
+      const sEl = document.getElementById(sId);
+      const vEl = document.getElementById(vId);
+      if (sEl) sEl.value = '0';
+      if (vEl) vEl.textContent = '+0.00';
+    }
+    studioEngine.updateMorphsFast(state.studioDraft.morphs);
+    showToast('↺ 已将全部 19 项面部骨相与五官形状滑杆归零');
+  });
+
   bindMorphSlider('morph-cut-height', 'val-cut-height', 'cutHeightOffset', 'cm');
   bindMorphSlider('morph-cut-pitch', 'val-cut-pitch', 'cutTiltPitch', '°');
 
@@ -2438,6 +2554,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       hairLength: 0.0,
       sideburnLock: 0.0,
       hairFlare: 0.0,
+      hairCurlWave: 0.0,
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
@@ -2450,6 +2567,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-hair-len', 'val-morph-hair-len'],
       ['morph-sideburn-lock', 'val-morph-sideburn-lock'],
       ['morph-hair-flare', 'val-morph-hair-flare'],
+      ['morph-hair-curl', 'val-morph-hair-curl'],
       ['morph-hair-off-y', 'val-morph-hair-off-y'],
       ['morph-hair-off-z', 'val-morph-hair-off-z'],
     ]) {
@@ -2463,7 +2581,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (scaleEl) scaleEl.value = '1.00';
     if (scaleValEl) scaleValEl.textContent = '100%';
     studioEngine.updateMorphsFast(state.studioDraft.morphs);
-    showToast('↺ 已重置当前发型全部 9 轴微调参数至艺术家出厂形态');
+    showToast('↺ 已重置当前发型全部 10 轴微调参数至艺术家出厂形态');
   });
 
   // Custom 3D hair model (.GLB / .OBJ) import
@@ -2475,20 +2593,176 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customHairUrl = blobUrl;
     state.studioDraft.customHairType = ext;
     await refreshStudio3DModel();
-    showToast(`💇‍♀️ 已导入外部 3D 发型模型「${file.name}」，可用下方 9 轴滑杆实时微调大小与位置！`);
+    showToast(`💇‍♀️ 已导入外部 3D 发型模型「${file.name}」，可用下方 10 轴滑杆实时微调大小与位置！`);
   });
+
+  // ==========================================================================
+  // STAGE 36: 0ms GPU LIVE COLOR, MAKEUP, SKIN DERMIS, EYE & PHOTO PROJECTION
+  // ==========================================================================
+  const applyLiveMaterialPatch = (patch = {}) => {
+    Object.assign(state.studioDraft, patch);
+    Object.assign(state.studioDraft.morphs, patch);
+    if (studioEngine) {
+      studioEngine.updateMaterialsFast(patch);
+    }
+    // Also sync to the selected desktop pet in the 3D Box Space if active
+    const pet = desktopEngine?.pets?.get(state.studioDraft.id) || desktopEngine?.pets?.values()?.next()?.value;
+    const headGroup = pet?.node || pet?.headNode;
+    if (headGroup) {
+      updateCollectibleMaterialsLive(headGroup, patch);
+      desktopEngine.wakeRender(1.5, true);
+    }
+  };
 
   for (const [id, key] of [
     ['col-skin', 'skinTone'],
     ['col-lip', 'lipColor'],
+    ['col-blush', 'blushColor'],
+    ['col-eyeshadow', 'eyeshadowColor'],
     ['col-iris', 'irisColor'],
-    ['col-hair', 'hairColor']
+    ['col-brow', 'browColor'],
+    ['col-hair', 'hairColor'],
+    ['col-hair-highlight', 'hairHighlightColor'],
   ]) {
-    document.getElementById(id).addEventListener('input', async (e) => {
-      state.studioDraft[key] = e.target.value;
-      await refreshStudio3DModel();
+    document.getElementById(id)?.addEventListener('input', (e) => {
+      const hex = e.target.value;
+      const patch = { [key]: hex };
+      // If user picks a custom lip/blush/eyeshadow/iris color, ensure its strength is visible!
+      if (key === 'lipColor' && Number(state.studioDraft.lipStrength ?? 0.65) < 0.25) {
+        patch.lipStrength = 0.65;
+        const sl = document.getElementById('slider-lip-strength');
+        const vl = document.getElementById('val-lip-strength');
+        if (sl) sl.value = '0.65';
+        if (vl) vl.textContent = '65%';
+      } else if (key === 'blushColor' && Number(state.studioDraft.blushIntensity ?? 0.28) < 0.15) {
+        patch.blushIntensity = 0.32;
+        const sl = document.getElementById('slider-blush');
+        const vl = document.getElementById('val-blush');
+        if (sl) sl.value = '0.32';
+        if (vl) vl.textContent = '32%';
+      } else if (key === 'eyeshadowColor' && Number(state.studioDraft.eyeshadowIntensity ?? 0.20) < 0.12) {
+        patch.eyeshadowIntensity = 0.28;
+        const sl = document.getElementById('slider-eyeshadow');
+        const vl = document.getElementById('val-eyeshadow');
+        if (sl) sl.value = '0.28';
+        if (vl) vl.textContent = '28%';
+      } else if (key === 'hairHighlightColor' && Number(state.studioDraft.hairHighlightStrength ?? 0) < 0.20) {
+        patch.hairHighlightStrength = 0.45;
+        const sl = document.getElementById('slider-hair-highlight');
+        const vl = document.getElementById('val-hair-highlight');
+        if (sl) sl.value = '0.45';
+        if (vl) vl.textContent = '45%';
+      }
+      applyLiveMaterialPatch(patch);
     });
   }
+
+  const bindLiveMaterialSlider = (id, valId, key, fmt = 'pct') => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      const valEl = document.getElementById(valId);
+      if (valEl) {
+        if (fmt === 'pct') valEl.textContent = `${Math.round(v * 100)}%`;
+        else if (fmt === 'signed') valEl.textContent = `${v >= 0 ? '+' : ''}${v.toFixed(2)}`;
+        else valEl.textContent = v.toFixed(2);
+      }
+      const patch = { [key]: v };
+      if (key === 'photoBlend' || key === 'photoProjScale' || key === 'photoProjOffsetX' || key === 'photoProjOffsetY') {
+        patch.photoElement = state.studioDraft.photoElement || refPhotoCanvas;
+        patch.lifePhotoUrl = state.studioDraft.lifePhotoDataUrl;
+      }
+      applyLiveMaterialPatch(patch);
+    });
+  };
+
+  bindLiveMaterialSlider('slider-skin-warmth', 'val-skin-warmth', 'skinWarmth', 'signed');
+  bindLiveMaterialSlider('slider-skin-brightness', 'val-skin-brightness', 'skinBrightness', 'pct');
+  bindLiveMaterialSlider('slider-skin-rosiness', 'val-skin-rosiness', 'skinRosiness', 'pct');
+  bindLiveMaterialSlider('slider-blush', 'val-blush', 'blushIntensity', 'pct');
+  bindLiveMaterialSlider('slider-eyeshadow', 'val-eyeshadow', 'eyeshadowIntensity', 'pct');
+  bindLiveMaterialSlider('slider-lip-strength', 'val-lip-strength', 'lipStrength', 'pct');
+  bindLiveMaterialSlider('slider-lip-gloss', 'val-lip-gloss', 'lipGloss', 'pct');
+  bindLiveMaterialSlider('slider-iris-mix', 'val-iris-mix', 'irisMix', 'pct');
+  bindLiveMaterialSlider('slider-brow-opacity', 'val-brow-opacity', 'browOpacity', 'pct');
+  bindLiveMaterialSlider('slider-hair-highlight', 'val-hair-highlight', 'hairHighlightStrength', 'pct');
+
+  // Stage 36: Anti-Silicone Dermis, Eye Optics & 3D Photo Projection Sliders
+  bindLiveMaterialSlider('slider-pore-relief', 'val-pore-relief', 'poreRelief', 'pct');
+  bindLiveMaterialSlider('slider-skin-roughness', 'val-skin-roughness', 'skinRoughness', 'dec');
+  bindLiveMaterialSlider('slider-skin-mottle', 'val-skin-mottle', 'skinMottle', 'pct');
+  bindLiveMaterialSlider('slider-aegyosal', 'val-aegyosal', 'aegyoSal', 'pct');
+  bindLiveMaterialSlider('slider-dark-circles', 'val-dark-circles', 'darkCircles', 'pct');
+  bindLiveMaterialSlider('slider-freckles', 'val-freckles', 'freckles', 'pct');
+  bindLiveMaterialSlider('slider-iris-scale', 'val-iris-scale', 'irisScale', 'pct');
+  bindLiveMaterialSlider('slider-pupil-size', 'val-pupil-size', 'pupilSize', 'pct');
+  bindLiveMaterialSlider('slider-eye-catchlight', 'val-eye-catchlight', 'eyeCatchlight', 'pct');
+  bindLiveMaterialSlider('slider-photo-proj', 'val-photo-proj', 'photoBlend', 'pct');
+  bindLiveMaterialSlider('slider-photo-proj-scale', 'val-photo-proj-scale', 'photoProjScale', 'pct');
+  bindLiveMaterialSlider('slider-photo-proj-x', 'val-photo-proj-x', 'photoProjOffsetX', 'signed');
+  bindLiveMaterialSlider('slider-photo-proj-y', 'val-photo-proj-y', 'photoProjOffsetY', 'signed');
+
+  document.getElementById('sel-beauty-mark')?.addEventListener('change', (e) => {
+    applyLiveMaterialPatch({ beautyMark: parseInt(e.target.value, 10) || 0 });
+  });
+
+  document.getElementById('btn-reset-color-tuning')?.addEventListener('click', () => {
+    const colorDefaults = {
+      skinTone: '#fae3d2',
+      lipColor: '#c45866',
+      blushColor: '#e87a88',
+      eyeshadowColor: '#b8766c',
+      irisColor: '#3b2316',
+      browColor: '#261e1c',
+      hairColor: '#121216',
+      hairTipColor: '#4a3528',
+      hairHighlightColor: '#8c6244',
+      skinWarmth: 0.0,
+      skinBrightness: 1.0,
+      skinRosiness: 0.25,
+      blushIntensity: 0.22,
+      eyeshadowIntensity: 0.18,
+      lipStrength: 0.38,
+      lipGloss: 0.48,
+      irisMix: 0.42,
+      browOpacity: 0.94,
+      hairHighlightStrength: 0.0,
+    };
+    for (const [id, val] of [
+      ['col-skin', colorDefaults.skinTone],
+      ['col-lip', colorDefaults.lipColor],
+      ['col-blush', colorDefaults.blushColor],
+      ['col-eyeshadow', colorDefaults.eyeshadowColor],
+      ['col-iris', colorDefaults.irisColor],
+      ['col-brow', colorDefaults.browColor],
+      ['col-hair', colorDefaults.hairColor],
+      ['col-hair-tip', colorDefaults.hairTipColor],
+      ['col-hair-highlight', colorDefaults.hairHighlightColor],
+    ]) {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    }
+    for (const [sId, vId, val, txt] of [
+      ['slider-skin-warmth', 'val-skin-warmth', 0.0, '+0.00'],
+      ['slider-skin-brightness', 'val-skin-brightness', 1.0, '100%'],
+      ['slider-skin-rosiness', 'val-skin-rosiness', 0.25, '25%'],
+      ['slider-blush', 'val-blush', 0.22, '22%'],
+      ['slider-eyeshadow', 'val-eyeshadow', 0.18, '18%'],
+      ['slider-lip-strength', 'val-lip-strength', 0.38, '38%'],
+      ['slider-lip-gloss', 'val-lip-gloss', 0.48, '48%'],
+      ['slider-iris-mix', 'val-iris-mix', 0.42, '42%'],
+      ['slider-brow-opacity', 'val-brow-opacity', 0.94, '94%'],
+      ['slider-hair-highlight', 'val-hair-highlight', 0.0, '0%'],
+    ]) {
+      const sEl = document.getElementById(sId);
+      const vEl = document.getElementById(vId);
+      if (sEl) sEl.value = String(val);
+      if (vEl) vEl.textContent = txt;
+    }
+    applyLiveMaterialPatch(colorDefaults);
+    showToast('↺ 已恢复自然原生肤色与彩妆配色');
+  });
 
   document.getElementById('sel-groom-density')?.addEventListener('change', async e => {
     state.studioDraft.groomDensity = Number(e.target.value);

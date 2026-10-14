@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
+  updateCollectibleMaterialsLive,
   updateHeadLifeAnimation,
   triggerCollectibleBlink,
   disposeHeadNode
@@ -60,8 +61,8 @@ export class StudioPreviewEngine {
 
     const w = this.canvas.clientWidth || 540;
     const h = this.canvas.clientHeight || 480;
-    this.camera = new THREE.PerspectiveCamera(34, w / h, 1, 300);
-    this.camera.position.set(0, -7.0, 58);
+    this.camera = new THREE.PerspectiveCamera(32, w / h, 1, 300);
+    this.camera.position.set(0, 1.0, 62);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -80,7 +81,7 @@ export class StudioPreviewEngine {
     ensureSceneEnvironment(this.renderer, this.scene, 0.85);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
-    this.controls.target.set(0, -1.5, 0.5);
+    this.controls.target.set(0, 1.0, 0.5);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
     // Allow closer macro zoom (11 cm) for pore/iris/cross-section inspection
@@ -248,6 +249,15 @@ export class StudioPreviewEngine {
     this.wakeRender(1.4, true);
   }
 
+  /**
+   * Stage 36: Zero-latency live GPU material/color/makeup/pore/eye/photo-projection update
+   */
+  updateMaterialsFast(patch = {}) {
+    if (!this.headNode) return;
+    updateCollectibleMaterialsLive(this.headNode, patch);
+    this.wakeRender(1.4, false);
+  }
+
   updateCutHelperPosition(morphs = {}) {
     if (!this.cutPlaneHelper) return;
     this.cutPlaneHelper.position.y = (morphs.cutHeightOffset || 0) * 0.35;
@@ -259,21 +269,21 @@ export class StudioPreviewEngine {
     this.autoRotate = false;
     const longHair = this.headNode?.userData?.groomStats?.id === 'groom_center_long';
     if (preset === 'front') {
-      this.camera.position.set(0, -7.0, 58);
-      this.controls.target.set(0, -1.5, 0.5);
+      this.camera.position.set(0, 1.0, 62);
+      this.controls.target.set(0, 1.0, 0.5);
     } else if (preset === 'three_quarter') {
-      this.camera.position.set(21, -5.0, 53);
-      this.controls.target.set(0, -1.5, 0.5);
+      this.camera.position.set(22, 1.5, 56);
+      this.controls.target.set(0, 1.0, 0.5);
     } else if (preset === 'anatomy_bottom') {
       // Dramatic upward inspection view directly looking at the C4/C5 Medical Anatomical Neck Cross-Section!
       this.camera.position.set(0, -34, 15);
       this.controls.target.set(0, -12.2, -0.8);
     } else if (preset === 'profile') {
-      this.camera.position.set(58, 0.0, 0.5);
-      this.controls.target.set(0, -0.8, 0.5);
+      this.camera.position.set(60, 1.2, 0.5);
+      this.controls.target.set(0, 1.0, 0.5);
     } else if (preset === 'turntable') {
-      this.camera.position.set(22, -4.0, 54);
-      this.controls.target.set(0, -1.0, 0.5);
+      this.camera.position.set(22, 1.5, 58);
+      this.controls.target.set(0, 1.0, 0.5);
       this.autoRotate = true;
     }
     if (longHair && preset !== 'anatomy_bottom') {

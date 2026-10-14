@@ -286,15 +286,15 @@ const PURE_ZERO_BLEND = {
 
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
   cn_oval_scholar:      { skinVariant: 'cn_scholar_natural',    headBlend: { ...PURE_ZERO_BLEND } },
-  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND } },
-  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND } },
-  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND } },
-  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND } },
-  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND } },
-  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND } },
-  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND } },
-  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND } },
-  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND } },
+  cn_round_babyface:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.72 } },
+  kr_idol_vline:        { skinVariant: 'kr_chaebol_cool',       headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.72 } },
+  cn_classical_melon:   { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.72 } },
+  kr_sweet_heart:       { skinVariant: 'kr_firstlove_camellia', headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.52 } },
+  cn_cold_royal:        { skinVariant: 'cn_intellectual_olive', headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.72 } },
+  cn_pure_campus_bell:  { skinVariant: 'cn_porcelain_ivory',    headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.72 } },
+  kr_waterglow_idol:    { skinVariant: 'kr_dewy_peach',         headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.72 } },
+  cn_tang_peony:        { skinVariant: 'cn_jiangnan_jade',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.52 } },
+  eurasian_sculpted_mix:{ skinVariant: 'eurasian_velvet_rose',  headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.72 } },
 };
 
 let realWebAssetsPromise = null;
@@ -378,11 +378,16 @@ async function ensureRealWebAssetsLoaded(glbBuffer) {
   return realWebAssetsPromise;
 }
 
-function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natural') {
+function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natural', morphs = null) {
   if (!rootGroup || !realWebAssetsCache?.eyebrows) return;
   const spec = EYEBROW_STYLE_TO_MH_ASSET[eyebrowStyle] || EYEBROW_STYLE_TO_MH_ASSET.cn_scholar_natural;
   const asset = realWebAssetsCache.eyebrows[spec.assetId] || realWebAssetsCache.eyebrows.eyebrow001;
   if (!asset) return;
+
+  const m = morphs || rootGroup.userData.currentMorphs || {};
+  const browH = Math.max(-1.0, Math.min(1.0, Number(m.browHeight ?? 0)));
+  const browTilt = Math.max(-1.0, Math.min(1.0, Number(m.browTilt ?? 0)));
+  const browThick = Math.max(0.5, Math.min(1.65, Number(m.browThickness ?? 1.0)));
 
   rootGroup.traverse((child) => {
     if (!child.isMesh) return;
@@ -393,11 +398,26 @@ function applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle = 'cn_scholar_natu
         child.material.map = asset.texture;
         child.material.alphaTest = 0.015;
         child.material.transparent = true;
-        child.material.opacity = 0.96;
+        child.material.opacity = Math.min(1.0, Number(rootGroup.userData.browOpacity ?? 0.92));
+        if (rootGroup.userData.browColor) {
+          child.material.color.set(rootGroup.userData.browColor);
+        }
         child.material.needsUpdate = true;
       }
       if (asset.pos && child.geometry?.attributes?.position && child.geometry.attributes.position.array.length === asset.pos.length) {
-        child.geometry.attributes.position.array.set(asset.pos);
+        const out = child.geometry.attributes.position.array;
+        const src = asset.pos;
+        for (let i = 0; i < src.length; i += 3) {
+          const bx = src[i];
+          const by = src[i + 1];
+          const bz = src[i + 2];
+          const centerY = 0.0322;
+          const archShift = (Math.abs(bx) - 0.030) * browTilt * 0.14;
+          out[i] = bx;
+          out[i + 1] = centerY + (by - centerY) * browThick + browH * 0.0042 + archShift;
+          // Snuggle -0.65mm closer to the brow ridge so eyebrows never float like a sticker
+          out[i + 2] = bz - 0.00065;
+        }
         child.geometry.attributes.position.needsUpdate = true;
         child.geometry.computeVertexNormals();
       }
@@ -519,6 +539,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const hairLen = Math.max(-0.6, Math.min(0.9, Number(morphs.hairLength ?? 0)));
   const sideburn = Math.max(-0.6, Math.min(0.7, Number(morphs.sideburnLock ?? 0)));
   const hairFlare = Math.max(-0.7, Math.min(0.7, Number(morphs.hairFlare ?? 0)));
+  const hairCurlWave = Math.max(-0.6, Math.min(0.9, Number(morphs.hairCurlWave ?? 0)));
   const offX = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetX ?? 0)));
   const offY = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetY ?? 0)));
   const offZ = Math.max(-0.5, Math.min(0.5, Number(morphs.hairOffsetZ ?? 0)));
@@ -530,6 +551,9 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
   const ombreMix = Math.max(0.0, Math.min(1.0, Number(morphs.hairOmbreMix ?? rootGroup.userData.hairOmbreMix ?? 0.0)));
   const tipColorHex = morphs.hairTipColor || rootGroup.userData.hairTipColor || '#4a3528';
   const tipCol = new THREE.Color(tipColorHex);
+  const highlightHex = morphs.hairHighlightColor || rootGroup.userData.hairHighlightColor || '#9e6b52';
+  const highlightCol = new THREE.Color(highlightHex);
+  const highlightStr = Math.max(0.0, Math.min(1.0, Number(morphs.hairHighlightStrength ?? rootGroup.userData.hairHighlightStrength ?? 0.0)));
 
   hairGroup.position.set(offX * 0.035, offY * 0.035, offZ * 0.035);
   hairGroup.scale.setScalar(uScale);
@@ -543,6 +567,8 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       u.uHairWispyFeather.value = wispyFeather;
       u.uHairOmbreMix.value = ombreMix;
       u.uHairTipColor.value.copy(tipCol);
+      if (u.uHairHighlightColor) u.uHairHighlightColor.value.copy(highlightCol);
+      if (u.uHairHighlightStrength) u.uHairHighlightStrength.value = highlightStr;
     }
     if (!child.isMesh || !child.geometry?.attributes?.position) return;
     if (child.name === 'ScalpRootFeatherCap') return;
@@ -614,12 +640,17 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
         z += sideburn * 0.010 * wSide;
       }
 
-      if ((Math.abs(hairLen) > 1e-4 || Math.abs(hairFlare) > 1e-4) && y < -0.015) {
-        const wTip = Math.min(1.0, Math.max(0.0, (-0.015 - y) / 0.11));
+      if ((Math.abs(hairLen) > 1e-4 || Math.abs(hairFlare) > 1e-4 || Math.abs(hairCurlWave) > 1e-4) && y < -0.005) {
+        const wTip = Math.min(1.0, Math.max(0.0, (-0.005 - y) / 0.11));
         y -= hairLen * 0.055 * wTip;
         const signX = x >= 0 ? 1.0 : -1.0;
         x += signX * hairFlare * 0.028 * (wTip * wTip);
         z += hairFlare * 0.014 * (wTip * wTip);
+        if (Math.abs(hairCurlWave) > 1e-4) {
+          const wavePhase = y * 135.0 + Math.abs(x) * 42.0;
+          x += Math.sin(wavePhase) * 0.0085 * hairCurlWave * wTip;
+          z += Math.cos(wavePhase * 0.85) * 0.0065 * hairCurlWave * wTip;
+        }
       }
 
       if (neckClear > 0.05 && y < -0.042 && z < 0.025) {
@@ -731,31 +762,38 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     blend_cn_royal:    wCnRoyal,
     blend_eurasian:    wEurasian,
   });
-  applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle);
+  applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle, m);
 
-  const clampHarmony = (val, maxAbs = 0.28) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
+  // Stage 36: Full-range [-1.0, +1.0] facial & cranial shape fine-tuning (no artificial 0.28 cap!)
+  const clampHarmony = (val, maxAbs = 1.0) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
 
   const jawV = clampHarmony(m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine));
   const chin = clampHarmony(m.chinLength ?? bias.chinLength);
   const cheek = clampHarmony(m.cheekSoftness ?? m.cheekboneFullness ?? bias.cheekSoftness);
   const nose = clampHarmony(m.noseBridge ?? m.noseBridgeHeight ?? bias.noseBridge);
+  const noseW = clampHarmony(m.noseWidth ?? (-nose * 0.35));
   const eye = clampHarmony(m.eyeAlmond ?? m.eyeSize ?? bias.eyeAlmond);
   const eyeTilt = clampHarmony(m.eyeTilt ?? bias.eyeTilt);
-  const lip = clampHarmony(m.lipFullness ?? bias.lipFullness, 0.22);
-  const forehead = clampHarmony(m.foreheadHeight ?? 0, 0.22);
-  const ear = clampHarmony(m.earSize ?? 0, 0.25);
+  const eyelidOpen = clampHarmony(m.eyelidOpen ?? 0);
+  const browH = clampHarmony(m.browHeight ?? 0);
+  const lip = clampHarmony(m.lipFullness ?? bias.lipFullness, 0.85);
+  const mouthSmile = clampHarmony(m.mouthSmile ?? 0, 0.85);
+  const forehead = clampHarmony(m.foreheadHeight ?? 0, 0.85);
+  const ear = clampHarmony(m.earSize ?? 0, 0.85);
+  const headWidthRatio = clampHarmony(m.headWidthScale ?? 0, 0.22);
+  const headLengthRatio = clampHarmony(m.headLengthScale ?? 0, 0.22);
 
   const exprId = m.deadExpression || rootGroup.userData.deadExpression || 'dead_calm';
   rootGroup.userData.deadExpression = exprId;
   const exprPreset = FORENSIC_EXPRESSION_PRESETS.find((p) => p.id === exprId) || FORENSIC_EXPRESSION_PRESETS[0];
   const presetW = exprPreset.weights || {};
 
-  const jawOpenVal = Math.max(0, Math.min(0.85, Number(m.jawOpen ?? 0)));
+  const jawOpenVal = Math.max(0, Math.min(0.85, Number(m.jawOpen ?? m.mouthOpen ?? 0)));
   const jawSideVal = Math.max(0, Math.min(0.85, Number(m.jawSide ?? 0)));
   const tongueOutVal = Math.max(0, Math.min(0.85, Number(m.tongueOut ?? 0)));
   const eyeRollUpVal = Math.max(0, Math.min(0.85, Number(m.eyeRollUp ?? 0)));
-  const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? 0)));
-  const eyeWideVal = Math.max(0, Math.min(0.85, Number(m.eyeWide ?? 0)));
+  const eyeCloseVal = Math.max(0, Math.min(1.0, Number(m.eyeClose ?? 0) + Math.max(0, -eyelidOpen * 0.75)));
+  const eyeWideVal = Math.max(0, Math.min(0.85, Number(m.eyeWide ?? 0) + Math.max(0, eyelidOpen * 0.75)));
 
   const targetWeights = {
     // 7 Distinct DAZ-Style Complete 3D Head Models + 2 Brow Bone Channels (encoded in int16 * 32767.0)
@@ -766,31 +804,31 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     mh_head_melon:       wCnMelon * 1.15,
     mh_head_diamond:     wCnRoyal * 1.15,
     mh_head_eurasian:    wEurasian * 1.25,
-    mh_brow_down:        Number(browSpec.browDown ?? 0),
-    mh_brow_up:          Number(browSpec.browUp ?? 0),
-    // Official MakeHuman Base `.target` Sliders
-    face_jaw_width_decr: jawV > 0 ? jawV : 0,
-    face_jaw_width_incr: jawV < 0 ? -jawV : 0,
-    face_chin_incr: chin > 0 ? chin : 0,
-    face_chin_decr: chin < 0 ? -chin : 0,
-    face_cheekbones_incr: cheek > 0 ? cheek : 0,
-    face_cheekbones_decr: cheek < 0 ? -cheek : 0,
-    face_nose_height_incr: nose > 0 ? nose : 0,
-    face_nose_height_decr: nose < 0 ? -nose : 0,
-    face_nose_width_decr: nose > 0 ? nose * 0.45 : 0,
-    face_nose_width_incr: nose < 0 ? -nose * 0.45 : 0,
-    face_eye_size_incr: eye > 0 ? eye : 0,
-    face_eye_size_decr: eye < 0 ? -eye : 0,
-    face_eye_tilt_incr: eyeTilt > 0 ? eyeTilt : 0,
-    face_eye_tilt_decr: eyeTilt < 0 ? -eyeTilt : 0,
-    face_lips_incr: lip > 0 ? lip : 0,
-    face_lips_decr: lip < 0 ? -lip : 0,
+    mh_brow_down:        Math.max(0, Number(browSpec.browDown ?? 0) + Math.max(0, -browH * 0.85)),
+    mh_brow_up:          Math.max(0, Number(browSpec.browUp ?? 0) + Math.max(0, browH * 0.85)),
+    // Official MakeHuman Base `.target` Sliders (full range unlocked)
+    face_jaw_width_decr: jawV > 0 ? jawV * 0.88 : 0,
+    face_jaw_width_incr: jawV < 0 ? -jawV * 0.88 : 0,
+    face_chin_incr: chin > 0 ? chin * 0.88 : 0,
+    face_chin_decr: chin < 0 ? -chin * 0.88 : 0,
+    face_cheekbones_incr: cheek > 0 ? cheek * 0.88 : 0,
+    face_cheekbones_decr: cheek < 0 ? -cheek * 0.88 : 0,
+    face_nose_height_incr: nose > 0 ? nose * 0.88 : 0,
+    face_nose_height_decr: nose < 0 ? -nose * 0.88 : 0,
+    face_nose_width_incr: noseW > 0 ? noseW * 0.85 : 0,
+    face_nose_width_decr: noseW < 0 ? -noseW * 0.85 : 0,
+    face_eye_size_incr: eye > 0 ? eye * 0.88 : 0,
+    face_eye_size_decr: eye < 0 ? -eye * 0.88 : 0,
+    face_eye_tilt_incr: eyeTilt > 0 ? eyeTilt * 0.88 : 0,
+    face_eye_tilt_decr: eyeTilt < 0 ? -eyeTilt * 0.88 : 0,
+    face_lips_incr: lip > 0 ? lip * 0.72 : 0,
+    face_lips_decr: lip < 0 ? -lip * 0.72 : 0,
     face_mouth_width_decr: 0,
     face_mouth_width_incr: 0,
-    face_forehead_incr: forehead > 0 ? forehead : 0,
-    face_forehead_decr: forehead < 0 ? -forehead : 0,
-    face_ear_size_incr: ear > 0 ? ear : 0,
-    face_ear_size_decr: ear < 0 ? -ear : 0,
+    face_forehead_incr: forehead > 0 ? forehead * 0.78 : 0,
+    face_forehead_decr: forehead < 0 ? -forehead * 0.78 : 0,
+    face_ear_size_incr: ear > 0 ? ear * 0.82 : 0,
+    face_ear_size_decr: ear < 0 ? -ear * 0.82 : 0,
     blink_left: eyeCloseVal,
     blink_right: eyeCloseVal,
     look_left: 0,
@@ -798,10 +836,10 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     look_up: eyeRollUpVal * 0.65,
     look_down: 0,
     expr_serene: Number(presetW.expr_serene ?? 0),
-    expr_hollow: Number(presetW.expr_hollow ?? 0),
+    expr_hollow: Math.max(0, Number(presetW.expr_hollow ?? 0) + Math.max(0, -mouthSmile * 0.45)),
     expr_shock: Number(presetW.expr_shock ?? 0),
     expr_rigor: Number(presetW.expr_rigor ?? 0),
-    expr_smile: Number(presetW.expr_smile ?? 0),
+    expr_smile: Math.max(0, Number(presetW.expr_smile ?? 0) + Math.max(0, mouthSmile * 0.85)),
     expr_flaccid: Number(presetW.expr_flaccid ?? 0),
     jaw_open: jawOpenVal,
     jaw_side: jawSideVal,
@@ -819,6 +857,28 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
       }
     }
   });
+
+  // Apply non-destructive overall cranial width & length aspect ratio scaling
+  const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
+  if (modelContainer) {
+    modelContainer.scale.set(
+      BUST_WORLD_SCALE * (1.0 + headWidthRatio * 0.55),
+      BUST_WORLD_SCALE * (1.0 + headLengthRatio * 0.55),
+      BUST_WORLD_SCALE
+    );
+  }
+
+  // Update gaze offset on Eye shader if present
+  if (m.gazeYaw !== undefined || m.gazePitch !== undefined) {
+    const yaw = clampHarmony(m.gazeYaw ?? 0, 1.0);
+    const pitch = clampHarmony(m.gazePitch ?? 0, 1.0);
+    rootGroup.traverse((child) => {
+      const eyeU = child.material?.userData?.eyeUniforms;
+      if (eyeU?.uGazeOffset) {
+        eyeU.uGazeOffset.value.set(yaw * 0.24, pitch * 0.22);
+      }
+    });
+  }
 
   applyArtistHairFineTuning(rootGroup, m);
 
@@ -847,11 +907,12 @@ export function triggerCollectibleBlink() {
 
 function computeSkinTintColor(skinToneHex = '#ffe8df') {
   const c = new THREE.Color(skinToneHex || '#ffe8df');
-  // Subtle neutral tint (0.93..1.02) so the real downloaded photographic female skin texture
-  // retains 100% of its natural dermal pores, eyelids, lips, and subsurface complexion without plastic wash!
-  const r = Math.min(1.02, Math.max(0.93, 0.80 + c.r * 0.21));
-  const g = Math.min(1.02, Math.max(0.92, 0.80 + c.g * 0.21));
-  const b = Math.min(1.02, Math.max(0.91, 0.80 + c.b * 0.21));
+  // Normalize against default warm ivory (#ffe8df -> r=1.0, g=0.81, b=0.74 in linear space)
+  // so default skinToneHex gives a neutral (1,1,1) multiplier while darker/cooler/warmer picks
+  // visibly shift the skin across the full [0.48, 1.24] range!
+  const r = Math.min(1.24, Math.max(0.48, 0.36 + c.r * 0.64));
+  const g = Math.min(1.24, Math.max(0.48, 0.42 + c.g * 0.71));
+  const b = Math.min(1.24, Math.max(0.48, 0.45 + c.b * 0.74));
   return new THREE.Color(r, g, b);
 }
 
@@ -1016,14 +1077,18 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
     uHairWispyFeather: { value: Number(hairShaderParams.hairWispyFeather ?? 0.45) },
     uHairOmbreMix: { value: Number(hairShaderParams.hairOmbreMix ?? 0.0) },
     uHairTipColor: { value: new THREE.Color(hairShaderParams.hairTipColor || '#4a3528') },
+    uHairHighlightColor: { value: new THREE.Color(hairShaderParams.hairHighlightColor || '#9e6b52') },
+    uHairHighlightStrength: { value: Number(hairShaderParams.hairHighlightStrength ?? 0.0) },
   };
   material.userData = material.userData || {};
   material.userData.hairShaderUniforms = sharedUniforms;
-  material.customProgramCacheKey = () => `marschner_hair_v35_${sheenIntensity.toFixed(2)}_${isWispLayer ? 'wisp' : 'core'}`;
+  material.customProgramCacheKey = () => `marschner_hair_v36_${sheenIntensity.toFixed(2)}_${isWispLayer ? 'wisp' : 'core'}`;
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uHairWispyFeather = sharedUniforms.uHairWispyFeather;
     shader.uniforms.uHairOmbreMix = sharedUniforms.uHairOmbreMix;
     shader.uniforms.uHairTipColor = sharedUniforms.uHairTipColor;
+    shader.uniforms.uHairHighlightColor = sharedUniforms.uHairHighlightColor;
+    shader.uniforms.uHairHighlightStrength = sharedUniforms.uHairHighlightStrength;
 
     shader.vertexShader = `
       varying vec3 vHairLocalPos;
@@ -1058,6 +1123,8 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
       uniform float uHairWispyFeather;
       uniform float uHairOmbreMix;
       uniform vec3 uHairTipColor;
+      uniform vec3 uHairHighlightColor;
+      uniform float uHairHighlightStrength;
       varying vec3 vHairLocalPos;
       varying vec3 vHairSmoothNormal;
       float vStrandReliefField;
@@ -1078,17 +1145,19 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
         #endif
         float rawLinearLuma = clamp(dot(sampledDiffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0);
         float texSrgbLuma = sqrt(rawLinearLuma);
-        float artistLockShade = smoothstep(0.22, 0.86, texSrgbLuma);
+        // High-frequency keratin micro-fiber ridges so dark front bangs show silky individual strands
+        float fiberPhase = vMapUv.x * 96.0 + vHairLocalPos.x * 680.0;
+        float microFiber = 0.5 + 0.5 * sin(fiberPhase) * cos(fiberPhase * 0.37 + 1.9);
+        float artistLockShade = clamp(mix(smoothstep(0.20, 0.86, texSrgbLuma), microFiber, 0.28), 0.0, 1.0);
 
         float texAlpha = sampledDiffuseColor.a;
 
-        // Stage 35 · Wispy See-Through Air Bangs & Soft Tip Feathering (matches user_photo_ref.jpg!)
+        // Stage 36 · Wispy See-Through Air Bangs & Soft Tip Feathering
         float inForeheadBangs = smoothstep(0.056, 0.072, vHairLocalPos.z)
           * smoothstep(0.012, 0.026, vHairLocalPos.y)
           * (1.0 - smoothstep(0.058, 0.082, vHairLocalPos.y))
           * (1.0 - smoothstep(0.036, 0.058, abs(vHairLocalPos.x)));
         if (inForeheadBangs > 0.01 && uHairWispyFeather > 0.01) {
-          // Multi-scale non-periodic organic strand locks along forehead X + UV
           float strandCoord = vHairLocalPos.x * 420.0 + vMapUv.x * 18.0;
           float wispA = fract(sin(floor(strandCoord) * 127.1) * 43758.5453);
           float wispB = fract(sin(floor(strandCoord * 0.43 + 7.3) * 269.5) * 18345.23);
@@ -1102,10 +1171,14 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
         vStrandReliefField = artistLockShade;
         vArtistLockRidge = artistLockShade;
 
-        // Dual-Tone Ombre Hair Dye (Root-to-Tip Gradient)
+        // Dual-Tone Ombre Hair Dye (Root-to-Tip Gradient) + Streak Highlights (挑染)
         float tipFactor = clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0);
         float ombreWeight = smoothstep(0.12, 0.88, tipFactor) * clamp(uHairOmbreMix, 0.0, 1.0);
         vec3 baseHairCol = mix(diffuse, uHairTipColor, ombreWeight);
+        if (uHairHighlightStrength > 0.01) {
+          float streakWave = pow(0.5 + 0.5 * sin(vHairLocalPos.x * 115.0 + vMapUv.x * 14.0), 4.0) * artistLockShade;
+          baseHairCol = mix(baseHairCol, uHairHighlightColor, clamp(streakWave * uHairHighlightStrength * 0.85, 0.0, 0.85));
+        }
 
         // Subtle root-parting & inner-neck depth AO
         float rFromCore = length(vHairLocalPos - vec3(0.0, 0.020, -0.008));
@@ -1640,13 +1713,34 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
 }
 
 /**
- * Stage 36 · Natural Deep Espresso-Brown Iris & Pinpoint Catchlight Eye Shader
- * Eliminates milky grey-white environment wash and faceted cornea rings so eyes are
- * deep, dark, crystal-clear, and expressive with a delicate pinpoint catchlight.
+ * Stage 36 · Crystal-Clear Dual-Layer Iris Stroma, Limbal Ring, Pupil Dilation & Pinpoint Catchlight Shader
+ * - Eliminates the milky white ring glare from Stage 35.
+ * - Supports real-time Iris Color (`uIrisColor`), Iris Scale (`uIrisScale` 美瞳直径),
+ *   Pupil Dilation (`uPupilScale` 瞳孔大小), Catchlight Brightness (`uCatchlightStrength`),
+ *   Sclera Brightness (`uScleraBrightness`), and Gaze Direction (`uGazeOffset`).
  */
-function injectLifelikeEyeShader(material) {
+function injectLifelikeEyeShader(material, initialEye = {}) {
+  const eyeUniforms = {
+    uIrisColor: { value: new THREE.Color(initialEye.irisColor || '#3b271e') },
+    uIrisColorMix: { value: Number(initialEye.irisColorMix ?? 0.42) },
+    uIrisScale: { value: Number(initialEye.irisScale ?? 1.0) },
+    uPupilScale: { value: Number(initialEye.pupilSize ?? 1.0) },
+    uCatchlightStrength: { value: Number(initialEye.eyeCatchlight ?? 0.85) },
+    uScleraBrightness: { value: Number(initialEye.scleraBrightness ?? 1.0) },
+    uGazeOffset: {
+      value: new THREE.Vector2(
+        Number(initialEye.gazeYaw ?? 0) * 0.24,
+        Number(initialEye.gazePitch ?? 0) * 0.22
+      ),
+    },
+  };
+  material.userData = material.userData || {};
+  material.userData.eyeUniforms = eyeUniforms;
   material.customProgramCacheKey = () => 'cervix3d_lifelike_eye_v36';
   material.onBeforeCompile = (shader) => {
+    for (const [k, uObj] of Object.entries(eyeUniforms)) {
+      shader.uniforms[k] = uObj;
+    }
     shader.vertexShader = `
       varying vec3 vEyeLocalPos;
       varying vec3 vEyeNormal;
@@ -1660,24 +1754,45 @@ function injectLifelikeEyeShader(material) {
       `
     );
     shader.fragmentShader = `
+      uniform vec3 uIrisColor;
+      uniform float uIrisColorMix;
+      uniform float uIrisScale;
+      uniform float uPupilScale;
+      uniform float uCatchlightStrength;
+      uniform float uScleraBrightness;
+      uniform vec2 uGazeOffset;
       varying vec3 vEyeLocalPos;
       varying vec3 vEyeNormal;
     ` + shader.fragmentShader;
+
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `
       #include <map_fragment>
-      // Deepen iris & pupil contrast so East Asian dark brown eyes never look washed-out or grey
-      float eyeSideMap = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
-      vec2 relXYMap = (vEyeLocalPos.xy - vec2(eyeSideMap * 0.0285, 0.0179)) / 0.0061;
-      float rIrisMap = length(relXYMap);
-      float inIrisMap = 1.0 - smoothstep(0.82, 1.04, rIrisMap);
-      float inPupilMap = 1.0 - smoothstep(0.24, 0.42, rIrisMap);
-      vec3 deepIrisCol = pow(max(diffuseColor.rgb, vec3(0.001)), vec3(1.26)) * vec3(0.76, 0.70, 0.66);
-      diffuseColor.rgb = mix(diffuseColor.rgb * 0.90, deepIrisCol, inIrisMap);
-      diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.010, 0.014), inPupilMap * 0.92);
+      {
+        float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
+        vec2 eyeCenter = vec2(eyeSide * 0.0285, 0.0179) + uGazeOffset * 0.0045;
+        vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0061 * clamp(uIrisScale, 0.72, 1.35));
+        float rIris = length(relXY);
+        float inIris = 1.0 - smoothstep(0.88, 1.04, rIris);
+        float pupilRadius = 0.34 * clamp(uPupilScale, 0.50, 1.65);
+        float inPupil = 1.0 - smoothstep(pupilRadius - 0.05, pupilRadius + 0.05, rIris);
+
+        // Radial iris collagen crypt fibers & dark limbal ring
+        float theta = atan(relXY.y, relXY.x);
+        float radialFibers = 0.5 + 0.5 * sin(theta * 36.0 + sin(rIris * 12.0) * 1.4) * cos(theta * 19.0 - 0.8);
+        float limbalRing = smoothstep(0.70, 0.96, rIris) * inIris;
+        vec3 customIris = uIrisColor * (0.72 + 0.56 * radialFibers) * (1.0 - 0.58 * limbalRing);
+        float stromaMask = inIris * (1.0 - inPupil);
+        diffuseColor.rgb = mix(diffuseColor.rgb, customIris, clamp(stromaMask * uIrisColorMix, 0.0, 0.92));
+        // Deep velvet-black pupil aperture
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.012, 0.012, 0.016), inPupil * 0.92);
+        // Sclera brightness & subtle corner vascular warmth
+        diffuseColor.rgb *= mix(clamp(uScleraBrightness, 0.72, 1.28), 1.0, inIris);
+      }
       `
     );
+
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <lights_fragment_end>',
       `
@@ -1685,29 +1800,28 @@ function injectLifelikeEyeShader(material) {
       vec3 viewDir = normalize(vViewPosition);
       vec3 nEye = normalize(normal);
 
-      // Compute local eye center in 3D head space (left/right eye at x = +-0.0285, y = 0.0179, z = 0.0851)
       float eyeSide = vEyeLocalPos.x >= 0.0 ? 1.0 : -1.0;
-      vec2 relXY = (vEyeLocalPos.xy - vec2(eyeSide * 0.0285, 0.0179)) / 0.0061;
+      vec2 eyeCenter = vec2(eyeSide * 0.0285, 0.0179) + uGazeOffset * 0.0045;
+      vec2 relXY = (vEyeLocalPos.xy - eyeCenter) / (0.0061 * clamp(uIrisScale, 0.72, 1.35));
       float rIris = length(relXY);
-      float inIris = 1.0 - smoothstep(0.86, 1.04, rIris);
+      float inIris = 1.0 - smoothstep(0.88, 1.06, rIris);
 
-      // Upper eyelid soft ambient occlusion along upper lid shadow line
-      float upperLidAO = smoothstep(0.0238, 0.0182, vEyeLocalPos.y);
-      reflectedLight.directDiffuse *= (0.58 + 0.42 * upperLidAO);
-      reflectedLight.indirectDiffuse *= (0.62 + 0.38 * upperLidAO);
-      reflectedLight.indirectSpecular *= 0.08;
+      // Upper eyelid soft ambient occlusion
+      float upperLidAO = smoothstep(0.0242, 0.0192, vEyeLocalPos.y);
+      reflectedLight.directDiffuse *= (0.74 + 0.26 * upperLidAO);
+      reflectedLight.indirectDiffuse *= (0.78 + 0.22 * upperLidAO);
 
-      // Subtle warm amber lower-iris caustic crescent
-      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.30, 0.0, 1.0) * exp(-pow((rIris - 0.56) / 0.22, 2.0));
-      reflectedLight.directDiffuse += vec3(0.24, 0.12, 0.05) * causticZone * inIris;
+      // Lower iris warm caustic crescent (opposite top-right key light)
+      float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.35, 0.0, 1.0) * exp(-pow((rIris - 0.58) / 0.24, 2.0));
+      reflectedLight.directDiffuse += (uIrisColor * 0.65 + vec3(0.24, 0.14, 0.08)) * causticZone * inIris * 0.82;
 
-      // Delicate, tiny pinpoint catchlight at upper-right of pupil (never covers whole iris)
-      float uvCatch1 = exp(-(pow((relXY.x + 0.24) / 0.075, 2.0) + pow((relXY.y - 0.26) / 0.068, 2.0)));
-      float uvCatch2 = exp(-(pow((relXY.x - 0.26) / 0.045, 2.0) + pow((relXY.y + 0.22) / 0.045, 2.0)));
-
-      vec3 wetCatchlight = vec3(0.72, 0.69, 0.64) * (uvCatch1 * inIris)
-                         + vec3(0.28, 0.27, 0.26) * (uvCatch2 * inIris);
-      reflectedLight.directSpecular = reflectedLight.directSpecular * 0.15 + wetCatchlight * upperLidAO;
+      // Crisp Pinpoint Studio Catchlights (NO milky ring wash across the iris!)
+      float uvCatch1 = exp(-(pow((relXY.x + 0.30) / 0.105, 2.0) + pow((relXY.y - 0.32) / 0.095, 2.0)));
+      float uvCatch2 = exp(-(pow((relXY.x - 0.32) / 0.055, 2.0) + pow((relXY.y + 0.28) / 0.055, 2.0)));
+      vec3 wetCatchlight = (vec3(2.15, 2.12, 2.08) * uvCatch1 + vec3(1.15, 1.18, 1.25) * uvCatch2)
+                         * inIris * clamp(uCatchlightStrength, 0.0, 1.8);
+      reflectedLight.directSpecular = reflectedLight.directSpecular * 0.28 + wetCatchlight * upperLidAO;
+      reflectedLight.indirectSpecular *= 0.26;
       `
     );
   };
@@ -1832,27 +1946,47 @@ export async function buildCollectibleHeadNode(config = {}) {
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
       }
+      const initRough = Math.max(0.36, Number(config.skinRoughness ?? materials.skinRoughness ?? 0.56));
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
         normalScale: new THREE.Vector2(0.58, 0.58),
         roughnessMap: skinMicro.roughnessMap,
-        color: computeSkinTintColor(skinToneHex),
-        roughness: Math.max(0.56, Number(materials.skinRoughness ?? 0.62)),
+        color: new THREE.Color('#ffffff'),
+        roughness: initRough,
         metalness: 0.0,
-        sheen: 0.18,
-        sheenRoughness: 0.78,
-        sheenColor: new THREE.Color('#f7d5ca'),
+        sheen: 0.22,
+        sheenRoughness: 0.72,
+        sheenColor: new THREE.Color('#ffddd4'),
         clearcoat: 0.0,
-        clearcoatRoughness: 0.65,
-        specularIntensity: 0.22,
-        specularColor: new THREE.Color('#fff5ee'),
-        ior: 1.38,
-        envMapIntensity: 0.24,
+        clearcoatRoughness: 0.48,
+        specularIntensity: 0.28,
+        specularColor: new THREE.Color('#fff9f6'),
+        ior: 1.40,
+        envMapIntensity: 0.36,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
-      injectAestheticSubsurfaceScattering(skinMaterial);
+      skinMaterial.userData.customSkinRoughness = initRough;
+      injectAestheticSubsurfaceScattering(skinMaterial, 0.88, {
+        skinToneTint: computeSkinTintColor(skinToneHex),
+        skinWarmthShift: Number(config.skinWarmthShift ?? materials.skinWarmthShift ?? 0.0),
+        skinBrightness: Number(config.skinBrightness ?? materials.skinBrightness ?? 1.0),
+        skinRosiness: Number(config.skinRosiness ?? materials.skinRosiness ?? 0.25),
+        poreRelief: Number(config.poreRelief ?? materials.poreRelief ?? 1.15),
+        skinMicroMottle: Number(config.skinMicroMottle ?? materials.skinMicroMottle ?? 1.0),
+        blushColor: config.blushColor || materials.blushColor || '#f07682',
+        blushStrength: Number(config.blushIntensity ?? materials.blushIntensity ?? 0.22),
+        eyeshadowColor: config.eyeshadowColor || materials.eyeshadowColor || '#b87068',
+        eyeshadowStrength: Number(config.eyeshadowIntensity ?? materials.eyeshadowIntensity ?? 0.18),
+        aegyoSalStrength: Number(config.aegyoSalStrength ?? materials.aegyoSalStrength ?? 0.42),
+        darkCircleStrength: Number(config.darkCircleStrength ?? materials.darkCircleStrength ?? 0.10),
+        lipColor: config.lipColor || materials.lipColor || '#cb5362',
+        lipStrength: Number(config.lipStrength ?? materials.lipStrength ?? 0.38),
+        lipGloss: Number(config.lipGloss ?? materials.lipGloss ?? 0.48),
+        freckleStrength: Number(config.freckleStrength ?? materials.freckleStrength ?? 0.0),
+        beautyMarkMode: Number(config.beautyMarkMode ?? materials.beautyMarkMode ?? 0.0),
+      });
       child.material = skinMaterial;
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
       child.name = 'NeckCrossSectionCap';
@@ -1865,15 +1999,15 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: colorTex,
         emissiveMap: colorTex,
         emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.24,
+        emissiveIntensity: 0.32,
         bumpMap: bumpTex,
         bumpScale: 0.005,
-        roughness: Math.max(0.42, 0.76 - wetness * 0.32),
+        roughness: Math.max(0.34, 0.72 - wetness * 0.40),
         metalness: 0.0,
-        clearcoat: 0.12,
-        clearcoatRoughness: 0.45,
-        specularIntensity: 0.28,
-        envMapIntensity: 0.20,
+        clearcoat: 0.25,
+        clearcoatRoughness: 0.35,
+        specularIntensity: 0.40,
+        envMapIntensity: 0.32,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eye') {
@@ -1884,21 +2018,37 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       const eyeMat = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.30,
+        roughness: 0.05,
         metalness: 0.0,
-        clearcoat: 0.0,
-        clearcoatRoughness: 0.50,
-        specularIntensity: 0.16,
-        ior: 1.38,
-        envMapIntensity: 0.03,
+        clearcoat: 0.85,
+        clearcoatRoughness: 0.02,
+        specularIntensity: 0.85,
+        ior: 1.40,
+        envMapIntensity: 0.36,
       });
-      injectLifelikeEyeShader(eyeMat);
+      injectLifelikeEyeShader(eyeMat, {
+        irisColor: config.irisColor || materials.irisColor || '#3b271e',
+        irisColorMix: Number(config.irisColorMix ?? materials.irisColorMix ?? 0.42),
+        irisScale: Number(config.irisScale ?? materials.irisScale ?? morphs.irisScale ?? 1.0),
+        pupilSize: Number(config.pupilSize ?? materials.pupilSize ?? morphs.pupilSize ?? 1.0),
+        eyeCatchlight: Number(config.eyeCatchlight ?? materials.eyeCatchlight ?? 0.85),
+        scleraBrightness: Number(config.scleraBrightness ?? materials.scleraBrightness ?? 1.0),
+        gazeYaw: Number(morphs.gazeYaw ?? 0),
+        gazePitch: Number(morphs.gazePitch ?? 0),
+      });
       child.material = eyeMat;
     } else if (matName === 'Cornea') {
-      child.visible = false;
-      child.material = new THREE.MeshBasicMaterial({
+      child.material = new THREE.MeshPhysicalMaterial({
+        color: new THREE.Color('#ffffff'),
         transparent: true,
-        opacity: 0.0,
+        opacity: 0.032,
+        roughness: 0.015,
+        metalness: 0.0,
+        clearcoat: 0.85,
+        clearcoatRoughness: 0.015,
+        specularIntensity: 0.65,
+        ior: 1.38,
+        envMapIntensity: 0.26,
         depthWrite: false,
       });
     } else if (matName === 'Eyebrow') {
@@ -1907,17 +2057,23 @@ export async function buildCollectibleHeadNode(config = {}) {
       const realBrowAsset = realWebAssetsCache?.eyebrows?.[browSpec.assetId] || realWebAssetsCache?.eyebrows?.eyebrow001;
       const browMap = realBrowAsset?.texture || child.material?.map || null;
       if (browMap) browMap.colorSpace = THREE.SRGBColorSpace;
+      const browColHex = config.browColor || materials.browColor || '#ffffff';
+      const browOp = Number(config.browOpacity ?? materials.browOpacity ?? 0.94);
+      rootGroup.userData.browColor = browColHex;
+      rootGroup.userData.browOpacity = browOp;
       child.material = new THREE.MeshStandardMaterial({
         map: browMap,
-        color: new THREE.Color('#ffffff'),
+        color: new THREE.Color(browColHex),
         transparent: true,
-        alphaTest: 0.02,
+        opacity: browOp,
+        alphaTest: 0.015,
+        alphaToCoverage: true,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.56,
-        envMapIntensity: 0.35,
+        roughness: 0.62,
+        envMapIntensity: 0.25,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Eyelash') {
@@ -1927,12 +2083,13 @@ export async function buildCollectibleHeadNode(config = {}) {
         map: lashMap,
         color: new THREE.Color('#ffffff'),
         transparent: true,
-        alphaTest: 0.06,
+        alphaTest: 0.015,
+        alphaToCoverage: true,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.36,
-        envMapIntensity: 0.45,
+        roughness: 0.42,
+        envMapIntensity: 0.28,
         side: THREE.DoubleSide,
       });
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
@@ -1988,7 +2145,171 @@ export async function buildCollectibleHeadNode(config = {}) {
   rootGroup.userData.headMesh = headSkinMesh;
   rootGroup.userData.capMesh = neckCapMesh;
 
+  // Apply any initial material / photo-projection grading
+  updateCollectibleMaterialsLive(rootGroup, {
+    ...materials,
+    ...config,
+    ...(config.morphs || {}),
+  });
+
   return rootGroup;
+}
+
+const photoProjTexCache = new Map();
+function loadPhotoProjectionTexture(url, onLoaded) {
+  if (!url || typeof Image === 'undefined') return null;
+  if (photoProjTexCache.has(url)) {
+    const cached = photoProjTexCache.get(url);
+    if (onLoaded) onLoaded(cached);
+    return cached;
+  }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const tex = new THREE.Texture(img);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.userData = { sharedSkinMicro: true };
+  photoProjTexCache.set(url, tex);
+  img.onload = () => {
+    tex.needsUpdate = true;
+    if (onLoaded) onLoaded(tex);
+  };
+  img.src = url;
+  return tex;
+}
+
+/**
+ * Stage 36 · Zero-Latency Live GPU Material, Color, Makeup, Iris, Eyebrow & Photo-Projection Updater
+ * Updates all skin, makeup, pore, freckle, mole, photo-projection, iris, eyebrow, and cross-section
+ * parameters in 0ms without reloading or rebuilding the 3D GLB model!
+ */
+export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
+  if (!rootGroup) return;
+  rootGroup.userData.liveMaterials = {
+    ...(rootGroup.userData.liveMaterials || {}),
+    ...patch,
+  };
+  const m = rootGroup.userData.liveMaterials;
+
+  if (patch.browColor !== undefined) rootGroup.userData.browColor = patch.browColor;
+  if (patch.browOpacity !== undefined) rootGroup.userData.browOpacity = Number(patch.browOpacity);
+
+  // If hair color / ombre / highlight / feather keys are in patch, update HairGroup live in 0ms!
+  if (
+    patch.hairColor !== undefined ||
+    patch.hairTipColor !== undefined ||
+    patch.hairHighlightColor !== undefined ||
+    patch.hairHighlightStrength !== undefined ||
+    patch.hairOmbreMix !== undefined ||
+    patch.hairWispyFeather !== undefined
+  ) {
+    rootGroup.userData.currentMorphs = {
+      ...(rootGroup.userData.currentMorphs || {}),
+      ...patch,
+    };
+    updateHairDesignOnGroup(rootGroup, patch);
+  }
+
+  rootGroup.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    const mat = child.material;
+
+    // 1. HeadSkinMesh: True-Dermis & Makeup Grading Uniforms
+    if (child.name === 'HeadSkinMesh' && mat.userData?.skinGradingUniforms) {
+      const u = mat.userData.skinGradingUniforms;
+      if (m.skinTone || m.skinToneHex) {
+        u.uSkinToneTint.value.copy(computeSkinTintColor(m.skinTone || m.skinToneHex));
+      }
+      const warmth = m.skinWarmthShift ?? m.skinWarmth;
+      if (warmth !== undefined) u.uSkinWarmthShift.value = Number(warmth);
+      if (m.skinBrightness !== undefined) u.uSkinBrightness.value = Number(m.skinBrightness);
+      if (m.skinRosiness !== undefined) u.uSkinRosiness.value = Number(m.skinRosiness);
+      if (m.poreRelief !== undefined) u.uPoreRelief.value = Number(m.poreRelief);
+      const mottle = m.skinMicroMottle ?? m.skinMottle;
+      if (mottle !== undefined) u.uSkinMicroMottle.value = Number(mottle);
+      if (m.skinRoughness !== undefined) {
+        const rVal = Math.max(0.28, Math.min(0.88, Number(m.skinRoughness)));
+        mat.roughness = rVal;
+        mat.userData.customSkinRoughness = rVal;
+      }
+      if (m.blushColor) u.uBlushColor.value.set(m.blushColor);
+      if (m.blushIntensity !== undefined) u.uBlushStrength.value = Number(m.blushIntensity);
+      if (m.eyeshadowColor) u.uEyeshadowColor.value.set(m.eyeshadowColor);
+      if (m.eyeshadowIntensity !== undefined) u.uEyeshadowStrength.value = Number(m.eyeshadowIntensity);
+      const aegyo = m.aegyoSalStrength ?? m.aegyoSal;
+      if (aegyo !== undefined) u.uAegyoSalStrength.value = Number(aegyo);
+      const darkCirc = m.darkCircleStrength ?? m.darkCircles;
+      if (darkCirc !== undefined) u.uDarkCircleStrength.value = Number(darkCirc);
+      if (m.lipColor) u.uLipColor.value.set(m.lipColor);
+      if (m.lipStrength !== undefined) u.uLipStrength.value = Number(m.lipStrength);
+      if (m.lipGloss !== undefined) u.uLipGloss.value = Number(m.lipGloss);
+      const freck = m.freckleStrength ?? m.freckles;
+      if (freck !== undefined) u.uFreckleStrength.value = Number(freck);
+      const bMark = m.beautyMarkMode ?? m.beautyMark;
+      if (bMark !== undefined) u.uBeautyMarkMode.value = Number(bMark);
+
+      const projStr = m.photoProjStrength ?? m.photoBlend;
+      if (projStr !== undefined) {
+        u.uPhotoProjStrength.value = Number(projStr);
+        if (Number(projStr) > 0.005) u.uPhotoProjEnabled.value = 1.0;
+      }
+      if (m.photoProjScale !== undefined) u.uPhotoProjScale.value = Number(m.photoProjScale);
+      if (m.photoProjOffsetX !== undefined || m.photoProjOffsetY !== undefined) {
+        u.uPhotoProjOffset.value.set(
+          Number(m.photoProjOffsetX ?? u.uPhotoProjOffset.value.x),
+          Number(m.photoProjOffsetY ?? u.uPhotoProjOffset.value.y)
+        );
+      }
+      const photoUrl = m.photoUrl || m.photoProjectionUrl || m.lifePhotoUrl;
+      if (photoUrl) {
+        loadPhotoProjectionTexture(photoUrl, (tex) => {
+          u.uPhotoProjMap.value = tex;
+          if (u.uPhotoProjStrength.value > 0.005) u.uPhotoProjEnabled.value = 1.0;
+        });
+      } else if (m.photoElement) {
+        const tex = new THREE.Texture(m.photoElement);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+        tex.userData = { sharedSkinMicro: true };
+        u.uPhotoProjMap.value = tex;
+        if (u.uPhotoProjStrength.value > 0.005) u.uPhotoProjEnabled.value = 1.0;
+      }
+    }
+
+    // 2. Eye Mesh: Iris Color, Scale, Pupil Dilation, Catchlights & Gaze
+    if (mat.userData?.eyeUniforms) {
+      const eu = mat.userData.eyeUniforms;
+      const imix = m.irisColorMix ?? m.irisMix;
+      if (m.irisColor) {
+        eu.uIrisColor.value.set(m.irisColor);
+        if (imix === undefined) eu.uIrisColorMix.value = 0.72;
+      }
+      if (imix !== undefined) eu.uIrisColorMix.value = Number(imix);
+      if (m.irisScale !== undefined) eu.uIrisScale.value = Number(m.irisScale);
+      if (m.pupilSize !== undefined) eu.uPupilScale.value = Number(m.pupilSize);
+      if (m.eyeCatchlight !== undefined) eu.uCatchlightStrength.value = Number(m.eyeCatchlight);
+      if (m.scleraBrightness !== undefined) eu.uScleraBrightness.value = Number(m.scleraBrightness);
+      if (m.gazeYaw !== undefined || m.gazePitch !== undefined) {
+        eu.uGazeOffset.value.set(
+          Number(m.gazeYaw ?? 0) * 0.24,
+          Number(m.gazePitch ?? 0) * 0.22
+        );
+      }
+    }
+
+    // 3. Eyebrow Mesh: Live Tint & Opacity
+    if (child.userData?.isEyebrowMesh || mat.name === 'Eyebrow') {
+      if (m.browColor) mat.color.set(m.browColor);
+      if (m.browOpacity !== undefined) mat.opacity = Math.max(0.15, Math.min(1.0, Number(m.browOpacity)));
+    }
+
+    // 4. NeckCrossSectionCap: Live Wetness
+    if (child.name === 'NeckCrossSectionCap' && m.wetness !== undefined) {
+      const w = Number(m.wetness);
+      mat.roughness = Math.max(0.28, 0.72 - w * 0.40);
+      mat.clearcoat = 0.15 + w * 0.35;
+    }
+  });
 }
 
 export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {

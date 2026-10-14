@@ -33,14 +33,14 @@ export const DYNAMIC_LIGHT_MODES = [
 ];
 
 export const GLOBAL_CHIAROSCURO_UNIFORMS = {
-  uSssIntensity: { value: 0.82 },
-  uChiaroscuro: { value: 0.68 },
+  uSssIntensity: { value: 0.85 },
+  uChiaroscuro: { value: 0.58 },
   uWindowGoboMode: { value: 1.0 },
-  uWindowGoboStrength: { value: 0.38 },
+  uWindowGoboStrength: { value: 0.34 },
   uWindowGoboPhase: { value: 0.0 },
   uWindowLightDir: { value: new THREE.Vector3(0.54, 0.44, 0.72).normalize() },
   uCursorLightDir: { value: new THREE.Vector3(0.18, 0.28, 0.94).normalize() },
-  uCursorTorchIntensity: { value: 0.28 },
+  uCursorTorchIntensity: { value: 0.55 },
 };
 
 export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
@@ -52,87 +52,87 @@ export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
 export const VISUAL_STYLE_PRESETS = {
   cinema_85mm_portrait: {
     id: 'cinema_85mm_portrait',
-    label: '🎞️ 85mm 怀旧柔焦写真 · 窗畔伦勃朗光影与胶片老照片感 (默认首推)',
-    hdrMode: 'golden_hour',
-    keyColor: '#ffeed6',
-    fillColor: '#768db0',
-    rimColor: '#fcd9a8',
-    hemiSky: '#f7ece0',
-    hemiGround: '#161110',
-    keyIntensity: 1.36,
-    fillIntensity: 0.28,
-    rimIntensity: 0.78,
-    hemiIntensity: 0.24,
-    upIntensity: 0.14,
-    keyAzimuthDeg: 38,
-    keyElevationDeg: 28,
-    exposure: 0.80,
-    envIntensity: 0.32,
-    contrast: 1.09,
-    saturation: 0.90,
-    warmth: 0.07,
-    vignette: 0.36,
-    sharpen: 0.06,
-    softFocus: 0.56,
-    depthBlur: 0.44,
-    chromatic: 0.14,
-    bloomStrength: 0.07,
-    filmGrain: 0.09,
-    tyndall: 0.58,
-    vintagePhoto: 0.48,
-    skinGloss: 0.12,
-    sssIntensity: 0.82,
-    chiaroscuro: 0.68,
-    irisSparkle: 0.05,
-    halation: 0.28,
-    skinLumen: 0.0,
-    cursorTorch: 0.28,
-    windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.34,
-    tint: [1.02, 0.99, 0.94],
-    shadowTint: [0.035, 0.025, 0.022],
+    label: '📸 85mm 大光圈人像摄影 · 柔焦奶油肌与双柔光箱 HDR (默认首推)',
+    hdrMode: 'softbox_portrait',
+    keyColor: '#fff6ee',
+    fillColor: '#b8d0f4',
+    rimColor: '#e4f0ff',
+    hemiSky: '#fffaf5',
+    hemiGround: '#2e2426',
+    keyIntensity: 1.66,
+    fillIntensity: 0.64,
+    rimIntensity: 1.42,
+    hemiIntensity: 0.48,
+    upIntensity: 0.28,
+    keyAzimuthDeg: 28,
+    keyElevationDeg: 26,
+    exposure: 0.95,
+    envIntensity: 0.96,
+    contrast: 1.05,
+    saturation: 1.02,
+    warmth: 0.02,
+    vignette: 0.22,
+    sharpen: 0.30,
+    softFocus: 0.14,
+    depthBlur: 0.12,
+    chromatic: 0.08,
+    bloomStrength: 0.12,
+    filmGrain: 0.04,
+    tyndall: 0.36,
+    vintagePhoto: 0.06,
+    skinGloss: 0.54,
+    sssIntensity: 0.92,
+    chiaroscuro: 0.32,
+    irisSparkle: 0.82,
+    halation: 0.48,
+    skinLumen: 0.58,
+    cursorTorch: 0.75,
+    windowGobo: 'none',
+    windowGoboStrength: 0.12,
+    tint: [1.01, 1.00, 1.01],
+    shadowTint: [0.03, 0.02, 0.03],
   },
   korean_magazine_glow: {
     id: 'korean_magazine_glow',
-    label: '✨ 柔雾胶片写真 · 细腻哑光绒肌与浅景深虚化',
+    label: '✨ 韩系画报清透水光 · 高调柔焦冷白凝脂滤镜',
     hdrMode: 'softbox_portrait',
-    keyColor: '#fff3e8',
-    fillColor: '#8da8cc',
-    rimColor: '#fde6d8',
-    hemiSky: '#faf2ec',
-    hemiGround: '#1a1416',
-    keyIntensity: 1.38,
-    fillIntensity: 0.34,
-    rimIntensity: 0.82,
-    hemiIntensity: 0.28,
-    upIntensity: 0.16,
-    keyAzimuthDeg: 32,
-    keyElevationDeg: 26,
-    exposure: 0.82,
-    envIntensity: 0.34,
-    contrast: 1.07,
-    saturation: 0.94,
-    warmth: 0.03,
-    vignette: 0.30,
-    sharpen: 0.08,
-    softFocus: 0.52,
-    depthBlur: 0.38,
-    chromatic: 0.10,
-    bloomStrength: 0.07,
-    filmGrain: 0.07,
-    tyndall: 0.44,
-    vintagePhoto: 0.32,
-    skinGloss: 0.14,
-    sssIntensity: 0.84,
-    chiaroscuro: 0.56,
-    irisSparkle: 0.06,
-    halation: 0.24,
-    skinLumen: 0.0,
-    cursorTorch: 0.30,
-    windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.26,
-    tint: [1.01, 0.995, 0.98],
-    shadowTint: [0.03, 0.022, 0.028],
+    keyColor: '#fffaf8',
+    fillColor: '#c6daf8',
+    rimColor: '#eef4ff',
+    hemiSky: '#ffffff',
+    hemiGround: '#2c242c',
+    keyIntensity: 1.64,
+    fillIntensity: 0.72,
+    rimIntensity: 1.46,
+    hemiIntensity: 0.52,
+    upIntensity: 0.32,
+    keyAzimuthDeg: 24,
+    keyElevationDeg: 25,
+    exposure: 0.97,
+    envIntensity: 1.02,
+    contrast: 1.04,
+    saturation: 1.03,
+    warmth: 0.0,
+    vignette: 0.18,
+    sharpen: 0.28,
+    softFocus: 0.18,
+    depthBlur: 0.10,
+    chromatic: 0.06,
+    bloomStrength: 0.14,
+    filmGrain: 0.03,
+    tyndall: 0.30,
+    vintagePhoto: 0.04,
+    skinGloss: 0.65,
+    sssIntensity: 0.95,
+    chiaroscuro: 0.25,
+    irisSparkle: 0.90,
+    halation: 0.52,
+    skinLumen: 0.72,
+    cursorTorch: 0.85,
+    windowGobo: 'none',
+    windowGoboStrength: 0.10,
+    tint: [1.01, 1.01, 1.03],
+    shadowTint: [0.03, 0.025, 0.04],
   },
   wong_kar_wai_film: {
     id: 'wong_kar_wai_film',
@@ -143,78 +143,72 @@ export const VISUAL_STYLE_PRESETS = {
     rimColor: '#fbbf24',
     hemiSky: '#ffe8c8',
     hemiGround: '#0e1615',
-    keyIntensity: 1.42,
-    fillIntensity: 0.24,
-    rimIntensity: 0.88,
-    hemiIntensity: 0.20,
-    upIntensity: 0.12,
-    keyAzimuthDeg: 42,
-    keyElevationDeg: 28,
-    exposure: 0.78,
-    envIntensity: 0.28,
-    contrast: 1.14,
-    saturation: 0.88,
-    warmth: 0.11,
-    vignette: 0.44,
-    sharpen: 0.04,
-    softFocus: 0.60,
-    depthBlur: 0.48,
-    chromatic: 0.18,
-    bloomStrength: 0.08,
-    filmGrain: 0.15,
-    tyndall: 0.64,
-    vintagePhoto: 0.62,
-    skinGloss: 0.12,
-    sssIntensity: 0.82,
-    chiaroscuro: 0.78,
-    irisSparkle: 0.04,
-    halation: 0.34,
-    skinLumen: 0.0,
+    keyIntensity: 1.68,
+    fillIntensity: 0.36,
+    rimIntensity: 1.42,
+    hemiIntensity: 0.28,
+    upIntensity: 0.18,
+    keyAzimuthDeg: 38,
+    keyElevationDeg: 30,
+    exposure: 0.86,
+    envIntensity: 0.85,
+    contrast: 1.12,
+    saturation: 0.95,
+    warmth: 0.08,
+    vignette: 0.38,
+    sharpen: 0.24,
+    softFocus: 0.10,
+    depthBlur: 0.04,
+    chromatic: 0.14,
+    bloomStrength: 0.07,
+    filmGrain: 0.14,
+    tyndall: 0.48,
+    vintagePhoto: 0.28,
+    skinGloss: 0.38,
+    sssIntensity: 0.88,
+    chiaroscuro: 0.72,
     windowGobo: 'venetian_blinds',
-    windowGoboStrength: 0.40,
-    tint: [1.03, 0.98, 0.90],
-    shadowTint: [0.02, 0.04, 0.03],
+    windowGoboStrength: 0.32,
+    tint: [1.02, 0.99, 0.93],
+    shadowTint: [0.015, 0.035, 0.03],
   },
   dreamy_promist_soft: {
     id: 'dreamy_promist_soft',
-    label: '☁️ 电影黑柔镜 (1/4 Pro-Mist) · 极致光学柔焦模糊彻底消除3D感',
+    label: '☁️ 电影黑柔镜 (1/4 Pro-Mist) · 极致奶油柔焦彻底消除3D硬边',
     hdrMode: 'softbox_portrait',
-    keyColor: '#ffeedf',
-    fillColor: '#8ba2c4',
-    rimColor: '#f8d8c8',
-    hemiSky: '#faf0ea',
-    hemiGround: '#181214',
-    keyIntensity: 1.32,
-    fillIntensity: 0.30,
-    rimIntensity: 0.74,
-    hemiIntensity: 0.24,
-    upIntensity: 0.14,
-    keyAzimuthDeg: 36,
+    keyColor: '#fff4ea',
+    fillColor: '#a4b8dc',
+    rimColor: '#fde2e4',
+    hemiSky: '#fff8f6',
+    hemiGround: '#1c1618',
+    keyIntensity: 1.56,
+    fillIntensity: 0.52,
+    rimIntensity: 1.26,
+    hemiIntensity: 0.38,
+    upIntensity: 0.24,
+    keyAzimuthDeg: 28,
     keyElevationDeg: 28,
-    exposure: 0.79,
-    envIntensity: 0.30,
-    contrast: 1.06,
-    saturation: 0.90,
-    warmth: 0.06,
-    vignette: 0.36,
-    sharpen: 0.0,
-    softFocus: 0.74,
-    depthBlur: 0.56,
-    chromatic: 0.14,
-    bloomStrength: 0.08,
-    filmGrain: 0.10,
-    tyndall: 0.52,
-    vintagePhoto: 0.46,
-    skinGloss: 0.10,
-    sssIntensity: 0.80,
-    chiaroscuro: 0.64,
-    irisSparkle: 0.04,
-    halation: 0.32,
-    skinLumen: 0.0,
-    windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.32,
-    tint: [1.02, 0.99, 0.95],
-    shadowTint: [0.035, 0.025, 0.028],
+    exposure: 0.88,
+    envIntensity: 0.90,
+    contrast: 1.05,
+    saturation: 0.97,
+    warmth: 0.03,
+    vignette: 0.24,
+    sharpen: 0.22,
+    softFocus: 0.14,
+    depthBlur: 0.04,
+    chromatic: 0.10,
+    bloomStrength: 0.07,
+    filmGrain: 0.06,
+    tyndall: 0.36,
+    vintagePhoto: 0.12,
+    skinGloss: 0.38,
+    sssIntensity: 0.86,
+    chiaroscuro: 0.50,
+    windowGobo: 'none',
+    windowGoboStrength: 0.15,
+    tint: [1.01, 1.00, 0.99],
+    shadowTint: [0.025, 0.02, 0.03],
   },
   kodak_portra_400: {
     id: 'kodak_portra_400',
@@ -631,64 +625,52 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMod
 
     const modePalettes = {
       softbox_portrait: {
-        bg: new THREE.Color(0.018, 0.020, 0.028),
-        ring: new THREE.Color(1.45, 1.38, 1.30),
-        warmBox: new THREE.Color(1.55, 1.34, 1.18),
-        coolBox: new THREE.Color(0.32, 0.42, 0.58),
-        rimStrip: new THREE.Color(0.95, 1.05, 1.22),
-        bounceBox: new THREE.Color(0.26, 0.22, 0.20),
+        bg: new THREE.Color(0.038, 0.040, 0.052),
+        warmBox: new THREE.Color(3.4, 3.0, 2.8),
+        coolBox: new THREE.Color(2.2, 2.7, 3.6),
+        rimStrip: new THREE.Color(4.2, 4.6, 5.4),
+        bounceBox: new THREE.Color(1.4, 1.2, 1.2),
       },
       golden_hour: {
-        bg: new THREE.Color(0.024, 0.014, 0.010),
-        ring: new THREE.Color(1.65, 1.18, 0.68),
-        warmBox: new THREE.Color(1.75, 1.12, 0.58),
-        coolBox: new THREE.Color(0.22, 0.32, 0.52),
-        rimStrip: new THREE.Color(1.35, 0.92, 0.44),
-        bounceBox: new THREE.Color(0.32, 0.20, 0.14),
+        bg: new THREE.Color(0.055, 0.028, 0.016),
+        warmBox: new THREE.Color(4.6, 2.7, 1.3),
+        coolBox: new THREE.Color(1.5, 2.2, 3.4),
+        rimStrip: new THREE.Color(5.5, 3.6, 1.6),
+        bounceBox: new THREE.Color(1.8, 1.1, 0.7),
       },
       rainy_window: {
-        bg: new THREE.Color(0.012, 0.022, 0.038),
-        ring: new THREE.Color(1.18, 1.48, 1.75),
-        warmBox: new THREE.Color(1.12, 1.32, 1.62),
-        coolBox: new THREE.Color(0.35, 0.52, 0.78),
-        rimStrip: new THREE.Color(0.92, 1.28, 1.58),
-        bounceBox: new THREE.Color(0.18, 0.26, 0.36),
+        bg: new THREE.Color(0.020, 0.038, 0.068),
+        warmBox: new THREE.Color(2.6, 3.3, 4.4),
+        coolBox: new THREE.Color(3.0, 4.2, 5.6),
+        rimStrip: new THREE.Color(3.8, 5.2, 6.4),
+        bounceBox: new THREE.Color(1.1, 1.5, 2.2),
       },
       museum_velvet: {
-        bg: new THREE.Color(0.014, 0.010, 0.018),
-        ring: new THREE.Color(1.42, 1.16, 0.88),
-        warmBox: new THREE.Color(1.52, 1.14, 0.78),
-        coolBox: new THREE.Color(0.24, 0.22, 0.38),
-        rimStrip: new THREE.Color(1.12, 0.88, 0.64),
-        bounceBox: new THREE.Color(0.20, 0.15, 0.18),
+        bg: new THREE.Color(0.022, 0.016, 0.030),
+        warmBox: new THREE.Color(3.6, 2.7, 1.9),
+        coolBox: new THREE.Color(1.8, 1.6, 2.6),
+        rimStrip: new THREE.Color(4.5, 3.5, 2.5),
+        bounceBox: new THREE.Color(1.0, 0.8, 1.0),
       },
     };
     const pal = modePalettes[modeKey] || modePalettes.softbox_portrait;
     domeScene.background = pal.bg;
 
-    // Circular Portrait Beauty-Dish Ring Light in front (+Z) for circular eye catchlights & nose-tip glint
-    const ringGeo = new THREE.RingGeometry(1.15, 1.72, 48);
-    const ringMat = new THREE.MeshBasicMaterial({ color: pal.ring, side: THREE.DoubleSide });
-    const beautyRing = new THREE.Mesh(ringGeo, ringMat);
-    beautyRing.position.set(0.24, 1.05, 4.0);
-    beautyRing.lookAt(0, 0.12, 0);
-    domeScene.add(beautyRing);
-
-    // Key Octabox Softbox Panel (top-right-front)
+    // Key Octabox Softbox Panel (top-right-front — natural portrait key without blinding central ring glare)
     const warmBox = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.8, 3.4),
+      new THREE.PlaneGeometry(3.4, 3.0),
       new THREE.MeshBasicMaterial({ color: pal.warmBox, side: THREE.DoubleSide })
     );
-    warmBox.position.set(3.2, 2.4, 3.0);
+    warmBox.position.set(3.2, 2.4, 3.2);
     warmBox.lookAt(0, 0, 0);
     domeScene.add(warmBox);
 
     // Fill Softbox Panel (left-front)
     const coolBox = new THREE.Mesh(
-      new THREE.PlaneGeometry(3.8, 3.2),
+      new THREE.PlaneGeometry(3.6, 3.0),
       new THREE.MeshBasicMaterial({ color: pal.coolBox, side: THREE.DoubleSide })
     );
-    coolBox.position.set(-3.6, 1.4, 2.4);
+    coolBox.position.set(-3.6, 1.4, 2.6);
     coolBox.lookAt(0, 0, 0);
     domeScene.add(coolBox);
 
@@ -710,7 +692,7 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMod
     bounceCard.lookAt(0, 0, 0);
     domeScene.add(bounceCard);
 
-    envTex = pmrem.fromScene(domeScene, 0.032).texture;
+    envTex = pmrem.fromScene(domeScene, 0.04).texture;
     domeScene.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material) o.material.dispose();
@@ -725,15 +707,62 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMod
   return envTex;
 }
 
+let _fallbackWhitePhotoTex = null;
+function getFallbackPhotoTex() {
+  if (!_fallbackWhitePhotoTex) {
+    _fallbackWhitePhotoTex = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+    _fallbackWhitePhotoTex.needsUpdate = true;
+  }
+  return _fallbackWhitePhotoTex;
+}
+
 /**
- * Stage 33 · Crisp Photographic Dermis SSS + High-Contrast HDR Facial Reflection Pipeline:
- * - Eliminates the excessive uniform orange-peach SSS wash that made faces look overexposed and silicone-like.
- * - Preserves full HDR environment reflection (`indirectSpecular`) with natural Fresnel cheek/nose/lip sheen so
- *   switching HDR modes (`softbox_portrait`, `golden_hour`, `rainy_window`, `museum_velvet`) visibly sculpts the face!
+ * Creates a per-material uniform bundle for Stage 36 True-Dermis Micro-Structure
+ * & Real-Time Facial Color, Makeup, Lip Vermilion, Freckle, Beauty-Mark & Reference-Photo Projection.
  */
-export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92) {
+export function createSkinGradingUniforms(initial = {}) {
+  return {
+    uSkinToneTint: { value: new THREE.Color(initial.skinToneTint || '#ffffff') },
+    uSkinWarmthShift: { value: Number(initial.skinWarmthShift ?? 0.0) },
+    uSkinBrightness: { value: Number(initial.skinBrightness ?? 1.0) },
+    uSkinRosiness: { value: Number(initial.skinRosiness ?? 0.25) },
+    uPoreRelief: { value: Number(initial.poreRelief ?? 1.15) },
+    uSkinMicroMottle: { value: Number(initial.skinMicroMottle ?? 1.0) },
+    uBlushColor: { value: new THREE.Color(initial.blushColor || '#f07682') },
+    uBlushStrength: { value: Number(initial.blushStrength ?? 0.22) },
+    uEyeshadowColor: { value: new THREE.Color(initial.eyeshadowColor || '#b87068') },
+    uEyeshadowStrength: { value: Number(initial.eyeshadowStrength ?? 0.18) },
+    uAegyoSalStrength: { value: Number(initial.aegyoSalStrength ?? 0.42) },
+    uDarkCircleStrength: { value: Number(initial.darkCircleStrength ?? 0.10) },
+    uLipColor: { value: new THREE.Color(initial.lipColor || '#cb5362') },
+    uLipStrength: { value: Number(initial.lipStrength ?? 0.36) },
+    uLipGloss: { value: Number(initial.lipGloss ?? 0.48) },
+    uFreckleStrength: { value: Number(initial.freckleStrength ?? 0.0) },
+    uBeautyMarkMode: { value: Number(initial.beautyMarkMode ?? 0.0) },
+    uPhotoProjMap: { value: initial.photoProjMap || getFallbackPhotoTex() },
+    uPhotoProjEnabled: { value: initial.photoProjMap ? 1.0 : 0.0 },
+    uPhotoProjStrength: { value: Number(initial.photoProjStrength ?? 0.0) },
+    uPhotoProjScale: { value: Number(initial.photoProjScale ?? 1.0) },
+    uPhotoProjOffset: { value: new THREE.Vector2(Number(initial.photoProjOffsetX ?? 0.0), Number(initial.photoProjOffsetY ?? 0.0)) },
+  };
+}
+
+/**
+ * Stage 36 · Anti-Silicone True-Dermis 3D Millimeter-Space Micro-Pore & Real-Time Facial Grading Pipeline:
+ * 1. Solves the MakeHuman full-body UV resolution bottleneck (~200px face island) by synthesizing
+ *    3-scale 3D millimeter-space cellular sebaceous pores, Langer's rhomboid creases, and vertical
+ *    lip-vermilion furrows directly at `vCervixLocalPos` (infinite sharpness even at 11cm macro zoom!).
+ * 2. Adds subtle organic melanin & hemoglobin chromophore micro-mottling (`uSkinMicroMottle`) so skin
+ *    never looks like a flat uniform CG color fill.
+ * 3. Provides 0ms real-time GPU grading for Skin Tone, Warmth, Brightness, Rosiness, Blush, Eyeshadow,
+ *    Aegyo-Sal, Dark Circles, Lip Vermilion Color/Gloss, Freckles, and 6 Beauty-Mark Positions!
+ */
+export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92, initialGrading = {}) {
   material.userData = material.userData || {};
   material.userData.uSssIntensity = GLOBAL_CHIAROSCURO_UNIFORMS.uSssIntensity;
+  const gradingU = material.userData.skinGradingUniforms || createSkinGradingUniforms(initialGrading);
+  material.userData.skinGradingUniforms = gradingU;
+
   if (typeof initialSss === 'number') {
     GLOBAL_CHIAROSCURO_UNIFORMS.uSssIntensity.value = initialSss;
   }
@@ -747,6 +776,9 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
     shader.uniforms.uWindowLightDir = GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir;
     shader.uniforms.uCursorLightDir = GLOBAL_CHIAROSCURO_UNIFORMS.uCursorLightDir;
     shader.uniforms.uCursorTorchIntensity = GLOBAL_CHIAROSCURO_UNIFORMS.uCursorTorchIntensity;
+    for (const [k, uObj] of Object.entries(gradingU)) {
+      shader.uniforms[k] = uObj;
+    }
 
     shader.vertexShader = shader.vertexShader.replace(
       '#include <common>',
@@ -772,8 +804,77 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
       uniform vec3 uWindowLightDir;
       uniform vec3 uCursorLightDir;
       uniform float uCursorTorchIntensity;
+      uniform vec3 uSkinToneTint;
+      uniform float uSkinWarmthShift;
+      uniform float uSkinBrightness;
+      uniform float uSkinRosiness;
+      uniform float uPoreRelief;
+      uniform float uSkinMicroMottle;
+      uniform vec3 uBlushColor;
+      uniform float uBlushStrength;
+      uniform vec3 uEyeshadowColor;
+      uniform float uEyeshadowStrength;
+      uniform float uAegyoSalStrength;
+      uniform float uDarkCircleStrength;
+      uniform vec3 uLipColor;
+      uniform float uLipStrength;
+      uniform float uLipGloss;
+      uniform float uFreckleStrength;
+      uniform float uBeautyMarkMode;
+      uniform sampler2D uPhotoProjMap;
+      uniform float uPhotoProjEnabled;
+      uniform float uPhotoProjStrength;
+      uniform float uPhotoProjScale;
+      uniform vec2 uPhotoProjOffset;
       varying vec3 vCervixWorldPos;
       varying vec3 vCervixLocalPos;
+      float vDermisPoreCavity;
+      float vLipVermilionMask;
+
+      float dermisHash21(vec2 p) {
+        p = fract(p * vec2(234.56, 789.12));
+        p += dot(p, p + 34.56);
+        return fract(p.x * p.y);
+      }
+
+      float dermisNoise2D(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        vec2 u = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(dermisHash21(i), dermisHash21(i + vec2(1.0, 0.0)), u.x),
+          mix(dermisHash21(i + vec2(0.0, 1.0)), dermisHash21(i + vec2(1.0, 1.0)), u.x),
+          u.y
+        );
+      }
+
+      // 3D Millimeter-Space Cellular Sebaceous Pore & Langer's Rhomboid Crease Field
+      float compute3DPoreField(vec3 localPos) {
+        vec2 mm = vec2(atan(localPos.x, max(0.02, localPos.z + 0.02)) * 92.0, localPos.y * 920.0);
+        vec2 cell = floor(mm * 3.8);
+        vec2 fracP = fract(mm * 3.8) - 0.5;
+        vec2 jitter = vec2(dermisHash21(cell) - 0.5, dermisHash21(cell + 17.3) - 0.5) * 0.48;
+        float dPore = length(fracP - jitter);
+        float poreCrater = smoothstep(0.11, 0.34, dPore);
+        float langerA = dermisNoise2D(vec2(mm.x * 2.4 + mm.y * 1.7, mm.y * 2.4 - mm.x * 1.7));
+        float langerB = dermisNoise2D(vec2(mm.x * 5.2 - mm.y * 3.4, mm.y * 5.2 + mm.x * 3.4));
+        return clamp(poreCrater * 0.58 + (0.62 * langerA + 0.38 * langerB) * 0.42, 0.0, 1.0);
+      }
+
+      // Smooth 3D Lip Vermilion Mask & Vertical Lip Crease Relief
+      float computeLipVermilionMask(vec3 p, out float lipCrease) {
+        float xNorm = p.x / 0.0205;
+        float cupidsBow = -0.0226 - 0.0018 * cos(clamp(xNorm, -1.0, 1.0) * 3.14159 * 2.0) - 0.0048 * pow(abs(xNorm), 1.85);
+        float lowerBorder = -0.0384 + 0.0056 * pow(abs(xNorm), 1.75);
+        float inX = 1.0 - smoothstep(0.76, 1.04, abs(xNorm));
+        float inY = smoothstep(lowerBorder - 0.0022, lowerBorder + 0.0022, p.y)
+                  * (1.0 - smoothstep(cupidsBow - 0.0018, cupidsBow + 0.0020, p.y));
+        float inZ = smoothstep(0.096, 0.1015, p.z);
+        float mask = clamp(inX * inY * inZ, 0.0, 1.0);
+        float creaseWave = dermisNoise2D(vec2(p.x * 1650.0, p.y * 240.0));
+        lipCrease = mix(0.5, creaseWave, mask);
+        return mask;
+      }
 
       float computeWindowBeamEnvelope(vec3 worldPos, vec3 lightDir) {
         if (uWindowGoboMode < 0.5 || uWindowGoboStrength <= 0.001) return 1.0;
@@ -812,40 +913,163 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
 
       vec3 computeDualLobeSkinSSS(vec3 fragNormal, vec3 lightDir, vec3 lightColor, vec3 viewDir, vec3 localPos) {
         float ndl = dot(fragNormal, lightDir);
-        // 1. Pre-Integrated Translucent Rose-Cream Terminator Scatter (eliminates muddy grey-brown shadows!)
         float penumbra = smoothstep(-0.62, 0.18, ndl) * (1.0 - smoothstep(0.08, 0.62, ndl));
-        vec3 deepDermis = vec3(0.96, 0.38, 0.32) * penumbra * 0.30;
-        // 2. Soft Epidermal Wrap (keeps unlit cheek luminous & hydrated)
+        vec3 deepDermis = vec3(0.96, 0.36, 0.30) * penumbra * 0.28;
         float softWrap = clamp((ndl + 0.52) / 1.52, 0.0, 1.0) * (1.0 - smoothstep(0.22, 0.78, ndl));
-        vec3 chromaticWrap = vec3(0.11, 0.068, 0.056) * softWrap;
-        // 3. Thin-Tissue Ear & Nostril Back-Lit Ruby Translucency
+        vec3 chromaticWrap = vec3(0.095, 0.058, 0.048) * softWrap;
         float thinTissueMask = max(
           smoothstep(0.058, 0.078, abs(localPos.x)) * smoothstep(-0.028, 0.025, localPos.y),
           smoothstep(0.080, 0.095, localPos.z) * smoothstep(-0.022, 0.008, localPos.y)
         );
         float backTrans = pow(clamp(dot(-viewDir, lightDir) + 0.25, 0.0, 1.0), 2.2) * thinTissueMask;
-        vec3 rubyTrans = vec3(1.10, 0.28, 0.20) * backTrans * 0.28;
+        vec3 rubyTrans = vec3(1.05, 0.26, 0.18) * backTrans * 0.26;
         return (deepDermis + chromaticWrap + rubyTrans) * lightColor * uSssIntensity;
       }`
     );
 
-    // Crisp microscopic dermal pore normal relief
+    // Stage 36 · Real-Time Facial Color, Makeup, Lip Vermilion, Freckle, Beauty-Mark & Photo Projection Grading
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+      {
+        vec3 p = vCervixLocalPos;
+        float lipCreaseVal = 0.5;
+        float lipMask = computeLipVermilionMask(p, lipCreaseVal);
+        vLipVermilionMask = lipMask;
+
+        // 0. Direct 3D Frontal Portrait Photo Projection (solves 286px MakeHuman UV bottleneck!)
+        float eyeHoleMask = smoothstep(0.0040, 0.0068, length((vec2(abs(p.x), p.y) - vec2(0.0288, 0.0162)) * vec2(0.74, 1.45)));
+        if (uPhotoProjEnabled > 0.5 && uPhotoProjStrength > 0.005 && p.z > 0.032) {
+          float pScale = max(0.45, uPhotoProjScale);
+          vec2 projUV = vec2(
+            0.5 + (p.x / (0.128 * pScale)) + uPhotoProjOffset.x,
+            0.51 + (p.y / (0.148 * pScale)) + uPhotoProjOffset.y
+          );
+          if (projUV.x > 0.02 && projUV.x < 0.98 && projUV.y > 0.02 && projUV.y < 0.98) {
+            vec4 photoSample = texture2D(uPhotoProjMap, projUV);
+            vec3 photoLinear = pow(max(photoSample.rgb, vec3(0.001)), vec3(2.2));
+            float ovalDist = length((p.xy - vec2(0.0, -0.001)) / vec2(0.054, 0.058));
+            float ovalFeather = (1.0 - smoothstep(0.68, 1.04, ovalDist)) * smoothstep(0.035, 0.068, p.z) * eyeHoleMask;
+            diffuseColor.rgb = mix(diffuseColor.rgb, photoLinear, clamp(ovalFeather * uPhotoProjStrength, 0.0, 0.95));
+          }
+        }
+
+        // 1. Base Skin Tone Tint, Warmth Shift & Brightness
+        vec3 skinCol = diffuseColor.rgb * uSkinToneTint * uSkinBrightness;
+        skinCol.r *= (1.0 + uSkinWarmthShift * 0.10 + uSkinRosiness * 0.055);
+        skinCol.g *= (1.0 + uSkinWarmthShift * 0.02 - uSkinRosiness * 0.015);
+        skinCol.b *= (1.0 - uSkinWarmthShift * 0.10 - uSkinRosiness * 0.025);
+
+        // 2. Micro-Chromophore Melanin & Hemoglobin Mottling (eliminates flat CG color fill!)
+        vec2 mmCoord = vec2(p.x * 340.0, p.y * 340.0 + p.z * 180.0);
+        float hemoNoise = dermisNoise2D(mmCoord * 1.3) - 0.5;
+        float melaNoise = dermisNoise2D(mmCoord * 2.9 + 11.7) - 0.5;
+        float faceFrontMask = smoothstep(0.02, 0.075, p.z);
+        vec3 chromoDelta = (vec3(0.024, -0.010, -0.008) * hemoNoise + vec3(0.014, 0.008, -0.012) * melaNoise)
+                         * clamp(uSkinMicroMottle, 0.0, 1.6) * faceFrontMask * (1.0 - lipMask * 0.7);
+        skinCol += skinCol * chromoDelta;
+
+        // 3. Apple Cheek & Nasal-Tip Blush Gradient
+        float cheekDist = length((vec2(abs(p.x), p.y) - vec2(0.036, -0.004)) / vec2(0.023, 0.017));
+        float noseTipDist = length((p.xy - vec2(0.0, -0.0145)) / vec2(0.011, 0.009));
+        float blushMask = (exp(-cheekDist * cheekDist * 1.45) + 0.38 * exp(-noseTipDist * noseTipDist * 1.8))
+                        * smoothstep(0.058, 0.088, p.z) * (1.0 - lipMask);
+        skinCol = mix(skinCol, skinCol * (0.55 + 0.45 * uBlushColor) + uBlushColor * 0.24, clamp(blushMask * uBlushStrength * 0.85, 0.0, 0.75));
+
+        // 4. Upper Eyelid Eyeshadow & Outer Canthus Contour
+        float lidDist = length((vec2(abs(p.x), p.y) - vec2(0.030, 0.0205)) / vec2(0.017, 0.0065));
+        float eyeHole = eyeHoleMask;
+        float shadowMask = exp(-lidDist * lidDist * 1.6) * eyeHole * smoothstep(0.072, 0.088, p.z);
+        skinCol = mix(skinCol, skinCol * uEyeshadowColor * 0.92, clamp(shadowMask * uEyeshadowStrength * 0.85, 0.0, 0.72));
+
+        // 5. Under-Eye Aegyo-Sal (卧蚕) Puff Highlight & Subtle Groove Shadow
+        if (uAegyoSalStrength > 0.01) {
+          float inEyeX = exp(-pow((abs(p.x) - 0.029) / 0.013, 2.0)) * smoothstep(0.074, 0.086, p.z);
+          float puffBand = exp(-pow((p.y - 0.0082) / 0.0020, 2.0)) * inEyeX;
+          float grooveBand = exp(-pow((p.y - 0.0046) / 0.0016, 2.0)) * inEyeX;
+          skinCol += vec3(0.042, 0.034, 0.032) * puffBand * uAegyoSalStrength;
+          skinCol *= (1.0 - 0.13 * grooveBand * uAegyoSalStrength);
+        }
+
+        // 6. Periorbital Dark Circles / Forensic Post-Mortem Eye Hollow Tint
+        if (uDarkCircleStrength > 0.01) {
+          float dcDist = length((vec2(abs(p.x), p.y) - vec2(0.027, 0.0045)) / vec2(0.015, 0.0065));
+          float dcMask = exp(-dcDist * dcDist * 1.5) * smoothstep(0.072, 0.086, p.z);
+          skinCol = mix(skinCol, skinCol * vec3(0.76, 0.68, 0.74), clamp(dcMask * uDarkCircleStrength * 0.65, 0.0, 0.55));
+        }
+
+        // 7. Natural Freckles across Nasal Bridge & Upper Cheeks
+        if (uFreckleStrength > 0.01) {
+          float freckleZone = exp(-pow(p.x / 0.046, 2.0)) * exp(-pow((p.y + 0.003) / 0.015, 2.0)) * smoothstep(0.068, 0.092, p.z) * (1.0 - lipMask);
+          vec2 fGrid = p.xy * 1150.0;
+          vec2 fCell = floor(fGrid);
+          vec2 fFrac = fract(fGrid) - 0.5;
+          vec2 fJit = vec2(dermisHash21(fCell) - 0.5, dermisHash21(fCell + 9.1) - 0.5) * 0.55;
+          float fDot = (1.0 - smoothstep(0.08, 0.24, length(fFrac - fJit))) * step(0.68, dermisHash21(fCell + 31.7));
+          skinCol = mix(skinCol, skinCol * vec3(0.72, 0.56, 0.46), clamp(fDot * freckleZone * uFreckleStrength * 0.72, 0.0, 0.60));
+        }
+
+        // 8. Switchable Beauty Marks / Moles (1=右颊三痣, 2=左眼泪痣, 3=右眼下卧蚕痣, 4=鼻梁痣, 5=左唇角痣, 6=净肌去痣)
+        if (uBeautyMarkMode >= 0.5) {
+          float moleAlpha = 0.0;
+          if (abs(uBeautyMarkMode - 1.0) < 0.4) {
+            float m1 = 1.0 - smoothstep(0.0007, 0.0014, length(p.xy - vec2(-0.036, -0.012)));
+            float m2 = 1.0 - smoothstep(0.0006, 0.0013, length(p.xy - vec2(-0.041, -0.019)));
+            float m3 = 1.0 - smoothstep(0.0006, 0.0013, length(p.xy - vec2(-0.033, -0.025)));
+            moleAlpha = max(m1, max(m2, m3)) * step(0.055, p.z);
+          } else if (abs(uBeautyMarkMode - 2.0) < 0.4) {
+            moleAlpha = (1.0 - smoothstep(0.0006, 0.0013, length(p.xy - vec2(0.039, 0.0095)))) * step(0.070, p.z);
+          } else if (abs(uBeautyMarkMode - 3.0) < 0.4) {
+            moleAlpha = (1.0 - smoothstep(0.0006, 0.0013, length(p.xy - vec2(-0.028, 0.0055)))) * step(0.075, p.z);
+          } else if (abs(uBeautyMarkMode - 4.0) < 0.4) {
+            moleAlpha = (1.0 - smoothstep(0.0006, 0.0012, length(p.xy - vec2(0.0015, 0.0045)))) * step(0.095, p.z);
+          } else if (abs(uBeautyMarkMode - 5.0) < 0.4) {
+            moleAlpha = (1.0 - smoothstep(0.0006, 0.0013, length(p.xy - vec2(0.021, -0.0345)))) * step(0.088, p.z);
+          }
+          skinCol = mix(skinCol, skinCol * vec3(0.32, 0.22, 0.18), moleAlpha * 0.85);
+        }
+
+        // 9. Lip Vermilion Color Grading & Inner Bite-Lip (咬唇) Depth
+        if (lipMask > 0.005 && uLipStrength > 0.01) {
+          float innerBite = exp(-pow((p.y + 0.0315) / 0.0042, 2.0)) * (1.0 - smoothstep(0.008, 0.018, abs(p.x)));
+          vec3 targetLip = mix(uLipColor * 1.06, uLipColor * 0.78, innerBite * 0.55);
+          targetLip *= (0.92 + 0.16 * lipCreaseVal);
+          skinCol = mix(skinCol, mix(skinCol * 0.45 + targetLip * 0.65, targetLip, 0.68), clamp(lipMask * uLipStrength, 0.0, 0.95));
+        }
+
+        diffuseColor.rgb = skinCol;
+      }`
+    );
+
+    // 3D Millimeter-Space Dermis Pore + Vertical Lip Crease Normal Perturbation
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <normal_fragment_maps>',
       `#include <normal_fragment_maps>
-      #ifdef USE_ROUGHNESSMAP
+      {
+        float faceRegion = smoothstep(-0.065, -0.025, vCervixLocalPos.y) * smoothstep(-0.01, 0.055, vCervixLocalPos.z);
+        float poreVal = compute3DPoreField(vCervixLocalPos);
+        float lipCreaseLocal = 0.5;
+        float lipMaskN = computeLipVermilionMask(vCervixLocalPos, lipCreaseLocal);
+        float combinedMicroHeight = mix(poreVal, lipCreaseLocal * 1.35, lipMaskN);
+        vDermisPoreCavity = poreVal;
+
+        #ifdef USE_ROUGHNESSMAP
+          combinedMicroHeight = mix(combinedMicroHeight, roughnessFactor, 0.35);
+        #endif
+
         vec3 dPosDx = dFdx( vViewPosition );
         vec3 dPosDy = dFdy( vViewPosition );
-        float dPoreDx = dFdx( roughnessFactor );
-        float dPoreDy = dFdy( roughnessFactor );
+        float dHdx = dFdx( combinedMicroHeight );
+        float dHdy = dFdy( combinedMicroHeight );
         vec3 r1 = cross( dPosDy, normal );
         vec3 r2 = cross( normal, dPosDx );
         float det = dot( dPosDx, r1 );
         if ( abs( det ) > 1e-6 ) {
-          vec3 surfGrad = sign( det ) * ( dPoreDx * r1 + dPoreDy * r2 );
-          normal = normalize( normal - ( 0.0072 / max( abs( det ), 1e-4 ) ) * surfGrad );
+          float reliefAmp = 0.0115 * clamp(uPoreRelief, 0.0, 2.2) * (0.35 + 0.65 * faceRegion);
+          vec3 surfGrad = sign( det ) * ( dHdx * r1 + dHdy * r2 );
+          normal = normalize( normal - ( reliefAmp / max( abs( det ), 1e-4 ) ) * surfGrad );
         }
-      #endif`
+      }`
     );
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -856,41 +1080,43 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
       float winEnv = computeWindowBeamEnvelope(vCervixWorldPos, uWindowLightDir);
       float fragNdl = dot(normal, viewWinL);
 
-      // Sculptural Directional Chiaroscuro Portrait Shading (authentic light & shadow depth across nose bridge & cheeks)
-      float litTerm = smoothstep(-0.28, 0.68, fragNdl) * winEnv;
+      // Luminous Soft-Wrap Portrait Shading (NEVER crushes shadow side into dirty grey-brown!)
+      float litTerm = smoothstep(-0.48, 0.56, fragNdl) * winEnv;
       float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.5);
-      float chiaroscuroCurve = mix(1.0, mix(0.40, 1.02, litTerm), clamp(chiaroscuroStrength * 0.82, 0.0, 0.90));
+      float chiaroscuroCurve = mix(1.0, mix(0.80, 1.03, litTerm), clamp(chiaroscuroStrength * 0.35, 0.0, 0.45));
 
       reflectedLight.directDiffuse *= chiaroscuroCurve;
-      reflectedLight.indirectDiffuse *= mix(0.92, 0.44 + 0.56 * litTerm, clamp(chiaroscuroStrength * 0.72, 0.0, 0.85));
+      reflectedLight.indirectDiffuse *= mix(0.96, 0.80 + 0.24 * litTerm, clamp(chiaroscuroStrength * 0.28, 0.0, 0.40));
 
-      // Warm Amber-Rose Subsurface Bounce along Shadow Terminator (warm cinematic shadows, never muddy grey)
-      vec3 warmSubsurfaceShadow = vec3(1.06, 0.90, 0.86);
+      // Warm Rose-Porcelain Subsurface Bounce in Shadows
+      vec3 warmSubsurfaceShadow = vec3(1.04, 0.94, 0.95);
       reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse * warmSubsurfaceShadow, reflectedLight.indirectDiffuse, litTerm);
 
-      // Matte-Velvet Photographic Skin Specular (eliminates plastic/silicone shine & temple glare)
+      // Anti-Silicone Micro-Pore Specular Cavity Masking + Dedicated Wet Lip Gloss
       float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
-      float poreSpecMask = clamp(1.18 - roughnessFactor * 0.82, 0.22, 0.78);
+      float fresnelSheen = pow(1.0 - ndotv, 2.8);
+      float poreSpecMask = clamp(0.32 + 0.88 * vDermisPoreCavity, 0.26, 1.12);
       float tZoneMask = max(
-        exp(-pow(vCervixLocalPos.x / 0.014, 2.0)) * smoothstep(0.072, 0.095, vCervixLocalPos.z),
-        exp(-pow((abs(vCervixLocalPos.x) - 0.035) / 0.018, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.002) / 0.015, 2.0)) * smoothstep(0.066, 0.088, vCervixLocalPos.z)
+        exp(-pow(vCervixLocalPos.x / 0.015, 2.0)) * smoothstep(0.075, 0.105, vCervixLocalPos.z),
+        exp(-pow((abs(vCervixLocalPos.x) - 0.035) / 0.020, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.002) / 0.016, 2.0)) * smoothstep(0.068, 0.092, vCervixLocalPos.z)
       );
-      reflectedLight.directSpecular *= (0.26 + 0.24 * litTerm + 0.18 * tZoneMask) * poreSpecMask;
-      reflectedLight.indirectSpecular *= (0.20 + 0.14 * tZoneMask) * poreSpecMask * (0.45 + 0.55 * litTerm);
+      float lipSpecBoost = vLipVermilionMask * clamp(uLipGloss, 0.0, 1.5) * 1.45;
+      reflectedLight.directSpecular *= (0.42 + 0.30 * litTerm + 0.26 * tZoneMask + lipSpecBoost) * poreSpecMask;
+      reflectedLight.indirectSpecular *= (0.45 + 0.38 * fresnelSheen + 0.22 * tZoneMask + lipSpecBoost * 0.85) * poreSpecMask;
 
-      // Subtle Interactive Studio Torch (gentle warm light without specular glare)
+      // Interactive Mouse-Following Studio Beauty Torch
       if (uCursorTorchIntensity > 0.01) {
         vec3 curL = normalize(uCursorLightDir);
         vec3 curH = normalize(curL + viewDir);
         float curNdl = max(0.0, dot(normal, curL));
-        float curSpec = pow(max(0.0, dot(normal, curH)), 28.0) * (0.30 + 0.40 * tZoneMask);
-        reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.96, 0.92) * curNdl * 0.06 * uCursorTorchIntensity;
-        reflectedLight.directSpecular += vec3(1.02, 0.96, 0.92) * curSpec * 0.10 * uCursorTorchIntensity;
+        float curSpec = pow(max(0.0, dot(normal, curH)), 42.0) * (0.35 + 0.45 * tZoneMask + lipSpecBoost) * poreSpecMask;
+        reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.02, 0.97, 0.95) * curNdl * 0.08 * uCursorTorchIntensity;
+        reflectedLight.directSpecular += vec3(1.04, 0.99, 0.96) * curSpec * 0.18 * uCursorTorchIntensity;
       }
 
-      // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along lit cheek contour
-      float vellusRim = pow(1.0 - ndotv, 4.0) * smoothstep(0.0, 0.65, fragNdl);
-      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.04, 0.95, 0.88) * vellusRim * 0.08;
+      // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour
+      float vellusRim = pow(1.0 - ndotv, 3.6) * smoothstep(-0.25, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
+      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.04, 0.97, 0.95) * vellusRim * 0.12;
 
       #if ( NUM_DIR_LIGHTS > 0 )
         vec3 sssAccum = vec3(0.0);
@@ -899,11 +1125,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92)
           sssAccum += computeDualLobeSkinSSS( normal, directionalLights[ i ].direction, directionalLights[ i ].color, viewDir, vCervixLocalPos );
         }
         #pragma unroll_loop_end
-        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.55 + 0.45 * winEnv) * 0.26;
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.65 + 0.35 * winEnv) * 0.32;
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-chiaroscuro-window-sss-v36';
+  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v36';
 }
 
 /**
@@ -1097,21 +1323,24 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   const effectiveEnv = baseEnv * Math.max(0.68, 1.12 - chiaroscuro * 0.20);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
-  // Update skin subsurface scattering & natural matte-velvet photographic skin response
-  const skinGloss = Number(m.skinGloss ?? basePreset.skinGloss ?? 0.12);
-  const sssIntensity = Number(m.sssIntensity ?? basePreset.sssIntensity ?? 0.82);
-  const cursorTorch = Number(m.cursorTorch ?? basePreset.cursorTorch ?? 0.28);
+  // Update skin subsurface scattering & natural anti-silicone dermis reflectance
+  const skinGloss = Number(m.skinGloss ?? basePreset.skinGloss ?? 0.14);
+  const sssIntensity = Number(m.sssIntensity ?? basePreset.sssIntensity ?? 0.88);
+  const cursorTorch = Number(m.cursorTorch ?? basePreset.cursorTorch ?? 0.55);
   GLOBAL_CHIAROSCURO_UNIFORMS.uSssIntensity.value = sssIntensity;
   GLOBAL_CHIAROSCURO_UNIFORMS.uCursorTorchIntensity.value = cursorTorch;
 
   engine.scene.traverse((obj) => {
     if (!obj.isMesh || !obj.material) return;
     if (obj.name === 'HeadSkinMesh' || obj.material.userData?.uSssIntensity) {
-      obj.material.roughness = Math.max(0.48, 0.68 - skinGloss * 0.24);
-      obj.material.clearcoat = skinGloss * 0.04;
-      obj.material.clearcoatRoughness = Math.max(0.45, 0.72 - skinGloss * 0.25);
-      obj.material.specularIntensity = 0.18 + skinGloss * 0.22;
-      obj.material.envMapIntensity = 0.20 + skinGloss * 0.24;
+      const userRough = obj.material.userData?.customSkinRoughness;
+      obj.material.roughness = typeof userRough === 'number'
+        ? userRough
+        : Math.max(0.42, 0.64 - skinGloss * 0.24);
+      obj.material.clearcoat = Math.max(0.0, (skinGloss - 0.55) * 0.18);
+      obj.material.clearcoatRoughness = 0.45;
+      obj.material.specularIntensity = 0.24 + skinGloss * 0.26;
+      obj.material.envMapIntensity = 0.34 + skinGloss * 0.28;
     }
   });
 
