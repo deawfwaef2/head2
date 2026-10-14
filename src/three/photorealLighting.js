@@ -1690,6 +1690,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       // Optional Stage 45 matte module: recompute from the character's base each time.
       // No edits to customSkinRoughness, archives or imported materials; zero/off restores exactly.
       const matteAmount = Math.max(0, Math.min(1, Number(m.repairSkinMatteAmount) || 0));
+      obj.material.userData.visualMatteAmount = matteAmount;
       obj.material.roughness = THREE.MathUtils.lerp(baseRoughness, Math.max(baseRoughness, 0.54), matteAmount);
       obj.material.clearcoat = Math.max(0.0, (skinGloss - 0.55) * 0.18);
       obj.material.clearcoatRoughness = 0.45;
@@ -1701,6 +1702,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
         // while preserving per-specimen relative pore scale.
         obj.material.userData.baseVisualPoreRelief ??= poreUniform.value;
         const basePore = obj.material.userData.baseVisualPoreRelief;
+        obj.material.userData.visualPoreFactor = poreReliefGlobalVal !== undefined ? poreReliefGlobalVal / 0.56 : undefined;
         poreUniform.value = poreReliefGlobalVal !== undefined
           ? Math.min(1.0, basePore * (poreReliefGlobalVal / 0.56))
           : basePore;

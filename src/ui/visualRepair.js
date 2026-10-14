@@ -62,7 +62,7 @@ export function buildRepairConfig(original, options) {
 export function createVisualRepair({desktop,studio,notify = ()=>{}}) {
   let options={...DEFAULT_REPAIR}, compare=false, opened=false, session=null, raf=0;
   let stored=null;
-  try { const record=JSON.parse(localStorage.getItem(REPAIR_KEY)||'null');if(record?.version===1) stored={name:String(record.name||'我的方案').slice(0,40),options:sanitizeRepair(record.options)}; } catch (_) {}
+  try { const record=JSON.parse(localStorage.getItem(REPAIR_KEY)||'null');if(record?.version===1) stored={name:String(record.name||'我的方案').slice(0,40),options:sanitizeRepair(record.options)}; } catch (error) { console.warn('画风方案读取失败：', error.message); }
   const adapters=[];
   const hidden=new Map();
   const isActive=()=>options.enabled&&!compare;

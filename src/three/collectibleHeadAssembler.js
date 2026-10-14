@@ -2253,7 +2253,13 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.skinBrightness !== undefined) u.uSkinBrightness.value = Number(m.skinBrightness);
       if (m.skinRosiness !== undefined) u.uSkinRosiness.value = Number(m.skinRosiness);
       if (m.poreScale !== undefined && u.uPoreScale) u.uPoreScale.value = Number(m.poreScale);
-      if (m.poreRelief !== undefined) u.uPoreRelief.value = Number(m.poreRelief);
+      if (m.poreRelief !== undefined) {
+        // Character edits update the base, not the temporary modulated result.
+        const basePore = Number(m.poreRelief);
+        mat.userData.baseVisualPoreRelief = basePore;
+        const factor = mat.userData.visualPoreFactor;
+        u.uPoreRelief.value = factor !== undefined ? Math.min(1, basePore * factor) : basePore;
+      }
       if (m.tZoneOiliness !== undefined && u.uTZoneOiliness) u.uTZoneOiliness.value = Number(m.tZoneOiliness);
       if (m.specularLobe !== undefined && u.uSpecularLobe) u.uSpecularLobe.value = Number(m.specularLobe);
       if (m.charSssDepth !== undefined && u.uCharSssDepth) u.uCharSssDepth.value = Number(m.charSssDepth);
@@ -2267,7 +2273,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
 
       if (m.skinRoughness !== undefined) {
         const rVal = Math.max(0.18, Math.min(0.88, Number(m.skinRoughness)));
-        mat.roughness = rVal;
+        mat.roughness = THREE.MathUtils.lerp(rVal, Math.max(rVal, 0.54), mat.userData.visualMatteAmount || 0);
         mat.userData.customSkinRoughness = rVal;
       }
       if (m.normalMapStrength !== undefined && mat.normalScale) {
