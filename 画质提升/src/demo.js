@@ -1,6 +1,7 @@
 // 画质提升 · 独立演示（不接入主项目）
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createStudioRig, createBackdrop, LIGHT_PRESETS } from './studioLighting.js';
 import { upgradeSkinMaterial, setSkinParams } from './skinMaterial.js';
@@ -56,6 +57,7 @@ controls.maxPolarAngle = Math.PI * 0.62;
 let rig = null; let backdrop = null; let post = null; let basicLights = null;
 const head = new THREE.Group();
 scene.add(head);
+let builtinSkin = null;
 let parts = {}; let hairMeshes = []; let hairMats = null; let skinMat = null; let stand = null;
 const origMats = new Map();
 const skinTextures = {};
@@ -168,6 +170,48 @@ async function loadHair(id) {
   for (const m of [core, tips]) { m.applyMatrix4(srcMesh.matrixWorld); head.add(m); hairMeshes.push(m); }
 }
 
+// ---------- 导入外部高精头模（测试渲染管线上限用：如 3D 扫描头模 GLB/OBJ + 贴图）----------
+let external = null;
+async function importExternal(fileList) {
+  const files = [...fileList];
+  const model = files.find((f) => /\.(glb|gltf|obj)$/i.test(f.name));
+  if (!model) { alert('请选择 .glb / .obj 模型（可同时多选它的颜色贴图与法线贴图）'); return; }
+  const imgTex = async (f, srgb) => {
+    if (!f) return null;
+    const bmp = await createImageBitmap(f, { imageOrientation: 'flipY' });
+    const t = new THREE.Texture(bmp); t.flipY = false; t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = 8; t.needsUpdate = true; return t;
+  };
+  const colF = files.find((f) => /(col|albedo|diffuse|base|color)/i.test(f.name) && /\.(jpe?g|png|webp)$/i.test(f.name));
+  const nrmF = files.find((f) => /(normal|nrm|tangent|_n\.)/i.test(f.name) && /\.(jpe?g|png|webp)$/i.test(f.name));
+  let root;
+  if (/\.obj$/i.test(model.name)) root = new OBJLoader().parse(await model.text());
+  else root = (await parseGlb(new Uint8Array(await model.arrayBuffer()))).scene;
+  const colT = await imgTex(colF, true); const nrmT = await imgTex(nrmF, false);
+  // 统一尺寸：头高约 0.24 m，居中到原头模位置
+  const box = new THREE.Box3().setFromObject(root); const size = box.getSize(new THREE.Vector3()); const c = box.getCenter(new THREE.Vector3());
+  const k = 0.24 / Math.max(size.y, 1e-6);
+  root.scale.setScalar(k); root.position.set(-c.x * k, -c.y * k + 0.005, -c.z * k);
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true;
+    const src = Array.isArray(o.material) ? o.material[0] : o.material;
+    const map = colT || src.map || null; const nrm = nrmT || src.normalMap || null;
+    if (map) map.flipY = !!colT ? false : map.flipY;
+    o.userData.orig = new THREE.MeshStandardMaterial({ map, normalMap: nrm, roughness: 0.6 });
+    o.userData.after = upgradeSkinMaterial({ map, normalMap: nrm }, { normalScale: 1.0, albedoSaturation: 1.0, albedoGamma: 1.0, albedoContrast: 1.0 });
+    o.material = state.mode === 'after' ? o.userData.after : o.userData.orig;
+  });
+  if (external) head.remove(external);
+  external = root;
+  head.add(root);
+  gltfHead.scene.visible = false;
+  hairMeshes.forEach((m) => { m.visible = false; });
+  if (stand) stand.visible = false;
+  await applyMode();
+  if (QA) startLoop();
+}
+window.__importExternal = importExternal;
+
 // ---------- 模式切换 ----------
 async function applyMode() {
   const after = state.mode === 'after';
@@ -176,10 +220,10 @@ async function applyMode() {
   const skinOrig = origMats.get(parts.skin);
   if (tex) skinOrig.map = tex;
   if (after) {
-    if (!skinMat) skinMat = upgradeSkinMaterial(skinOrig);
-    skinMat.map = tex || skinOrig.map;
-    skinMat.needsUpdate = true;
-    parts.skin.material = skinMat;
+    if (!builtinSkin) builtinSkin = upgradeSkinMaterial(skinOrig);
+    builtinSkin.map = tex || skinOrig.map;
+    builtinSkin.needsUpdate = true;
+    parts.skin.material = builtinSkin;
   } else {
     skinOrig.needsUpdate = true;
     parts.skin.material = skinOrig;
@@ -192,10 +236,12 @@ async function applyMode() {
   if (parts.lashes) { const o = origMats.get(parts.lashes); parts.lashes.material = after ? (parts.lashes.userData.after ||= upgradeLashMaterial(o)) : o; }
   if (parts.brows) { const o = origMats.get(parts.brows); parts.brows.material = after ? (parts.brows.userData.after ||= upgradeBrowMaterial(o)) : o; parts.brows.castShadow = false; }
   for (const m of hairMeshes) {
-    if (m.userData.afterOnly) m.visible = after;
+    if (m.userData.afterOnly) m.visible = after && !external;
     else m.material = after ? m.userData.after : m.userData.orig;
   }
+  if (external) external.traverse((o) => { if (o.isMesh) o.material = after ? o.userData.after : o.userData.orig; });
   // 光照与后期
+  skinMat = external ? (external.getObjectByProperty('isMesh', true)?.userData.after || builtinSkin) : builtinSkin;
   renderer.shadowMap.enabled = after;
   if (after) {
     if (basicLights) basicLights.visible = false;
@@ -205,7 +251,7 @@ async function applyMode() {
     if (!backdrop) backdrop = createBackdrop(scene, p.backdrop);
     backdrop.set(p.backdrop); backdrop.mesh.visible = true;
     scene.background = null;
-    renderer.toneMapping = THREE.AgXToneMapping;
+    renderer.toneMapping = { agx: THREE.AgXToneMapping, aces: THREE.ACESFilmicToneMapping, neutral: THREE.NeutralToneMapping }[qs.get('tm') || 'neutral'];
     if (!post) post = createPostChain(renderer, scene, camera);
   } else {
     if (rig) rig.group.visible = false;
@@ -223,7 +269,7 @@ async function applyMode() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
   }
-  if (stand) stand.visible = true;
+  if (stand) stand.visible = !external;
   renderer.shadowMap.needsUpdate = true;
   scene.traverse((o) => { if (o.material) o.material.needsUpdate = true; });
   updateUI();
@@ -270,6 +316,8 @@ function bindUI() {
     a.href = canvas.toDataURL('image/png');
     a.click();
   };
+  $('fileImport').onchange = (e) => importExternal(e.target.files);
+  $('btnBuiltin').onclick = () => { if (!external) return; head.remove(external); external = null; gltfHead.scene.visible = true; hairMeshes.forEach((m) => { m.visible = true; }); applyMode(); };
   $('panelToggle').onclick = () => document.body.classList.toggle('hidepanel');
 }
 
@@ -282,6 +330,18 @@ window.addEventListener('resize', () => {
 
 // ---------- 启动 ----------
 let frames = 0;
+const clock = new THREE.Clock();
+function startLoop() {
+  frames = 0; window.__READY__ = false;
+  renderer.setAnimationLoop(() => {
+    controls.update();
+    if (state.mode === 'after' && post) post.render(clock.getElapsedTime());
+    else renderer.render(scene, camera);
+    frames++;
+    if (QA && frames >= 2) { renderer.setAnimationLoop(null); window.__READY__ = true; }
+    else if (frames === 3) window.__READY__ = true;
+  });
+}
 async function boot() {
   try {
     await loadHead();
@@ -292,15 +352,7 @@ async function boot() {
     await applyMode();
     bindUI();
     $('loading').style.display = 'none';
-    const clock = new THREE.Clock();
-    renderer.setAnimationLoop(() => {
-      controls.update();
-      if (state.mode === 'after' && post) post.render(clock.getElapsedTime());
-      else renderer.render(scene, camera);
-      frames++;
-      if (QA && frames >= 2) { renderer.setAnimationLoop(null); window.__READY__ = true; }
-      else if (frames === 3) window.__READY__ = true;
-    });
+    startLoop();
   } catch (err) {
     console.error(err);
     $('loading').textContent = '加载失败：' + (err?.message || err);

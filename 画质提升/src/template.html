@@ -43,6 +43,8 @@
     <label>暗角</label><div class="row"><input type="range" id="sVig" min="0" max="1" step="0.01" value="0.32"><span id="sVigO"></span></div>
     <label>镜头微对比锐化</label><div class="row"><input type="range" id="sSharp" min="0" max="1.2" step="0.01" value="0.35"><span id="sSharpO"></span></div>
   </div>
+  <label>导入高精头模测试（GLB/OBJ + 颜色/法线贴图，可多选）</label><input type="file" id="fileImport" multiple accept=".glb,.gltf,.obj,.jpg,.jpeg,.png,.webp" style="width:100%;color:#aaa">
+  <button id="btnBuiltin">↩ 回到内置头模</button>
   <button id="btnShot">📷 保存截图</button>
   <div class="note">本页面是独立的画质研究模块，不连接主项目。鼠标拖动旋转，滚轮缩放。</div>
 </div>

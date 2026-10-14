@@ -11,13 +11,13 @@
 import * as THREE from 'three';
 
 export const SKIN_DEFAULTS = {
-  roughness: 0.5,
+  roughness: 0.56,
   normalScale: 0.8,
   scatter: 1.0,          // 次表面散射强度
   curvatureScale: 1 / 140, // 曲率→散射映射（场景单位为米时）
-  dualLobe: 0.14,        // 第二高光瓣强度
+  dualLobe: 0.07,        // 第二高光瓣强度
   dualLobeRoughness: 0.32,
-  sheen: 0.22,
+  sheen: 0.1,
   albedoContrast: 1.08,
   albedoSaturation: 1.22,
   albedoGamma: 1.12,
@@ -55,7 +55,7 @@ export function upgradeSkinMaterial(src, opts = {}) {
     roughness: o.roughness,
     metalness: 0,
     ior: 1.4,
-    specularIntensity: 1.0,
+    specularIntensity: 0.75,
     specularColor: new THREE.Color(1, 1, 1),
     clearcoat: o.dualLobe,
     clearcoatRoughness: o.dualLobeRoughness,

@@ -8,12 +8,12 @@ import * as THREE from 'three';
 export const LIGHT_PRESETS = {
   softbox: {
     label: '摄影棚柔光（参考图3）',
-    exposure: 1.0,
-    key: { dir: [-0.55, 0.42, 0.72], color: 0xfff4ea, intensity: 2.4, size: 1.35 },
-    fill: { dir: [0.85, 0.05, 0.55], color: 0xe9eef7, intensity: 0.18 },
+    exposure: 0.85,
+    key: { dir: [-0.55, 0.42, 0.72], color: 0xfff4ea, intensity: 2.6, size: 1.35 },
+    fill: { dir: [0.85, 0.05, 0.55], color: 0xe9eef7, intensity: 0.08 },
     rim: [{ dir: [0.7, 0.35, -0.65], color: 0xfff1e2, intensity: 1.15 }, { dir: [-0.75, 0.25, -0.6], color: 0xdfe8ff, intensity: 0.65 }],
-    top: 0.25, floor: [0.2, 0.17, 0.14],
-    envIntensity: 0.55,
+    top: 0.2, floor: [0.16, 0.13, 0.11],
+    envIntensity: 0.38,
     backdrop: ['#8c8580', '#3f3b39'],
   },
   window: {

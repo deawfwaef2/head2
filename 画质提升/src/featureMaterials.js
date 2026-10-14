@@ -15,14 +15,14 @@ export function upgradeEyeMaterial(src) {
       transparent: true,
       opacity: 0.04,
       depthWrite: false,
-      envMapIntensity: 1.6,
+      envMapIntensity: 1.1,
     });
     // 让反射不被 opacity 一起削弱：透明度只作用在漫反射，高光保持
     m.onBeforeCompile = (s) => {
       s.fragmentShader = s.fragmentShader.replace(
         '#include <opaque_fragment>',
         `float specL = dot(outgoingLight - totalDiffuse, vec3(0.333));
-         diffuseColor.a = clamp(diffuseColor.a + specL * 1.2, 0.0, 1.0);
+         diffuseColor.a = clamp(diffuseColor.a + specL * 0.7, 0.0, 1.0);
          #include <opaque_fragment>`,
       );
     };
@@ -103,7 +103,7 @@ export function upgradeBrowMaterial(src) {
 export const HAIR_DEFAULTS = {
   color: [0.032, 0.023, 0.019], // 东亚自然黑发：深棕黑（线性空间），不是纯黑
   roughness: 0.62,
-  textureInfluence: 0.85,
+  textureInfluence: 0.6,
   spec1: 0.09, spec1Exp: 220.0,   // 主高光 R：发丝表皮反射，冷白、细
   spec2: 0.07, spec2Exp: 40.0,   // 次高光 TRT：穿过发丝内部，带发色、宽
   shift2: -0.18,
@@ -174,6 +174,7 @@ function patchHairShader(s, o, tipsPass) {
       `#ifdef USE_MAP
          vec4 hTex = texture2D( map, vMapUv );
          float lum = dot(hTex.rgb, vec3(0.299, 0.587, 0.114));
+         lum = mix(0.45, min(lum, 0.8), smoothstep(0.2, 0.8, hTex.a));
          vec3 strand = mix(vec3(1.0), vec3(0.6 + lum * 0.8), uTexInfluence);
          diffuseColor.rgb *= strand;
          diffuseColor.a *= hTex.a;
@@ -196,7 +197,7 @@ function patchHairShader(s, o, tipsPass) {
   if (tipsPass) {
     s.fragmentShader = s.fragmentShader.replace(
       '#include <alphatest_fragment>',
-      '#include <alphatest_fragment>\n if (diffuseColor.a >= 0.3) discard;',
+      '#include <alphatest_fragment>\n if (diffuseColor.a >= 0.45) discard;',
     );
   }
 }
@@ -219,7 +220,7 @@ export function buildHairMaterials(src, opts = {}) {
     envMapIntensity: 0.3,
   };
   if (base.map) { base.map.colorSpace = THREE.SRGBColorSpace; base.map.anisotropy = 8; }
-  const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.3 });
+  const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.45 });
   core.onBeforeCompile = (s) => patchHairShader(s, o, false);
   core.customProgramCacheKey = () => 'photoreal-hair-core-v2';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
