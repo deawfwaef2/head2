@@ -977,3 +977,9 @@
 
 
 
+
+## Stage 47A — 2026-10-14 · Hair visual diagnosis / playable baseline
+- Read root HANDOFF and latest hair/head reservations before edits. HAIR ONLY; preserve head/face/eye GLB and code. Existing main 845f9c8 already has restored 5,966-vertex photo hair and scalp fitting; do not blindly revert assets again.
+- Rebuilt root standalone HTML FIRST (25.93 MiB), identical to docs/index.html. Dependencies and Chromium live under /tmp via ignored node_modules symlink, not persisted. Preserve <128 MiB expanded workspace; append-only collaboration, fetch before pushes, no force push.
+- Actual file:// boot with HTTP blocked passed: 3 pets, start handler, no JS/GLSL errors. Inspected front/side/rear captures: photo hair coverage intact but broad, nearly black cards; bob01 atlas appears coarse rather than natural fibers. New QA harness scripts/qa_hair_v47.mjs. Desktop capture caught the start-overlay fade mid-transition; refine capture timing before final review.
+- Next: investigate matching original author atlas for bob hair, improve bounded hair shading only, keep original import materials. No photoreal completion claim; no live agent chat available here beyond Git/HANDOFF. Credential never recorded in artifacts.

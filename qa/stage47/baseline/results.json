@@ -1,0 +1,34 @@
+{
+  "label": "baseline",
+  "errors": [],
+  "network": [],
+  "screenshots": [
+    "qa/stage47/baseline/front.png",
+    "qa/stage47/baseline/side.png",
+    "qa/stage47/baseline/rear.png"
+  ],
+  "boot": {
+    "pets": 3,
+    "started": true
+  },
+  "hair": {
+    "style": "hair_user_photo",
+    "meshes": [
+      {
+        "name": "ScalpRootFeatherCap",
+        "vertices": 4494,
+        "map": false
+      },
+      {
+        "name": "hair_user_photo",
+        "vertices": 21223,
+        "fit": {
+          "adjustedVertices": 148,
+          "cachedRays": 1825
+        },
+        "map": true
+      }
+    ]
+  },
+  "passed": true
+}
