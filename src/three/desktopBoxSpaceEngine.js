@@ -1034,7 +1034,7 @@ export class DesktopBoxSpaceEngine {
     this.raycaster.setFromCamera(this.mouseNDC, this.camera);
     const roots = [];
     for (const s of this.structures.values()) {
-      roots.push(s.node);
+      if (s.node.visible && !s.node.userData.visualRepairHidden) roots.push(s.node);
     }
     const hits = this.raycaster.intersectObjects(roots, true);
     if (hits.length === 0) return null;

@@ -1,0 +1,74 @@
+/* Scoped inspector. Old UI/layout/visual presets stay unchanged when disabled. */
+#visual-repair-root { --vr-bg:#10151e; --vr-card:#171e29; --vr-edge:#2a3545; --vr-ink:#eaf0f8; --vr-muted:#93a2b7; --vr-accent:#82d9c6; font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; color:var(--vr-ink); }
+#visual-repair-root [hidden] {display:none!important}
+#visual-repair-root button,#visual-repair-root input {font:inherit;box-sizing:border-box}
+#visual-repair-root button {border:1px solid var(--vr-edge);border-radius:7px;background:#1c2532;color:var(--vr-ink);cursor:pointer;padding:7px 10px;line-height:1.4;transition:background .15s,border-color .15s;box-shadow:none;text-shadow:none;margin:0;min-height:32px}
+#visual-repair-root button:hover {background:#283548;border-color:#64827d}
+#visual-repair-root button:focus-visible,#visual-repair-root input:focus-visible,#visual-repair-root summary:focus-visible {outline:2px solid var(--vr-accent);outline-offset:3px}
+#visual-repair-root button:disabled,#visual-repair-root input:disabled {opacity:.4;cursor:not-allowed}
+#visual-repair-root .vr-panel {position:fixed;z-index:10100;top:96px;right:18px;bottom:20px;width:374px;max-height:790px;display:flex;flex-direction:column;background:var(--vr-bg);border:1px solid #344253;border-radius:16px;box-shadow:0 22px 70px #0009;overflow:hidden;text-align:left}
+#visual-repair-root .vr-panel.vr-left {right:auto;left:18px}
+#visual-repair-root .vr-header {display:flex;justify-content:space-between;gap:12px;padding:23px 22px 17px;border-bottom:1px solid var(--vr-edge)}
+#visual-repair-root .vr-eyebrow {font-size:9px;letter-spacing:2px;color:var(--vr-accent);font-weight:700}
+#visual-repair-root h2 {font-size:23px;line-height:1.4;font-weight:650;margin:5px 0 3px;letter-spacing:.4px;color:var(--vr-ink)}
+#visual-repair-root p {margin:0;color:var(--vr-muted);font-size:12px}
+#visual-repair-root .vr-header-actions {display:flex;gap:5px;align-items:flex-start}
+#visual-repair-root .vr-header-actions button {font-size:20px;width:30px;padding:1px;border:0;background:transparent;color:#a4b3c5}
+#visual-repair-root .vr-modebar {display:flex;justify-content:space-between;align-items:center;gap:6px;padding:14px 20px 8px}
+#visual-repair-root .vr-modebar label {display:flex;gap:8px;align-items:center;font-weight:600;font-size:12px;margin:0;color:var(--vr-ink)}
+#visual-repair-root input[type=checkbox] {accent-color:var(--vr-accent);width:16px;height:16px;margin:0}
+#visual-repair-root #vr-compare {font-size:11px;background:transparent;padding:6px 9px}
+#visual-repair-root #vr-compare[aria-pressed=true] {background:#285054;border-color:var(--vr-accent)}
+#visual-repair-root .vr-status {display:flex;align-items:center;gap:7px;font-size:11px;color:var(--vr-muted);padding:0 20px 13px}
+#visual-repair-root .vr-dot {display:inline-block;width:6px;height:6px;border-radius:50%;background:#8794a8;flex:none}
+#visual-repair-root [data-active=true] .vr-status .vr-dot,#visual-repair-root .vr-mini .vr-dot {background:var(--vr-accent)}
+#visual-repair-root .vr-scroll {padding:0 20px 12px;overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#384a5d transparent}
+#visual-repair-root .vr-section-heading {display:flex;align-items:center;justify-content:space-between;padding:7px 0 10px}
+#visual-repair-root h3 {font-size:12px;margin:0;color:#dce7f3;font-weight:600}
+#visual-repair-root .vr-section-heading>span {font-size:10px;color:#8091a7}
+#visual-repair-root .vr-recipes {display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:18px}
+#visual-repair-root .vr-recipes button {display:flex;align-items:flex-start;flex-direction:column;padding:9px 8px;background:var(--vr-card);text-align:left;border-radius:9px}
+#visual-repair-root .vr-recipes strong {font-size:12px;font-weight:600;margin:7px 0 3px}
+#visual-repair-root .vr-recipes small {font-size:9px;color:var(--vr-muted);white-space:nowrap}
+#visual-repair-root .vr-swatch {width:100%;height:24px;border-radius:4px;background:linear-gradient(110deg,#445262,#e4eff0);opacity:.9}
+#visual-repair-root .vr-swatch-soft {background:linear-gradient(110deg,#44424a,#c4b5a4)}
+#visual-repair-root .vr-swatch-inspect {background:linear-gradient(110deg,#2b4948,#92c7bb)}
+#visual-repair-root .vr-tabs {display:flex;gap:3px;border:1px solid var(--vr-edge);border-radius:8px;background:#0b1018;padding:3px;margin-bottom:9px}
+#visual-repair-root .vr-tabs button {flex:1;border:0;background:none;font-size:11px;color:var(--vr-muted);padding:7px 5px;min-height:29px}
+#visual-repair-root .vr-tabs button[aria-pressed=true] {background:#283645;color:#c6f5e9}
+#visual-repair-root .vr-option {padding:13px 0;border-bottom:1px solid #25303e}
+#visual-repair-root .vr-option-label {display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;cursor:pointer;font-size:12px;color:var(--vr-ink)}
+#visual-repair-root .vr-option-label>span {flex:1;min-width:0}
+#visual-repair-root .vr-option-label strong {display:block;font-size:12px;font-weight:550}
+#visual-repair-root .vr-option-label small {display:block;color:var(--vr-muted);font-size:10px;margin-top:4px;line-height:1.6}
+#visual-repair-root .vr-option-label input {position:absolute;opacity:0;width:31px;height:20px;right:22px;cursor:pointer}
+#visual-repair-root .vr-option-label i {display:block;flex:none;width:30px;height:17px;border-radius:12px;background:#3a4657;position:relative;pointer-events:none}
+#visual-repair-root .vr-option-label i:after {content:"";position:absolute;top:3px;left:3px;width:11px;height:11px;border-radius:50%;background:#a3b1c3;transition:transform .15s}
+#visual-repair-root .vr-option-label input:checked+i {background:#377c70}
+#visual-repair-root .vr-option-label input:checked+i:after {background:#c8fff0;transform:translateX(13px)}
+#visual-repair-root .vr-option-label input:focus-visible+i {outline:2px solid var(--vr-accent);outline-offset:3px}
+#visual-repair-root .vr-range {display:flex;align-items:center;gap:12px;margin-top:12px}
+#visual-repair-root input[type=range] {flex:1;width:100%;height:4px;accent-color:var(--vr-accent);margin:4px 0;background:#344456;padding:0;border:0}
+#visual-repair-root output {width:42px;flex:none;text-align:right;font:11px ui-monospace,monospace;color:#b9cecb;font-variant-numeric:tabular-nums}
+#visual-repair-root .vr-note {font-size:10px;line-height:1.8;margin:12px 0;color:#8f9fb4}
+#visual-repair-root .vr-library {margin-top:18px;border:1px solid var(--vr-edge);border-radius:9px;background:#141c27}
+#visual-repair-root summary {padding:11px;cursor:pointer;font-size:12px;color:#d6e2ef}
+#visual-repair-root summary span {font-size:10px;color:#8294ac;float:right;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#visual-repair-root .vr-library-body {padding:0 12px}
+#visual-repair-root .vr-library-body label {font-size:10px;color:var(--vr-muted);display:block}
+#visual-repair-root input[type=text] {display:block;width:100%;background:#0d131c;color:var(--vr-ink);border:1px solid var(--vr-edge);border-radius:6px;padding:8px;margin:5px 0 10px}
+#visual-repair-root .vr-file-actions {display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#visual-repair-root .vr-file-actions button {font-size:11px}
+#visual-repair-root .vr-footnote {font-size:10px;color:#75869b;line-height:1.8;margin:14px 0 6px}
+#visual-repair-root .vr-footer {display:flex;align-items:center;gap:6px;padding:13px 16px;border-top:1px solid var(--vr-edge);background:#121a26;flex:none}
+#visual-repair-root .vr-footer button {font-size:11px;padding:9px 9px}
+#visual-repair-root .vr-footer button:first-child {margin-right:auto;background:none;border:0;color:#9bb0c7;padding-left:0}
+#visual-repair-root .vr-footer .vr-primary {background:#8addc8;color:#122b29;border-color:#8addc8;font-weight:650}
+#visual-repair-root .vr-mini {position:fixed;z-index:10101;right:18px;top:18px;display:flex;align-items:center;gap:9px;background:#121b28;border:1px solid #344556;padding:8px 10px;border-radius:11px;box-shadow:0 8px 24px #0005}
+#visual-repair-root .vr-mini button {background:none;border:0;font-size:12px;padding:3px 5px;min-height:25px}
+#visual-repair-root .vr-mini .vr-divider {width:1px;height:16px;background:#344556}
+body.vr-compact #desktop-overlay-bar,body.vr-compact #screen-pets-strip,body.vr-compact #study-triumph-hud,body.vr-compact #os-desktop-icons,body.vr-compact #visual-customizer-drawer {display:none!important}
+body.vr-hide-labels #specimen-placards-layer {display:none!important}
+@media(max-width:600px) {#visual-repair-root .vr-panel,#visual-repair-root .vr-panel.vr-left {top:72px;right:10px;left:10px;bottom:10px;width:auto;max-height:none} #visual-repair-root .vr-mini {right:10px;top:12px;gap:4px} #visual-repair-root .vr-header {padding:16px 18px 12px}}
+@media(max-height:680px) {#visual-repair-root .vr-panel {top:72px;bottom:10px} #visual-repair-root .vr-header {padding:12px 18px 10px} #visual-repair-root .vr-header h2 {font-size:20px} #visual-repair-root .vr-eyebrow {display:none}}
+@media(prefers-reduced-motion:reduce) {#visual-repair-root * {transition:none!important}}

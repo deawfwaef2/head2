@@ -815,3 +815,10 @@
   7. **8 Cinema Film Stock Emulsion LUT Curves (`FILM_LUT_CATALOG`: `uFilmLutMode` + `uFilmLutStrength`) & 6 One-Click Master Post-FX Combos (`POSTFX_MASTER_COMBOS` + `#btn-quick-postfx`)**:
      - Film Stocks: `portra_160_sun`, `kodak_2383`, `fuji_velvia_50`, `cinestill_800t`, `ilford_hp5_bichrome`, `bleach_bypass`, `agfa_vista_warm`, `natural_linear`.
      - Master Combos: `sunlit_portra_bokeh`, `kodak_2383_anamorphic`, `cinestill_800t_halation`, `fuji_forest_lightleak`, `ilford_rembrandt_bw`, `rainy_dew_promist`, plus `#btn-reset-postfx`.
+
+## Stage 41A — 2026-10-14 · Optional visual repair inspector (checkpoint)
+- User now explicitly requires a selectable repair tool, NOT another forced replacement of the original look/UI. Preserve all existing presets, material/mesh data, settings and Stage 40 post-processing. Agent cannot switch backend model identity from this conversation; do not claim otherwise.
+- Synced/read remote `ca6f34f` and its Stage 40 handoff before coding. New isolated `src/ui/visualRepair.js` + scoped CSS; main.js only imports/mounts after existing initialization. Default OFF, opening changes no render settings. Recipes and individual sliders are explicit preview choices.
+- Engine applyVisualCustomConfig wrappers keep original configs independently and compose optional neutral-light, shadow-lift, haze/blur reduction, exposure, static-light and gobo overrides. Original UI writes update the base, not the repair recipe. A/B original view, cancel-session, restore-original, apply-and-close supported.
+- Optional shelf visibility (not deletion/movement/physics rewrite), old-toolbar compaction, label hiding. Hidden shelves excluded from cursor picking. Separate versioned localStorage recipe + JSON import/export; no startup auto-application, no overwrite of collectible storage or original preset config.
+- Built offline HTML immediately (~29.64 MiB) with embedded module/CSS. Runtime/UI validation still pending at this checkpoint. Next steps: real browser regression, screenshot/mobile sizing, cancellation and original-config invariance.

@@ -1,3 +1,4 @@
+import { createVisualRepair } from './ui/visualRepair.js';
 import {
   DEFAULT_COLLECTIBLES,
   DAZ_TUTORIAL_STEPS,
@@ -4223,6 +4224,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       desktopEngine.applyPlacementFormation('study_companion_sides');
     }
   }, 250);
+
+  const visualRepair = createVisualRepair({ desktop: desktopEngine, studio: studioEngine, notify: showToast });
+  if (window.__cervixQA) window.__cervixQA.visualRepair = visualRepair;
 
   if (bootStatus) bootStatus.remove();
   if (window.__cervixQA) window.__cervixQA.ready = true;
