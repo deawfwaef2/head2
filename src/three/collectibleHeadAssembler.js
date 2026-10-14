@@ -1104,6 +1104,7 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
         diffuseColor.a *= coverage;
       #endif
     `);
+
   };
 }
 

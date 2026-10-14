@@ -72,7 +72,13 @@ export class DesktopBoxSpaceEngine {
 
     this.stagePlatforms = [];
     this.deletedStagePropIds = new Set();
-    this.visualConfig = { presetId: 'rainy_study' };
+    this.visualConfig = {
+      presetId: 'cinema_85mm_portrait',
+      hdrMode: 'golden_hour',
+      windowGobo: 'hair_sun_slit',
+      windowGoboStrength: 0.78,
+      chiaroscuro: 0.94,
+    };
 
     this.pets = new Map();
     this.structures = new Map();
@@ -128,8 +134,8 @@ export class DesktopBoxSpaceEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
-    applyBaseRendererSettings(this.renderer, 0.90);
-    ensureSceneEnvironment(this.renderer, this.scene, 0.85);
+    applyBaseRendererSettings(this.renderer, 0.88);
+    ensureSceneEnvironment(this.renderer, this.scene, 0.16, 'golden_hour');
 
     this.lightRig = buildDesktopLightRig(this.scene);
     this.hemiLight = this.lightRig.hemi;
@@ -141,7 +147,7 @@ export class DesktopBoxSpaceEngine {
     this.beautyPost = null;
     this.beautyPostUserEnabled = true;
     try {
-      if (!this.softwareRenderer) this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
+      this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
       this.beautyPost?.setEnabled(true);
     } catch (err) {
       console.warn('后期链初始化失败，已回退直渲:', err);
@@ -159,6 +165,7 @@ export class DesktopBoxSpaceEngine {
       this.atmosphere = null;
     }
 
+    applyCustomVisualConfigToEngine(this, this.visualConfig);
     this.updateCameraProjection();
   }
 
