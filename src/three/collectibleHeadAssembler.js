@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
+import { refineArtistHairCards } from './hairCardSubdivision.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
@@ -1017,12 +1018,12 @@ export function disposeHeadNode(node) {
 function configureHairSheen(material, value) {
   const n = Number(value);
   const sheen = Number.isFinite(n) ? THREE.MathUtils.clamp(n, 0, 1) : 0.45;
-  material.roughness = 0.58 - sheen * 0.18;
-  material.specularIntensity = sheen * 0.90;
+  material.roughness = 0.70 - sheen * 0.16;
+  material.specularIntensity = sheen * 0.42;
   material.anisotropy = 0; // No metal-like GGX streaks with unknown/mirrored card tangents.
   material.sheen = 0;
   material.clearcoat = 0;
-  material.envMapIntensity = 0.30;
+  material.envMapIntensity = 0.18;
 }
 
 export function updateHairSheen(node, value) {
@@ -1042,12 +1043,12 @@ function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
   const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216', '#111216']);
   if (legacyDarkSet.has(normalizedHex)) {
-    return new THREE.Color('#131418');
+    return new THREE.Color('#1b1b1e');
   }
   const baseColor = new THREE.Color(normalizedHex);
   const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
   if (lum < 0.05) {
-    return new THREE.Color('#131418');
+    return new THREE.Color('#1b1b1e');
   }
   return baseColor;
 }
@@ -1071,14 +1072,20 @@ function fitImportedHairScene(scene) {
 function injectArtistHairColor(material, hairShaderParams = {}) {
   const uniforms = {
     uHairWispyFeather: { value: Number(hairShaderParams.hairWispyFeather ?? 0.45) },
-    uHairFlowHorizontal: { value: hairShaderParams.flowHorizontal ? 1 : 0 },
+    uHairUseCoverage: { value: 1 },
     uHairOmbreMix: { value: Number(hairShaderParams.hairOmbreMix ?? 0) },
     uHairTipColor: { value: new THREE.Color(hairShaderParams.hairTipColor || '#4a3528') },
     uHairHighlightColor: { value: new THREE.Color('#9e6b52') },
     uHairHighlightStrength: { value: 0 },
   };
   material.userData.hairShaderUniforms = uniforms;
-  material.customProgramCacheKey = () => 'artist-hair-scene-fiber-v42';
+  material.customProgramCacheKey = () => 'artist-hair-azimuth-coverage-v43';
+  material.onBeforeRender = renderer => {
+    const rt = renderer.getRenderTarget();
+    uniforms.uHairUseCoverage.value = rt
+      ? (rt.samples > 0 ? 1 : 0)
+      : (renderer.getContext().getContextAttributes().antialias ? 1 : 0);
+  };
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = 'varying vec3 vHairLocalPos;\n' + shader.vertexShader;
@@ -1087,7 +1094,7 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
     shader.fragmentShader = `
       varying vec3 vHairLocalPos;
       uniform float uHairWispyFeather;
-      uniform float uHairFlowHorizontal;
+      uniform float uHairUseCoverage;
       uniform float uHairOmbreMix;
       uniform vec3 uHairTipColor;
       uniform vec3 uHairHighlightColor;
@@ -1106,6 +1113,19 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
         float coverage = hairTexel.a;
         coverage *= 1.0 - 0.25 * uHairWispyFeather * (1.0 - coverage);
         diffuseColor.a *= coverage;
+      #endif
+    `);
+    // Three's default A2C alpha-test turns every alpha > .12 into opaque.
+    // Preserve the artist coverage on MSAA targets instead of solid black strips.
+    shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
+      #ifdef USE_ALPHATEST
+        if (uHairUseCoverage > 0.5) {
+          if (diffuseColor.a < 0.015) discard;
+        } else {
+          // Stable cutout fallback: no temporal noise / hashed transparency.
+          if (diffuseColor.a < 0.38) discard;
+          diffuseColor.a = 1.0;
+        }
       #endif
     `);
     injectArtistHairLighting(shader);
@@ -1240,7 +1260,9 @@ async function loadModularDonorMeshes(donorSpec) {
     const meshes = [];
     gltf.scene.traverse((child) => {
       if (!child.isMesh || !child.geometry?.attributes?.position) return;
-      const subGeo = filterGeometryByCentroid(child.geometry, donorSpec.filter, false);
+      const refined = refineArtistHairCards(child.geometry);
+      const subGeo = filterGeometryByCentroid(refined, donorSpec.filter, false);
+      if (refined !== child.geometry) refined.dispose();
       if (subGeo) {
         const m = new THREE.Mesh(subGeo, child.material);
         m.name = `Modular_${donorSpec.style}`;
@@ -1310,6 +1332,13 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       loadedScene = gltf.scene;
       if (config.customHairUrl) fitImportedHairScene(loadedScene);
     }
+
+    if (!config.customHairUrl) loadedScene.traverse(child => {
+      if (!child.isMesh) return;
+      const original = child.geometry;
+      child.geometry = refineArtistHairCards(original);
+      if (child.geometry !== original) original.dispose();
+    });
 
     // Load optional modular custom hair parts (Front Bangs + Side Locks + Back Ponytail/Bun)
     const bangsDonor = (frontBangsStyle !== 'default' && frontBangsStyle !== 'forehead_bare' && MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle)

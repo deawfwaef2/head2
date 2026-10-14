@@ -64,10 +64,15 @@ export function injectArtistHairLighting(shader) {
       float secondary = hairLobe(clamp(dot(T2,H), -1.0, 1.0), exponent * 0.26);
       vec3 F = F_Schlick(material.specularColor, material.specularF90, max(dot(V,H),0.0));
       // Coverage and fine modulation come only from the artist's texture.
-      float strandWeight = mix(0.45, 1.15, hairAtlasValue);
+      float strandWeight = mix(0.30, 1.0, hairAtlasValue);
+      // Longitudinal scattering alone creates a bright ring on every card.
+      // Restrict the azimuth around the fiber normal too, without a fake light.
+      vec3 azimuthH = H - hairFlowT * dot(H,hairFlowT);
+      float azimuthLength = max(length(azimuthH), 1e-5);
+      float azimuth = pow(max(dot(N,azimuthH / azimuthLength),0.0), 3.0);
       float visibility = max(dot(N, incident.direction), 0.0);
       vec3 fiber = incident.color * visibility * F * strandWeight *
-        (primary * 2.2 + secondary * 0.50);
+        azimuth * (primary * 0.72 + secondary * 0.16);
       reflectedLight.directSpecular += mix(ordinary.directSpecular, fiber, hairFlowValid);
     }
     #undef RE_Direct
