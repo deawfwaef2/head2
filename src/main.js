@@ -152,7 +152,21 @@ const state = {
     irisSparkle: 0.05,
     halation: 0.54,
     skinLumen: 0.0,
-    cursorTorch: 0.24
+    cursorTorch: 0.24,
+    sssBlur: 0.64,
+    microContrast: 0.42,
+    highlightRoll: 0.52,
+    shadowCrush: 0.58,
+    sunFlareVeil: 0.76,
+    dappledBokeh: 0.78,
+    anamorphicFlare: 0.24,
+    lightLeak: 0.22,
+    swirlyBokeh: 0.28,
+    wetLensDrop: 0.0,
+    lensDistortion: 0.12,
+    filmLutMode: 'portra_160_sun',
+    filmLutStrength: 0.68,
+    postfxCombo: 'sunlit_portra_bokeh'
   },
   studioDraft: {
     basePreset: 'fangyaoping',
@@ -3285,12 +3299,29 @@ window.addEventListener('DOMContentLoaded', async () => {
     syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', vc.skinGloss, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-sharpen', 'val-vc-sharpen', vc.sharpen, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-contrast', 'val-vc-contrast', vc.contrast, v => Number(v).toFixed(2));
+    syncSlider('vc-saturation', 'val-vc-saturation', vc.saturation, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-warmth', 'val-vc-warmth', vc.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
     syncSlider('vc-bloom', 'val-vc-bloom', vc.bloomStrength, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-sss-blur', 'val-vc-sss-blur', vc.sssBlur, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-micro-contrast', 'val-vc-micro-contrast', vc.microContrast, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-highlight-roll', 'val-vc-highlight-roll', vc.highlightRoll, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-shadow-crush', 'val-vc-shadow-crush', vc.shadowCrush, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-sun-flare-veil', 'val-vc-sun-flare-veil', vc.sunFlareVeil, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-dappled-bokeh', 'val-vc-dappled-bokeh', vc.dappledBokeh, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-swirly-bokeh', 'val-vc-swirly-bokeh', vc.swirlyBokeh, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-anamorphic-flare', 'val-vc-anamorphic-flare', vc.anamorphicFlare, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-light-leak', 'val-vc-light-leak', vc.lightLeak, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-wet-lens-drop', 'val-vc-wet-lens-drop', vc.wetLensDrop, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-film-lut-strength', 'val-vc-film-lut-strength', vc.filmLutStrength, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-film-grain', 'val-vc-film-grain', vc.filmGrain, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-vignette', 'val-vc-vignette', vc.vignette, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-lens-distortion', 'val-vc-lens-distortion', vc.lensDistortion, v => `${Math.round(v * 100)}%`);
     const selHdr = document.getElementById('sel-hdr-mode');
     if (selHdr && vc.hdrMode) selHdr.value = vc.hdrMode;
     const selGobo = document.getElementById('sel-window-gobo');
     if (selGobo && vc.windowGobo) selGobo.value = vc.windowGobo;
+    const selLut = document.getElementById('sel-film-lut-mode');
+    if (selLut && vc.filmLutMode) selLut.value = vc.filmLutMode;
     const colKey = document.getElementById('vc-key-color');
     if (colKey && vc.keyColor) colKey.value = vc.keyColor;
     const colRim = document.getElementById('vc-rim-color');
@@ -3313,6 +3344,20 @@ window.addEventListener('DOMContentLoaded', async () => {
       btnChiaroTop.textContent = goboTopLabels[gId] || '🌞 强光影: 开启';
       btnChiaroTop.classList.toggle('active-top', gId !== 'none' && (vc.chiaroscuro ?? 0.94) > 0.55);
     }
+    const btnPostFxTop = document.getElementById('btn-quick-postfx');
+    if (btnPostFxTop) {
+      const cId = vc.postfxCombo || 'sunlit_portra_bokeh';
+      const postfxTopLabels = {
+        sunlit_portra_bokeh: '🎞️ 后处理: Portra逆光散景',
+        kodak_2383_anamorphic: '🎬 后处理: 2383变形拉丝',
+        cinestill_800t_halation: '🌃 后处理: 800T朱红旋焦',
+        fuji_forest_lightleak: '🍃 后处理: 富士森系漏光',
+        ilford_rembrandt_bw: '🖤 后处理: 铂金雕塑黑白',
+        rainy_dew_promist: '💧 后处理: 雨窗水雾柔焦',
+      };
+      btnPostFxTop.textContent = postfxTopLabels[cId] || '🎞️ 后处理: 自定义';
+      btnPostFxTop.classList.toggle('active-top', true);
+    }
     const btnDynTop = document.getElementById('btn-quick-dyn-light');
     if (btnDynTop) {
       const mId = state.visualCustomConfig.dynamicLightMode || 'sunset_cloud_drift';
@@ -3330,6 +3375,108 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine?.applyVisualCustomConfig(state.visualCustomConfig);
     studioEngine?.applyVisualCustomConfig(state.visualCustomConfig);
   };
+
+  // Stage 40 · 6 Master Post-Processing Combos (1-Click or Top-Bar Cycle)
+  const POSTFX_MASTER_COMBOS = {
+    sunlit_portra_bokeh: {
+      postfxCombo: 'sunlit_portra_bokeh',
+      label: '🌞 Portra 160 逆光暖金眩光 + 树影翠金散景 + 真皮次表面散射 (参考图同款)',
+      filmLutMode: 'portra_160_sun', filmLutStrength: 0.68,
+      sssBlur: 0.64, microContrast: 0.42, highlightRoll: 0.52, shadowCrush: 0.58,
+      sunFlareVeil: 0.76, dappledBokeh: 0.78, softFocus: 0.58, depthBlur: 0.48,
+      swirlyBokeh: 0.28, anamorphicFlare: 0.24, lightLeak: 0.22, wetLensDrop: 0.0,
+      tyndall: 0.74, halation: 0.54, vintagePhoto: 0.34, filmGrain: 0.07,
+      vignette: 0.44, chromatic: 0.16, lensDistortion: 0.12, contrast: 1.22, saturation: 0.96, warmth: 0.12, bloomStrength: 0.11,
+    },
+    kodak_2383_anamorphic: {
+      postfxCombo: 'kodak_2383_anamorphic',
+      label: '🎬 Kodak Vision3 2383 电影印片 + 变形宽银幕水平拉丝 + 深邃暗部',
+      filmLutMode: 'kodak_2383', filmLutStrength: 0.82,
+      sssBlur: 0.58, microContrast: 0.56, highlightRoll: 0.64, shadowCrush: 0.74,
+      sunFlareVeil: 0.52, dappledBokeh: 0.35, softFocus: 0.46, depthBlur: 0.54,
+      swirlyBokeh: 0.36, anamorphicFlare: 0.86, lightLeak: 0.18, wetLensDrop: 0.0,
+      tyndall: 0.68, halation: 0.62, vintagePhoto: 0.28, filmGrain: 0.09,
+      vignette: 0.52, chromatic: 0.22, lensDistortion: 0.18, contrast: 1.28, saturation: 0.94, warmth: 0.08, bloomStrength: 0.14,
+    },
+    cinestill_800t_halation: {
+      postfxCombo: 'cinestill_800t_halation',
+      label: '🌃 CineStill 800T 朱红卤化银光晕 + Petzval 经典旋焦散景',
+      filmLutMode: 'cinestill_800t', filmLutStrength: 0.78,
+      sssBlur: 0.62, microContrast: 0.48, highlightRoll: 0.58, shadowCrush: 0.66,
+      sunFlareVeil: 0.64, dappledBokeh: 0.42, softFocus: 0.54, depthBlur: 0.58,
+      swirlyBokeh: 0.88, anamorphicFlare: 0.54, lightLeak: 0.36, wetLensDrop: 0.0,
+      tyndall: 0.62, halation: 0.96, vintagePhoto: 0.24, filmGrain: 0.11,
+      vignette: 0.50, chromatic: 0.26, lensDistortion: 0.22, contrast: 1.24, saturation: 0.98, warmth: 0.04, bloomStrength: 0.15,
+    },
+    fuji_forest_lightleak: {
+      postfxCombo: 'fuji_forest_lightleak',
+      label: '🍃 富士森系翠金树影散景 + 胶片暗盒暖红漏光呼吸',
+      filmLutMode: 'fuji_velvia_50', filmLutStrength: 0.74,
+      sssBlur: 0.68, microContrast: 0.38, highlightRoll: 0.56, shadowCrush: 0.52,
+      sunFlareVeil: 0.84, dappledBokeh: 1.15, softFocus: 0.62, depthBlur: 0.52,
+      swirlyBokeh: 0.42, anamorphicFlare: 0.20, lightLeak: 0.78, wetLensDrop: 0.0,
+      tyndall: 0.82, halation: 0.48, vintagePhoto: 0.30, filmGrain: 0.08,
+      vignette: 0.42, chromatic: 0.18, lensDistortion: 0.14, contrast: 1.20, saturation: 1.02, warmth: 0.10, bloomStrength: 0.12,
+    },
+    ilford_rembrandt_bw: {
+      postfxCombo: 'ilford_rembrandt_bw',
+      label: '🖤 Ilford HP5 铂金银盐高反差黑白 + 极致微反差骨相雕塑',
+      filmLutMode: 'ilford_hp5_bichrome', filmLutStrength: 0.94,
+      sssBlur: 0.48, microContrast: 0.78, highlightRoll: 0.48, shadowCrush: 0.82,
+      sunFlareVeil: 0.46, dappledBokeh: 0.30, softFocus: 0.42, depthBlur: 0.46,
+      swirlyBokeh: 0.34, anamorphicFlare: 0.18, lightLeak: 0.12, wetLensDrop: 0.0,
+      tyndall: 0.64, halation: 0.36, vintagePhoto: 0.42, filmGrain: 0.14,
+      vignette: 0.58, chromatic: 0.08, lensDistortion: 0.12, contrast: 1.34, saturation: 0.22, warmth: 0.06, bloomStrength: 0.09,
+    },
+    rainy_dew_promist: {
+      postfxCombo: 'rainy_dew_promist',
+      label: '💧 雨窗呼吸水雾微折射 + 电影黑柔镜漫射 + 丁达尔斜射光束',
+      filmLutMode: 'kodak_2383', filmLutStrength: 0.64,
+      sssBlur: 0.70, microContrast: 0.36, highlightRoll: 0.60, shadowCrush: 0.54,
+      sunFlareVeil: 0.58, dappledBokeh: 0.52, softFocus: 0.68, depthBlur: 0.54,
+      swirlyBokeh: 0.32, anamorphicFlare: 0.42, lightLeak: 0.16, wetLensDrop: 0.88,
+      tyndall: 0.86, halation: 0.52, vintagePhoto: 0.26, filmGrain: 0.07,
+      vignette: 0.46, chromatic: 0.18, lensDistortion: 0.14, contrast: 1.18, saturation: 0.94, warmth: 0.04, bloomStrength: 0.13,
+    },
+  };
+
+  document.querySelectorAll('[data-postfx-combo]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-postfx-combo]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const comboId = btn.dataset.postfxCombo;
+      const cfg = POSTFX_MASTER_COMBOS[comboId];
+      if (cfg) {
+        applyVisualConfigAndSyncUI(cfg, false);
+        showToast(`🎞️ 已套用大师级后处理配方：${cfg.label}`);
+      }
+    });
+  });
+
+  document.getElementById('btn-reset-postfx')?.addEventListener('click', () => {
+    document.querySelectorAll('[data-postfx-combo]').forEach(b => {
+      b.classList.toggle('active', b.dataset.postfxCombo === 'sunlit_portra_bokeh');
+    });
+    applyVisualConfigAndSyncUI(POSTFX_MASTER_COMBOS.sunlit_portra_bokeh, false);
+    showToast('🔄 已恢复参考图默认盛夏逆光发丝+Portra160散景后处理配方');
+  });
+
+  document.getElementById('btn-quick-postfx')?.addEventListener('click', () => {
+    const keys = Object.keys(POSTFX_MASTER_COMBOS);
+    const cur = state.visualCustomConfig.postfxCombo || 'sunlit_portra_bokeh';
+    const nextKey = keys[(keys.indexOf(cur) + 1) % keys.length];
+    const cfg = POSTFX_MASTER_COMBOS[nextKey];
+    document.querySelectorAll('[data-postfx-combo]').forEach(b => {
+      b.classList.toggle('active', b.dataset.postfxCombo === nextKey);
+    });
+    applyVisualConfigAndSyncUI(cfg, false);
+    showToast(`🎞️ 已切换大师级后处理特效：${cfg.label}`);
+  });
+
+  document.getElementById('sel-film-lut-mode')?.addEventListener('change', (e) => {
+    applyVisualConfigAndSyncUI({ filmLutMode: e.target.value }, false);
+    showToast(`🎞️ 已切换电影胶片乳剂曲线：${e.target.options[e.target.selectedIndex].text}`);
+  });
 
   document.getElementById('btn-quick-chiaroscuro')?.addEventListener('click', () => {
     const cycleModes = [
@@ -3410,6 +3557,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-env-intensity', 'val-vc-env-intensity', 'envIntensity', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-tyndall', 'val-vc-tyndall', 'tyndall', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-vintage-photo', 'val-vc-vintage-photo', 'vintagePhoto', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-sss-blur', 'val-vc-sss-blur', 'sssBlur', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-micro-contrast', 'val-vc-micro-contrast', 'microContrast', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-highlight-roll', 'val-vc-highlight-roll', 'highlightRoll', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-shadow-crush', 'val-vc-shadow-crush', 'shadowCrush', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-sun-flare-veil', 'val-vc-sun-flare-veil', 'sunFlareVeil', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-dappled-bokeh', 'val-vc-dappled-bokeh', 'dappledBokeh', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-swirly-bokeh', 'val-vc-swirly-bokeh', 'swirlyBokeh', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-anamorphic-flare', 'val-vc-anamorphic-flare', 'anamorphicFlare', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-light-leak', 'val-vc-light-leak', 'lightLeak', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-wet-lens-drop', 'val-vc-wet-lens-drop', 'wetLensDrop', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-film-lut-strength', 'val-vc-film-lut-strength', 'filmLutStrength', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-film-grain', 'val-vc-film-grain', 'filmGrain', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-vignette', 'val-vc-vignette', 'vignette', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-lens-distortion', 'val-vc-lens-distortion', 'lensDistortion', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-saturation', 'val-vc-saturation', 'saturation', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', 'chiaroscuro', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', 'windowGoboStrength', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-key-azimuth', 'val-vc-key-azimuth', 'keyAzimuthDeg', v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
