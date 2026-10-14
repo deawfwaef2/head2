@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
 import { refineArtistHairCards } from './hairCardSubdivision.js';
+import { fitArtistHairOutsideScalp } from './hairScalpFit.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
@@ -744,6 +745,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       out[i3 + 2] = z;
     }
 
+    if (child.material?.userData?.builtInHair) fitArtistHairOutsideScalp(geo, rootGroup.getObjectByName('HeadSkinMesh'));
     posAttr.needsUpdate = true;
     // CRITICAL RULE: NEVER call raw geo.computeVertexNormals() on UV-split hair cards!
     // Raw computeVertexNormals() creates flat faceted triangles across UV seams (causing white triangle glare).
@@ -1359,6 +1361,7 @@ async function loadModularDonorMeshes(donorSpec) {
         const m = new THREE.Mesh(subGeo, child.material);
         m.name = `Modular_${donorSpec.style}`;
         m.userData.isModularPart = true;
+        m.userData.hairSourceStyle = donorSpec.style;
         meshes.push(m);
       }
     });
@@ -1435,9 +1438,9 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     });
 
     // Stage 43 · 4-Zone Surgical Modular Hair Assembly (Crown / Front Bangs / Side Locks / Back Attachment)
-    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle);
-    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || MODULAR_SIDELOCKS_DONORS[sideLocksStyle]?.style !== resolvedStyle);
-    const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || MODULAR_BACK_DONORS[backAttachmentStyle]?.style !== resolvedStyle);
+    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || (MODULAR_BANGS_DONORS[frontBangsStyle] && MODULAR_BANGS_DONORS[frontBangsStyle].style !== resolvedStyle));
+    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || (MODULAR_SIDELOCKS_DONORS[sideLocksStyle] && MODULAR_SIDELOCKS_DONORS[sideLocksStyle].style !== resolvedStyle));
+    const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || (MODULAR_BACK_DONORS[backAttachmentStyle] && MODULAR_BACK_DONORS[backAttachmentStyle].style !== resolvedStyle));
 
     const bangsDonor = (frontBangsStyle !== 'default' && frontBangsStyle !== 'forehead_bare' && MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle)
       ? MODULAR_BANGS_DONORS[frontBangsStyle]
@@ -1449,11 +1452,17 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       ? MODULAR_BACK_DONORS[backAttachmentStyle]
       : null;
 
+    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
+      loadModularDonorMeshes(bangsDonor),
+      loadModularDonorMeshes(sideDonor),
+      loadModularDonorMeshes(backDonor),
+    ]);
+
     if (stripFrontBangs || stripSideLocks || stripBackDrape) {
       loadedScene.traverse((child) => {
         if (!child.isMesh || !child.geometry?.attributes?.position) return;
         let geo = child.geometry;
-        if (stripFrontBangs) {
+        if (stripFrontBangs && (frontBangsStyle === 'forehead_bare' || bangsMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => z > 0.048 && y > 0.012 && y < 0.086 && Math.abs(x) < 0.056,
@@ -1461,7 +1470,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           );
           if (trimmed) geo = trimmed;
         }
-        if (stripSideLocks) {
+        if (stripSideLocks && (sideLocksStyle === 'tucked_ear' || sideMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => Math.abs(x) > 0.046 && z > 0.002 && z < 0.068 && y > -0.058 && y < 0.042,
@@ -1469,7 +1478,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           );
           if (trimmed) geo = trimmed;
         }
-        if (stripBackDrape) {
+        if (stripBackDrape && (backAttachmentStyle === 'cropped_nape' || backMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
             (x, y, z) => z < -0.018 && y < 0.025,
@@ -1481,11 +1490,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       });
     }
 
-    const [bangsMeshes, sideMeshes, backMeshes] = await Promise.all([
-      loadModularDonorMeshes(bangsDonor),
-      loadModularDonorMeshes(sideDonor),
-      loadModularDonorMeshes(backDonor),
-    ]);
     for (const m of [...bangsMeshes, ...sideMeshes, ...backMeshes]) {
       loadedScene.add(m);
     }
@@ -1524,7 +1528,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         totalVerts += g.attributes.position.count;
         totalTris += g.index ? g.index.count / 3 : g.attributes.position.count / 3;
       }
-      if (!customAsset) updateArtistHairFlow(g, resolvedStyle === 'daz_hair_asym_short');
+      if (!customAsset) updateArtistHairFlow(g, (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short');
       const configureMaterial = original => {
         // Imported GLBs retain artist PBR textures, material slots and alpha modes.
         // Never turn an imported multi-material groom into one black material.
@@ -1551,7 +1555,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         });
         material.userData.builtInHair = true;
         configureHairSheen(material, sheenIntensity);
-        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: resolvedStyle === 'daz_hair_asym_short' });
+        injectArtistHairColor(material, { ...hairShaderParams, flowHorizontal: (child.userData.hairSourceStyle || resolvedStyle) === 'daz_hair_asym_short' });
         return material;
       };
       child.material = Array.isArray(child.material)
@@ -2320,7 +2324,13 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.skinBrightness !== undefined) u.uSkinBrightness.value = Number(m.skinBrightness);
       if (m.skinRosiness !== undefined) u.uSkinRosiness.value = Number(m.skinRosiness);
       if (m.poreScale !== undefined && u.uPoreScale) u.uPoreScale.value = Number(m.poreScale);
-      if (m.poreRelief !== undefined) u.uPoreRelief.value = Number(m.poreRelief);
+      if (m.poreRelief !== undefined) {
+        // Character edits update the base, not the temporary modulated result.
+        const basePore = Number(m.poreRelief);
+        mat.userData.baseVisualPoreRelief = basePore;
+        const factor = mat.userData.visualPoreFactor;
+        u.uPoreRelief.value = factor !== undefined ? Math.min(1, basePore * factor) : basePore;
+      }
       if (m.tZoneOiliness !== undefined && u.uTZoneOiliness) u.uTZoneOiliness.value = Number(m.tZoneOiliness);
       if (m.specularLobe !== undefined && u.uSpecularLobe) u.uSpecularLobe.value = Number(m.specularLobe);
       if (m.charSssDepth !== undefined && u.uCharSssDepth) u.uCharSssDepth.value = Number(m.charSssDepth);
@@ -2334,7 +2344,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
 
       if (m.skinRoughness !== undefined) {
         const rVal = Math.max(0.18, Math.min(0.88, Number(m.skinRoughness)));
-        mat.roughness = rVal;
+        mat.roughness = THREE.MathUtils.lerp(rVal, Math.max(rVal, 0.54), mat.userData.visualMatteAmount || 0);
         mat.userData.customSkinRoughness = rVal;
       }
       if (m.normalMapStrength !== undefined && mat.normalScale) {
