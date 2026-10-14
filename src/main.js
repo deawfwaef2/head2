@@ -77,7 +77,15 @@ function restoreCollectibles() {
         if (item.customModelUrl?.startsWith('blob:')) item.customModelUrl = null;
         if (item.customHairUrl?.startsWith('blob:')) item.customHairUrl = null;
         const def = byId.get(item.id);
-        byId.set(item.id, def ? { ...def, ...item } : item);
+        if (def) {
+          byId.set(item.id, {
+            ...def,
+            ...item,
+            morphs: { ...(def.morphs || {}), ...(item.morphs || {}) },
+          });
+        } else {
+          byId.set(item.id, item);
+        }
       }
       return [...byId.values()];
     }

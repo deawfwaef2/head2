@@ -2206,9 +2206,9 @@ function buildHighResSculptedNeckCrossSectionGeometry(baseCapMesh) {
   const indices = [];
 
   for (let ir = 0; ir <= N_rad; ir++) {
-    // Non-linear radial distribution for higher density around lumens, vertebra & dermal rim
+    // Non-linear radial distribution (starts at 0.0025 to avoid polar center triangle degeneracy)
     const tRad = ir / N_rad;
-    const rho = Math.pow(tRad, 0.92);
+    const rho = ir === 0 ? 0.0 : (0.0025 + 0.9975 * Math.pow(tRad, 0.92));
 
     for (let ia = 0; ia <= N_ang; ia++) {
       const theta = (ia / N_ang) * Math.PI * 2.0;
@@ -2223,149 +2223,154 @@ function buildHighResSculptedNeckCrossSectionGeometry(baseCapMesh) {
 
       let dy = 0.0;
 
-      // 1. ANTERIOR (+Z): Deep Continuous Trachea Airway Cavity & Hyaline C-Ring (u=0.50, v=0.705)
-      const dTrach = Math.hypot((u - 0.50) / 0.072, (v - 0.705) / 0.064);
-      const angTrach = Math.atan2(v - 0.705, u - 0.50);
-      if (dTrach < 1.38) {
-        if (dTrach < 0.78) {
+      // 1. ANTERIOR (+Z): Deep Continuous Trachea Airway Cavity & Hyaline C-Ring (u=0.50, v=0.715)
+      const dTrach = Math.hypot((u - 0.50) / 0.068, (v - 0.715) / 0.060);
+      const angTrach = Math.atan2(v - 0.715, u - 0.50);
+      if (dTrach < 1.18) {
+        if (dTrach < 0.68) {
           // Deep hollow airway cavity plunging +9.8mm up into the throat + 3 internal tracheal ring ridges
-          const depthT = Math.pow(1.0 - Math.pow(dTrach / 0.78, 2.0), 1.35);
-          const ringUndulation = 0.00055 * Math.sin(depthT * Math.PI * 6.0);
+          const depthT = Math.pow(1.0 - Math.pow(dTrach / 0.68, 2.0), 1.35);
+          const ringUndulation = 0.00050 * Math.sin(depthT * Math.PI * 6.0);
           dy += 0.0098 * depthT + ringUndulation;
-        } else if (dTrach < 1.18) {
+        } else if (dTrach < 0.98) {
           // Hyaline cartilage C-ring (open posteriorly at angTrach ≈ -PI/2 toward esophagus)
-          const postGap = Math.exp(-Math.pow((angTrach + Math.PI * 0.5) / 0.52, 2.0));
-          const cRingProfile = Math.exp(-Math.pow((dTrach - 0.96) / 0.14, 2.0));
-          dy -= 0.00165 * cRingProfile * (1.0 - 0.82 * postGap);
+          const postGap = Math.exp(-Math.pow((angTrach + Math.PI * 0.5) / 0.54, 2.0));
+          const cRingProfile = Math.exp(-Math.pow((dTrach - 0.80) / 0.11, 2.0));
+          dy -= 0.00165 * cRingProfile * (1.0 - 0.88 * postGap);
         }
       }
 
-      // 2. ESOPHAGUS: Collapsed 8-fold Stellate Mucosal Pit (u=0.50, v=0.585)
-      const dEso = Math.hypot((u - 0.50) / 0.046, (v - 0.585) / 0.032);
+      // 2. ESOPHAGUS: Collapsed Stellate Mucosal Pit (u=0.50, v=0.585)
+      const dEso = Math.hypot((u - 0.50) / 0.044, (v - 0.585) / 0.028);
       const angEso = Math.atan2(v - 0.585, u - 0.50);
-      if (dEso < 1.25) {
-        if (dEso < 0.68) {
-          const stellateFolds = 0.00045 * Math.cos(angEso * 7.0) * (dEso / 0.68);
-          dy += 0.0032 * (1.0 - Math.pow(dEso / 0.68, 2.0)) + stellateFolds;
+      if (dEso < 1.15) {
+        if (dEso < 0.62) {
+          const stellateFolds = 0.00040 * Math.cos(angEso * 6.0) * (dEso / 0.62);
+          dy += 0.0030 * (1.0 - Math.pow(dEso / 0.62, 2.0)) + stellateFolds;
         } else {
-          dy -= 0.00085 * Math.exp(-Math.pow((dEso - 0.88) / 0.20, 2.0));
+          dy -= 0.00080 * Math.exp(-Math.pow((dEso - 0.82) / 0.16, 2.0));
         }
       }
 
-      // 3. BILATERAL THYROID GLAND LOBES: Lobulated Endocrine Relief (u=0.50±0.106, v=0.675)
+      // 3. BILATERAL THYROID GLAND LOBES: Lobulated Endocrine Relief (u=0.50±0.094, v=0.688)
       for (const side of [-1, 1]) {
-        const dThy = Math.hypot((u - (0.50 + side * 0.106)) / 0.048, (v - 0.675) / 0.068);
-        if (dThy < 1.05) {
-          const lobuleNoise = 0.00032 * Math.sin(u * 190.0) * Math.cos(v * 190.0);
-          dy -= (0.00110 * Math.cos(dThy * Math.PI * 0.48) + lobuleNoise);
+        const dThy = Math.hypot((u - (0.50 + side * 0.094)) / 0.045, (v - 0.688) / 0.064);
+        if (dThy < 1.02) {
+          const lobuleNoise = 0.00028 * Math.sin(u * 190.0) * Math.cos(v * 190.0);
+          dy -= (0.00105 * Math.cos(dThy * Math.PI * 0.48) + lobuleNoise);
         }
       }
 
-      // 4. POSTERIOR (-Z): C4 Cervical Vertebra Cortical Ring & Recessed Trabecular Marrow (u=0.50, v=0.425)
-      const dVert = Math.hypot((u - 0.50) / 0.088, (v - 0.425) / 0.068);
-      if (dVert < 1.18) {
-        if (dVert > 0.66) {
-          // Hard cortical bone outer ring protruding -2.25mm downward
-          dy -= 0.00225 * Math.exp(-Math.pow((dVert - 0.86) / 0.18, 2.0));
+      // 4. POSTERIOR (-Z): C4 Cervical Vertebra Cortical Ring & Recessed Trabecular Marrow (u=0.50, v=0.442)
+      const dVert = Math.hypot((u - 0.50) / 0.084, (v - 0.442) / 0.058);
+      if (dVert < 1.14) {
+        if (dVert > 0.64) {
+          // Hard cortical bone outer ring protruding -2.2mm downward
+          dy -= 0.00220 * Math.exp(-Math.pow((dVert - 0.84) / 0.16, 2.0));
         } else {
           // Recessed cancellous red-marrow core with fine honeycomb bony spicules
-          const trabSpicules = 0.00045 * Math.sin(u * 280.0) * Math.cos(v * 280.0);
-          dy -= (0.00075 - trabSpicules);
+          const trabSpicules = 0.00042 * Math.sin(u * 280.0) * Math.cos(v * 280.0);
+          dy -= (0.00070 - trabSpicules);
         }
       }
 
-      // Bilateral Transverse Processes & Foramina Transversaria (u=0.50±0.118, v=0.430)
+      // Bilateral Transverse Processes & Foramina Transversaria (u=0.50±0.106, v=0.422)
       for (const side of [-1, 1]) {
-        const dTp = Math.hypot((u - (0.50 + side * 0.118)) / 0.046, (v - 0.430) / 0.032);
-        if (dTp < 1.12) {
-          if (dTp < 0.44) {
-            // Foramen transversarium & vertebral artery lumen
-            dy += 0.0018 * (1.0 - dTp / 0.44);
-          } else {
-            dy -= 0.00165 * Math.exp(-Math.pow((dTp - 0.76) / 0.22, 2.0));
-          }
+        const dTp = Math.hypot((u - (0.50 + side * 0.106)) / 0.050, (v - 0.422) / 0.033);
+        const dFt = Math.hypot((u - (0.50 + side * 0.114)) / 0.019, (v - 0.422) / 0.015);
+        if (dFt < 1.0) {
+          dy += 0.0022 * (1.0 - dFt);
+        } else if (dTp < 1.08) {
+          dy -= 0.00160 * Math.exp(-Math.pow((dTp - 0.68) / 0.24, 2.0));
         }
       }
 
-      // Posterior Vertebral Arch (Laminae) & Bifid Spinous Process (v in [0.185, 0.365])
-      if (v > 0.175 && v < 0.368) {
-        const tSp = (0.368 - v) / (0.368 - 0.175);
-        const targetDu = tSp < 0.68 ? 0.064 * (1.0 - tSp / 0.68) : 0.022 * ((tSp - 0.68) / 0.32);
+      // Posterior Vertebral Arch (Laminae) & Bifid Spinous Process (v in [0.195, 0.365])
+      if (v > 0.190 && v < 0.368) {
+        const tSp = (0.368 - v) / (0.368 - 0.190);
+        const targetDu = tSp < 0.58 ? 0.062 * (1.0 - tSp / 0.58) : 0.014 * ((tSp - 0.58) / 0.42);
         const dArch = Math.abs(Math.abs(u - 0.50) - targetDu);
         if (dArch < 0.024) {
-          dy -= 0.00185 * Math.exp(-Math.pow(dArch / 0.013, 2.0));
+          dy -= 0.00180 * Math.exp(-Math.pow(dArch / 0.013, 2.0));
         }
       }
 
-      // 5. SPINAL CANAL & SEVERED SPINAL CORD STUMP (u=0.50, v=0.335)
-      const dCord = Math.hypot((u - 0.50) / 0.056, (v - 0.335) / 0.044);
-      if (dCord < 1.15) {
+      // 5. SPINAL CANAL & SEVERED SPINAL CORD STUMP (u=0.50, v=0.332)
+      const dCord = Math.hypot((u - 0.50) / 0.052, (v - 0.332) / 0.041);
+      if (dCord < 1.12) {
         if (dCord < 0.68) {
-          // Protruding creamy-white spinal cord stump with subtle central sulci
-          dy -= 0.00195 * Math.cos(dCord * Math.PI * 0.62);
+          dy -= 0.00190 * Math.cos(dCord * Math.PI * 0.62);
         } else {
-          // Recessed subdural / epidural space around the cord
-          dy += 0.00135 * Math.exp(-Math.pow((dCord - 0.88) / 0.16, 2.0));
+          dy += 0.00140 * Math.exp(-Math.pow((dCord - 0.86) / 0.15, 2.0));
         }
       }
 
       // 6. BILATERAL CAROTID SHEATH VESSELS: Common Carotid Artery & Internal Jugular Vein
       for (const side of [-1, 1]) {
-        // Common Carotid Artery (u=0.50±0.162, v=0.565): thick elastic wall + recessed lumen
-        const dCa = Math.hypot(u - (0.50 + side * 0.162), v - 0.565) / 0.032;
-        if (dCa < 1.25) {
+        // Common Carotid Artery (u=0.50±0.158, v=0.562): thick elastic wall + recessed lumen
+        const dCa = Math.hypot((u - (0.50 + side * 0.158)) / 0.027, (v - 0.562) / 0.025);
+        if (dCa < 1.20) {
           if (dCa < 0.56) {
             dy += 0.0028 * (1.0 - Math.pow(dCa / 0.56, 2.0));
           } else {
-            dy -= 0.00175 * Math.exp(-Math.pow((dCa - 0.80) / 0.20, 2.0));
+            dy -= 0.00165 * Math.exp(-Math.pow((dCa - 0.78) / 0.18, 2.0));
           }
         }
-        // Internal Jugular Vein (u=0.50±0.228, v=0.555): recessed venous lumen + thin wall
-        const dIjv = Math.hypot((u - (0.50 + side * 0.228)) / 0.038, (v - 0.555) / 0.030);
-        if (dIjv < 1.18) {
-          if (dIjv < 0.72) {
-            dy += 0.0022 * (1.0 - Math.pow(dIjv / 0.72, 2.0));
+        // Internal Jugular Vein (u=0.50±0.212, v=0.548): collapsed venous slit + thin wall
+        const jx = (u - (0.50 + side * 0.212)) * Math.cos(0.45 * side) + (v - 0.548) * Math.sin(0.45 * side);
+        const jy = -(u - (0.50 + side * 0.212)) * Math.sin(0.45 * side) + (v - 0.548) * Math.cos(0.45 * side);
+        const dIjv = Math.hypot(jx / 0.033, jy / 0.017);
+        if (dIjv < 1.15) {
+          if (dIjv < 0.68) {
+            dy += 0.0022 * (1.0 - Math.pow(dIjv / 0.68, 2.0));
           } else {
-            dy -= 0.00095 * Math.exp(-Math.pow((dIjv - 0.88) / 0.18, 2.0));
+            dy -= 0.00090 * Math.exp(-Math.pow((dIjv - 0.86) / 0.16, 2.0));
           }
         }
       }
 
-      // 7. 16 RETRACTED CERVICAL MUSCLE COMPARTMENTS & INTERMUSCULAR FASCIAL SULCI
-      const muscleCenters = [
-        [0.275, 0.635, 0.105, 0.068], // Sternocleidomastoid (胸锁乳突肌)
-        [0.095, 0.795, 0.064, 0.038], // Infrahyoid Strap (舌骨下肌群)
-        [0.200, 0.745, 0.048, 0.032], // Omohyoid (肩胛舌骨肌)
-        [0.075, 0.525, 0.048, 0.030], // Longus Colli (颈长肌)
-        [0.240, 0.440, 0.078, 0.056], // Scalenes (斜角肌)
-        [0.280, 0.310, 0.088, 0.056], // Levator Scapulae & Splenius (肩胛提肌/头夹肌)
-        [0.115, 0.255, 0.074, 0.046], // Semispinalis (头半棘肌)
-        [0.175, 0.165, 0.098, 0.044], // Trapezius (斜方肌)
+      // 7. TIGHTLY-PACKED ROTATED CERVICAL MUSCLE BELLIES & INTERMUSCULAR SEPTA
+      const muscleBellies = [
+        [0.255, 0.665, 0.135, 0.088, 0.68],
+        [0.095, 0.825, 0.092, 0.052, 0.16],
+        [0.205, 0.775, 0.078, 0.048, 0.44],
+        [0.085, 0.535, 0.076, 0.052, -0.15],
+        [0.245, 0.465, 0.108, 0.078, -0.32],
+        [0.295, 0.325, 0.118, 0.084, -0.72],
+        [0.125, 0.255, 0.098, 0.074, -0.38],
+        [0.195, 0.145, 0.142, 0.062, -0.22],
       ];
-      let maxMuscleBelly = 0.0;
+      let minM = 10.0;
+      let secondM = 10.0;
       for (const side of [-1, 1]) {
-        for (const [mcx, mcy, mrx, mry] of muscleCenters) {
-          const dm = Math.hypot((u - (0.50 + side * mcx)) / mrx, (v - mcy) / mry);
-          if (dm < 1.15) {
-            const bellyVal = Math.max(0.0, Math.cos(dm * Math.PI * 0.46));
-            if (bellyVal > maxMuscleBelly) maxMuscleBelly = bellyVal;
+        for (const [mcx, mcy, mrx, mry, mang] of muscleBellies) {
+          const rot = -side * mang;
+          const dx = u - (0.50 + side * mcx);
+          const dz = v - mcy;
+          const lx = (dx * Math.cos(rot) + dz * Math.sin(rot)) / mrx;
+          const lz = (-dx * Math.sin(rot) + dz * Math.cos(rot)) / mry;
+          const dm = Math.hypot(lx, lz);
+          if (dm < minM) {
+            secondM = minM;
+            minM = dm;
+          } else if (dm < secondM) {
+            secondM = dm;
           }
         }
       }
-      if (maxMuscleBelly > 0.01) {
-        const myofibrilWave = 0.00028 * Math.sin(u * 240.0 + v * 160.0) * Math.cos(u * 180.0 - v * 220.0);
-        dy -= (0.00145 * maxMuscleBelly + myofibrilWave * maxMuscleBelly);
-      } else if (rho > 0.28 && rho < 0.88 && dTrach > 1.1 && dVert > 1.05 && dCord > 1.0) {
-        // Recessed intermuscular fascial sulci where dark venous blood pools
-        dy += 0.00075;
+      if (minM < 1.15 && dTrach > 1.05 && dVert > 1.02 && dCord > 0.98) {
+        const bellyVal = Math.max(0.0, Math.cos(Math.min(1.0, minM) * Math.PI * 0.46));
+        const septumCleft = Math.exp(-Math.pow((secondM - minM) / 0.085, 2.0));
+        const myofibrilWave = 0.00024 * Math.sin(u * 230.0 + v * 150.0) * Math.cos(u * 170.0 - v * 210.0);
+        dy -= (0.00135 * bellyVal * (1.0 - 0.65 * septumCleft) + myofibrilWave * bellyVal);
+        dy += 0.00065 * septumCleft;
       }
 
-      // 8. OUTER SUBCUTANEOUS ADIPOSE RING & BEVELED RAGGED DERMIS CUT LIP (rho in [0.88, 1.0])
-      if (rho > 0.88) {
-        const fatWave = 0.00030 * Math.sin(theta * 28.0) * Math.exp(-Math.pow((rho - 0.925) / 0.025, 2.0));
-        const rimWave = 0.00038 * Math.sin(theta * 7.0 + 0.5) + 0.00024 * Math.cos(theta * 15.0 - 1.2);
-        const dermisBevel = -0.00125 * Math.exp(-Math.pow((1.0 - rho) / 0.038, 2.0));
-        dy += dermisBevel - fatWave + rimWave * smoothstepJS(0.92, 1.0, rho);
+      // 8. OUTER SUBCUTANEOUS LAYER & BEVELED RAGGED DERMIS CUT LIP (rho in [0.90, 1.0])
+      if (rho > 0.90) {
+        const rimWave = 0.00032 * Math.sin(theta * 7.0 + 0.5) + 0.00020 * Math.cos(theta * 13.0 - 1.2);
+        const dermisBevel = -0.00115 * Math.exp(-Math.pow((1.0 - rho) / 0.036, 2.0));
+        dy += dermisBevel + rimWave * smoothstepJS(0.93, 1.0, rho);
       }
 
       const idx = ir * stride + ia;
@@ -2423,6 +2428,18 @@ function smoothstepJS(edge0, edge1, x) {
   return t * t * (3.0 - 2.0 * t);
 }
 
+function computeCharacterFluidSeed(config = {}) {
+  if (config.charFluidSeed !== undefined) return Number(config.charFluidSeed);
+  if (config.materials?.charFluidSeed !== undefined) return Number(config.materials.charFluidSeed);
+  const str = String(config.id || config.name || config.basePreset || config.faceArchetype || 'StudioDraft');
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return 1.13 + ((h >>> 0) % 8999) / 1000.0;
+}
+
 export async function buildCollectibleHeadNode(config = {}) {
   const rootGroup = new THREE.Group();
   rootGroup.name = `Collectible_${config.id || 'StudioDraft'}`;
@@ -2458,11 +2475,14 @@ export async function buildCollectibleHeadNode(config = {}) {
   const wetness = Number(config.anatomyOptions?.wetness ?? materials.crossSectionWetness ?? 0.92);
   const vascularContrast = Number(config.anatomyOptions?.vascularContrast ?? materials.crossSectionVeinContrast ?? 1.25);
   const showLabels = Boolean(config.anatomyOptions?.showLabels);
+  const charFluidSeed = computeCharacterFluidSeed(config);
+  rootGroup.userData.charFluidSeed = charFluidSeed;
 
   const { colorTex, bumpTex } = createAnatomyTextures({
     skinColor: skinToneHex,
     vascularContrast,
     dermisRimScale: 1.0,
+    anatomySeed: charFluidSeed,
     showLabels,
   });
 
@@ -2582,6 +2602,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         tearType: Number(config.tearType ?? materials.tearType ?? morphs.tearType ?? 0.0),
         mouthBloodStrength: Number(config.mouthBloodStrength ?? materials.mouthBloodStrength ?? morphs.mouthBloodStrength ?? 0.0),
         faceSplatterStrength: Number(config.faceSplatterStrength ?? materials.faceSplatterStrength ?? morphs.faceSplatterStrength ?? 0.0),
+        charFluidSeed,
       });
       child.material = skinMaterial;
     } else if (matName === 'NeckCrossSection' || child.name === 'NeckCrossSection') {
@@ -2600,18 +2621,15 @@ export async function buildCollectibleHeadNode(config = {}) {
 
       const crossMat = new THREE.MeshPhysicalMaterial({
         map: colorTex,
-        emissiveMap: colorTex,
-        emissive: new THREE.Color('#ffffff'),
-        emissiveIntensity: 0.05,
         bumpMap: bumpTex,
-        bumpScale: 0.016,
-        roughness: Math.max(0.10, 0.48 - wetness * 0.36),
+        bumpScale: 0.014,
+        roughness: 0.24,
         metalness: 0.0,
-        clearcoat: 0.94,
-        clearcoatRoughness: 0.06,
-        ior: 1.47,
-        specularIntensity: 0.88,
-        envMapIntensity: 0.48,
+        clearcoat: 0.0,
+        clearcoatRoughness: 0.20,
+        ior: 1.44,
+        specularIntensity: 0.72,
+        envMapIntensity: 0.36,
         side: THREE.DoubleSide,
       });
       injectForensicCrossSectionShader(crossMat, wetness);
@@ -2984,6 +3002,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.tearType !== undefined && u.uTearType) u.uTearType.value = Number(m.tearType);
       if (m.mouthBloodStrength !== undefined && u.uMouthBloodStrength) u.uMouthBloodStrength.value = Number(m.mouthBloodStrength);
       if (m.faceSplatterStrength !== undefined && u.uFaceSplatterStrength) u.uFaceSplatterStrength.value = Number(m.faceSplatterStrength);
+      if (m.charFluidSeed !== undefined && u.uCharFluidSeed) u.uCharFluidSeed.value = Number(m.charFluidSeed);
 
       const projStr = m.photoProjStrength ?? m.photoBlend;
       if (projStr !== undefined) {
@@ -3071,11 +3090,11 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (m.browOpacity !== undefined) mat.opacity = Math.max(0.15, Math.min(1.0, Number(m.browOpacity)));
     }
 
-    // 4. NeckCrossSectionCap: Live Wetness
+    // 4. NeckCrossSectionCap: Live Wetness (spatially-varying roughness driven by injectForensicCrossSectionShader)
     if (child.name === 'NeckCrossSectionCap' && m.wetness !== undefined) {
       const w = Number(m.wetness);
-      mat.roughness = Math.max(0.10, 0.48 - w * 0.36);
-      mat.clearcoat = 0.72 + w * 0.25;
+      mat.roughness = 0.24;
+      mat.clearcoat = 0.0;
       if (mat.userData?.uCrossWetness) mat.userData.uCrossWetness.value = w;
     }
   });

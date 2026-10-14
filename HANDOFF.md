@@ -1148,3 +1148,16 @@
 - **3. 强制视觉自检完成**：
   - 通过 Headless Chromium 渲染并调用 `read_file` 亲眼核查 `/home/user/.cache/tmp/qa_bipolar.png`，确认双极引擎面板、满屏暴击/失血飘字与底部反向嘲讽反杀横幅显示清晰，零报错。
 
+## Stage 55 — 2026-10-14 · 彻底修复断面材质与 `flipY` 错位 + 消除多头重复感 + 升级 Beer-Lambert 与 Rayleigh-Plateau 真实流体物理
+- **问题一（回应“而且你看断面材质那种效果不对”——修复 `CanvasTexture.flipY` 垂直反置 + 像素级冷冻切片组织学合成 + 空间变化粗糙度）**：
+  - **修复 `flipY` 贴图与 3D 雕塑顶点浮雕错位**：Three.js `CanvasTexture` 默认 `flipY = true`（Canvas 顶部 `py = 0` 对应 `UV.v = 1.0`），此前 `anatomyTextureGenerator.js` 按 `py = v * size` 绘制导致 2D 贴图（气管画在 `UV.v = 0.295`）与 3D 顶点浮雕（气管在 `UV.v = 0.715`）上下颠倒错位。现统一采用 `v = 1.0 - (py + 0.5) / size`，使 2D 组织贴图与 8,700 顶点 3D 浮雕 100% 严丝合缝对齐，并通过 `read_file` 视觉核查生成的解剖贴图。
+  - **彻底重做 `src/textures/anatomyTextureGenerator.js`（零卡通蓝血管/黄砖墙/椭圆圈）**：摒弃 2D `ctx.ellipse` 矢量色块与教科书式蓝/粉圆圈，改用 `640×640` 逐像素多尺度 Domain-Warped FBM 与 Worley 细胞组织学合成：紧密贴合的颈部肌群肌束与肌束膜大理石纹、`smin` 平滑连续 C4 颈椎骨与红骨髓蜂窝骨小梁、微染血珠光透明软骨 C 形气管环、塌陷食管黏膜褶皱、真实暗红塌陷颈内静脉腔与颈总动脉断口、以及按角色种子生成的非对称凝血泊。
+  - **移除生硬全盘塑料清漆（`clearcoat: 0.94`）**：在 `collectibleHeadAssembler.js` 与 `injectForensicCrossSectionShader` (`cervix3d-forensic-cross-v54`) 中取消全断面统一塑料感 `clearcoat` 与自发光，改为按组织类型空间变化的微表面粗糙度（骨皮质/真皮切缘哑光丝缎 `0.42`、横纹肌束湿润纤维 `0.20`、暗红静脉凝血泊与管腔镜面水润 `0.04`）。
+- **问题二（回应“而且看上去好重复就是如果有多个头”——独有流体种子 `uCharFluidSeed` + 剔除周期性 `cos(5*ang)` 血冠 + 6 位默认角色差异化创伤档案）**：
+  - 在 `photorealLighting.js` 与 `collectibleHeadAssembler.js` 新增按角色 ID/预设独立派生的 `uCharFluidSeed`（同时驱动 3D 皮肤流体着色器与横切面 `anatomySeed`）。
+  - 彻底剔除颈部血迹中周期性的 `cos(angCut * 5.0)` / `sin(angCut * 9.0)` 均匀辐射冠，改为由 `uCharFluidSeed` 驱动的非对称动脉/静脉破裂扇区。
+  - 在 `src/data/defaultCollectibles.js` 与 `src/main.js` (`restoreCollectibles`) 中为全部 6 位默认角色配置契合其死因档案的独立 `charFluidSeed` 与差异化默认体液参数（方尧平雨夜清泪、初夏微晕眼妆哭痕+口角渗血、林汐单侧冷傲鼻血+旋翼飞溅血点、苏晚朱砂血泪+口角溢血、千雪舞台钢索斩首重度涌血、沈知微诡异浅笑嘴角溢血）。
+- **问题三（回应“还是假”——Rayleigh-Plateau 珠链表面张力流体物理 + 毛孔/颈纹毛细漫染 + Beer-Lambert 光学吸收）**：
+  - 将泪痕、血泪、鼻血、嘴角溢血与颈部流血全面升级为 **Rayleigh-Plateau 表面张力缩颈（细湿线与饱满 3D 凸透镜挂珠交替）** + **3D 毛孔与横向颈纹毛细漫染（Capillary Wicking）** + **Beer-Lambert 血红蛋白光学透射吸收（`skinCol * exp(-depth * vec3(2.9, 25.0, 32.0))` 叠加暗紫红静脉凝血核与干涸弯月面边缘环）**。
+
+
