@@ -546,14 +546,15 @@ export function createSkinMicroMaps(size = 1024) {
   const roughTex = new THREE.CanvasTexture(roughCanvas);
   roughTex.wrapS = THREE.RepeatWrapping;
   roughTex.wrapT = THREE.RepeatWrapping;
-  roughTex.repeat.set(3.5, 3.5);
+  // Face UV island occupies ~16% of MakeHuman's body UV; repeat(38, 38) yields ~6x 1024px tiles (~6K pore density) across the face!
+  roughTex.repeat.set(38, 38);
   roughTex.anisotropy = 16;
   roughTex.needsUpdate = true;
 
   const bumpTex = new THREE.CanvasTexture(bumpCanvas);
   bumpTex.wrapS = THREE.RepeatWrapping;
   bumpTex.wrapT = THREE.RepeatWrapping;
-  bumpTex.repeat.set(3.5, 3.5);
+  bumpTex.repeat.set(38, 38);
   bumpTex.anisotropy = 16;
   bumpTex.needsUpdate = true;
 
@@ -569,22 +570,57 @@ export function samplePhotoColors(imgElement) {
   ctx.drawImage(imgElement, 0, 0, 128, 128);
   const data = ctx.getImageData(0, 0, 128, 128).data;
 
+  // 1. Sample mid-cheek skin tone
   let r = 0, g = 0, b = 0, n = 0;
-  for (let y = 48; y < 78; y++) {
-    for (let x = 44; x < 84; x++) {
+  for (let y = 48; y < 76; y++) {
+    for (let x = 42; x < 86; x++) {
       const idx = (y * 128 + x) * 4;
       r += data[idx]; g += data[idx + 1]; b += data[idx + 2]; n++;
     }
   }
-  r /= n; g /= n; b /= n;
-  const sr = Math.round(Math.min(250, Math.max(222, r * 0.45 + 246 * 0.55)));
-  const sg = Math.round(Math.min(228, Math.max(190, g * 0.45 + 216 * 0.55)));
-  const sb = Math.round(Math.min(218, Math.max(176, b * 0.45 + 204 * 0.55)));
-  const toHex = (rv, gv, bv) => '#' + [rv, gv, bv].map(v => v.toString(16).padStart(2, '0')).join('');
+  r /= Math.max(1, n); g /= Math.max(1, n); b /= Math.max(1, n);
+  const sr = Math.round(Math.min(252, Math.max(210, r * 0.58 + 244 * 0.42)));
+  const sg = Math.round(Math.min(234, Math.max(182, g * 0.58 + 218 * 0.42)));
+  const sb = Math.round(Math.min(226, Math.max(170, b * 0.58 + 208 * 0.42)));
+  const toHex = (rv, gv, bv) => '#' + [rv, gv, bv].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+
+  // 2. Sample lip vermilion region (lower-middle face)
+  let lr = 0, lg = 0, lb = 0, ln = 0;
+  for (let y = 78; y < 96; y++) {
+    for (let x = 50; x < 78; x++) {
+      const idx = (y * 128 + x) * 4;
+      const pr = data[idx], pg = data[idx + 1], pb = data[idx + 2];
+      // Weight pixels with higher redness (vermilion)
+      const redness = Math.max(0.2, (pr - pg * 0.65 - pb * 0.35) / 60);
+      lr += pr * redness; lg += pg * redness; lb += pb * redness; ln += redness;
+    }
+  }
+  lr /= Math.max(1, ln); lg /= Math.max(1, ln); lb /= Math.max(1, ln);
+  const lipHex = toHex(
+    Math.min(228, Math.max(158, lr * 0.65 + 196 * 0.35)),
+    Math.min(132, Math.max(68, lg * 0.55 + 88 * 0.45)),
+    Math.min(144, Math.max(76, lb * 0.55 + 98 * 0.45))
+  );
+
+  // 3. Sample crown hair color
+  let hr = 0, hg = 0, hb = 0, hn = 0;
+  for (let y = 8; y < 28; y++) {
+    for (let x = 36; x < 92; x++) {
+      const idx = (y * 128 + x) * 4;
+      hr += data[idx]; hg += data[idx + 1]; hb += data[idx + 2]; hn++;
+    }
+  }
+  hr /= Math.max(1, hn); hg /= Math.max(1, hn); hb /= Math.max(1, hn);
+  const hairHex = toHex(
+    Math.min(72, Math.max(16, hr * 0.35)),
+    Math.min(62, Math.max(15, hg * 0.33)),
+    Math.min(68, Math.max(18, hb * 0.36))
+  );
 
   return {
     skinTone: toHex(sr, sg, sb),
-    lipColor: '#d45868',
+    lipColor: lipHex,
+    hairColor: hairHex,
     irisColor: '#362015'
   };
 }

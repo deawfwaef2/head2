@@ -108,15 +108,16 @@
     </div>
   </div>
 
-  <!-- Stage 28: Floating 3D Structure / Shelf / Prop Action HUD (Appears when clicking/selecting any 3D structure) -->
-  <div id="structure-floating-hud" class="hidden" style="position:fixed;z-index:10020;transform:translate(-50%,-100%);background:rgba(15,12,10,0.92);border:1px solid rgba(217,179,130,0.55);border-radius:10px;padding:7px 11px;box-shadow:0 10px 28px rgba(0,0,0,0.68);backdrop-filter:blur(10px);color:#f5ebd9;font-size:12px;pointer-events:auto;white-space:nowrap;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <strong id="struct-hud-title" style="color:#fde68a;font-size:12px;">🧪 维多利亚玻璃钟罩座</strong>
-      <button type="button" id="btn-struct-hud-eject" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(56,189,248,0.22);border-color:rgba(56,189,248,0.55);color:#bae6fd;display:none;">📤 取出头颅</button>
-      <button type="button" id="btn-struct-hud-delete" class="chip-btn" style="padding:2px 8px;font-size:11px;background:rgba(244,63,94,0.25);border-color:rgba(244,63,94,0.6);color:#fecdd3;">🗑️ 删除此建筑/摆件</button>
+  <!-- Stage 28/36: Floating 3D Structure / Shelf / Prop Action HUD (Never overlaps Studio window; includes close button) -->
+  <div id="structure-floating-hud" class="hidden" style="position:fixed;z-index:35;transform:translate(-50%,-100%);background:rgba(15,20,32,0.92);border:1px solid rgba(56,189,248,0.45);border-radius:10px;padding:6px 10px;box-shadow:0 8px 24px rgba(0,0,0,0.65);backdrop-filter:blur(10px);color:#f1f5f9;font-size:11.5px;pointer-events:auto;white-space:nowrap;">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <strong id="struct-hud-title" style="color:#7dd3fc;font-size:11.5px;">🧪 维多利亚玻璃钟罩座</strong>
+      <button type="button" id="btn-struct-hud-eject" class="chip-btn" style="padding:2px 7px;font-size:10.5px;background:rgba(56,189,248,0.22);border-color:rgba(56,189,248,0.55);color:#bae6fd;display:none;">📤 取出头颅</button>
+      <button type="button" id="btn-struct-hud-delete" class="chip-btn" style="padding:2px 7px;font-size:10.5px;background:rgba(244,63,94,0.25);border-color:rgba(244,63,94,0.6);color:#fecdd3;">🗑️ 删除</button>
+      <button type="button" id="btn-struct-hud-close" class="chip-btn" style="padding:1px 6px;font-size:10.5px;background:rgba(148,163,184,0.18);border-color:rgba(148,163,184,0.35);color:#cbd5e1;" title="关闭悬浮条">✕</button>
     </div>
-    <div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;opacity:0.88;">
-      💡 左键按住直接平滑拖动移位（Alt+左键单独拎出人头）· 右键单击或按 Delete 键秒删
+    <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
+      💡 左键拖动移位 · 滚轮调远近景深 · 右键或 Delete 秒删
     </div>
   </div>
 
@@ -847,11 +848,22 @@
             </div>
           </div>
 
-          <!-- Right Column: Daz Morph Sliders, Forensic Post-Mortem Expressions, Realistic Hair & Dossier Save -->
+          <!-- Right Column: Categorized 6-Tab High-Clarity Character, Shape, Color, Texture & Hair Workbench -->
           <div class="studio-col studio-col-right">
-            <!-- A. Base, Face Archetype, Eyebrow Style, Forensic Dead Expressions & Facial Morphs -->
-            <div class="card-block">
-              <h3>👩 步骤 2：中韩青年女头型流派、8款眉形、尸相与骨相精调</h3>
+            <!-- Stage 36: Clean Categorized Sub-Tab Bar (solves dense UI wall & obstruction) -->
+            <div class="studio-subtab-bar" id="studio-subtab-bar">
+              <button type="button" class="studio-subtab-btn active" data-studio-subtab="base">👤 基底/头模</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="shape">📐 形状微调</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="color">🎨 颜色微调</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="texture">🖼️ 贴图/肤质</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="hair">💇‍♀️ 发型设计</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="save">🩸 断面/保存</button>
+              <button type="button" class="studio-subtab-btn expand-all-btn" id="btn-studio-expand-all" title="展开或折叠全部6个调参模块">📑 全部展开</button>
+            </div>
+
+            <!-- SUB-TAB 1: BASE PRESETS, SINGLE-MODEL ARCHETYPES, MULTI-HEAD BLENDER & FORENSIC EXPRESSIONS -->
+            <div class="card-block studio-subtab-panel active" data-subtab-panel="base">
+              <h3>👤 模块 1：角色基底 · 10款纯净单头模 · 多头混合 · 尸相表情</h3>
               <div class="control-group compact">
                 <div class="field-row">
                   <label>中韩青年女六款角色基底 (独立皮肤贴图 + 专属妆容 + 美人痣)</label>
@@ -866,33 +878,7 @@
                 </div>
 
                 <div class="field-row">
-                  <label>🎨 8款无皱纹年轻亚洲/中式/韩系/混血少女真摄影皮肤材质 (可独立自由切换)</label>
-                  <select id="sel-skin-variant">
-                    <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 · 19岁女状元方尧平右颊三颗痣原生肌</option>
-                    <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 · 零皱纹清透无瑕少女原皮与花瓣唇</option>
-                    <option value="kr_dewy_peach">🍑 韩系水光蜜桃肌 · 初夏同款粉白奶油肌+卧蚕高光+蜜桃咬唇</option>
-                    <option value="kr_chaebol_cool">✨ 韩系财阀千金冷白肌 · 林汐同款清冷梅子唇+左眼尾泪痣</option>
-                    <option value="cn_jiangnan_jade">🌙 江南古典羊脂玉肌 · 苏晚同款远山黛+眼下泪痣+古典点绛唇</option>
-                    <option value="kr_firstlove_camellia">💖 韩系初恋雪瓷肌 · 千雪同款舞台桃花腮红+鼻梁痣+山茶红唇</option>
-                    <option value="cn_intellectual_olive">❄️ 中式清冷高智象牙肌 · 沈知微同款立体眼窝修容+左颊痣+干枯玫瑰唇</option>
-                    <option value="eurasian_velvet_rose">🌍 欧亚轻混血丝绒奶油肌 · 东西方融合细腻奶油肌与裸色玫瑰唇</option>
-                  </select>
-                </div>
-
-                <div class="preset-photo-row" id="skin-variant-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
-                  <span>皮肤秒切:</span>
-                  <button type="button" class="chip-btn" data-skin-var="cn_porcelain_ivory">🌸 中式冷白原皮</button>
-                  <button type="button" class="chip-btn active" data-skin-var="cn_scholar_natural">📖 状元三痣暖玉肌</button>
-                  <button type="button" class="chip-btn" data-skin-var="kr_dewy_peach">🍑 韩系水光蜜桃肌</button>
-                  <button type="button" class="chip-btn" data-skin-var="kr_chaebol_cool">✨ 财阀千金梅子肌</button>
-                  <button type="button" class="chip-btn" data-skin-var="cn_jiangnan_jade">🌙 江南羊脂点绛肌</button>
-                  <button type="button" class="chip-btn" data-skin-var="kr_firstlove_camellia">💖 初恋雪瓷山茶肌</button>
-                  <button type="button" class="chip-btn" data-skin-var="cn_intellectual_olive">❄️ 高智干枯玫瑰肌</button>
-                  <button type="button" class="chip-btn" data-skin-var="eurasian_velvet_rose">🌍 混血丝绒奶油肌</button>
-                </div>
-
-                <div class="field-row">
-                  <label>🍑 10款中式/韩风/古典/幼态/混血预设头模 (默认纯净单脸不混合，下方滑杆可手动自由混合)</label>
+                  <label>🍑 10款中式/韩风/古典/幼态/混血预设头模 (单通道纯净独立头模，切换立竿见影)</label>
                   <select id="sel-face-archetype">
                     <option value="cn_oval_scholar">📖 中式书卷清秀鹅蛋脸 (方尧平 · 纯净独立单头模)</option>
                     <option value="cn_round_babyface">🍑 中韩甜妹胶原娃娃脸 (初夏 · 纯净独立单头模)</option>
@@ -923,7 +909,7 @@
 
                 <div style="background:rgba(15,23,42,0.52);border:1px solid rgba(148,163,184,0.18);border-radius:8px;padding:8px;margin-bottom:8px;">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                    <span style="font-size:11.5px;color:#38bdf8;font-weight:600;">🧬 7通道多头模自由混合器 (默认全0%不混合 · 仅手动拉动时叠加)：</span>
+                    <span style="font-size:11.5px;color:#38bdf8;font-weight:600;">🧬 7通道多头模自由混合器 (可自由叠加多种脸型)：</span>
                     <button type="button" id="btn-studio-reset-blend" class="chip-btn" style="font-size:10.5px;padding:2px 7px;color:#7dd3fc;">↺ 一键归零纯净单脸</button>
                   </div>
                   <div id="studio-head-blend-sliders">
@@ -963,32 +949,6 @@
                       <span data-studio-head-blend-val="blend_eurasian">0%</span>
                     </div>
                   </div>
-                </div>
-
-                <div class="field-row">
-                  <label>✒️ 8款中韩根根分明真毛流眉形 (3D眉骨弧度 + 500根手绘级毛流贴图)</label>
-                  <select id="sel-eyebrow-style">
-                    <option value="cn_scholar_natural">🌿 中式原生书卷眉 (自然微弯柔顺学生眉 · 方尧平同款)</option>
-                    <option value="kr_straight_mist">☁️ 韩式温柔一字雾眉 (减龄幼态平眉 · 初夏同款)</option>
-                    <option value="kr_idol_arch">✨ 韩系女团柔弧流星眉 (精致微挑眉峰 · 林汐同款)</option>
-                    <option value="cn_willow_classical">🌙 江南古典弯弯柳叶眉 (纤细柔美仕女眉 · 苏晚同款)</option>
-                    <option value="kr_sweet_droop">🥺 韩系无辜八字微垂眉 (楚楚可怜小鹿眉 · 千雪同款)</option>
-                    <option value="cn_cold_sword">⚔️ 中式清冷英气剑眉 (斜飞入鬓御姐眉 · 沈知微同款)</option>
-                    <option value="kr_wild_feathered">🪶 根根分明野生毛流眉 (韩系画报感立体眉头立毛)</option>
-                    <option value="cn_tang_moth">🌸 古典短巧远山蛾眉 (传统东方含蓄短巧蛾眉)</option>
-                  </select>
-                </div>
-
-                <div class="preset-photo-row" id="eyebrow-style-quick-chips" style="margin-bottom:4px;flex-wrap:wrap;gap:4px;">
-                  <span>8款眉形:</span>
-                  <button type="button" class="chip-btn active" data-brow-style="cn_scholar_natural">🌿 原生书卷眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="kr_straight_mist">☁️ 韩式一字雾眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="kr_idol_arch">✨ 韩系流星眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="cn_willow_classical">🌙 古典柳叶眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="kr_sweet_droop">🥺 无辜微垂眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="cn_cold_sword">⚔️ 清冷英气剑眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="kr_wild_feathered">🪶 根根野生眉</button>
-                  <button type="button" class="chip-btn" data-brow-style="cn_tang_moth">🌸 远山短蛾眉</button>
                 </div>
 
                 <div class="field-row">
@@ -1035,45 +995,328 @@
                   <input type="range" id="morph-jaw-side" min="0.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-jaw-side">+0.00</span>
                 </div>
+              </div>
+            </div>
 
+            <!-- SUB-TAB 2: 18-AXIS FULL-RANGE CRANIOFACIAL & FEATURE SHAPE FINE-TUNING -->
+            <div class="card-block studio-subtab-panel" data-subtab-panel="shape">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <h3 style="margin:0;">📐 模块 2：18轴全量程五官与头骨形状微调 (解锁100%幅度对齐原照)</h3>
+                <button type="button" id="btn-reset-shape-morphs" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置五官形状</button>
+              </div>
+              <div class="control-group compact">
                 <div class="slider-row">
-                  <span>下颌V线收窄 (Jaw V-Line)</span>
-                  <input type="range" id="morph-jaw" min="-0.45" max="0.45" step="0.02" value="0.04" />
+                  <span>📐 下颌V脸收窄(+) ↔ 方颌骨感(-)</span>
+                  <input type="range" id="morph-jaw" min="-1.00" max="1.00" step="0.02" value="0.04" />
                   <span id="val-morph-jaw">+0.04</span>
                 </div>
                 <div class="slider-row">
-                  <span>颧弓与苹果肌饱满度</span>
-                  <input type="range" id="morph-cheek" min="-0.40" max="0.40" step="0.02" value="0.16" />
+                  <span>📐 下巴修长尖翘(+) ↔ 短圆幼态(-)</span>
+                  <input type="range" id="morph-chin" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-chin">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>📐 苹果肌胶原饱满(+) ↔ 清瘦高颧(-)</span>
+                  <input type="range" id="morph-cheek" min="-1.00" max="1.00" step="0.02" value="0.16" />
                   <span id="val-morph-cheek">+0.16</span>
                 </div>
                 <div class="slider-row">
-                  <span>鼻梁与鼻尖立体度</span>
-                  <input type="range" id="morph-nose" min="-0.40" max="0.45" step="0.02" value="0.04" />
+                  <span>👃 鼻梁高挺立体(+) ↔ 柔和低鼻梁(-)</span>
+                  <input type="range" id="morph-nose" min="-1.00" max="1.00" step="0.02" value="0.04" />
                   <span id="val-morph-nose">+0.04</span>
                 </div>
                 <div class="slider-row">
-                  <span>杏眼弧度与眼尾微挑</span>
-                  <input type="range" id="morph-eye" min="-0.35" max="0.40" step="0.02" value="0.08" />
+                  <span>👃 鼻翼宽窄微调 · 秀气收窄(-) ↔ 宽鼻翼(+)</span>
+                  <input type="range" id="morph-nose-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-nose-width">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 杏眼放大灵动(+) ↔ 细长丹凤(-)</span>
+                  <input type="range" id="morph-eye" min="-1.00" max="1.00" step="0.02" value="0.08" />
                   <span id="val-morph-eye">+0.08</span>
                 </div>
                 <div class="slider-row">
-                  <span>唇部微调 (默认0平直静态唇)</span>
-                  <input type="range" id="morph-lip" min="-0.35" max="0.45" step="0.02" value="0.00" />
+                  <span>👁️ 眼尾上挑狐狸眼(+) ↔ 无辜下垂狗狗眼(-)</span>
+                  <input type="range" id="morph-eye-tilt" min="-1.00" max="1.00" step="0.02" value="0.04" />
+                  <span id="val-morph-eye-tilt">+0.04</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 眼睑开合度 · 半阖微醺(-) ↔ 圆睁(+)</span>
+                  <input type="range" id="morph-eyelid-open" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-eyelid-open">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>✒️ 眉眼间距高低微调 · 压眉(-) ↔ 挑高(+)</span>
+                  <input type="range" id="morph-brow-height" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-brow-height">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>✒️ 眉峰弧度挑平 · 八字垂眉(-) ↔ 剑眉挑峰(+)</span>
+                  <input type="range" id="morph-brow-tilt" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-brow-tilt">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>✒️ 3D眉毛粗细浓密缩放</span>
+                  <input type="range" id="morph-brow-thick" min="0.55" max="1.55" step="0.05" value="1.00" />
+                  <span id="val-morph-brow-thick">100%</span>
+                </div>
+                <div class="slider-row">
+                  <span>👄 唇部丰满欲感(+) ↔ 薄唇清冷(-)</span>
+                  <input type="range" id="morph-lip" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-lip">+0.00</span>
                 </div>
-
-                <div class="color-picker-grid">
-                  <label>肤色 <input type="color" id="col-skin" value="#ffe9df" /></label>
-                  <label>唇色 <input type="color" id="col-lip" value="#c46470" /></label>
-                  <label>瞳色 <input type="color" id="col-iris" value="#3b2014" /></label>
-                  <label>发色 <input type="color" id="col-hair" value="#121216" /></label>
+                <div class="slider-row">
+                  <span>👄 嘴角弧度 · 清冷微抿(-) ↔ 甜美浅笑(+)</span>
+                  <input type="range" id="morph-mouth-smile" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-mouth-smile">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>🧠 额头饱满度与发际高度</span>
+                  <input type="range" id="morph-forehead" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-forehead">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👂 耳廓大小与精灵耳贴面度</span>
+                  <input type="range" id="morph-ear" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-ear">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>↔️ 头颅整体左右宽窄比例 (对位宽脸/窄脸照)</span>
+                  <input type="range" id="morph-head-width" min="-0.20" max="0.20" step="0.01" value="0.00" />
+                  <span id="val-morph-head-width">100%</span>
+                </div>
+                <div class="slider-row">
+                  <span>↕️ 头颅整体上下长短比例 (对位长脸/短脸照)</span>
+                  <input type="range" id="morph-head-length" min="-0.20" max="0.20" step="0.01" value="0.00" />
+                  <span id="val-morph-head-length">100%</span>
+                </div>
+                <div class="slider-row">
+                  <span>👀 眼球视线左右微调 (左看 ↔ 右看)</span>
+                  <input type="range" id="morph-gaze-yaw" min="-1.00" max="1.00" step="0.05" value="0.00" />
+                  <span id="val-morph-gaze-yaw">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👀 眼球视线上下微调 (俯视 ↔ 仰视)</span>
+                  <input type="range" id="morph-gaze-pitch" min="-1.00" max="1.00" step="0.05" value="0.00" />
+                  <span id="val-morph-gaze-pitch">+0.00</span>
                 </div>
               </div>
             </div>
 
-            <!-- B. 28 Master Artist 3D Hairstyles + Modular Custom Hair Designer & 9-Axis Fine-Tuning -->
-            <div class="card-block">
-              <h3>💇‍♀️ 步骤 3：玩家自由组合发型设计工坊 · 28款基底发型 + 模块化刘海/鬓角/后束发 + 双色挑染</h3>
+            <!-- SUB-TAB 3: REAL-TIME COLOR & MAKEUP GRADING STUDIO -->
+            <div class="card-block studio-subtab-panel" data-subtab-panel="color">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <h3 style="margin:0;">🎨 模块 3：全维度颜色与妆容实时微调 (0ms GPU即时显色)</h3>
+                <button type="button" id="btn-reset-color-tuning" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置配色</button>
+              </div>
+              <div class="control-group compact">
+                <div class="color-picker-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
+                  <label>🌸 基底肤色 <input type="color" id="col-skin" value="#ffe9df" /></label>
+                  <label>💄 唇彩主色 <input type="color" id="col-lip" value="#cb5362" /></label>
+                  <label>🍑 腮红颜色 <input type="color" id="col-blush" value="#f07682" /></label>
+                  <label>✨ 眼影颜色 <input type="color" id="col-eyeshadow" value="#b87068" /></label>
+                  <label>👁️ 虹膜瞳色 <input type="color" id="col-iris" value="#3b2014" /></label>
+                  <label>✒️ 眉毛染色 <input type="color" id="col-brow" value="#ffffff" /></label>
+                  <label>🖤 主体发色 <input type="color" id="col-hair" value="#121216" /></label>
+                  <label>🎨 发梢渐变 <input type="color" id="col-hair-tip" value="#4a3528" /></label>
+                  <label>⚡ 挑染高光 <input type="color" id="col-hair-highlight" value="#9e6b52" /></label>
+                </div>
+
+                <div class="slider-row">
+                  <span>🌡️ 肤色冷暖色温 (冷白皮 ↔ 暖杏小麦皮)</span>
+                  <input type="range" id="slider-skin-warmth" min="-1.00" max="1.00" step="0.05" value="0.00" />
+                  <span id="val-skin-warmth">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>☀️ 肤色明暗透亮度 (苍白/暗沉 ↔ 清透提亮)</span>
+                  <input type="range" id="slider-skin-brightness" min="0.72" max="1.28" step="0.02" value="1.00" />
+                  <span id="val-skin-brightness">100%</span>
+                </div>
+                <div class="slider-row">
+                  <span>🩸 真皮气血红润度 (冷白失血 ↔ 桃花粉嫩)</span>
+                  <input type="range" id="slider-skin-rosiness" min="0.00" max="1.00" step="0.05" value="0.25" />
+                  <span id="val-skin-rosiness">25%</span>
+                </div>
+                <div class="slider-row">
+                  <span>🍑 苹果肌与鼻尖腮红晕染浓度</span>
+                  <input type="range" id="slider-blush" min="0.00" max="1.00" step="0.05" value="0.22" />
+                  <span id="val-blush">22%</span>
+                </div>
+                <div class="slider-row">
+                  <span>✨ 上眼睑眼影与眼尾深邃修容浓度</span>
+                  <input type="range" id="slider-eyeshadow" min="0.00" max="1.00" step="0.05" value="0.18" />
+                  <span id="val-eyeshadow">18%</span>
+                </div>
+                <div class="slider-row">
+                  <span>💄 唇彩/咬唇妆显色饱和浓度</span>
+                  <input type="range" id="slider-lip-strength" min="0.00" max="1.00" step="0.05" value="0.38" />
+                  <span id="val-lip-strength">38%</span>
+                </div>
+                <div class="slider-row">
+                  <span>💧 唇釉水光镜面光泽度 (哑光丝绒 ↔ 镜面水光唇)</span>
+                  <input type="range" id="slider-lip-gloss" min="0.00" max="1.30" step="0.05" value="0.48" />
+                  <span id="val-lip-gloss">48%</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 虹膜美瞳染色覆盖浓度</span>
+                  <input type="range" id="slider-iris-mix" min="0.00" max="1.00" step="0.05" value="0.42" />
+                  <span id="val-iris-mix">42%</span>
+                </div>
+                <div class="slider-row">
+                  <span>✒️ 3D眉毛显色浓淡透明度</span>
+                  <input type="range" id="slider-brow-opacity" min="0.25" max="1.00" step="0.05" value="0.94" />
+                  <span id="val-brow-opacity">94%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- SUB-TAB 4: SKIN TEXTURES, ANTI-SILICONE PORES, MOLES, EYES & 3D PHOTO PROJECTION -->
+            <div class="card-block studio-subtab-panel" data-subtab-panel="texture">
+              <h3>🖼️ 模块 4：贴图与真实肤质微调 · 去硅胶感3D毛孔 · 照片直接投射</h3>
+              <div class="control-group compact">
+                <div class="field-row">
+                  <label>🎨 8款无皱纹年轻亚洲/中式/韩系/混血少女真摄影皮肤材质</label>
+                  <select id="sel-skin-variant">
+                    <option value="cn_scholar_natural">📖 岭南书卷暖玉肌 · 19岁女状元方尧平右颊三颗痣原生肌</option>
+                    <option value="cn_porcelain_ivory">🌸 中式冷白凝脂肌 · 零皱纹清透无瑕少女原皮与花瓣唇</option>
+                    <option value="kr_dewy_peach">🍑 韩系水光蜜桃肌 · 初夏同款粉白奶油肌+卧蚕高光+蜜桃咬唇</option>
+                    <option value="kr_chaebol_cool">✨ 韩系财阀千金冷白肌 · 林汐同款清冷梅子唇+左眼尾泪痣</option>
+                    <option value="cn_jiangnan_jade">🌙 江南古典羊脂玉肌 · 苏晚同款远山黛+眼下泪痣+古典点绛唇</option>
+                    <option value="kr_firstlove_camellia">💖 韩系初恋雪瓷肌 · 千雪同款舞台桃花腮红+鼻梁痣+山茶红唇</option>
+                    <option value="cn_intellectual_olive">❄️ 中式清冷高智象牙肌 · 沈知微同款立体眼窝修容+左颊痣+干枯玫瑰唇</option>
+                    <option value="eurasian_velvet_rose">🌍 欧亚轻混血丝绒奶油肌 · 东西方融合细腻奶油肌与裸色玫瑰唇</option>
+                  </select>
+                </div>
+
+                <div class="preset-photo-row" id="skin-variant-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                  <span>皮肤秒切:</span>
+                  <button type="button" class="chip-btn" data-skin-var="cn_porcelain_ivory">🌸 中式冷白原皮</button>
+                  <button type="button" class="chip-btn active" data-skin-var="cn_scholar_natural">📖 状元三痣暖玉肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="kr_dewy_peach">🍑 韩系水光蜜桃肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="kr_chaebol_cool">✨ 财阀千金梅子肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="cn_jiangnan_jade">🌙 江南羊脂点绛肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="kr_firstlove_camellia">💖 初恋雪瓷山茶肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="cn_intellectual_olive">❄️ 高智干枯玫瑰肌</button>
+                  <button type="button" class="chip-btn" data-skin-var="eurasian_velvet_rose">🌍 混血丝绒奶油肌</button>
+                </div>
+
+                <div class="field-row">
+                  <label>✒️ 8款中韩根根分明真毛流眉形 (3D贴骨弧度 + 500根手绘级毛流贴图)</label>
+                  <select id="sel-eyebrow-style">
+                    <option value="cn_scholar_natural">🌿 中式原生书卷眉 (自然微弯柔顺学生眉 · 方尧平同款)</option>
+                    <option value="kr_straight_mist">☁️ 韩式温柔一字雾眉 (减龄幼态平眉 · 初夏同款)</option>
+                    <option value="kr_idol_arch">✨ 韩系女团柔弧流星眉 (精致微挑眉峰 · 林汐同款)</option>
+                    <option value="cn_willow_classical">🌙 江南古典弯弯柳叶眉 (纤细柔美仕女眉 · 苏晚同款)</option>
+                    <option value="kr_sweet_droop">🥺 韩系无辜八字微垂眉 (楚楚可怜小鹿眉 · 千雪同款)</option>
+                    <option value="cn_cold_sword">⚔️ 中式清冷英气剑眉 (斜飞入鬓御姐眉 · 沈知微同款)</option>
+                    <option value="kr_wild_feathered">🪶 根根分明野生毛流眉 (韩系画报感立体眉头立毛)</option>
+                    <option value="cn_tang_moth">🌸 古典短巧远山蛾眉 (传统东方含蓄短巧蛾眉)</option>
+                  </select>
+                </div>
+
+                <div class="preset-photo-row" id="eyebrow-style-quick-chips" style="margin-bottom:6px;flex-wrap:wrap;gap:4px;">
+                  <span>8款眉形:</span>
+                  <button type="button" class="chip-btn active" data-brow-style="cn_scholar_natural">🌿 原生书卷眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_straight_mist">☁️ 韩式一字雾眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_idol_arch">✨ 韩系流星眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="cn_willow_classical">🌙 古典柳叶眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_sweet_droop">🥺 无辜微垂眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="cn_cold_sword">⚔️ 清冷英气剑眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="kr_wild_feathered">🪶 根根野生眉</button>
+                  <button type="button" class="chip-btn" data-brow-style="cn_tang_moth">🌸 远山短蛾眉</button>
+                </div>
+
+                <!-- Anti-Silicone True-Dermis & Eye Micro-Detail Controls -->
+                <div style="background:rgba(15,23,42,0.55);border:1px solid rgba(56,189,248,0.28);border-radius:8px;padding:8px;margin-bottom:8px;">
+                  <div style="font-size:11.5px;color:#7dd3fc;font-weight:700;margin-bottom:4px;">🔬 去硅胶感 · 3D毫米级真皮毛孔/皮沟/卧蚕/美人痣/瞳孔微调：</div>
+                  <div class="slider-row">
+                    <span>🔬 3D毫米级真皮毛孔与唇纹深度 (彻底消除塑料感)</span>
+                    <input type="range" id="slider-pore-relief" min="0.00" max="2.00" step="0.05" value="1.15" />
+                    <span id="val-pore-relief">115%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🧴 表皮丝绒哑光度 (低=水光 / 高=真实粉雾哑光肌)</span>
+                    <input type="range" id="slider-skin-roughness" min="0.34" max="0.82" step="0.02" value="0.56" />
+                    <span id="val-skin-roughness">56%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🧬 真皮血色素与黑色素自然微斑驳感</span>
+                    <input type="range" id="slider-skin-mottle" min="0.00" max="1.60" step="0.05" value="1.00" />
+                    <span id="val-skin-mottle">100%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🥺 眼下卧蚕高光与阴影立体度 (Aegyo-Sal)</span>
+                    <input type="range" id="slider-aegyosal" min="0.00" max="1.00" step="0.05" value="0.42" />
+                    <span id="val-aegyosal">42%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🌙 眼下微暗沉/黑眼圈写实度</span>
+                    <input type="range" id="slider-dark-circles" min="0.00" max="1.00" step="0.05" value="0.10" />
+                    <span id="val-dark-circles">10%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🍂 鼻梁与脸颊野生小雀斑浓度</span>
+                    <input type="range" id="slider-freckles" min="0.00" max="1.00" step="0.05" value="0.00" />
+                    <span id="val-freckles">0%</span>
+                  </div>
+                  <div class="field-row" style="margin:4px 0;">
+                    <label>✦ 面部特征美人痣 / 泪痣位置切换</label>
+                    <select id="sel-beauty-mark">
+                      <option value="0" selected>默认跟随基底皮肤贴图</option>
+                      <option value="1">① 右颊三颗状元星痣 (方尧平/初夏特征)</option>
+                      <option value="2">② 左眼尾清冷泪痣 (林汐特征)</option>
+                      <option value="3">③ 右眼下卧蚕泪痣 (苏晚特征)</option>
+                      <option value="4">④ 鼻梁正中俏皮美人痣 (千雪特征)</option>
+                      <option value="5">⑤ 左嘴角甜美梨涡痣 (沈知微特征)</option>
+                    </select>
+                  </div>
+                  <div class="slider-row">
+                    <span>👁️ 虹膜美瞳直径大小缩放 (Iris Scale)</span>
+                    <input type="range" id="slider-iris-scale" min="0.78" max="1.28" step="0.02" value="1.00" />
+                    <span id="val-iris-scale">100%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>⚫ 瞳孔收缩/散大比例 (Pupil Dilation)</span>
+                    <input type="range" id="slider-pupil-size" min="0.55" max="1.55" step="0.05" value="1.00" />
+                    <span id="val-pupil-size">100%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>✨ 双点眼神光清澈亮度 (无白环雾化)</span>
+                    <input type="range" id="slider-eye-catchlight" min="0.00" max="1.60" step="0.05" value="0.85" />
+                    <span id="val-eye-catchlight">85%</span>
+                  </div>
+                </div>
+
+                <!-- 3D Frontal Reference Photo Direct Projection -->
+                <div style="background:rgba(30,22,45,0.58);border:1px solid rgba(244,114,182,0.35);border-radius:8px;padding:8px;">
+                  <div style="font-size:11.5px;color:#f9a8d4;font-weight:700;margin-bottom:4px;">📷 原照片五官贴图 3D 直接投射对齐 (可将左侧参考照直接融合到3D脸上)：</div>
+                  <div class="slider-row">
+                    <span>📷 原照片面部贴图投射融合度</span>
+                    <input type="range" id="slider-photo-proj" min="0.00" max="0.95" step="0.05" value="0.00" />
+                    <span id="val-photo-proj">0%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>🔍 投射照片五官缩放比例</span>
+                    <input type="range" id="slider-photo-proj-scale" min="0.65" max="1.45" step="0.02" value="1.00" />
+                    <span id="val-photo-proj-scale">100%</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>↔️ 投射照片左右水平对位微调</span>
+                    <input type="range" id="slider-photo-proj-x" min="-0.25" max="0.25" step="0.01" value="0.00" />
+                    <span id="val-photo-proj-x">+0.00</span>
+                  </div>
+                  <div class="slider-row">
+                    <span>↕️ 投射照片上下垂直对位微调</span>
+                    <input type="range" id="slider-photo-proj-y" min="-0.25" max="0.25" step="0.01" value="0.00" />
+                    <span id="val-photo-proj-y">+0.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- SUB-TAB 5: 28 MASTER ARTIST 3D HAIRSTYLES + MODULAR CUSTOM HAIR DESIGNER -->
+            <div class="card-block studio-subtab-panel" data-subtab-panel="hair">
+              <h3>💇‍♀️ 模块 5：自由组合发型工坊 · 28款真发丝 + 模块拼装 + 12轴发丝微调</h3>
               <div class="control-group compact">
                 <div class="field-row">
                   <label>① 选择基底 3D 发型（28 款 MakeHuman 大师精雕真发丝 · 双侧严密包覆耳鬓无空隙）</label>
@@ -1180,8 +1423,10 @@
                     <input type="range" id="slider-hair-ombre" min="0.0" max="1.0" step="0.05" value="0.0" />
                     <span id="val-hair-ombre">0%</span>
                   </div>
-                  <div style="display:flex;align-items:center;gap:12px;margin-top:4px;font-size:11.5px;color:#e2e8f0;">
-                    <label style="display:flex;align-items:center;gap:6px;">发梢挑染颜色 <input type="color" id="col-hair-tip" value="#4a3528" /></label>
+                  <div class="slider-row">
+                    <span>⚡ 发丝局部高光挑染束强度</span>
+                    <input type="range" id="slider-hair-highlight" min="0.0" max="1.0" step="0.05" value="0.0" />
+                    <span id="val-hair-highlight">0%</span>
                   </div>
                 </div>
 
@@ -1192,7 +1437,7 @@
                   </label>
                   <button type="button" id="btn-reset-hair-morphs" class="btn ghost small" title="恢复当前发型默认出厂形态">↺ 重置发型微调</button>
                 </div>
-                <p id="groom-quality-status" class="hint-text">已加载 28 款 MakeHuman 艺术家精雕真发丝 3D 发型（支持下方 9 轴实时微调）</p>
+                <p id="groom-quality-status" class="hint-text">已加载 28 款 MakeHuman 艺术家精雕真发丝 3D 发型（支持下方 10 轴实时微调）</p>
 
                 <div class="slider-row">
                   <span>✂️ 前额刘海长度微调</span>
@@ -1225,6 +1470,11 @@
                   <span id="val-morph-hair-flare">+0.00</span>
                 </div>
                 <div class="slider-row">
+                  <span>🌊 发尾波浪卷曲度微调 (直发 ↔ S波浪卷)</span>
+                  <input type="range" id="morph-hair-curl" min="-0.50" max="0.85" step="0.05" value="0.00" />
+                  <span id="val-morph-hair-curl">+0.00</span>
+                </div>
+                <div class="slider-row">
                   <span>↕️ 发型整体高低位置微调</span>
                   <input type="range" id="morph-hair-off-y" min="-0.40" max="0.40" step="0.02" value="0.00" />
                   <span id="val-morph-hair-off-y">+0.00</span>
@@ -1249,6 +1499,13 @@
                   <input type="range" id="slider-neck-clearance" min="0.0" max="1.0" step="0.05" value="0.45" />
                   <span id="val-neck-clearance">45%</span>
                 </div>
+              </div>
+            </div>
+
+            <!-- SUB-TAB 6: ANATOMICAL CROSS-SECTION & DOSSIER REGISTRATION -->
+            <div class="card-block highlight-card studio-subtab-panel" data-subtab-panel="save">
+              <h3>🩸 模块 6：颈部解剖断面精调与收藏品档案登记</h3>
+              <div class="control-group compact">
                 <div class="slider-row">
                   <span>颈部截断高度 (C3~C6)</span>
                   <input type="range" id="morph-cut-height" min="-1.5" max="1.5" step="0.1" value="0.0" />
@@ -1264,13 +1521,6 @@
                   <input type="range" id="slider-anatomy-wetness" min="0.2" max="1.0" step="0.05" value="0.82" />
                   <span id="val-anatomy-wetness">82%</span>
                 </div>
-              </div>
-            </div>
-
-            <!-- C. Collectible Naming & Dossier Registration -->
-            <div class="card-block highlight-card">
-              <h3>🏷️ 步骤 4：收藏品命名与档案登记</h3>
-              <div class="control-group compact">
                 <div class="two-col-inputs">
                   <div>
                     <label>收藏品名称</label>
