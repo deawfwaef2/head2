@@ -1,0 +1,16 @@
+{
+  "title": "CERVIX-3D 真实桌面3D断头标本桌宠与典藏工坊",
+  "description": "3D 物理交互断头标本桌面桌宠，支持直接拖拽、滚轮景深推拉、标本容器收纳与连接标牌展示。",
+  "file": "点击开始游戏_CERVIX3D.html",
+  "type": "web",
+  "general": {
+    "properties": {
+      "schemecolor": {
+        "order": 0,
+        "text": "ui_browse_properties_scheme_color",
+        "type": "color",
+        "value": "0.06 0.09 0.16"
+      }
+    }
+  }
+}

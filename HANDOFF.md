@@ -1039,3 +1039,17 @@
 - **新文档 `画质提升/HAIR_发丝方法说明.md`**：本方法与主项目发片着色的区别、完整流程、性能数据、12 条坑与注意事项、局限、迁移代码片段。后续 agent 改头发前请先读。
 - 截图：`画质提升/qa/screens_hair/01~06`（01 原版发片 vs 02 真发丝，同一机位）。
 - 仍未接入主项目（遵守“不连接现有游戏”的要求）。
+
+## Stage 50-真实桌面桌宠方案 — 2026-10-14 · 原生透明穿透桌宠宿主升级 + 三合一落地方案（零触碰 `src/` 与 `画质提升/`）
+- **遵守多模型并行分工**：用户指明已有模型专门处理画质问题（`画质提升/`），要求我们提供并落地“转换为真实电脑屏幕桌面桌宠（而不只是网页）”的完整方案。本阶段**完全不触碰 `src/`、`public/`、`点击开始游戏_CERVIX3D.html` 及 `画质提升/`**，确保与画质模型零合并冲突。
+- **方案一（Electron 原生透明 + 30Hz 3D 射线动态鼠标穿透桌宠升级，`electron/main.cjs` & `electron/preload.cjs`）**：
+  - 升级 `electron/preload.cjs`：在透明桌宠层（`real-desktop-overlay`）自动隐藏启动遮罩并将地板切换为 `floorStyle = 'none'`（**纯 3D 人头透明悬浮穿透模式**，消除占满屏幕下半部的木书桌遮挡），同时在屏幕右上角注入半透明悬浮控制胶囊 `#cervix-real-pet-capsule`（支持一键展开工坊、切换「🌌 纯人头穿透 / 🪵 3D书桌架」、开关生前照片标牌、召唤全员与安全退出）。
+  - 升级动态鼠标穿透判定：结合渲染层 3D 人头射线拾取与 `document.elementFromPoint(x, y)`，保证空白屏幕区域 `setIgnoreMouseEvents(true, { forward: true })` 100% 穿透到底层真实桌面软件/图标，而悬停 3D 人头、连接标牌、建筑悬浮面板或右上角迷你胶囊时立即恢复鼠标交互（`setIgnoreMouseEvents(false)`）。
+  - 升级 `electron/main.cjs`：支持 `--overlay` / `CERVIX_START_OVERLAY=1` 启动即进入纯屏幕透明穿透桌宠模式；系统托盘右键菜单支持随时切换模式，并内置一键预览 `画质提升/` 演示页入口。
+  - 新增一键双击启动器：`双击启动真实桌面桌宠_Windows.bat` 与 `双击启动真实桌面桌宠_Mac.command`。
+- **方案二（零 Node.js 轻量原生 WebView2/WebKit 透明桌宠，`启动轻量桌面桌宠_Python.py`）**：
+  - 基于 Python `pywebview` 直接调用 Windows Edge WebView2 / macOS WebKit 创建无边框、全透明、置顶悬浮桌宠窗口，并自动注入纯人头透明化脚本。
+- **方案三（Wallpaper Engine / Lively Wallpaper 3D 交互桌面壁纸清单，`project.json`）**：
+  - 根目录新增标准 `project.json`，可直接拖入 Wallpaper Engine 或 Lively Wallpaper 作为位于桌面图标后方的 3D 可交互断头标本动态桌面。
+- 详细架构与免安装 `.exe` / `.app` 打包命令已写入 `真实桌面桌宠方案与使用指南.md`。
+
