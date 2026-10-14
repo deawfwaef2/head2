@@ -3,13 +3,15 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 const url = process.env.QA_URL || 'http://127.0.0.1:5173';
 const offline = url.startsWith('file:');
 const report = { url: offline ? 'file:// standalone' : url, renderer: 'Chromium / SwiftShader', tests: [], errors: [], network: [] };
 const check = (name, ok, detail) => { report.tests.push({ name, passed: !!ok, detail }); if (!ok) throw new Error(name + ': ' + JSON.stringify(detail)); };
-const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'head2-qa-profile-'));
+const browser = await chromium.launchPersistentContext(profile, { viewport: { width: 1100, height: 780 }, acceptDownloads: true, headless: true, args: ['--no-sandbox', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 try {
-  const page = await browser.newPage({ viewport: { width: 1100, height: 780 }, acceptDownloads: true });
+  const page = await browser.newPage();
   page.on('pageerror', e => report.errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text().slice(0, 2000)); });
   if (offline) await page.route(/^https?:/, route => { report.network.push(route.request().url()); return route.abort(); });
@@ -72,9 +74,9 @@ try {
   check('registered collectible persists custom hair reference/type',saved.customHairUrl===imported.url&&saved.customHairType==='glb', {url:saved.customHairUrl,type:saved.customHairType});
   await page.reload();
   await page.waitForFunction(()=>window.__cervixQA?.ready,null,{timeout:120000});
-  const restored=await page.evaluate(()=>{const q=window.__cervixQA,p=q.desktop.pets.get('QA-HAIR-V39');return {url:p?.node.userData.customHairUrl,error:p?.node.userData.hairLoadError,exists:!!p?.node.getObjectByName('HairGroup'),petIds:[...q.desktop.pets.keys()],record:q.state.collectibles.find(x=>x.id==='QA-HAIR-V39'),stored:JSON.parse(localStorage.getItem('cervix3d-collectibles-stage36-master-v1')).find(x=>x.id==='QA-HAIR-V39')};});
+  const restored=await page.evaluate(()=>{const q=window.__cervixQA,p=q.desktop.pets.get('QA-HAIR-V39');return {url:p?.node.userData.customHairUrl,error:p?.node.userData.hairLoadError,exists:!!p?.node.getObjectByName('HairGroup'),petIds:[...q.desktop.pets.keys()],recordExists:q.state.collectibles.some(x=>x.id==='QA-HAIR-V39'),storedExists:JSON.parse(localStorage.getItem('cervix3d-collectibles-stage36-master-v1')).some(x=>x.id==='QA-HAIR-V39')};});
   check('reload restores imported hair on desktop pet',restored.exists&&restored.url===imported.url&&!restored.error,restored);
   check('no JS / GLSL compile errors across tests',report.errors.length===0,report.errors);
   if(offline)check('offline HTML makes no HTTP(S) requests',report.network.length===0,report.network);
 } catch(e) {report.failure=e.message;process.exitCode=1;}
-finally {await browser.close();fs.writeFileSync(offline?'HAIR_QA_OFFLINE.json':'HAIR_QA_DEV.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}
+finally {await browser.close();fs.rmSync(profile,{recursive:true,force:true});fs.writeFileSync(offline?'HAIR_QA_OFFLINE.json':'HAIR_QA_DEV.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));}

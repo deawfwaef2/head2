@@ -1954,6 +1954,13 @@ export async function buildCollectibleHeadNode(config = {}) {
 const photoProjTexCache = new Map();
 function loadPhotoProjectionTexture(url, onLoaded) {
   if (!url || typeof Image === 'undefined') return null;
+  // Default portrait projection must use the same embedded assets as the HUD.
+  // file:// cannot fetch /models/... from the OS filesystem.
+  if (typeof window !== 'undefined') {
+    const photoPath = String(url).replace(/^\.\//, '/');
+    if (photoPath === '/models/fang_yaoping_ref.jpg' && window.__EMBEDDED_FANG_PHOTO__) url = window.__EMBEDDED_FANG_PHOTO__;
+    if (/^\/models\/user_photo_ref\.(jpg|png)$/.test(photoPath) && window.__EMBEDDED_REF_PHOTO__) url = window.__EMBEDDED_REF_PHOTO__;
+  }
   if (photoProjTexCache.has(url)) {
     const cached = photoProjTexCache.get(url);
     if (onLoaded) onLoaded(cached);
