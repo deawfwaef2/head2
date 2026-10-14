@@ -58,6 +58,7 @@ import {
   DEFAULT_HEAD_PUZZLE_LOADOUTS,
   SURVIVOR_VICTORY_DECLARATIONS,
   DESKTOP_TACTILE_PLAY_MODES,
+  DESKTOP_STATUS_FOIL_FORMATIONS,
   SPECIMEN_SILENT_PLAY_OBSERVATIONS,
   getNextSilentPlayObservation,
   UNIVERSAL_SUPERIORITY_AURA_TEMPLATES,
@@ -812,6 +813,7 @@ function renderSpecimenPlacards(placardsList = []) {
               <button type="button" class="placard-mini-btn" data-placard-pinch="${item.id}" title="切换至【🤏直接上手捏脸/扒眼皮/掰嘴模式】，用鼠标直接在3D头颅上推拉眼皮、掰嘴、捏脸颊！" style="border-color:rgba(244,114,182,0.65);color:#fbcfe8;">🤏捏脸</button>
               <button type="button" class="placard-mini-btn" data-placard-eyeball="${item.id}" title="直接在桌面拨弄这颗3D头颅的眼球与瞳孔（上翻白眼/瞳孔涣散放大/针尖缩瞳/垂眸失焦）！" style="border-color:rgba(56,189,248,0.65);color:#bae6fd;">👁️拨眼</button>
               <button type="button" class="placard-mini-btn" data-placard-hairlift="${item.id}" title="直接揪住这颗3D头颅的发顶将其拎到半空掂量重量，再松手让4.5kg头颅重重落回桌面！" style="border-color:rgba(192,132,252,0.65);color:#e9d5ff;">🪮拎发</button>
+              <button type="button" class="placard-mini-btn" data-placard-chin="${item.id}" title="上位者单向触碰特权：勾起这颗3D头颅冰冷的下巴使其仰面18°接受你的检阅！" style="border-color:rgba(244,114,182,0.65);color:#fbcfe8;">👆挑颏</button>
               <button type="button" class="placard-mini-btn" data-placard-bow="${item.id}" title="直接在桌面按压这颗3D头颅使其【低眉俯首听训】、【歪头贴桌当镇纸】或【抬颏仰视伴读】！" style="border-color:rgba(251,191,36,0.65);color:#fde68a;">🙇‍♀️俯首</button>
               <button type="button" class="placard-mini-btn" data-placard-aura="${item.id}" title="一键切换通用【生前光环 vs 案头静默标本】投射人设与封条（不绑定预设名字，也可直接点击标牌标题/描述手改）" style="border-color:rgba(167,139,250,0.65);color:#ddd6fe;">🏷️换人设</button>
               <button type="button" class="placard-mini-btn" data-placard-fluid="${item.id}" title="在3D面容上直接点染/切换凄美清泪、猩红血泪、鼻血与断口鲜血" style="border-color:rgba(251,113,133,0.65);color:#fda4af;">🩸血泪</button>
@@ -878,6 +880,12 @@ function renderSpecimenPlacards(placardsList = []) {
         ev.stopPropagation();
         if (typeof window.__triggerPetDesktopHairLift === 'function') {
           window.__triggerPetDesktopHairLift(item.id, ev.clientX, ev.clientY);
+        }
+      });
+      cardEl.querySelector('[data-placard-chin]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (typeof window.__triggerPetDesktopChinLift === 'function') {
+          window.__triggerPetDesktopChinLift(item.id, ev.clientX, ev.clientY);
         }
       });
       cardEl.querySelector('[data-placard-bow]')?.addEventListener('click', (ev) => {
@@ -6216,6 +6224,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine.applyTactileBowGazeDelta(pet, 0, 0, true, clientX, clientY);
   };
 
+  window.__triggerPetDesktopChinLift = (petId, clientX, clientY) => {
+    if (!desktopEngine) return;
+    desktopEngine.performLinkedComfort3DAction('lift_chin', petId);
+    const col = state.collectibles.find(c => c.id === petId);
+    const displayName = col?.customDisplayName || (col?.name || '标本').split('·')[0].trim();
+    const pts = Math.round(70 * getActivePuzzleMultiplier());
+    puzzleState.monthlyVictorScore += pts;
+    savePuzzleScoreState();
+    refreshPuzzleHubUI();
+    spawnDopaminePopup(`👆 挑起下巴审视 +${pts} PTS ✨`, clientX, clientY);
+    showTactileToast(
+      `👆 已挑起【${displayName}】下巴仰面18°接受单向审视`,
+      getNextSilentPlayObservation('neck'),
+      `+${pts} PTS ✨`
+    );
+  };
+
   const petAuraCycleIdx = {};
   window.__cyclePetSuperiorityAura = (petId, clientX, clientY) => {
     const col = state.collectibles.find(c => c.id === petId);
@@ -6355,7 +6380,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (comfortTitleEl) comfortTitleEl.textContent = curArt.title;
       if (comfortMoodEl) comfortMoodEl.textContent = curArt.moodTag;
       if (comfortBodyEl) {
-        comfortBodyEl.innerHTML = curArt.paragraphs.map(p => `<p style="margin:0;text-indent:0;">${p}</p>`).join('');
+        comfortBodyEl.innerHTML = curArt.paragraphs.map(p => {
+          const formatted = String(p).replace(/\*\*([^*]+)\*\*/g, '<strong style="color:#fde68a;font-weight:800;">$1</strong>');
+          return `<p style="margin:0;text-indent:0;">${formatted}</p>`;
+        }).join('');
       }
       if (comfortAffirmEl) comfortAffirmEl.textContent = curArt.affirmation;
       if (comfortActionBtn) comfortActionBtn.textContent = curArt.actionBtnLabel || '🎭 让桌上3D头颅配合本文动作 (+60 PTS)';
@@ -6445,6 +6473,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     savePuzzleScoreState();
     refreshPuzzleHubUI();
     spawnDopaminePopup(`💊 速效强心针 +${pts} PTS ✨`, ev.clientX, ev.clientY);
+  });
+
+  // Stage 59: 1-Click 3D Status-Foil Formation Bar inside Comfort Reader
+  document.querySelectorAll('[data-status-formation]').forEach((btn) => {
+    btn.addEventListener('click', (ev) => {
+      const fid = btn.dataset.statusFormation;
+      const spec = DESKTOP_STATUS_FOIL_FORMATIONS.find(f => f.id === fid) || DESKTOP_STATUS_FOIL_FORMATIONS[0];
+      if (desktopEngine) {
+        desktopEngine.performLinkedComfort3DAction(spec.id, null);
+      }
+      const pts = Math.round((spec.pts || 90) * getActivePuzzleMultiplier());
+      puzzleState.monthlyVictorScore += pts;
+      savePuzzleScoreState();
+      refreshPuzzleHubUI();
+      spawnDopaminePopup(`${spec.shortLabel} +${pts} PTS ✨`, ev.clientX, ev.clientY);
+      showTactileToast(spec.toastTitle, spec.toastSub, `+${pts} PTS ✨`);
+    });
   });
 
   // Make #comfort-reader-drawer draggable by its header

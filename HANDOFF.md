@@ -1223,17 +1223,11 @@
     6. `⚡ 速效强心针 (翻牌)`（顶部常驻一句话强心针 `💊 换一句 (+30分)` + 3 篇核心强心针）
   - **阅读与桌面 3D 头颅动作实时联动 (`performLinkedComfort3DAction`)**：点击任意文章或底部的 **`🎭 让桌上3D头颅配合本文动作 (+60 PTS)`** / **`🎲 随机抽一篇 (+80 PTS)`**，桌上的 3D 头颅会同步自动执行文中对应的物理姿态（扒开眼皮、上翻眼球、掰开双唇、揪发拎起坠落、歪头当镇纸、流下清泪/血泪或全场低头俯首），实现“边看爽文边看桌上断头配合演练”的沉浸体验。
 - **3. 强制视觉自检完成**：
-  - 通过 Headless Chromium 渲染并调用 `read_file` 亲眼核查 `/var/tmp/cervix3d-work/stage58_final.png`，确认左侧顶部提示框与右侧宽心手札互不遮挡，3D 头颅扒眼皮/拨眼球及标牌新增按钮显示清晰，零报错。
-
-
-
-
-
-
+  - 通过 Headless Chromium 渲染并调用 `read_file` 亲眼核查 `/var/tmp/cervix3d-work/stage58_final.png` 与 `stage58_merged_master.png`，确认左侧顶部提示框与右侧宽心手札互不遮挡，3D 头颅扒眼皮/拨眼球及标牌新增按钮显示清晰，零报错。
 
 ---
 
-## Stage 59 — Zero-Quality-Loss Lag & Stutter Optimization for RTX 2070S (11.1× Faster Boot + 0.0026 ms GPU Hair Slider Updates)
+## Stage 59 (Rendering Track) — Zero-Quality-Loss Lag & Stutter Optimization for RTX 2070S (11.1× Faster Boot + 0.0026 ms GPU Hair Slider Updates)
 
 ### Root Causes & Fixes (Zero Visual Degradation)
 1. **`src/textures/anatomyTextureGenerator.js` (`6,994 ms` for 5 heads -> `478.3 ms`, `14.6×` faster; `18.1 ms` per subsequent head)**:
@@ -1250,3 +1244,24 @@
 4. **`src/textures/skinTextureGenerator.js`, `src/three/photorealLighting.js`, and `src/main.js`**:
    - Replaced `153,600` Canvas 2D path calls (`stroke`/`arc`/`fill`) in `createSkinMicroMaps` with direct `Float32Array` -> `ImageData` synthesis (`36.5 ms`).
    - Cached `_cachedStrandUniforms` and `_cachedEyeUniforms` to eliminate per-frame `scene.traverse()` calls at 60 FPS, throttled ambient dynamic-lighting shadow rebuilds to 200 ms, and yielded between collectible summons during startup so the browser UI remains responsive.
+
+## Stage 60 — 2026-10-14 · 深度「地位衬托」3D 桌面阵列（三首朝拜阵 / 阶梯仰视阵 / 器物化镇纸阵 / 挑下巴审视）与《人性爽感心理学全书》（8 大类 46 篇深度文 + 12 套地位衬托人设）
+- **1. 桌面 3D「地位衬托阵列」一键编排与上位者单向触碰互动 (`DESKTOP_STATUS_FOIL_FORMATIONS`, `src/three/desktopBoxSpaceEngine.js`, `src/main.js`, `index.html`)**：
+  - **🙇‍♀️ 三首朝拜阵 (`tri_bow_court`)**：让桌上所有 3D 头颅向玩家主座方向对称内倾，并同步低眉俯首 22°（`customRot.x = 0.36`, `eyelidOpen = -0.40`），复数个昔日高傲面孔同时向主座垂首，直接激活大脑背侧中缝核血清素支配回路。
+  - **📐 阶梯仰视阵 (`stepped_upward_gaze`)**：让桌上所有 3D 头颅从玩家手肘下方抬起下巴、瞳仁上翻 18° 仰望主座上的玩家（空间海拔差定律：她们的海拔被永久锁死在手肘以下 35cm）。
+  - **🪨 器物化镇纸阵 (`utility_degradation`)**：将昔日矜贵高傲的头颅降格为日常书房杂役器物（1 号歪头贴桌充当压草稿纸的镇纸、2 号仰面张口充当笔托底座、3 号在桌角深度俯首侍立），以“大材小用”反衬书桌主人的尊贵地位。
+  - **👆 挑起下巴审视 (`lift_chin` & 标牌 `👆挑颏` 按钮)**：模拟上位者单向触碰豁免权，勾起 3D 头颅冰冷的下巴迫使其仰面 18° 接受单向检阅。
+  - **👑 摩挲轻拍发顶 (`pat_crown`)**：给 3D 头颅施加轻拍发顶的物理点头冲量与面颊微温反馈。
+- **2. 扩充至 12 套通用「地位衬托·阶层差值」标牌模板 (`UNIVERSAL_SUPERIORITY_AURA_TEMPLATES`)**：
+  - 100% 不绑定任何预设角色，涵盖 `地位衬托·昔日傲慢上位者`、`地位衬托·昔日嘲讽者`、`地位衬托·恃靓高傲美人`、`地位衬托·趾高气扬卷王`、`地位衬托·顺遂天之骄女`、`地位衬托·嫌贫爱富势利眼`、`地位衬托·圈子冷暴力者`、`地位衬托·苛刻挑剔评判官`、`地位衬托·众星捧月焦点`、`地位衬托·凡尔赛炫耀者`、`地位衬托·嫉妒使绊对手`、`帝王书案藏品` 共 12 套地位衬托签，支持一键轮换或直接点击文字手改。
+- **3. 《📖 地位衬托 × 人性爽感心理学全书》扩充至 8 大分类、46 篇深度长文与 18 条速效箴言 (`COMFORT_HANDBOOK_CATEGORIES` & `COMFORT_HANDBOOK_ARTICLES` & `QUICK_COMFORT_PILLS`)**：
+  - 新增 **`👑 地位衬托/阶层差` (8 篇)**：《地位衬托第一定律：没有“高傲者的俯首”，哪来上位者的威仪？》、《手肘之下35厘米定律：空间海拔如何直接决定心理地位？》、《器物化降维：把昔日高不可攀的脸，当成压住第42页教材的镇纸》、《挑起下巴的特权：为什么单向触碰能在一秒内确立主从关系？》、《单向凝视权：你不再是被审视的考生，你是检阅藏品的帝王》、《动与静的极致反差：静止的满级标本，是为了衬托正在进化的你》、《12种自定义地位衬托签》、《为什么“死人绝不说话”，才是最高级的地位衬托？》。
+  - 新增 **`🧠 人性爽感心理学` (8 篇硬核脑科学与人性剖析)**：深入解析罗伯特·萨波尔斯基（Sapolsky）血清素相对地位差定律、诺奖得主埃利亚斯·卡内蒂（Elias Canetti）《群众与权力》幸存者狂喜定律、塞利格曼（Seligman）零阻力支配感（Zero-Friction Agency）、神经经济学奖励预期误差（Prediction Error = 生前高傲度 × 当下顺从度）、具身认知（Embodied Cognition）30°俯视效应、C4 解剖断面祛魅心理学、收藏家收编效应与心流神经锚定术。
+- **4. 强制视觉自检完成**：
+  - 通过 Headless Chromium 渲染并调用 `read_file` 亲眼核查 `/var/tmp/cervix3d-work/stage59_status_foil.png`、`stage59_psych_science.png` 与 `stage59_final.png`，确认 3D 地位衬托阵、标牌 `👆挑颏` 按钮与黄金高亮心理学正文显示清晰，零报错。
+
+
+
+
+
+

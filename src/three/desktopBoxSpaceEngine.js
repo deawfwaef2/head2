@@ -1391,6 +1391,58 @@ export class DesktopBoxSpaceEngine {
         pet.customRot.z = 0;
         m.eyelidOpen = -0.36;
         m.mouthCorner = 0.15;
+      } else if (actionType === 'tri_bow_court') {
+        // 🙇‍♀️ 三首朝拜地位衬托阵：对称向中心主座内倾 + 深度低眉俯首 22°
+        pet.customRot.x = 0.36;
+        pet.customRot.y = idx === 0 ? 0.24 : (idx === 1 ? -0.24 : 0.0);
+        pet.customRot.z = 0;
+        m.eyelidOpen = -0.40;
+        m.mouthCorner = 0.22;
+        m.browAngle = -0.18;
+      } else if (actionType === 'stepped_upward_gaze') {
+        // 📐 阶梯仰视地位衬托阵：全员从手肘下方抬起下巴、瞳仁上望主座
+        pet.customRot.x = -0.28;
+        pet.customRot.y = idx === 0 ? 0.18 : (idx === 1 ? -0.18 : 0.0);
+        pet.customRot.z = 0;
+        m.eyelidOpen = 0.38;
+        m.eyeRollUp = 0.28;
+        col.pupilSize = 1.26;
+      } else if (actionType === 'utility_degradation') {
+        // 🪨 降维器物化衬托阵：1号歪头压书镇纸、2号仰面张口笔托、3号桌角低头侍立
+        if (idx % 3 === 0) {
+          pet.customRot.x = 0.18;
+          pet.customRot.y = 0.16;
+          pet.customRot.z = 0.36;
+          m.eyelidOpen = -0.32;
+        } else if (idx % 3 === 1) {
+          pet.customRot.x = -0.24;
+          pet.customRot.y = -0.12;
+          pet.customRot.z = -0.10;
+          m.jawOpen = 0.64;
+          m.eyelidOpen = 0.24;
+        } else {
+          pet.customRot.x = 0.38;
+          pet.customRot.y = 0;
+          pet.customRot.z = -0.22;
+          m.eyelidOpen = -0.42;
+        }
+      } else if (actionType === 'lift_chin') {
+        // 👆 上位者挑起下巴审视：勾起下颌仰面 18° 接受单向检阅
+        pet.customRot.x = -0.32;
+        pet.customRot.y = idx % 2 === 0 ? 0.10 : -0.10;
+        pet.customRot.z = idx % 2 === 0 ? 0.11 : -0.11;
+        m.eyelidOpen = 0.42;
+        m.jawOpen = 0.16;
+        pet.vel.y = 2.2;
+        pet.isGrounded = false;
+      } else if (actionType === 'pat_crown') {
+        // 👑 摩挲轻拍发顶：顺从点头微垂 + 面颊微温
+        pet.customRot.x = 0.26;
+        pet.customRot.z = idx % 2 === 0 ? 0.08 : -0.08;
+        pet.vel.y = -1.8;
+        m.eyelidOpen = -0.28;
+        m.mouthCorner = 0.28;
+        col.blushIntensity = 0.48;
       } else if (actionType === 'pry_eyes') {
         pet.customRot.x = -0.18;
         m.eyelidOpen = 0.56;
