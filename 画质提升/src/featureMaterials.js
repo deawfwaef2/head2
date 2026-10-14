@@ -111,13 +111,15 @@ export const HAIR_DEFAULTS = {
   headCenter: [0.0, 0.012, -0.005],
   crown: [0.0, 0.135, -0.02],
   scalpRadius: 0.092,
+  inset: 0.0,
 };
 
 const HAIR_VERT_DECL = /* glsl */ `
-uniform vec3 uHeadCenter; uniform vec3 uCrown;
+uniform vec3 uHeadCenter; uniform vec3 uCrown; uniform float uInset;
 varying vec3 vHairFlow; varying vec3 vHairRadial; varying float vHairDepth;
 `;
 const HAIR_VERT_MAIN = /* glsl */ `
+transformed -= normalize(transformed - uHeadCenter) * uInset;
 {
   vec3 p = transformed;
   vec3 flow = normalize(p - uCrown);
@@ -135,7 +137,7 @@ vec3 gHairTint = vec3(1.0);
 float gHairAO = 1.0;
 `;
 
-function patchHairShader(s, o, tipsPass) {
+function patchHairShader(s, o, tipsPass, shared) {
   Object.assign(s.uniforms, {
     uTexInfluence: { value: o.textureInfluence },
     uSpec1: { value: o.spec1 }, uSpec1Exp: { value: o.spec1Exp },
@@ -145,6 +147,7 @@ function patchHairShader(s, o, tipsPass) {
     uCrown: { value: new THREE.Vector3(...o.crown) },
     uScalpRadius: { value: o.scalpRadius },
   });
+  s.uniforms.uInset = shared.uInset;
   s.vertexShader = s.vertexShader
     .replace('#include <common>', '#include <common>\n' + HAIR_VERT_DECL)
     .replace('#include <project_vertex>', HAIR_VERT_MAIN + '#include <project_vertex>');
@@ -220,13 +223,14 @@ export function buildHairMaterials(src, opts = {}) {
     envMapIntensity: 0.3,
   };
   if (base.map) { base.map.colorSpace = THREE.SRGBColorSpace; base.map.anisotropy = 8; }
+  const shared = { uInset: { value: o.inset } };
   const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.45 });
-  core.onBeforeCompile = (s) => patchHairShader(s, o, false);
+  core.onBeforeCompile = (s) => patchHairShader(s, o, false, shared);
   core.customProgramCacheKey = () => 'photoreal-hair-core-v2';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
-  tips.onBeforeCompile = (s) => patchHairShader(s, o, true);
+  tips.onBeforeCompile = (s) => patchHairShader(s, o, true, shared);
   tips.customProgramCacheKey = () => 'photoreal-hair-tips-v2';
-  return { core, tips };
+  return { core, tips, shared };
 }
 
 export function applyHairColor(mats, rgb) {

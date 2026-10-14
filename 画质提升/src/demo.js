@@ -9,6 +9,7 @@ import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHair
 import { createPostChain } from './postChain.js';
 import { createDisplayStand } from './displayStand.js';
 import { HEAD_GLB, HAIRS } from './assets.gen.js';
+import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture } from './strandHair.js';
 
 const qs = new URLSearchParams(location.search);
 const QA = qs.has('qa');
@@ -20,6 +21,8 @@ const state = {
   skin: qs.get('skin') || 'cn_scholar_natural',
   hairColor: 'natural',
   brow: qs.get('brow') || 'eyebrow010',
+  hairMode: qs.get('hairmode') || 'strand',
+  density: qs.get('density') || 'mid',
 };
 
 const HAIR_COLORS = {
@@ -28,6 +31,15 @@ const HAIR_COLORS = {
   brown: { label: '栗棕', rgb: [0.085, 0.045, 0.028] },
   tea: { label: '奶茶棕', rgb: [0.2, 0.12, 0.075] },
 };
+
+const DENSITY = {
+  low: { label: '流畅（约 1.2 万根）', guides: 1200, childrenPerGuide: 10 },
+  mid: { label: '标准（约 3 万根）', guides: 2200, childrenPerGuide: 14 },
+  high: { label: '高精（约 6 万根）', guides: 3000, childrenPerGuide: 20 },
+  ultra: { label: '极致（约 10 万根，需好显卡）', guides: 4000, childrenPerGuide: 25 },
+};
+const strandCache = new Map();
+let strandMesh = null; let strandMat = null; let hairCards = null;
 
 const VIEWS = {
   front: { pos: [0, 0.012, 1.05], target: [0, 0.005, 0], fov: 15 },
@@ -168,6 +180,37 @@ async function loadHair(id) {
   tips.userData.afterOnly = true;
   srcMesh.updateWorldMatrix(true, false);
   for (const m of [core, tips]) { m.applyMatrix4(srcMesh.matrixWorld); head.add(m); hairMeshes.push(m); }
+  hairCards = { core, tips, srcMesh, orig, geom, id: h.id };
+  // 发丝模式：发片 → 真发丝
+  if (strandMesh) { strandMesh.parent?.remove(strandMesh); strandMesh = null; }
+  if (state.hairMode === 'strand') await buildStrands();
+}
+
+async function buildStrands() {
+  if (!hairCards) return;
+  const key = hairCards.id + '|' + state.density;
+  $('loading').style.display = 'grid';
+  $('loading').textContent = '正在把发片转换为真发丝（' + DENSITY[state.density].label + '）…';
+  await new Promise((r) => setTimeout(r, 30));
+  let res = strandCache.get(key);
+  if (!res) {
+    const alphaAt = alphaSamplerFromTexture(hairCards.orig.map);
+    const headSoup = morphedHeadSoup(parts.skin);
+    hairCards.srcMesh.updateWorldMatrix(true, false);
+    res = generateStrands(hairCards.geom, hairCards.srcMesh.matrixWorld, alphaAt, headSoup, DENSITY[state.density]);
+    strandCache.set(key, res);
+    console.log('[strands]', hairCards.id, state.density, res.guides, 'guides', res.strandCount, 'strands', res.vertexCount, 'verts', res.ms);
+    window.__STRAND_STATS__ = { id: hairCards.id, guides: res.guides, strands: res.strandCount, verts: res.vertexCount, ms: res.ms };
+  }
+  if (!strandMat) strandMat = createStrandMaterial(res.headCenter);
+  strandMat.userData.strandUniforms.uHeadCenter.value.set(...res.headCenter);
+  setStrandParams(strandMat, { color: HAIR_COLORS[state.hairColor].rgb });
+  if (strandMesh) strandMesh.parent?.remove(strandMesh);
+  strandMesh = new THREE.Mesh(res.geometry, strandMat);
+  strandMesh.castShadow = false; strandMesh.receiveShadow = true; strandMesh.frustumCulled = false;
+  strandMesh.renderOrder = 1;
+  head.add(strandMesh);
+  $('loading').style.display = 'none';
 }
 
 // ---------- 导入外部高精头模（测试渲染管线上限用：如 3D 扫描头模 GLB/OBJ + 贴图）----------
@@ -235,9 +278,17 @@ async function applyMode() {
   }
   if (parts.lashes) { const o = origMats.get(parts.lashes); parts.lashes.material = after ? (parts.lashes.userData.after ||= upgradeLashMaterial(o)) : o; }
   if (parts.brows) { const o = origMats.get(parts.brows); parts.brows.material = after ? (parts.brows.userData.after ||= upgradeBrowMaterial(o)) : o; parts.brows.castShadow = false; }
+  const strandOn = after && state.hairMode === 'strand' && !external;
   for (const m of hairMeshes) {
-    if (m.userData.afterOnly) m.visible = after && !external;
+    if (m.userData.afterOnly) m.visible = after && !external && !strandOn;
     else m.material = after ? m.userData.after : m.userData.orig;
+  }
+  if (strandMesh) strandMesh.visible = strandOn;
+  if (hairMats) {
+    // 发丝模式下，原发片作为内层发量底衬：内收 1.2mm、压暗，只负责遮住头皮和投射阴影
+    hairMats.shared.uInset.value = strandOn ? 0.0012 : 0.0;
+    hairMats.core.alphaTest = strandOn ? 0.62 : 0.45;
+    hairMats.core.color.setRGB(...HAIR_COLORS[state.hairColor].rgb.map((v) => v * (strandOn ? 0.55 : 1)));
   }
   if (external) external.traverse((o) => { if (o.isMesh) o.material = after ? o.userData.after : o.userData.orig; });
   // 光照与后期
@@ -299,7 +350,12 @@ function bindUI() {
   $('btnMode').onclick = () => { state.mode = state.mode === 'after' ? 'before' : 'after'; applyMode(); };
   $('selLight').onchange = (e) => { state.light = e.target.value; if (state.mode === 'after') { const p = rig.apply(state.light); backdrop.set(p.backdrop); } };
   $('selHair').onchange = async (e) => { state.hair = e.target.value; await loadHair(state.hair); applyMode(); };
-  $('selHairColor').onchange = (e) => { state.hairColor = e.target.value; applyHairColor(hairMats, HAIR_COLORS[state.hairColor].rgb); };
+  $('selHairColor').onchange = (e) => { state.hairColor = e.target.value; applyHairColor(hairMats, HAIR_COLORS[state.hairColor].rgb); if (strandMat) setStrandParams(strandMat, { color: HAIR_COLORS[state.hairColor].rgb }); applyMode(); };
+  fillSelect($('selHairMode'), [['strand', '真发丝（发片→发丝转换）'], ['card', '原版发片（对比用）']], state.hairMode);
+  fillSelect($('selDensity'), Object.entries(DENSITY).map(([k, v]) => [k, v.label]), state.density);
+  $('selHairMode').onchange = async (e) => { state.hairMode = e.target.value; if (state.hairMode === 'strand' && !strandMesh) await buildStrands(); applyMode(); };
+  $('selDensity').onchange = async (e) => { state.density = e.target.value; if (state.hairMode === 'strand') await buildStrands(); applyMode(); };
+
   $('selSkin').onchange = async (e) => { state.skin = e.target.value; await applyMode(); };
   $('selView').onchange = (e) => { state.view = e.target.value; setView(state.view); };
   const slider = (id, fn) => { const el = $(id); const out = $(id + 'O'); const f = () => { out.textContent = (+el.value).toFixed(2); fn(+el.value); }; el.oninput = f; f(); };
@@ -307,6 +363,8 @@ function bindUI() {
   slider('sRough', (v) => skinMat && setSkinParams(skinMat, { roughness: v }));
   slider('sPore', (v) => skinMat && setSkinParams(skinMat, { normalScale: v }));
   slider('sGrain', (v) => post && post.set({ grain: v }));
+  slider('sHairShine', (v) => strandMat && setStrandParams(strandMat, { gainR: 1.9 * v, gainTRT: 2.4 * v }));
+  slider('sHairBack', (v) => strandMat && setStrandParams(strandMat, { gainTT: v }));
   slider('sVig', (v) => post && post.set({ vignette: v }));
   slider('sSharp', (v) => post && post.set({ sharpen: v }));
   slider('sExpo', (v) => { renderer.toneMappingExposure = v; });
@@ -331,10 +389,15 @@ window.addEventListener('resize', () => {
 // ---------- 启动 ----------
 let frames = 0;
 const clock = new THREE.Clock();
+const _dbs = new THREE.Vector2();
 function startLoop() {
   frames = 0; window.__READY__ = false;
   renderer.setAnimationLoop(() => {
     controls.update();
+    if (strandMat) {
+      const hpx = renderer.getDrawingBufferSize(_dbs).y;
+      setStrandParams(strandMat, { pxScale: 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.max(1, hpx) });
+    }
     if (state.mode === 'after' && post) post.render(clock.getElapsedTime());
     else renderer.render(scene, camera);
     frames++;

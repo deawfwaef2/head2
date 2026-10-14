@@ -27,7 +27,8 @@ for (const c of cases) {
   await page.evaluate(() => document.body.classList.add('hidepanel'));
   await page.waitForTimeout(+(process.env.WAIT || 300));
   const name = c.replace(/[&=]/g, '_');
-  await page.screenshot({ path: path.join(outDir, name + '.png') });
+  await page.screenshot({ path: path.join(outDir, name + '.png'), timeout: 300000 });
+  const st = await page.evaluate(() => window.__STRAND_STATS__ || null); if (st) console.log('  strands', JSON.stringify(st));
   const err = await page.evaluate(() => window.__ERROR__ || null);
   console.log(name, ((Date.now() - t0) / 1000).toFixed(1) + 's', err ? 'ERROR ' + err : 'ok', errs.slice(0, 6).join(' | '));
   await page.close();
