@@ -117,41 +117,42 @@ const state = {
   visualCustomConfig: {
     presetId: 'cinema_85mm_portrait',
     hdrMode: 'golden_hour',
-    envIntensity: 0.32,
-    windowGobo: 'rain_mullion',
-    windowGoboStrength: 0.34,
+    envIntensity: 0.18,
+    windowGobo: 'hair_sun_slit',
+    windowGoboStrength: 0.78,
     dynamicLightMode: 'sunset_cloud_drift',
     dynamicLightSpeed: 1.0,
     dynamicLightAmp: 1.0,
-    chiaroscuro: 0.68,
-    tyndall: 0.58,
-    vintagePhoto: 0.48,
-    softFocus: 0.56,
-    depthBlur: 0.44,
-    chromatic: 0.14,
-    keyColor: '#ffeed6',
-    rimColor: '#fcd9a8',
-    keyAzimuthDeg: 38,
-    keyElevationDeg: 28,
-    keyIntensity: 1.36,
-    fillIntensity: 0.28,
-    rimIntensity: 0.78,
-    hemiIntensity: 0.24,
-    exposure: 0.80,
-    sssIntensity: 0.82,
-    skinGloss: 0.12,
-    wetGloss: 0.12,
-    sharpen: 0.06,
-    contrast: 1.09,
-    saturation: 0.90,
-    warmth: 0.07,
-    vignette: 0.36,
-    filmGrain: 0.09,
-    bloomStrength: 0.07,
+    chiaroscuro: 0.94,
+    tyndall: 0.74,
+    vintagePhoto: 0.34,
+    softFocus: 0.58,
+    depthBlur: 0.48,
+    chromatic: 0.16,
+    keyColor: '#ffe8c4',
+    rimColor: '#ffd494',
+    keyAzimuthDeg: 36,
+    keyElevationDeg: 24,
+    keyIntensity: 2.18,
+    fillIntensity: 0.14,
+    rimIntensity: 1.16,
+    hemiIntensity: 0.14,
+    upIntensity: 0.08,
+    exposure: 0.88,
+    sssIntensity: 0.96,
+    skinGloss: 0.16,
+    wetGloss: 0.16,
+    sharpen: 0.04,
+    contrast: 1.22,
+    saturation: 0.96,
+    warmth: 0.12,
+    vignette: 0.44,
+    filmGrain: 0.07,
+    bloomStrength: 0.11,
     irisSparkle: 0.05,
-    halation: 0.28,
+    halation: 0.54,
     skinLumen: 0.0,
-    cursorTorch: 0.28
+    cursorTorch: 0.24
   },
   studioDraft: {
     basePreset: 'fangyaoping',
@@ -3219,74 +3220,98 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (fromPreset && patch.presetId && VISUAL_STYLE_PRESETS[patch.presetId]) {
       const p = VISUAL_STYLE_PRESETS[patch.presetId];
       Object.assign(state.visualCustomConfig, {
-        hdrMode: p.hdrMode || 'softbox_portrait',
-        envIntensity: p.envIntensity ?? 0.88,
-        windowGobo: p.windowGobo || 'none',
-        windowGoboStrength: p.windowGoboStrength ?? 0.16,
-        chiaroscuro: p.chiaroscuro ?? 0.28,
-        tyndall: p.tyndall ?? 0.36,
-        vintagePhoto: p.vintagePhoto ?? 0.06,
-        softFocus: p.softFocus ?? 0.14,
-        depthBlur: p.depthBlur ?? 0.12,
-        chromatic: p.chromatic ?? 0.08,
-        keyColor: p.keyColor || '#fff6ee',
-        rimColor: p.rimColor || '#fff0e4',
+        hdrMode: p.hdrMode || 'golden_hour',
+        envIntensity: p.envIntensity ?? 0.18,
+        windowGobo: p.windowGobo || 'hair_sun_slit',
+        windowGoboStrength: p.windowGoboStrength ?? 0.78,
+        chiaroscuro: p.chiaroscuro ?? 0.94,
+        tyndall: p.tyndall ?? 0.74,
+        vintagePhoto: p.vintagePhoto ?? 0.34,
+        softFocus: p.softFocus ?? 0.58,
+        depthBlur: p.depthBlur ?? 0.48,
+        chromatic: p.chromatic ?? 0.16,
+        keyColor: p.keyColor || '#ffe8c4',
+        rimColor: p.rimColor || '#ffd494',
         keyAzimuthDeg: p.keyAzimuthDeg,
         keyElevationDeg: p.keyElevationDeg,
         keyIntensity: p.keyIntensity,
+        fillIntensity: p.fillIntensity ?? 0.14,
         rimIntensity: p.rimIntensity,
+        hemiIntensity: p.hemiIntensity ?? 0.14,
+        upIntensity: p.upIntensity ?? 0.08,
+        exposure: p.exposure ?? 0.88,
         sssIntensity: p.sssIntensity,
-        skinGloss: p.skinGloss ?? 0.54,
-        wetGloss: p.skinGloss ?? 0.54,
+        skinGloss: p.skinGloss ?? 0.16,
+        wetGloss: p.skinGloss ?? 0.16,
         sharpen: p.sharpen,
         contrast: p.contrast,
+        saturation: p.saturation ?? 0.96,
         warmth: p.warmth,
+        vignette: p.vignette ?? 0.44,
+        filmGrain: p.filmGrain ?? 0.07,
         bloomStrength: p.bloomStrength,
-        irisSparkle: p.irisSparkle ?? 0.82,
-        halation: p.halation ?? 0.48,
-        skinLumen: p.skinLumen ?? 0.58,
-        cursorTorch: p.cursorTorch ?? 0.75
+        irisSparkle: p.irisSparkle ?? 0.05,
+        halation: p.halation ?? 0.54,
+        skinLumen: p.skinLumen ?? 0.0,
+        cursorTorch: p.cursorTorch ?? 0.24,
+        tint: p.tint,
+        shadowTint: p.shadowTint,
       });
-      const syncSlider = (id, valId, val, fmt) => {
-        const el = document.getElementById(id);
-        const vEl = document.getElementById(valId);
-        if (el) el.value = String(val);
-        if (vEl) vEl.textContent = fmt(val);
-      };
-      syncSlider('vc-cursor-torch', 'val-vc-cursor-torch', state.visualCustomConfig.cursorTorch, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-iris-sparkle', 'val-vc-iris-sparkle', state.visualCustomConfig.irisSparkle, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-halation', 'val-vc-halation', state.visualCustomConfig.halation, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-skin-lumen', 'val-vc-skin-lumen', state.visualCustomConfig.skinLumen, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-soft-focus', 'val-vc-soft-focus', state.visualCustomConfig.softFocus, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-depth-blur', 'val-vc-depth-blur', state.visualCustomConfig.depthBlur, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-chromatic', 'val-vc-chromatic', state.visualCustomConfig.chromatic, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-env-intensity', 'val-vc-env-intensity', state.visualCustomConfig.envIntensity, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-tyndall', 'val-vc-tyndall', state.visualCustomConfig.tyndall, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-vintage-photo', 'val-vc-vintage-photo', state.visualCustomConfig.vintagePhoto, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', state.visualCustomConfig.chiaroscuro, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', state.visualCustomConfig.windowGoboStrength, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-key-azimuth', 'val-vc-key-azimuth', p.keyAzimuthDeg, v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
-      syncSlider('vc-key-elevation', 'val-vc-key-elevation', p.keyElevationDeg, v => `${Math.round(v)}°`);
-      syncSlider('vc-key-intensity', 'val-vc-key-intensity', p.keyIntensity, v => Number(v).toFixed(2));
-      syncSlider('vc-rim-intensity', 'val-vc-rim-intensity', p.rimIntensity, v => Number(v).toFixed(2));
-      syncSlider('vc-sss', 'val-vc-sss', p.sssIntensity, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', state.visualCustomConfig.skinGloss, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-sharpen', 'val-vc-sharpen', p.sharpen, v => `${Math.round(v * 100)}%`);
-      syncSlider('vc-contrast', 'val-vc-contrast', p.contrast, v => Number(v).toFixed(2));
-      syncSlider('vc-warmth', 'val-vc-warmth', p.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
-      syncSlider('vc-bloom', 'val-vc-bloom', p.bloomStrength, v => `${Math.round(v * 100)}%`);
-      const selHdr = document.getElementById('sel-hdr-mode');
-      if (selHdr) selHdr.value = state.visualCustomConfig.hdrMode;
-      const selGobo = document.getElementById('sel-window-gobo');
-      if (selGobo) selGobo.value = state.visualCustomConfig.windowGobo;
-      const colKey = document.getElementById('vc-key-color');
-      if (colKey) colKey.value = state.visualCustomConfig.keyColor;
-      const colRim = document.getElementById('vc-rim-color');
-      if (colRim) colRim.value = state.visualCustomConfig.rimColor;
     }
+    const syncSlider = (id, valId, val, fmt) => {
+      const el = document.getElementById(id);
+      const vEl = document.getElementById(valId);
+      if (el && val !== undefined) el.value = String(val);
+      if (vEl && val !== undefined) vEl.textContent = fmt(val);
+    };
+    const vc = state.visualCustomConfig;
+    syncSlider('vc-cursor-torch', 'val-vc-cursor-torch', vc.cursorTorch, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-iris-sparkle', 'val-vc-iris-sparkle', vc.irisSparkle, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-halation', 'val-vc-halation', vc.halation, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-skin-lumen', 'val-vc-skin-lumen', vc.skinLumen, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-soft-focus', 'val-vc-soft-focus', vc.softFocus, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-depth-blur', 'val-vc-depth-blur', vc.depthBlur, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-chromatic', 'val-vc-chromatic', vc.chromatic, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-env-intensity', 'val-vc-env-intensity', vc.envIntensity, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-tyndall', 'val-vc-tyndall', vc.tyndall, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-vintage-photo', 'val-vc-vintage-photo', vc.vintagePhoto, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', vc.chiaroscuro, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', vc.windowGoboStrength, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-key-azimuth', 'val-vc-key-azimuth', vc.keyAzimuthDeg, v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
+    syncSlider('vc-key-elevation', 'val-vc-key-elevation', vc.keyElevationDeg, v => `${Math.round(v)}°`);
+    syncSlider('vc-key-intensity', 'val-vc-key-intensity', vc.keyIntensity, v => Number(v).toFixed(2));
+    syncSlider('vc-rim-intensity', 'val-vc-rim-intensity', vc.rimIntensity, v => Number(v).toFixed(2));
+    syncSlider('vc-sss', 'val-vc-sss', vc.sssIntensity, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', vc.skinGloss, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-sharpen', 'val-vc-sharpen', vc.sharpen, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-contrast', 'val-vc-contrast', vc.contrast, v => Number(v).toFixed(2));
+    syncSlider('vc-warmth', 'val-vc-warmth', vc.warmth, v => `${v >= 0 ? '+' : ''}${Number(v).toFixed(2)}`);
+    syncSlider('vc-bloom', 'val-vc-bloom', vc.bloomStrength, v => `${Math.round(v * 100)}%`);
+    const selHdr = document.getElementById('sel-hdr-mode');
+    if (selHdr && vc.hdrMode) selHdr.value = vc.hdrMode;
+    const selGobo = document.getElementById('sel-window-gobo');
+    if (selGobo && vc.windowGobo) selGobo.value = vc.windowGobo;
+    const colKey = document.getElementById('vc-key-color');
+    if (colKey && vc.keyColor) colKey.value = vc.keyColor;
+    const colRim = document.getElementById('vc-rim-color');
+    if (colRim && vc.rimColor) colRim.value = vc.rimColor;
     const selDyn = document.getElementById('sel-dynamic-light-mode');
     if (selDyn && state.visualCustomConfig.dynamicLightMode) {
       selDyn.value = state.visualCustomConfig.dynamicLightMode;
+    }
+    const btnChiaroTop = document.getElementById('btn-quick-chiaroscuro');
+    if (btnChiaroTop) {
+      const gId = vc.windowGobo || 'hair_sun_slit';
+      const goboTopLabels = {
+        hair_sun_slit: '🌞 强光影: 逆光发丝投影',
+        venetian_blinds: '🪟 强光影: 百叶窗切光',
+        tree_dappled: '🌿 强光影: 树影斑驳',
+        rain_mullion: '🌧️ 强光影: 雨夜窗格',
+        gothic_lattice: '🏰 强光影: 哥特花窗',
+        none: '🔦 柔光影: 影棚无影箱',
+      };
+      btnChiaroTop.textContent = goboTopLabels[gId] || '🌞 强光影: 开启';
+      btnChiaroTop.classList.toggle('active-top', gId !== 'none' && (vc.chiaroscuro ?? 0.94) > 0.55);
     }
     const btnDynTop = document.getElementById('btn-quick-dyn-light');
     if (btnDynTop) {
@@ -3305,6 +3330,21 @@ window.addEventListener('DOMContentLoaded', async () => {
     desktopEngine?.applyVisualCustomConfig(state.visualCustomConfig);
     studioEngine?.applyVisualCustomConfig(state.visualCustomConfig);
   };
+
+  document.getElementById('btn-quick-chiaroscuro')?.addEventListener('click', () => {
+    const cycleModes = [
+      { windowGobo: 'hair_sun_slit', windowGoboStrength: 0.78, chiaroscuro: 0.94, keyIntensity: 2.18, fillIntensity: 0.14, contrast: 1.22, label: '🌞 盛夏逆光发丝缕缕投影 + 10:1强明暗对比 (参考图同款)' },
+      { windowGobo: 'venetian_blinds', windowGoboStrength: 0.84, chiaroscuro: 0.98, keyIntensity: 2.26, fillIntensity: 0.12, contrast: 1.26, label: '🪟 书房百叶窗条纹切光 + 极致明暗分割' },
+      { windowGobo: 'tree_dappled', windowGoboStrength: 0.78, chiaroscuro: 0.90, keyIntensity: 2.10, fillIntensity: 0.16, contrast: 1.20, label: '🌿 窗外梧桐树影斑驳光斑 + 自然林间强光影' },
+      { windowGobo: 'rain_mullion', windowGoboStrength: 0.72, chiaroscuro: 0.86, keyIntensity: 1.98, fillIntensity: 0.18, contrast: 1.18, label: '🌧️ 雨夜十字窗框投影 + 伦勃朗明暗雕塑感' },
+      { windowGobo: 'none', windowGoboStrength: 0.0, chiaroscuro: 0.32, keyIntensity: 1.38, fillIntensity: 0.44, contrast: 1.06, label: '🔦 纯净影棚双柔光箱 (柔和均匀光影)' },
+    ];
+    const curGobo = state.visualCustomConfig.windowGobo || 'hair_sun_slit';
+    const curIdx = cycleModes.findIndex(m => m.windowGobo === curGobo);
+    const nextCfg = cycleModes[(curIdx + 1) % cycleModes.length];
+    applyVisualConfigAndSyncUI(nextCfg, false);
+    showToast(`🌓 已切换强光影明暗模式：${nextCfg.label}`);
+  });
 
   document.querySelectorAll('[data-style-preset]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -3382,6 +3422,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-contrast', 'val-vc-contrast', 'contrast', v => v.toFixed(2));
   bindVcSlider('vc-warmth', 'val-vc-warmth', 'warmth', v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`);
   bindVcSlider('vc-bloom', 'val-vc-bloom', 'bloomStrength', v => `${Math.round(v * 100)}%`);
+
+  // Initialize high-contrast sunlit hair-strand shadow visual config on startup
+  applyVisualConfigAndSyncUI({}, false);
 
   // Interactive Mouse Cursor Beauty Torch Tracking
   window.addEventListener('pointermove', (e) => {

@@ -16,16 +16,17 @@ export const HDR_ENVIRONMENT_CATALOG = [
 ];
 
 export const WINDOW_GOBO_CATALOG = [
+  { id: 'hair_sun_slit', modeInt: 5, label: '🌞 盛夏逆光发丝缕缕投影 + 树隙切光斑 (参考图同款·强明暗对比)' },
+  { id: 'tree_dappled', modeInt: 4, label: '🌿 窗外梧桐树影摇曳斑驳光 + 发丝微影 (自然呼吸感)' },
+  { id: 'venetian_blinds', modeInt: 2, label: '🪟 书房百叶窗条纹切光 (王家卫电影感强明暗切割)' },
   { id: 'rain_mullion', modeInt: 1, label: '🌧️ 雨夜十字窗格 + 流云漫射窗光 (伴学推荐)' },
-  { id: 'venetian_blinds', modeInt: 2, label: '🪟 书房百叶窗条纹光影 (电影感明暗切割)' },
   { id: 'gothic_lattice', modeInt: 3, label: '🏰 哥特菱格花窗光影 (古典标本馆)' },
-  { id: 'tree_dappled', modeInt: 4, label: '🌿 窗外梧桐树影摇曳斑驳光 (自然呼吸感)' },
-  { id: 'none', modeInt: 0, label: '🔦 纯净影棚柔光箱 (无窗框投影)' },
+  { id: 'none', modeInt: 0, label: '🔦 纯净影棚柔光箱 (无遮光投影)' },
 ];
 
 export const DYNAMIC_LIGHT_MODES = [
   { id: 'sunset_cloud_drift', label: '🌅 暮色流云慢移 · 光影角度与冷暖缓慢呼吸 (默认推荐)' },
-  { id: 'tree_breeze_dappled', label: '🌿 梧桐树影微风摇曳 · 斑驳光斑缓慢流淌' },
+  { id: 'tree_breeze_dappled', label: '🌿 梧桐树影微风摇曳 · 发丝投影与斑驳光斑缓慢流淌' },
   { id: 'rain_caustics_sway', label: '🌧️ 雨夜窗影水波 · 柔和冷暖交替漫游' },
   { id: 'candle_chiaroscuro', label: '🕯️ 古典烛火摇曳 · 暖金伦勃朗明暗跳动' },
   { id: 'cinema_orbit', label: '🎬 戏剧环绕走马灯 · 140°立体雕塑光巡航' },
@@ -33,14 +34,14 @@ export const DYNAMIC_LIGHT_MODES = [
 ];
 
 export const GLOBAL_CHIAROSCURO_UNIFORMS = {
-  uSssIntensity: { value: 0.85 },
-  uChiaroscuro: { value: 0.58 },
-  uWindowGoboMode: { value: 1.0 },
-  uWindowGoboStrength: { value: 0.34 },
+  uSssIntensity: { value: 0.96 },
+  uChiaroscuro: { value: 0.94 },
+  uWindowGoboMode: { value: 5.0 },
+  uWindowGoboStrength: { value: 0.78 },
   uWindowGoboPhase: { value: 0.0 },
-  uWindowLightDir: { value: new THREE.Vector3(0.54, 0.44, 0.72).normalize() },
+  uWindowLightDir: { value: new THREE.Vector3(0.58, 0.42, 0.70).normalize() },
   uCursorLightDir: { value: new THREE.Vector3(0.18, 0.28, 0.94).normalize() },
-  uCursorTorchIntensity: { value: 0.55 },
+  uCursorTorchIntensity: { value: 0.24 },
 };
 
 export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
@@ -50,47 +51,91 @@ export function updateInteractiveCursorLight(ndcX = 0, ndcY = 0) {
 }
 
 export const VISUAL_STYLE_PRESETS = {
+  sunlit_hair_shadow_film: {
+    id: 'sunlit_hair_shadow_film',
+    label: '🌞 盛夏逆光发丝投影 · 强明暗切割与奶油柔焦胶片 (参考图同款·首推)',
+    desc: '复刻参考照：脸颊缕缕发丝投影、前景树隙斜切强阳光、奶油漫射高光与暖绿散景光斑',
+    hdrMode: 'golden_hour',
+    keyColor: '#ffe4b8',
+    fillColor: '#4a5d4e',
+    rimColor: '#ffd28a',
+    hemiSky: '#fff0d4',
+    hemiGround: '#141812',
+    keyIntensity: 2.15,
+    fillIntensity: 0.14,
+    rimIntensity: 1.55,
+    hemiIntensity: 0.14,
+    upIntensity: 0.06,
+    keyAzimuthDeg: -38,
+    keyElevationDeg: 26,
+    exposure: 0.88,
+    envIntensity: 0.24,
+    contrast: 1.22,
+    saturation: 0.94,
+    warmth: 0.09,
+    vignette: 0.42,
+    sharpen: 0.04,
+    softFocus: 0.66,
+    depthBlur: 0.54,
+    chromatic: 0.16,
+    bloomStrength: 0.14,
+    filmGrain: 0.10,
+    tyndall: 0.78,
+    vintagePhoto: 0.46,
+    skinGloss: 0.12,
+    sssIntensity: 0.98,
+    chiaroscuro: 0.96,
+    irisSparkle: 0.08,
+    halation: 0.52,
+    skinLumen: 0.0,
+    cursorTorch: 0.22,
+    windowGobo: 'hair_sun_slit',
+    windowGoboStrength: 0.82,
+    tint: [1.03, 0.99, 0.91],
+    shadowTint: [0.028, 0.036, 0.022],
+  },
   cinema_85mm_portrait: {
     id: 'cinema_85mm_portrait',
-    label: '📸 85mm 大光圈人像摄影 · 柔焦奶油肌与双柔光箱 HDR (默认首推)',
-    hdrMode: 'softbox_portrait',
-    keyColor: '#fff6ee',
-    fillColor: '#b8d0f4',
-    rimColor: '#e4f0ff',
-    hemiSky: '#fffaf5',
-    hemiGround: '#2e2426',
-    keyIntensity: 1.66,
-    fillIntensity: 0.64,
-    rimIntensity: 1.42,
-    hemiIntensity: 0.48,
-    upIntensity: 0.28,
-    keyAzimuthDeg: 28,
+    label: '📸 85mm 逆光发丝强光影写真 · 奶油柔焦与树隙明暗切割 (默认首推)',
+    desc: '强明暗切割比(10:1)、脸颊缕缕发丝投影、奶油高光柔焦漫射与复古胶片层次',
+    hdrMode: 'golden_hour',
+    keyColor: '#ffe6be',
+    fillColor: '#526458',
+    rimColor: '#ffd494',
+    hemiSky: '#fff2da',
+    hemiGround: '#151814',
+    keyIntensity: 2.08,
+    fillIntensity: 0.16,
+    rimIntensity: 1.48,
+    hemiIntensity: 0.15,
+    upIntensity: 0.08,
+    keyAzimuthDeg: -36,
     keyElevationDeg: 26,
-    exposure: 0.95,
-    envIntensity: 0.96,
-    contrast: 1.05,
-    saturation: 1.02,
-    warmth: 0.02,
-    vignette: 0.22,
-    sharpen: 0.30,
-    softFocus: 0.14,
-    depthBlur: 0.12,
-    chromatic: 0.08,
-    bloomStrength: 0.12,
-    filmGrain: 0.04,
-    tyndall: 0.36,
-    vintagePhoto: 0.06,
-    skinGloss: 0.54,
-    sssIntensity: 0.92,
-    chiaroscuro: 0.32,
-    irisSparkle: 0.82,
+    exposure: 0.88,
+    envIntensity: 0.25,
+    contrast: 1.20,
+    saturation: 0.94,
+    warmth: 0.08,
+    vignette: 0.40,
+    sharpen: 0.05,
+    softFocus: 0.64,
+    depthBlur: 0.52,
+    chromatic: 0.15,
+    bloomStrength: 0.13,
+    filmGrain: 0.09,
+    tyndall: 0.74,
+    vintagePhoto: 0.44,
+    skinGloss: 0.12,
+    sssIntensity: 0.96,
+    chiaroscuro: 0.94,
+    irisSparkle: 0.08,
     halation: 0.48,
-    skinLumen: 0.58,
-    cursorTorch: 0.75,
-    windowGobo: 'none',
-    windowGoboStrength: 0.12,
-    tint: [1.01, 1.00, 1.01],
-    shadowTint: [0.03, 0.02, 0.03],
+    skinLumen: 0.0,
+    cursorTorch: 0.24,
+    windowGobo: 'hair_sun_slit',
+    windowGoboStrength: 0.78,
+    tint: [1.03, 0.99, 0.92],
+    shadowTint: [0.028, 0.035, 0.022],
   },
   korean_magazine_glow: {
     id: 'korean_magazine_glow',
@@ -618,39 +663,39 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.88, hdrMod
   }
   const modeKey = hdrMode || 'softbox_portrait';
   let envTex = envMapByMode.get(modeKey);
-  if (!envTex) {
+  if (!envTex && typeof renderer.compile === 'function') {
     const pmrem = new THREE.PMREMGenerator(renderer);
     // Build a high-contrast dark-velvet studio HDR light dome instead of a flat white box so HDR sculpts facial topography!
     const domeScene = new THREE.Scene();
 
     const modePalettes = {
       softbox_portrait: {
-        bg: new THREE.Color(0.038, 0.040, 0.052),
-        warmBox: new THREE.Color(3.4, 3.0, 2.8),
-        coolBox: new THREE.Color(2.2, 2.7, 3.6),
-        rimStrip: new THREE.Color(4.2, 4.6, 5.4),
-        bounceBox: new THREE.Color(1.4, 1.2, 1.2),
+        bg: new THREE.Color(0.018, 0.018, 0.024),
+        warmBox: new THREE.Color(3.8, 3.3, 2.9),
+        coolBox: new THREE.Color(0.42, 0.48, 0.62),
+        rimStrip: new THREE.Color(4.4, 4.6, 5.2),
+        bounceBox: new THREE.Color(0.32, 0.28, 0.26),
       },
       golden_hour: {
-        bg: new THREE.Color(0.055, 0.028, 0.016),
-        warmBox: new THREE.Color(4.6, 2.7, 1.3),
-        coolBox: new THREE.Color(1.5, 2.2, 3.4),
-        rimStrip: new THREE.Color(5.5, 3.6, 1.6),
-        bounceBox: new THREE.Color(1.8, 1.1, 0.7),
+        bg: new THREE.Color(0.016, 0.010, 0.006),
+        warmBox: new THREE.Color(5.4, 3.2, 1.5),
+        coolBox: new THREE.Color(0.28, 0.24, 0.20),
+        rimStrip: new THREE.Color(5.8, 3.8, 1.6),
+        bounceBox: new THREE.Color(0.26, 0.18, 0.12),
       },
       rainy_window: {
-        bg: new THREE.Color(0.020, 0.038, 0.068),
-        warmBox: new THREE.Color(2.6, 3.3, 4.4),
-        coolBox: new THREE.Color(3.0, 4.2, 5.6),
-        rimStrip: new THREE.Color(3.8, 5.2, 6.4),
-        bounceBox: new THREE.Color(1.1, 1.5, 2.2),
+        bg: new THREE.Color(0.012, 0.020, 0.036),
+        warmBox: new THREE.Color(3.2, 3.8, 4.8),
+        coolBox: new THREE.Color(0.38, 0.52, 0.74),
+        rimStrip: new THREE.Color(4.2, 5.4, 6.4),
+        bounceBox: new THREE.Color(0.28, 0.36, 0.52),
       },
       museum_velvet: {
-        bg: new THREE.Color(0.022, 0.016, 0.030),
-        warmBox: new THREE.Color(3.6, 2.7, 1.9),
-        coolBox: new THREE.Color(1.8, 1.6, 2.6),
-        rimStrip: new THREE.Color(4.5, 3.5, 2.5),
-        bounceBox: new THREE.Color(1.0, 0.8, 1.0),
+        bg: new THREE.Color(0.012, 0.008, 0.016),
+        warmBox: new THREE.Color(4.2, 3.0, 2.0),
+        coolBox: new THREE.Color(0.26, 0.22, 0.34),
+        rimStrip: new THREE.Color(4.8, 3.6, 2.4),
+        bounceBox: new THREE.Color(0.22, 0.18, 0.22),
       },
     };
     const pal = modePalettes[modeKey] || modePalettes.softbox_portrait;
@@ -876,39 +921,64 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         return mask;
       }
 
-      float computeWindowBeamEnvelope(vec3 worldPos, vec3 lightDir) {
+      float computeWindowBeamEnvelope(vec3 worldPos, vec3 localPos, vec3 lightDir) {
         if (uWindowGoboMode < 0.5 || uWindowGoboStrength <= 0.001) return 1.0;
         vec3 L = normalize(lightDir);
         vec3 rightAx = normalize(cross(vec3(0.0, 1.0, 0.0), L) + vec3(1e-4, 0.0, 0.0));
         vec3 upAx = normalize(cross(L, rightAx));
         vec2 p = vec2(dot(worldPos, rightAx), dot(worldPos, upAx));
-        float radialCone = smoothstep(82.0, 14.0, length(p * vec2(0.75, 0.85)));
+        vec2 faceCm = localPos.xy * 100.0;
         float ph = uWindowGoboPhase;
+        float sunSide = L.x >= 0.0 ? 1.0 : -1.0;
+
+        // Multi-Harmonic Wispy Hair-Strand Cast Shadows across Sunlit Temple, Eye & Cheek (复刻参考图脸颊缕缕发丝投影)
+        float cheekStrandZone = smoothstep(-4.4, -1.8, faceCm.y)
+                              * (1.0 - smoothstep(3.2, 5.2, faceCm.y))
+                              * smoothstep(0.032, 0.068, localPos.z)
+                              * smoothstep(-2.4, 1.6, faceCm.x * sunSide + 0.8);
+        float curveBend = (faceCm.y - 2.6) * (faceCm.y - 2.6) * 0.11;
+        float sCoord = (faceCm.x * sunSide - faceCm.y * 0.44 + curveBend) * 9.6 + sin(ph * 0.65) * 1.6;
+        float wispLock = smoothstep(-0.34, 0.46, sin(sCoord * 0.38 + cos(faceCm.y * 0.82 - ph * 0.4) * 0.78));
+        float fineStrandA = smoothstep(-0.56, 0.34, sin(sCoord * 1.18 + sin(faceCm.y * 1.38) * 0.62));
+        float fineStrandB = smoothstep(-0.62, 0.30, cos(sCoord * 2.10 - faceCm.y * 0.88 + ph * 0.52));
+        float hairStrandShadow = mix(
+          1.0,
+          0.10 + 0.90 * (0.45 * wispLock + 0.35 * fineStrandA + 0.20 * fineStrandB),
+          cheekStrandZone * 0.94
+        );
+
         float pattern = 1.0;
         if (uWindowGoboMode < 1.5) {
-          // 1. Rainy Mullion Window Lattice + Drifting Cloud Caustics
-          float mx = smoothstep(-0.75, 0.45, cos((p.x + sin(ph * 0.7) * 3.5) * 0.14));
-          float my = smoothstep(-0.75, 0.45, cos((p.y + cos(ph * 0.5) * 2.5) * 0.14));
-          float rainRipple = 0.90 + 0.10 * sin(p.x * 0.25 + p.y * 0.32 - ph * 1.8);
-          pattern = (0.62 + 0.38 * mx * my) * rainRipple;
+          // 1. Rainy Mullion Window Lattice at True Facial Scale + Raindrop Caustics
+          float mx = smoothstep(-0.55, 0.35, cos((faceCm.x + sin(ph * 0.6) * 1.4) * 0.68));
+          float my = smoothstep(-0.55, 0.35, cos((faceCm.y + cos(ph * 0.5) * 1.1) * 0.68));
+          float rainRipple = 0.82 + 0.18 * sin(faceCm.x * 1.8 + faceCm.y * 2.2 - ph * 1.8);
+          pattern = (0.10 + 0.90 * mx * my) * rainRipple * mix(1.0, hairStrandShadow, 0.55);
         } else if (uWindowGoboMode < 2.5) {
-          // 2. Venetian Blinds Slats (slowly tilting & drifting across face)
-          float slat = smoothstep(-0.45, 0.55, cos((p.y * 0.38 + p.x * 0.08) + sin(ph * 0.6) * 1.4));
-          pattern = 0.48 + 0.52 * slat;
+          // 2. Venetian Blinds Slats slicing across eyes & cheeks (High-Contrast Film Noir / Wong Kar-wai)
+          float slat = smoothstep(-0.28, 0.32, cos((faceCm.y * 1.85 + faceCm.x * 0.42 * sunSide) + sin(ph * 0.6) * 1.5));
+          pattern = (0.06 + 0.94 * slat) * mix(1.0, hairStrandShadow, 0.50);
         } else if (uWindowGoboMode < 3.5) {
-          // 3. Gothic Diamond Stained-Glass Lattice
-          float d1 = smoothstep(-0.65, 0.50, cos((p.x + p.y) * 0.16 + sin(ph * 0.5) * 0.8));
-          float d2 = smoothstep(-0.65, 0.50, cos((p.x - p.y) * 0.16 - cos(ph * 0.5) * 0.8));
-          pattern = 0.52 + 0.48 * d1 * d2;
+          // 3. Gothic Diamond Stained-Glass Lattice across face
+          float d1 = smoothstep(-0.45, 0.38, cos((faceCm.x + faceCm.y) * 0.72 + sin(ph * 0.5) * 0.9));
+          float d2 = smoothstep(-0.45, 0.38, cos((faceCm.x - faceCm.y) * 0.72 - cos(ph * 0.5) * 0.9));
+          pattern = (0.08 + 0.92 * d1 * d2) * mix(1.0, hairStrandShadow, 0.45);
+        } else if (uWindowGoboMode < 4.5) {
+          // 4. Swaying Sycamore Tree Dappled Sunlight + Wispy Hair Shadows
+          float leaf1 = sin(faceCm.x * 0.78 + ph * 0.9) * cos(faceCm.y * 0.84 - ph * 0.75);
+          float leaf2 = sin((faceCm.x - faceCm.y) * 0.62 - ph * 0.6) * cos((faceCm.x + faceCm.y) * 0.55 + ph * 0.95);
+          float dappled = smoothstep(-0.22, 0.34, 0.55 * leaf1 + 0.45 * leaf2);
+          pattern = (0.08 + 0.92 * dappled) * mix(1.0, hairStrandShadow, 0.82);
         } else {
-          // 4. Swaying Sycamore Tree Dappled Sunlight (斑驳树影微风摇曳)
-          float leaf1 = sin(p.x * 0.22 + ph * 1.1) * cos(p.y * 0.24 - ph * 0.9);
-          float leaf2 = sin((p.x - p.y) * 0.17 - ph * 0.7) * cos((p.x + p.y) * 0.15 + ph * 1.2);
-          float dappled = smoothstep(-0.35, 0.48, 0.55 * leaf1 + 0.45 * leaf2);
-          pattern = 0.46 + 0.54 * dappled;
+          // 5. Reference Photo Mode (hair_sun_slit): Diagonal Sunbeam Slit + Forehead/Jaw Foliage Cut Shadow + Cheek Hair-Strand Shadows!
+          float diagCoord = faceCm.x * (-0.52 * sunSide) + faceCm.y * 0.85 + sin(ph * 0.38) * 0.65;
+          float upperForeheadCut = 1.0 - smoothstep(1.35, 3.10, diagCoord + 0.45 * sin(faceCm.x * 0.65 + ph * 0.3));
+          float lowerJawCut = smoothstep(-4.8, -2.0, faceCm.y + faceCm.x * 0.28 * sunSide + cos(ph * 0.32) * 0.42);
+          float sideFoliageCut = smoothstep(-4.2, -0.4, faceCm.x * sunSide + faceCm.y * 0.36 + sin(faceCm.y * 0.75 - ph * 0.45) * 0.65);
+          float sunSlit = upperForeheadCut * lowerJawCut * (0.10 + 0.90 * sideFoliageCut);
+          pattern = clamp(0.05 + 0.95 * sunSlit * hairStrandShadow, 0.05, 1.0);
         }
-        float env = clamp(0.42 + 0.58 * radialCone * pattern, 0.36, 1.0);
-        return mix(1.0, env, clamp(uWindowGoboStrength * 0.85, 0.0, 1.0));
+        return mix(1.0, pattern, clamp(uWindowGoboStrength, 0.0, 1.0));
       }
 
       vec3 computeDualLobeSkinSSS(vec3 fragNormal, vec3 lightDir, vec3 lightColor, vec3 viewDir, vec3 localPos) {
@@ -1077,20 +1147,31 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       `#include <lights_fragment_end>
       vec3 viewDir = normalize(vViewPosition);
       vec3 viewWinL = normalize((viewMatrix * vec4(normalize(uWindowLightDir), 0.0)).xyz);
-      float winEnv = computeWindowBeamEnvelope(vCervixWorldPos, uWindowLightDir);
+      float winEnv = computeWindowBeamEnvelope(vCervixWorldPos, vCervixLocalPos, uWindowLightDir);
       float fragNdl = dot(normal, viewWinL);
 
-      // Luminous Soft-Wrap Portrait Shading (NEVER crushes shadow side into dirty grey-brown!)
-      float litTerm = smoothstep(-0.48, 0.56, fragNdl) * winEnv;
+      // Stage 38 · High-Contrast Sun-Slit & Hair-Strand Chiaroscuro (复刻参考图：强明暗切割对比 + 发丝投影 + 交界线暖橘红真皮透光)
+      float litNdl = smoothstep(-0.24, 0.42, fragNdl);
+      float sunMask = clamp(litNdl * winEnv, 0.0, 1.0);
+      float litTerm = sunMask;
       float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.5);
-      float chiaroscuroCurve = mix(1.0, mix(0.80, 1.03, litTerm), clamp(chiaroscuroStrength * 0.35, 0.0, 0.45));
+      float shadowContrast = clamp(chiaroscuroStrength * 0.78 + uWindowGoboStrength * 0.35, 0.0, 1.25);
 
-      reflectedLight.directDiffuse *= chiaroscuroCurve;
-      reflectedLight.indirectDiffuse *= mix(0.96, 0.80 + 0.24 * litTerm, clamp(chiaroscuroStrength * 0.28, 0.0, 0.40));
+      // Sunlit patches glow with warm golden-ivory radiance; shadow zones & hair-strand shadows drop into deep velvety film shadow!
+      float directScale = mix(1.0, mix(0.06, 1.48, pow(sunMask, 0.86)), clamp(shadowContrast, 0.0, 1.0));
+      float indirectScale = mix(1.0, mix(0.14, 1.06, smoothstep(0.0, 0.85, sunMask)), clamp(shadowContrast * 0.92, 0.0, 0.96));
 
-      // Warm Rose-Porcelain Subsurface Bounce in Shadows
-      vec3 warmSubsurfaceShadow = vec3(1.04, 0.94, 0.95);
-      reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse * warmSubsurfaceShadow, reflectedLight.indirectDiffuse, litTerm);
+      reflectedLight.directDiffuse *= directScale * mix(vec3(0.80, 0.64, 0.50), vec3(1.09, 0.99, 0.88), sunMask);
+      reflectedLight.indirectDiffuse *= indirectScale;
+
+      // Deep Cinematic Warm-Olive / Espresso-Amber Film Shadow Toning (eliminates flat grey CG ambient)
+      vec3 warmSubsurfaceShadow = vec3(0.78, 0.68, 0.54);
+      reflectedLight.indirectDiffuse = mix(reflectedLight.indirectDiffuse * warmSubsurfaceShadow, reflectedLight.indirectDiffuse, sunMask);
+
+      // Subsurface Blood-Glow Penumbra Fringe right along every Sun-Slit & Hair-Strand Shadow Border!
+      float penumbraFringe = 4.0 * sunMask * (1.0 - sunMask);
+      vec3 bloodTerminatorGlow = diffuseColor.rgb * vec3(1.26, 0.44, 0.22) * pow(penumbraFringe, 1.15) * 0.44 * uSssIntensity * clamp(shadowContrast, 0.2, 1.2);
+      reflectedLight.directDiffuse += bloodTerminatorGlow;
 
       // Anti-Silicone Micro-Pore Specular Cavity Masking + Dedicated Wet Lip Gloss
       float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
@@ -1101,8 +1182,8 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         exp(-pow((abs(vCervixLocalPos.x) - 0.035) / 0.020, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.002) / 0.016, 2.0)) * smoothstep(0.068, 0.092, vCervixLocalPos.z)
       );
       float lipSpecBoost = vLipVermilionMask * clamp(uLipGloss, 0.0, 1.5) * 1.45;
-      reflectedLight.directSpecular *= (0.42 + 0.30 * litTerm + 0.26 * tZoneMask + lipSpecBoost) * poreSpecMask;
-      reflectedLight.indirectSpecular *= (0.45 + 0.38 * fresnelSheen + 0.22 * tZoneMask + lipSpecBoost * 0.85) * poreSpecMask;
+      reflectedLight.directSpecular *= (0.18 + 0.62 * sunMask + 0.22 * tZoneMask * sunMask + lipSpecBoost) * poreSpecMask;
+      reflectedLight.indirectSpecular *= (0.16 + 0.45 * sunMask + 0.20 * fresnelSheen * sunMask + lipSpecBoost * 0.85) * poreSpecMask;
 
       // Interactive Mouse-Following Studio Beauty Torch
       if (uCursorTorchIntensity > 0.01) {
@@ -1115,8 +1196,8 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       }
 
       // Delicate Vellus Hair (Peach Fuzz) Grazing Rim along cheek & jawline contour
-      float vellusRim = pow(1.0 - ndotv, 3.6) * smoothstep(-0.25, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
-      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.04, 0.97, 0.95) * vellusRim * 0.12;
+      float vellusRim = pow(1.0 - ndotv, 3.4) * smoothstep(-0.25, 0.55, fragNdl) * (1.0 - vLipVermilionMask);
+      reflectedLight.directDiffuse += diffuseColor.rgb * vec3(1.08, 0.95, 0.84) * vellusRim * (0.08 + 0.16 * sunMask);
 
       #if ( NUM_DIR_LIGHTS > 0 )
         vec3 sssAccum = vec3(0.0);
@@ -1125,11 +1206,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           sssAccum += computeDualLobeSkinSSS( normal, directionalLights[ i ].direction, directionalLights[ i ].color, viewDir, vCervixLocalPos );
         }
         #pragma unroll_loop_end
-        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.65 + 0.35 * winEnv) * 0.32;
+        reflectedLight.directDiffuse += sssAccum * diffuseColor.rgb * (0.35 + 0.65 * winEnv) * 0.36;
       #endif`
     );
   };
-  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v36';
+  material.customProgramCacheKey = () => 'cervix3d-true-dermis-v38';
 }
 
 /**
@@ -1174,10 +1255,13 @@ export function injectStageWindowGoboShader(material) {
         vec2 p = vec2(dot(vStageWorldPos, rightAx), dot(vStageWorldPos, upAx));
         float gMask = smoothstep(92.0, 18.0, length(p * vec2(0.75, 0.85)));
         float ph = uWindowGoboPhase;
-        float pat = 0.65 + 0.35 * sin((p.x + sin(ph * 0.7) * 4.0) * 0.14) * cos((p.y + cos(ph * 0.5) * 3.0) * 0.14);
-        float finalGobo = mix(1.0, clamp(0.28 + 0.72 * gMask * pat, 0.24, 1.0), clamp(uWindowGoboStrength * 0.85, 0.0, 1.0));
+        float pat = 0.52 + 0.48 * sin((p.x + sin(ph * 0.7) * 4.0) * 0.22) * cos((p.y + cos(ph * 0.5) * 3.0) * 0.22);
+        float slitBand = smoothstep(-28.0, -4.0, p.x * 0.75 + p.y * 0.65 + sin(ph * 0.35) * 6.0) * smoothstep(34.0, 8.0, p.x * 0.75 + p.y * 0.65);
+        float beamVal = uWindowGoboMode > 4.5 ? clamp(slitBand * (0.45 + 0.55 * pat), 0.0, 1.0) : clamp(gMask * pat, 0.0, 1.0);
+        float finalGobo = mix(1.0, clamp(0.12 + 1.24 * beamVal, 0.12, 1.32), clamp(uWindowGoboStrength * 0.92, 0.0, 1.0));
         reflectedLight.directDiffuse *= finalGobo;
         reflectedLight.directSpecular *= finalGobo;
+        reflectedLight.indirectDiffuse *= mix(1.0, 0.28 + 0.75 * beamVal, clamp(uChiaroscuro * 0.75, 0.0, 0.85));
       }`
     );
   };
@@ -1201,30 +1285,30 @@ function configureKeyShadow(light, bound, mapSize = 2048, far = 400) {
 }
 
 export function buildStudioLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff6ee', '#221a18', 0.46);
-  const key = new THREE.DirectionalLight('#fff2e2', 1.92);
-  key.position.set(32, 30, 46);
+  const hemi = new THREE.HemisphereLight('#ffe5ba', '#16110d', 0.14);
+  const key = new THREE.DirectionalLight('#ffe8c4', 2.18);
+  key.position.set(34, 26, 48);
   configureKeyShadow(key, 20, 2048, 220);
-  const fill = new THREE.DirectionalLight('#9eb6d8', 0.58);
+  const fill = new THREE.DirectionalLight('#3b2f26', 0.14);
   fill.position.set(-34, 14, 38);
-  const up = new THREE.DirectionalLight('#f7d5ce', 0.32);
+  const up = new THREE.DirectionalLight('#c88264', 0.08);
   up.position.set(0, -48, 26);
-  const rim = new THREE.DirectionalLight('#ffe8d6', 1.15);
+  const rim = new THREE.DirectionalLight('#ffd494', 1.16);
   rim.position.set(-18, 28, -42);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
 }
 
 export function buildDesktopLightRig(scene) {
-  const hemi = new THREE.HemisphereLight('#fff6ee', '#221a18', 0.46);
-  const key = new THREE.DirectionalLight('#fff2e2', 1.95);
-  key.position.set(52, 48, 88);
+  const hemi = new THREE.HemisphereLight('#ffe5ba', '#16110d', 0.14);
+  const key = new THREE.DirectionalLight('#ffe8c4', 2.18);
+  key.position.set(54, 42, 86);
   configureKeyShadow(key, 54, 2048, 480);
-  const fill = new THREE.DirectionalLight('#9eb6d8', 0.58);
+  const fill = new THREE.DirectionalLight('#3b2f26', 0.14);
   fill.position.set(-55, 18, 72);
-  const up = new THREE.DirectionalLight('#f7d5ce', 0.32);
+  const up = new THREE.DirectionalLight('#c88264', 0.08);
   up.position.set(0, -65, 55);
-  const rim = new THREE.DirectionalLight('#ffe8d6', 1.18);
+  const rim = new THREE.DirectionalLight('#ffd494', 1.18);
   rim.position.set(-28, 42, -80);
   scene.add(hemi, key, fill, up, rim);
   return { hemi, key, fill, up, rim };
@@ -1298,7 +1382,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     baseFillCol.lerp(new THREE.Color(hdrSig.fillTint), 0.55);
     rig.fill.color.copy(baseFillCol);
     const baseFill = Number(m.fillIntensity ?? basePreset.fillIntensity) * hdrSig.fillScale;
-    rig.fill.intensity = baseFill * Math.max(0.42, 1.12 - chiaroscuro * 0.35);
+    rig.fill.intensity = baseFill * Math.max(0.08, 1.05 - chiaroscuro * 0.85);
   }
   if (rig.rim) {
     const baseRimCol = new THREE.Color(m.rimColor || basePreset.rimColor);
@@ -1312,15 +1396,15 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     rig.hemi.color.copy(baseSkyCol);
     rig.hemi.groundColor.set(m.hemiGround || basePreset.hemiGround);
     const baseHemi = Number(m.hemiIntensity ?? basePreset.hemiIntensity);
-    rig.hemi.intensity = baseHemi * Math.max(0.45, 1.08 - chiaroscuro * 0.30);
+    rig.hemi.intensity = baseHemi * Math.max(0.10, 1.05 - chiaroscuro * 0.80);
   }
   if (rig.up) {
-    rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity);
+    rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity) * Math.max(0.10, 1.0 - chiaroscuro * 0.78);
   }
 
   engine.renderer.toneMappingExposure = Number(m.exposure ?? basePreset.exposure);
-  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.88);
-  const effectiveEnv = baseEnv * Math.max(0.68, 1.12 - chiaroscuro * 0.20);
+  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.25);
+  const effectiveEnv = baseEnv * Math.max(0.12, 1.04 - chiaroscuro * 0.72);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
   // Update skin subsurface scattering & natural anti-silicone dermis reflectance
@@ -1597,7 +1681,9 @@ export function applyRenderQualityToEngine(engine, level = 'high') {
   }
 
   if ('environmentIntensity' in scene) {
-    scene.environmentIntensity = cfg.envIntensity;
+    const activeEnv = engine._activeVisualState?.envIntensity ?? cfg.envIntensity;
+    const activeChiaro = engine._activeVisualState?.chiaroscuro ?? 0.94;
+    scene.environmentIntensity = activeEnv * Math.max(0.12, 1.04 - activeChiaro * 0.72);
   }
   requestShadowUpdate(renderer);
   engine.currentRenderQuality = lvl;

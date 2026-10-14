@@ -1241,23 +1241,25 @@ function injectMarschnerHairShader(material, sheenIntensity = 0.88, isWispLayer 
 
         float tipFactorSpec = clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0);
         vec3 specBaseCol = mix(diffuse, uHairTipColor, smoothstep(0.12, 0.88, tipFactorSpec) * clamp(uHairOmbreMix, 0.0, 1.0));
-        vec3 rTint = mix(vec3(0.065, 0.068, 0.082), specBaseCol * 2.5 + vec3(0.045, 0.045, 0.055), 0.52);
-        vec3 trtTint = specBaseCol * 2.8 + vec3(0.032, 0.028, 0.036);
-        vec3 rimTint = specBaseCol * 2.1 + vec3(0.028, 0.028, 0.036);
+        vec3 rTint = mix(vec3(0.11, 0.085, 0.065), specBaseCol * 2.8 + vec3(0.08, 0.055, 0.035), 0.62);
+        vec3 trtTint = specBaseCol * 3.2 + vec3(0.14, 0.085, 0.042);
+        vec3 rimTint = specBaseCol * 2.6 + vec3(0.26, 0.15, 0.07);
 
         vec3 anisoGlint = (
-          specR * rTint * 0.68 +
-          specTRT * trtTint * 0.52
-        ) * ndotlKey * edgeMask * ${(0.68 + sheenIntensity * 0.46).toFixed(3)};
+          specR * rTint * 0.78 +
+          specTRT * trtTint * 0.68
+        ) * ndotlKey * edgeMask * ${(0.76 + sheenIntensity * 0.52).toFixed(3)};
 
-        vec3 rimStrand = fresnelRim * rimTint * edgeMask * 0.45;
+        // Warm golden-amber backlit strand translucency on outer wisps (as in uploads/image-1.png)
+        vec3 rimStrand = fresnelRim * rimTint * (0.45 + 0.85 * ndotlKey) * (0.35 + 0.65 * (1.0 - edgeMask));
 
-        float wrapLight = 0.36 + 0.64 * smoothstep(-0.40, 0.75, dot(surfNorm, keyLightDir));
-        reflectedLight.directDiffuse = max(reflectedLight.directDiffuse, diffuseColor.rgb * wrapLight * 0.76);
+        float wrapLight = 0.12 + 0.88 * pow(smoothstep(-0.28, 0.72, dot(surfNorm, keyLightDir)), 1.25);
+        reflectedLight.directDiffuse *= (0.28 + 0.92 * wrapLight);
+        reflectedLight.indirectDiffuse *= (0.22 + 0.78 * wrapLight);
 
-        reflectedLight.directSpecular *= 0.22 * edgeMask;
+        reflectedLight.directSpecular *= 0.24 * edgeMask;
         reflectedLight.indirectSpecular *= 0.26 * edgeMask;
-        reflectedLight.indirectSpecular += (anisoGlint + rimStrand) * smoothstep(0.18, 0.68, diffuseColor.a);
+        reflectedLight.indirectSpecular += (anisoGlint + rimStrand) * smoothstep(0.12, 0.62, diffuseColor.a);
       #endif
       `
     );

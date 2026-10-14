@@ -109,8 +109,8 @@ export const BeautyGradeShader = {
       if (!(col.r >= 0.0 && col.g >= 0.0 && col.b >= 0.0)) col = vec3(0.0);
       col = clamp(col, 0.0, 4.0);
 
-      // 1. Filmic Highlight Shoulder Compression (prevents over-bright forehead/temple glare!)
-      col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(0.52)) * 0.72);
+      // 1. Gentle High-Headroom Filmic Shoulder (preserves bright sunlit cheek glow while preventing harsh clipping above 1.15)
+      col = col / (vec3(1.0) + max(vec3(0.0), col - vec3(0.88)) * 0.48);
 
       // 2. Optional Micro-Detail Unsharp Mask (only when user explicitly increases uSharpen)
       if (uSharpen > 0.02) {
@@ -123,36 +123,34 @@ export const BeautyGradeShader = {
         col = clamp(col + detail * (uSharpen * 0.65), 0.0, 4.0);
       }
 
-      // 3. True Optical Soft-Focus Lens Diffusion (uSoftFocus + uHalation)
-      // Melts synthetic 3D polygon edges, hair-card boundaries, and silicone harshness into a creamy analog portrait!
+      // 3. True Optical Soft-Focus Lens Diffusion & Creamy Sunlit Highlight Bloom (复刻参考图：阳光直晒奶油柔焦漫射)
       if ((uSoftFocus > 0.001 || uHalation > 0.001) && srcAlpha > 0.005) {
-        vec3 mistNear = sampleRingBlur(vUv, texel * (1.8 + uSoftFocus * 2.2));
-        vec3 mistWide = sampleRingBlur(vUv, texel * (4.6 + uSoftFocus * 5.4));
-        vec3 mistBlend = mix(mistNear, mistWide, 0.46);
-        // Apply optical diffusion across ALL character pixels (including hair & shadow edges!)
-        float opticalBlurMix = clamp(uSoftFocus * 0.68, 0.0, 0.85);
+        vec3 mistNear = sampleRingBlur(vUv, texel * (2.0 + uSoftFocus * 2.6));
+        vec3 mistWide = sampleRingBlur(vUv, texel * (5.2 + uSoftFocus * 6.4));
+        vec3 mistBlend = mix(mistNear, mistWide, 0.48);
+        float opticalBlurMix = clamp(uSoftFocus * 0.72, 0.0, 0.88);
         vec3 softCol = mix(col, mistBlend, opticalBlurMix);
-        // Warm analog Black Pro-Mist halation around highlights
-        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.46)) * (uSoftFocus * 0.16 + uHalation * 0.22) * vec3(1.06, 0.90, 0.78);
+        // Creamy warm golden-peach highlight bloom bleeding softly from sunlit cheek into hair-strand shadows
+        vec3 hiGlow = max(vec3(0.0), mistWide - vec3(0.36)) * (uSoftFocus * 0.26 + uHalation * 0.34) * vec3(1.09, 0.93, 0.78);
         col = softCol + hiGlow * srcAlpha;
       }
 
       // 4. 85mm f/1.2 Portrait Lens Depth-of-Field / Peripheral Bokeh Blur (uDepthBlur)
-      // Keeps eyes & nose bridge softly focused while blurring outer hair, neck base, and background
+      // Keeps eyes, cheek hair-strand shadows & lips in tactile focus while melting outer hair & edges into creamy bokeh
       if (uDepthBlur > 0.001 && srcAlpha > 0.005) {
-        float bokehMask = smoothstep(0.14, 0.62, length((vUv - vec2(0.5, 0.50)) * vec2(1.18, 0.98)));
+        float bokehMask = smoothstep(0.15, 0.58, length((vUv - vec2(0.48, 0.52)) * vec2(1.16, 0.96)));
         float blurAmt = clamp(bokehMask * uDepthBlur, 0.0, 1.0);
         if (blurAmt > 0.005) {
-          vec3 dofNear = sampleRingBlur(vUv, texel * (3.2 + blurAmt * 6.5));
-          vec3 dofFar  = sampleRingBlur(vUv, texel * (6.8 + blurAmt * 12.0));
-          vec3 dofSample = mix(dofNear, dofFar, 0.52);
-          col = mix(col, dofSample, clamp(blurAmt * 0.88, 0.0, 0.92));
+          vec3 dofNear = sampleRingBlur(vUv, texel * (3.6 + blurAmt * 7.2));
+          vec3 dofFar  = sampleRingBlur(vUv, texel * (7.5 + blurAmt * 13.5));
+          vec3 dofSample = mix(dofNear, dofFar, 0.55);
+          col = mix(col, dofSample, clamp(blurAmt * 0.90, 0.0, 0.94));
         }
       }
 
-      // 5. True Screen-Space Radial Crepuscular God-Ray Scatter (Directional Light Mood / 光线感)
+      // 5. Reference-Photo Sun-Flare Veil + Crepuscular God-Rays + Foreground Dappled Foliage Bokeh (复刻参考图左上暖金眩光与右下树影翠金散景)
       if (uTyndall > 0.001 && srcAlpha > 0.005) {
-        vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.84, 0.94) : vec2(0.16, 0.94);
+        vec2 lightOrigin = uTyndallAngle <= 0.0 ? vec2(0.84, 0.92) : vec2(0.14, 0.90);
         vec2 delta = (lightOrigin - vUv) * 0.30;
         vec2 sampleUv = vUv;
         float scatter = 0.0;
@@ -163,29 +161,46 @@ export const BeautyGradeShader = {
           vec3 sc = texture2D(tDiffuse, clampedUv).rgb;
           float sa = texture2D(tSourceAlpha, clampedUv).r;
           float lumS = dot(sc, vec3(0.299, 0.587, 0.114));
-          scatter += smoothstep(0.32, 0.88, lumS) * sa * weight;
+          scatter += smoothstep(0.30, 0.85, lumS) * sa * weight;
           weight *= 0.84;
         }
-        // Directional window-light gradient across viewport (top-right warm light falloff to bottom-left shadow)
-        float dirBeam = clamp(1.0 - length((vUv - lightOrigin) * vec2(0.85, 0.95)) * 0.92, 0.0, 1.0);
-        vec3 tyndallGlow = uTyndallColor * ((scatter * 0.16 + dirBeam * 0.045) * srcAlpha);
+        // Upper-corner warm peach-gold sun-flare lens veil
+        float flareDist = length((vUv - lightOrigin) * vec2(0.85, 0.95));
+        float sunVeil = pow(clamp(1.0 - flareDist * 0.95, 0.0, 1.0), 2.1);
+        vec3 tyndallGlow = mix(uTyndallColor, vec3(1.06, 0.88, 0.72), 0.45) * ((scatter * 0.22 + sunVeil * 0.11) * srcAlpha);
         col += tyndallGlow * uTyndall;
+
+        // Opposite-corner foreground dappled foliage shadow & emerald-gold bokeh shimmer (as in uploads/image-1.png!)
+        vec2 foliageCorner = vec2(1.0 - lightOrigin.x, 0.12);
+        float folDist = length((vUv - foliageCorner) * vec2(0.95, 1.05));
+        float folZone = smoothstep(0.62, 0.12, folDist) * clamp(uDepthBlur * 1.1, 0.0, 1.0);
+        if (folZone > 0.01) {
+          float b1 = smoothstep(0.085, 0.015, length(vUv - (foliageCorner + vec2(-0.11, 0.16))));
+          float b2 = smoothstep(0.065, 0.012, length(vUv - (foliageCorner + vec2(-0.04, 0.25))));
+          float b3 = smoothstep(0.095, 0.020, length(vUv - (foliageCorner + vec2(-0.16, 0.06))));
+          float bokehDots = clamp(b1 + b2 * 0.85 + b3 * 0.75, 0.0, 1.2);
+          col = mix(col, col * vec3(0.34, 0.48, 0.36), folZone * 0.52 * srcAlpha);
+          col += vec3(0.42, 0.56, 0.32) * bokehDots * folZone * uTyndall * 0.28 * srcAlpha;
+        }
       }
 
       // 6. Color Temperature Warmth Shift
-      col.r += uWarmth * 0.044;
-      col.g += uWarmth * 0.014;
-      col.b -= uWarmth * 0.042;
+      col.r += uWarmth * 0.048;
+      col.g += uWarmth * 0.016;
+      col.b -= uWarmth * 0.045;
       col = max(col, vec3(0.0));
 
       // 7. Highlight / Midtone Art-Style Tint
       col *= uTint;
 
-      // 8. Toe-Preserving Filmic S-Curve Contrast
+      // 8. High-Contrast Filmic S-Curve (deepens shadow side while keeping sunlit cheek luminous & creamy!)
       float lumaPre = dot(col, vec3(0.2126, 0.7152, 0.0722));
-      float contrastPower = mix(1.0, clamp(uContrast, 0.82, 1.32), smoothstep(0.02, 0.22, lumaPre));
-      vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.26, 1.0 - contrastPower);
-      col = mix(col, filmicS, 0.68);
+      float contrastPower = clamp(uContrast, 0.82, 1.55);
+      vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.34, 1.0 - contrastPower);
+      // Extra shadow-toe deepening when contrast > 1.08 for dramatic chiaroscuro separation
+      float deepShadowToe = smoothstep(0.0, 0.42, lumaPre);
+      filmicS *= mix(1.0, 0.68 + 0.38 * deepShadowToe, clamp((contrastPower - 1.0) * 1.8, 0.0, 0.85));
+      col = mix(col, filmicS, 0.82);
       col = max(col, vec3(0.0));
 
       // 9. Creamy Shadow Split-Toning

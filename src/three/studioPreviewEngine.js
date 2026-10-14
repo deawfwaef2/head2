@@ -76,9 +76,9 @@ export class StudioPreviewEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.softwareRenderer = isSoftwareRenderer(this.renderer);
     this.renderer.localClippingEnabled = true;
-    // Stage 22 唯美写实管线：ACES + sRGB + 静态阴影缓存 + 环形眼神光离线 IBL
-    applyBaseRendererSettings(this.renderer, 0.90);
-    ensureSceneEnvironment(this.renderer, this.scene, 0.85);
+    // Stage 39 强明暗发丝投影写实管线：ACES + sRGB + 10:1主补光比 + 落日逆光离线 IBL
+    applyBaseRendererSettings(this.renderer, 0.88);
+    ensureSceneEnvironment(this.renderer, this.scene, 0.16, 'golden_hour');
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.target.set(0, 1.0, 0.5);
@@ -103,12 +103,21 @@ export class StudioPreviewEngine {
     this.beautyPost = null;
     this.beautyPostUserEnabled = true;
     try {
-      if (!this.softwareRenderer) this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
+      this.beautyPost = createBeautyPostChain(this.renderer, this.scene, this.camera, { width: w, height: h });
       this.beautyPost?.setEnabled(true);
     } catch (err) {
       console.warn('后期链初始化失败，已回退直渲:', err);
       this.beautyPost = null;
     }
+
+    this.visualConfig = {
+      presetId: 'cinema_85mm_portrait',
+      hdrMode: 'golden_hour',
+      windowGobo: 'hair_sun_slit',
+      windowGoboStrength: 0.78,
+      chiaroscuro: 0.94,
+    };
+    applyCustomVisualConfigToEngine(this, this.visualConfig);
 
     // Stage 13b 唯美氛围：背幕光晕 + 少量呼吸尘埃（加色混合，永不遮挡头模）
     this.atmosphere = null;

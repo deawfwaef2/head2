@@ -148,8 +148,11 @@
       <span class="badge-count" id="active-pet-count-badge">3 在屏</span>
     </div>
     <div class="overlay-actions">
-      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开可定制化画面效果：动态慢速变换光影、光学柔焦模糊、老照片胶片感与建筑系统">
-        🎨 画面·动态光影定制
+      <button id="btn-quick-customizer" class="overlay-btn primary" title="打开可定制化画面效果：强明暗发丝投影、动态慢速变换光影、光学柔焦模糊、老照片胶片感与建筑系统">
+        🎨 画面·强光影定制
+      </button>
+      <button id="btn-quick-chiaroscuro" class="overlay-btn active-top" title="一键切换强明暗对比与发丝投影模式 (参考图同款盛夏逆光发丝投影 / 百叶切光 / 树影斑驳 / 柔光无影)">
+        🌞 强光影: 逆光发丝投影
       </button>
       <button id="btn-quick-dyn-light" class="overlay-btn active-top" title="一键切换慢速变换光影模式 (暮光云影缓移 / 树影微风斑驳 / 雨窗流光 / 烛火呼吸 / 电影环绕)">
         🌅 慢速流光: 暮光云影
@@ -245,9 +248,10 @@
     <div class="vcd-body">
       <!-- 1. Art Style, HDR Environment, Optical Blur/DOF & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🎬 1. 14套电影色调 · 4种HDR环境光场 · 85mm黑柔镜/景深模糊 (彻底消除3D硅胶感)</div>
+        <div class="vcd-sec-title">🎬 1. 15套电影色调 · 强明暗发丝投影 · 4种HDR光场 · 85mm黑柔镜/景深 (彻底消除3D硅胶感)</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
-          <button class="vcd-preset-btn active" data-style-preset="cinema_85mm_portrait">📸 85mm柔焦人像(首推)</button>
+          <button class="vcd-preset-btn active" data-style-preset="cinema_85mm_portrait">🌞 盛夏逆光发丝强光影(参考图同款)</button>
+          <button class="vcd-preset-btn" data-style-preset="sunlit_hair_shadow_film">🎞️ 极致斜切强明暗发丝胶片</button>
           <button class="vcd-preset-btn" data-style-preset="korean_magazine_glow">✨ 韩系水光画报</button>
           <button class="vcd-preset-btn" data-style-preset="dreamy_promist_soft">☁️ 黑柔镜奶油柔焦</button>
           <button class="vcd-preset-btn" data-style-preset="kodak_portra_400">📷 柯达Portra400胶卷</button>
@@ -286,24 +290,25 @@
         </div>
 
         <div class="field-row" style="margin-top:6px;">
-          <label>🪟 窗户透光光影格栅样式 (投射在面部与书桌上)</label>
+          <label>🪟 面部与书桌光影投射样式 (发丝缕缕投影 / 窗框 / 百叶切光 / 树影斑驳)</label>
           <select id="sel-window-gobo">
-            <option value="none">🔦 纯净影棚无影柔光箱 (无窗框投影)</option>
-            <option value="rain_mullion" selected>🌧️ 雨夜十字窗格 + 柔和漫射窗光 (立体光线感·推荐)</option>
-            <option value="venetian_blinds">🪟 书房百叶窗柔化漫射光 (电影感光影)</option>
-            <option value="gothic_lattice">🏰 哥特菱格花窗柔光 (古典标本馆)</option>
-            <option value="tree_dappled">🌿 窗外梧桐树影柔光 (静谧庭院)</option>
+            <option value="hair_sun_slit" selected>🌞 盛夏逆光发丝缕缕投影 + 树隙切光斑 (参考图同款·强明暗对比)</option>
+            <option value="venetian_blinds">🪟 书房百叶窗条纹切光 (电影感百叶明暗切割)</option>
+            <option value="tree_dappled">🌿 窗外梧桐树影斑驳光斑 (林间阳光穿过树叶)</option>
+            <option value="rain_mullion">🌧️ 雨夜十字窗格 + 柔和漫射窗光 (立体窗框光影)</option>
+            <option value="gothic_lattice">🏰 哥特菱格花窗光影 (古典标本馆斜射花窗)</option>
+            <option value="none">🔦 纯净影棚无影柔光箱 (无窗框/发丝遮光投影)</option>
           </select>
         </div>
 
         <div class="field-row" style="margin-top:6px;display:flex;gap:12px;align-items:center;">
           <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
             ☀️ 主光源(柔光箱/窗光)色温:
-            <input type="color" id="vc-key-color" value="#ffeed6" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+            <input type="color" id="vc-key-color" value="#ffe8c4" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
           </label>
           <label style="flex:1;display:flex;align-items:center;gap:6px;font-size:12px;">
             🌙 背部发丝轮廓光色:
-            <input type="color" id="vc-rim-color" value="#fcd9a8" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
+            <input type="color" id="vc-rim-color" value="#ffd494" style="width:36px;height:24px;border:none;background:none;cursor:pointer;" />
           </label>
         </div>
 
@@ -319,49 +324,49 @@
             <span id="val-vc-dyn-amp">100%</span>
           </div>
           <div class="slider-row">
-            <span>🌫️ 电影黑柔镜/光学柔焦模糊 (Pro-Mist · 彻底消除3D生硬感)</span>
-            <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.56" />
-            <span id="val-vc-soft-focus">56%</span>
+            <span>🌓 强明暗对比度 (Chiaroscuro · 10:1阳光高光vs浓重暗部)</span>
+            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.5" step="0.05" value="0.94" />
+            <span id="val-vc-chiaroscuro">94%</span>
           </div>
           <div class="slider-row">
-            <span>📷 85mm 大光圈景深边缘虚化模糊 (DOF Bokeh Blur)</span>
-            <input type="range" id="vc-depth-blur" min="0.0" max="1.0" step="0.04" value="0.44" />
-            <span id="val-vc-depth-blur">44%</span>
+            <span>🪟 面部发丝投影/窗格切光浓度 (Hair/Window Gobo)</span>
+            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.78" />
+            <span id="val-vc-window-gobo-strength">78%</span>
+          </div>
+          <div class="slider-row">
+            <span>🌫️ 电影黑柔镜/阳光奶油高光漫射 (Pro-Mist Soft Focus)</span>
+            <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.58" />
+            <span id="val-vc-soft-focus">58%</span>
+          </div>
+          <div class="slider-row">
+            <span>📷 85mm 大光圈景深 + 前景树影散景光斑 (DOF Bokeh)</span>
+            <input type="range" id="vc-depth-blur" min="0.0" max="1.0" step="0.04" value="0.48" />
+            <span id="val-vc-depth-blur">48%</span>
+          </div>
+          <div class="slider-row">
+            <span>✨ 逆光暖金眩光雾翳 + 丁达尔光束 (Sun Flare & Tyndall)</span>
+            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.74" />
+            <span id="val-vc-tyndall">74%</span>
+          </div>
+          <div class="slider-row">
+            <span>🌸 胶片暖橘皮下散射与高光晕染 (Halation & Blood Fringe)</span>
+            <input type="range" id="vc-halation" min="0.0" max="1.5" step="0.05" value="0.54" />
+            <span id="val-vc-halation">54%</span>
           </div>
           <div class="slider-row">
             <span>🎞️ 怀旧银盐老照片胶片乳剂感 (Vintage Old Photo)</span>
-            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.48" />
-            <span id="val-vc-vintage-photo">48%</span>
-          </div>
-          <div class="slider-row">
-            <span>✨ 窗畔丁达尔斜射体积光束 (Tyndall Light Rays)</span>
-            <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.58" />
-            <span id="val-vc-tyndall">58%</span>
-          </div>
-          <div class="slider-row">
-            <span>🌓 伦勃朗立体光影明暗过渡 (Chiaroscuro 光线感)</span>
-            <input type="range" id="vc-chiaroscuro" min="0.0" max="1.5" step="0.05" value="0.68" />
-            <span id="val-vc-chiaroscuro">68%</span>
-          </div>
-          <div class="slider-row">
-            <span>🪟 窗户格栅光影浓度 (Window Gobo)</span>
-            <input type="range" id="vc-window-gobo-strength" min="0.0" max="1.0" step="0.04" value="0.34" />
-            <span id="val-vc-window-gobo-strength">34%</span>
-          </div>
-          <div class="slider-row">
-            <span>🌸 胶片暖金高光晕染 (Halation)</span>
-            <input type="range" id="vc-halation" min="0.0" max="1.5" step="0.05" value="0.28" />
-            <span id="val-vc-halation">28%</span>
+            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.34" />
+            <span id="val-vc-vintage-photo">34%</span>
           </div>
           <div class="slider-row">
             <span>🌈 光学定焦镜头微色散 (Chromatic Dispersion)</span>
-            <input type="range" id="vc-chromatic" min="0.0" max="1.0" step="0.04" value="0.14" />
-            <span id="val-vc-chromatic">14%</span>
+            <input type="range" id="vc-chromatic" min="0.0" max="1.0" step="0.04" value="0.16" />
+            <span id="val-vc-chromatic">16%</span>
           </div>
           <div class="slider-row">
             <span>🔦 鼠标跟随柔和补光手电 (Cursor Torch)</span>
-            <input type="range" id="vc-cursor-torch" min="0.0" max="1.6" step="0.05" value="0.28" />
-            <span id="val-vc-cursor-torch">28%</span>
+            <input type="range" id="vc-cursor-torch" min="0.0" max="1.6" step="0.05" value="0.24" />
+            <span id="val-vc-cursor-torch">24%</span>
           </div>
           <div class="slider-row">
             <span>✨ 高光微星芒点缀 (Iris Sparkle)</span>
@@ -375,8 +380,8 @@
           </div>
           <div class="slider-row">
             <span>🌐 HDR 环境漫反射强度 (Env HDR)</span>
-            <input type="range" id="vc-env-intensity" min="0.10" max="1.40" step="0.04" value="0.32" />
-            <span id="val-vc-env-intensity">32%</span>
+            <input type="range" id="vc-env-intensity" min="0.10" max="1.40" step="0.04" value="0.18" />
+            <span id="val-vc-env-intensity">18%</span>
           </div>
           <div class="slider-row">
             <span>☀️ 主光水平入射角 (Azimuth)</span>
