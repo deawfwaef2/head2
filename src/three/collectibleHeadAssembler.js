@@ -3527,7 +3527,8 @@ function loadPhotoProjectionTexture(url, onLoaded) {
   if (typeof window !== 'undefined') {
     const photoPath = String(url).replace(/^\.\//, '/');
     if (photoPath === '/models/fang_yaoping_ref.jpg' && window.__EMBEDDED_FANG_PHOTO__) url = window.__EMBEDDED_FANG_PHOTO__;
-    if (/^\/models\/user_photo_ref\.(jpg|png)$/.test(photoPath) && window.__EMBEDDED_REF_PHOTO__) url = window.__EMBEDDED_REF_PHOTO__;
+    if (/^\/models\/(user_photo_ref|chuxia_life_ref)\.(jpg|png)$/.test(photoPath) && window.__EMBEDDED_REF_PHOTO__) url = window.__EMBEDDED_REF_PHOTO__;
+    if (photoPath === '/models/linxi_life_ref.jpg' && window.__EMBEDDED_LINXI_PHOTO__) url = window.__EMBEDDED_LINXI_PHOTO__;
   }
   if (photoProjTexCache.has(url)) {
     const cached = photoProjTexCache.get(url);

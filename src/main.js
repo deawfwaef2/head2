@@ -2165,6 +2165,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (btnStartPure) {
     btnStartPure.addEventListener('click', () => {
+      document.body.classList.remove('game-not-started');
       if (startOverlay) startOverlay.classList.add('hidden');
       setWindowVisibility(true);
       soundEngine.playSummon(true);
@@ -2175,8 +2176,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (btnStartStudio) {
     btnStartStudio.addEventListener('click', () => {
+      document.body.classList.remove('game-not-started');
       if (startOverlay) startOverlay.classList.add('hidden');
       setWindowVisibility(false);
+      // Go straight to the editor instead of opening the unrelated vault tab.
+      document.querySelector('#software-tabs .nav-tab[data-tab="studio"]')?.click();
       soundEngine.playSummon(true);
       if (state.rainStudyAudioEnabled) soundEngine.startRainAmbience();
       showToast('🛠️ 已进入 CERVIX-3D 典藏库与建模工坊！窗外伴学小雨已开启，可随时隐藏窗口看屏幕桌宠');

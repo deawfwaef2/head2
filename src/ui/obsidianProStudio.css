@@ -25,6 +25,9 @@
   --obs-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 1px 0 rgba(255, 255, 255, 0.14) inset;
 }
 
+/* Keep the onboarding action visible and unobstructed until the user starts. */
+body.game-not-started #desktop-overlay-bar { display: none !important; }
+
 /* 1. Bulletproof .hidden & Non-Intrusive Background Elements */
 .hidden,
 [hidden] {
@@ -40,8 +43,7 @@
 #tactile-sculpt-hud-toast,
 #dopamine-floating-popups,
 #heartbeat-anticheat-banner,
-#vanishing-point-hud,
-#start-game-overlay {
+#vanishing-point-hud {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

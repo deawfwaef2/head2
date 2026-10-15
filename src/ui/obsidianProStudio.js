@@ -312,7 +312,6 @@ export function initObsidianProStudio() {
     'pet-hover-dossier',
     'visual-customizer-drawer',
     'heartbeat-anticheat-banner',
-    'start-game-overlay',
   ]) {
     const el = document.getElementById(id);
     if (el) {
@@ -325,7 +324,7 @@ export function initObsidianProStudio() {
 
   // Ensure #software-window starts hidden, while #specimen-placards-layer starts visible with clean 4-field placards
   const swWin = document.getElementById('software-window');
-  if (swWin) swWin.classList.add('window-hidden');
+  if (swWin && document.body.classList.contains('game-not-started')) swWin.classList.add('window-hidden');
   const placardsLayer = document.getElementById('specimen-placards-layer');
   if (placardsLayer) placardsLayer.classList.remove('hidden');
   const btnPlacards = document.getElementById('btn-quick-placards');
