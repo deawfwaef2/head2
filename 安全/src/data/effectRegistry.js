@@ -13,9 +13,11 @@ const R = (id, group, scope, key, label, min, max, step, off, extra = {}) => ({ 
 const T = (id, group, scope, key, label, extra = {}) => ({ id, group, scope, key, label, kind: 'toggle', off: false, ...extra });
 export const EFFECT_REGISTRY = [
   // 皮肤
+  R('skin.delight', 'skin', 'skin', 'delight', '去烘焙光影（去贴图自带的明暗/脏斑）', 0, 1, 0.01, 0),
   R('skin.scatter', 'skin', 'skin', 'scatter', '次表面散射（通透感）', 0, 2, 0.01, 0),
   R('skin.roughness', 'skin', 'skin', 'roughness', '粗糙度（低=油亮）', 0.3, 0.85, 0.01, 0.55),
   R('skin.normalScale', 'skin', 'skin', 'normalScale', '贴图毛孔', 0, 1.6, 0.01, 0),
+  R('skin.normalHP', 'skin', 'skin', 'normalHP', '贴图法线去低频（去脸颊脏斑）', 0, 1, 0.01, 0),
   R('skin.micro', 'skin', 'skin', 'micro', '程序化毛孔（近看更真）', 0, 1.5, 0.01, 0),
   R('skin.breakup', 'skin', 'skin', 'breakup', '高光破碎（去塑料感）', 0, 1.5, 0.01, 0),
   R('skin.sheen', 'skin', 'skin', 'sheen', '面部绒毛柔光', 0, 0.6, 0.01, 0),

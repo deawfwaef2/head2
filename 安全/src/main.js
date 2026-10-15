@@ -91,7 +91,7 @@ function defaultCharacter() {
     hairShine: 1, hairBack: 1,
     stand: 'obsidian',
     light: 'windowGobo', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5, bgMul: 0.55, shadowStrength: 0.8, shadowSoft: 1.3 },
-    skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.8, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5, regional: 0.7, translucency: 0.8 },
+    skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.3, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5, regional: 0.7, translucency: 0.8, delight: 0.75, normalHP: 1 },
     film: 'moodyFilm', bg: 'windowShadow', post: { dof: true, aperture: 0.0016 }, eyeOcc: 0.75,
     hairline: { ...HAIRLINE_DEFAULTS }, fx: { bypass: {}, links: [] },
     faceArch: 'none', faceArchK: 1, eyeShape: {},
@@ -113,7 +113,7 @@ function saveStore() {
 let ch = (store.current && store.items.find((x) => x.id === store.current)) ? structuredClone(store.items.find((x) => x.id === store.current)) : defaultCharacter();
 ch = { ...defaultCharacter(), ...ch, lightOv: { ...defaultCharacter().lightOv, ...(ch.lightOv || {}) }, skinP: { ...defaultCharacter().skinP, ...(ch.skinP || {}) } };
 const S = store.settings;
-function normalizeChar(c) { const d = defaultCharacter(); c.hairline = { ...d.hairline, ...(c.hairline || {}) }; c.fx = { bypass: { ...(c.fx?.bypass || {}) }, links: [...(c.fx?.links || [])] }; return c; }
+function normalizeChar(c) { const d = defaultCharacter(); if (c.skinP && c.skinP.normalScale === 0.8) c.skinP.normalScale = 0.3; /* 旧默认值会放大法线贴图里的脏斑 */ c.hairline = { ...d.hairline, ...(c.hairline || {}) }; c.fx = { bypass: { ...(c.fx?.bypass || {}) }, links: [...(c.fx?.links || [])] }; return c; }
 normalizeChar(ch);
 
 // ---------------- 效果总线：所有画面效果 = 可开关 / 可调 / 可连线的节点 ----------------

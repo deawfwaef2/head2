@@ -115,6 +115,7 @@ export function upgradeSkinMaterial(src, opts = {}) {
     uMicro: { value: o.micro }, uBreakup: { value: o.breakup }, uMottle: { value: o.mottle },
     uRegional: { value: o.regional }, uTrans: { value: o.translucency },
     uFaceEyeL: { value: new THREE.Vector3(-0.032, 0.03, 0.08) }, uFaceEyeR: { value: new THREE.Vector3(0.032, 0.03, 0.08) }, uFaceNose: { value: new THREE.Vector3(0, 0.0, 0.11) },
+    uDelight: { value: o.delight ?? 0.75 }, uNormHP: { value: o.normalHP ?? 1.0 }, uDelightBias: { value: 5.0 },
     uHairline: { value: o.hairline ?? 1.0 }, uScalpAO: { value: o.scalpAO ?? 0.7 }, uHairRoot: { value: new THREE.Vector3(0.03, 0.022, 0.018) },
   };
   mat.onBeforeCompile = (shader) => {
@@ -135,10 +136,20 @@ export function upgradeSkinMaterial(src, opts = {}) {
     );
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <lights_physical_pars_fragment>', SKIN_DIRECT_GLSL + lights)
-      .replace('#include <common>', '#include <common>\nuniform float uCurvScale;\nuniform vec3 uAlbedoGrade;\nvarying vec3 vSkinObjN; varying float vHairCov; varying vec3 vHairDir; uniform float uHairline, uScalpAO; uniform vec3 uHairRoot; float gHairDens = 0.0;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nuniform float uCurvScale;\nuniform vec3 uAlbedoGrade;\nvarying vec3 vSkinObjN; varying float vHairCov; varying vec3 vHairDir; uniform float uHairline, uScalpAO, uDelight, uDelightBias, uNormHP; uniform vec3 uHairRoot; float gHairDens = 0.0;\n' + NOISE_GLSL)
       .replace(
         '#include <map_fragment>',
         `#include <map_fragment>
+        #ifdef USE_MAP
+        if (uDelight > 0.001) {
+          // 去烘焙光影：贴图来自照片投影，自带明暗/脏斑。用模糊 mip 估计低频明暗，除掉后乘回全图平均肤色，
+          // 只保留高频细节（雀斑、毛孔、唇纹），让真实灯光来决定明暗。
+          vec3 lo = texture2D(map, vMapUv, uDelightBias).rgb;
+          vec3 avg = texture2D(map, vMapUv, 12.0).rgb;
+          vec3 flatC = diffuseColor.rgb / max(lo, vec3(0.02)) * avg;
+          diffuseColor.rgb = mix(diffuseColor.rgb, flatC, uDelight);
+        }
+        #endif
         {
           vec3 c = diffuseColor.rgb;
           float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -197,7 +208,17 @@ export function upgradeSkinMaterial(src, opts = {}) {
         #include <lights_fragment_begin>`,
       );
   };
-  mat.customProgramCacheKey = () => 'photoreal-skin-v4';
+  const prevCompile = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader) => {
+    prevCompile(shader);
+    // 贴图法线去低频：原法线贴图来自照片烘焙，含大块错误起伏（脸颊上的“脏斑”）。
+    // 减去模糊 mip 的法线，只保留毛孔/细纹等高频细节。
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps.replace(
+      'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
+      'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;\n\t{ vec3 lowN = texture2D( normalMap, vNormalMapUv, 2.0 ).xyz * 2.0 - 1.0; mapN = mix(mapN, vec3(mapN.xy - lowN.xy, 1.0), uNormHP); }',
+    ));
+  };
+  mat.customProgramCacheKey = () => 'photoreal-skin-v6';
   return mat;
 }
 
@@ -216,6 +237,8 @@ export function setSkinParams(mat, p) {
   if (p.mottle != null) u.uMottle.value = p.mottle;
   if (p.regional != null) u.uRegional.value = p.regional;
   if (p.translucency != null) u.uTrans.value = p.translucency;
+  if (p.delight != null) u.uDelight.value = p.delight;
+  if (p.normalHP != null) u.uNormHP.value = p.normalHP;
   if (p.hairline != null) u.uHairline.value = p.hairline;
   if (p.scalpAO != null) u.uScalpAO.value = p.scalpAO;
   if (p.hairRoot) u.uHairRoot.value.set(...p.hairRoot);
