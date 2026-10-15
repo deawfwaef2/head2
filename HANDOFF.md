@@ -1638,3 +1638,11 @@
 - 本地合并提交 `b354427`（双亲 `4609d40`/`207532b`）之后已执行 `git fetch origin main`，确认远端 `207532b` 是本地 HEAD 祖先、正常推送可快进；执行**无强推**的 `git push origin HEAD:main` 因沙箱没有 GitHub 身份凭据报 `could not read Username for 'https://github.com'`。没有写入或泄露授权信息、没有覆盖别人提交。**当前本地提交尚未推到 GitHub**；如取得用户授权，先再 fetch 检查远端是否前进，有新提交就正常 merge/回归测试，然后普通 push，绝不 force。
 - 此时本机 Git 含双分支模型/HTML 历史，`git gc` 后除依赖工作树仍约 132 MiB；为遵守 <128 MiB，上述**已完成完整模型构建、离线实测与根目录 HTML** 保持原样，临时在 sparse-checkout 的工作树仅排除 `public/models/daz_asian_head_base.glb`（5.19 MB）及旧 QA 截图 `groom-cycles-review.png` / `groom-realtime-review.png`（共约 1.25 MB）。三文件**没有从 Git 索引/提交对象或 GitHub 历史删除**；可双击 HTML 中仍内嵌完整亚洲头模；`docs/index.html` 已重新硬链接根目录文件，Git 状态干净。排除依赖后当前约 **126 MiB**。
 - **后续重建注意**：本机工作树暂时缺少亚洲基础 GLB，**不能直接 `npm run build`**（会生成缺模版本）。获取推送授权并普通推送后，建议从最新远端重新浅层稀疏检出以腾出 Git 对象空间，再将本机 sparse-checkout 三条排除项恢复，确认模型文件完整后方可再次构建/视觉验收；在恢复前，现成 `点击开始游戏_CERVIX3D.html` 是由完整模型打包和实测的交付品，不要用缺模源码包覆盖它。授权只用于推送，不得落任何项目文件、Handoff、命令输出或聊天摘要。
+
+
+---
+
+## [2026-10-15 Stage 71d] Stage71c 用语澄清与最终离线包哈希（追加记录）
+
+- Stage71c 持久副本曾误写「远端已在 1849935 的提交中追加保存」；**1849935 只是本地未推送的提交**，当前 GitHub `main` 仍为 `ad9e0dc`，推送因无可用身份验证失败。该误写是「待推送分支」与「已推送远端」的混淆，不应据此宣称同步完成。身份验证解决前，必须以离线 HTML 交付并明确说明推送受阻。
+- 试验性高密度发丝与更亮的头皮纹理没有根治默认束发顶端的平滑暗区，而且可能增加软件渲染成本，已恢复至提交状态、没有纳入交付。最终离线 HTML 与 docs 页面字节一致，SHA-256 为 `e30f564db3ff068ef0ad14bdb33c7eeedd75dcac2fde3e74f789a22093fe45b9`。默认束发需如实告知「仍有轻微平滑深色区域」，不能称为彻底照片级。
