@@ -130,8 +130,10 @@ export function upgradeSkinMaterial(src, opts = {}) {
        {
          // 逆光透射（Barré-Brisebois 近似）：薄处（高曲率）透出红光
          vec3 Ht = normalize(directLight.direction + geometryNormal * 0.35);
-         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 3.0) * (0.25 + 1.5 * gSkinCurv);
-         reflectedLight.directDiffuse += directLight.color * It * uTrans * vec3(1.0, 0.28, 0.16) * material.diffuseColor * 0.9;
+         // 厚度近似：只有轮廓边缘（耳廓、鼻翼、下颌边）这类薄处透光；不用屏幕导数曲率（会出现三角面块）
+         float thin = pow(1.0 - clamp(abs(dot(gSkinSmoothN, geometryViewDir)), 0.0, 1.0), 2.5);
+         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 4.0) * (0.04 + 0.96 * thin);
+         reflectedLight.directDiffuse += directLight.color * It * uTrans * vec3(1.0, 0.3, 0.18) * material.diffuseColor * 0.55;
        }`,
     );
     shader.fragmentShader = shader.fragmentShader
@@ -218,7 +220,7 @@ export function upgradeSkinMaterial(src, opts = {}) {
       'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;\n\t{ vec3 lowN = texture2D( normalMap, vNormalMapUv, 2.0 ).xyz * 2.0 - 1.0; mapN = mix(mapN, vec3(mapN.xy - lowN.xy, 1.0), uNormHP); }',
     ));
   };
-  mat.customProgramCacheKey = () => 'photoreal-skin-v6';
+  mat.customProgramCacheKey = () => 'photoreal-skin-v7';
   return mat;
 }
 

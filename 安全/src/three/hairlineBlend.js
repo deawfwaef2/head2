@@ -226,7 +226,8 @@ export const HAIRLINE_SKIN_GLSL = `
     // 细发在不同位置结束：3D 噪声打散（不沿方向做分段，避免出现等高线条纹）
     float nz = sk_n(vSkinObj * 900.0) * 0.6 + sk_n(vSkinObj * 260.0) * 0.4;
     float exists = smoothstep(0.35, 0.75, cv + (nz - 0.5) * 0.45 + (h1 - 0.5) * 0.15);
-    float dens = exists * line;
+    float fineN = sk_n(vSkinObj * 2600.0);
+    float dens = exists * (0.55 + 0.45 * fineN); // 不再用条纹（插值方向在三角形间跳变会产生摩尔纹），细发交给碎发几何
     float scalp = smoothstep(0.45, 0.95, cv);
     vec3 cc = diffuseColor.rgb;
     cc *= mix(1.0, 0.55, scalp * uScalpAO);                // 头发覆盖处头皮遮蔽

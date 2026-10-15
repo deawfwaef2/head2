@@ -20,3 +20,32 @@
 - HTML 版桌宠在浏览器窗口内，不是跨应用系统桌宠。
 
 协作规则见 `HANDOFF_安全.md`。
+
+
+## 目录结构（与主项目一致）
+```
+安全/
+  index.html            页面骨架（开发时由 Vite 直接加载 src/main.js）
+  package.json / vite.config.js
+  src/main.js           应用入口（工坊/收藏/桌宠/设置）
+  src/style.css
+  src/three/            渲染模块：skinMaterial / featureMaterials / strandHair / hairlineBlend / faceTargets / studioLighting / postChain / backgrounds / displayStand
+  src/data/             数据：hairCatalog / faceArchetypes / eastAsianHeadTargets / effectRegistry / effectBus / assetLoader
+  src/ui/ src/textures/ 预留（对应主项目同名目录）
+  public/models/        头模 + 37 款发型 GLB
+  scripts/              build_standalone_html.mjs（打包单文件 HTML）/ sanitize_assets.mjs / qa_shots.mjs
+```
+- 开发预览：`cd 安全 && npx vite` → http://localhost:5174
+- 打包可双击 HTML：`node 安全/scripts/build_standalone_html.mjs`
+
+## 效果开关与连线（二次开发）
+所有画面效果登记在 `src/data/effectRegistry.js`，渲染代码只读 `fx.effective(id)`，没有写死。
+```js
+const fx = window.SafeBust.fx;
+fx.enable('post.grain', false);              // 关掉颗粒
+fx.set('hairline.babyHair', 1.5);            // 碎发更密
+fx.link('light.keyMul', 'post.bloom', { scale: 0.2, offset: 0 }); // 主光越强辉光越强
+fx.on('*', (v, id) => console.log(id, v));   // 监听所有效果
+fx.export();                                  // 导出开关+连线 JSON
+```
+URL 参数：`fxoff=post.ao,render.hairShadow`、`face=<骨相id>`、`hair=<发型id>`、`look=<风格>`、`view=hairline` 等。

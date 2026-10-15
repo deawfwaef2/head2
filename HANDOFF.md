@@ -1353,3 +1353,10 @@
   - Rebuilt `/home/user/点击开始游戏_CERVIX3D.html` (`31.05 MB`, hardlinked with `docs/index.html`).
 
 
+
+---
+
+## [2026-10-15] 安全版阶段 7 —— `安全/` 已与主项目同构（Vite + src/three|data|ui|textures + public/models + scripts）
+- 同步了主项目 37 款纯发型 GLB 与 MPFB2 骨相数据（已排除 hair_user_photo.glb、*_ref.jpg 与 user_photo_clone 配方、人名标签）。
+- 新增效果总线 `安全/src/data/effectRegistry.js + effectBus.js`：所有画面效果可开关/可调/可连线（`window.SafeBust.fx`）。
+- 详见 `安全/HANDOFF_安全.md` 阶段 7。

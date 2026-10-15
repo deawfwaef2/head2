@@ -17,6 +17,19 @@ function nearestMap(geomPos, skinBase, M) {
   return out;
 }
 
+function vertexNormals(P, index, count) {
+  const N = new Float32Array(count * 3);
+  for (let t = 0; t < index.length; t += 3) {
+    const a = index[t] * 3, b = index[t + 1] * 3, c = index[t + 2] * 3;
+    const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2];
+    const vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    N[a] += nx; N[a + 1] += ny; N[a + 2] += nz; N[b] += nx; N[b + 1] += ny; N[b + 2] += nz; N[c] += nx; N[c + 1] += ny; N[c + 2] += nz;
+  }
+  for (let i = 0; i < count; i++) { const l = Math.hypot(N[i * 3], N[i * 3 + 1], N[i * 3 + 2]) || 1; N[i * 3] /= l; N[i * 3 + 1] /= l; N[i * 3 + 2] /= l; }
+  return N;
+}
+
 export function recipeWeights(archetype, strength = 1) {
   const r = EAST_ASIAN_ARCHETYPE_MPFB_RECIPES[archetype] || {};
   const w = {}; for (const [k, v] of Object.entries(r)) w[k] = v * strength; return w;
@@ -50,6 +63,18 @@ export function applyFaceTargets(parts, weights, anchors) {
     pa.array[i * 3] = base[i * 3] + D[i * 3]; pa.array[i * 3 + 1] = base[i * 3 + 1] + D[i * 3 + 1]; pa.array[i * 3 + 2] = base[i * 3 + 2] + D[i * 3 + 2];
   }
   pa.needsUpdate = true; g.computeBoundingSphere(); g.computeBoundingBox();
+  // 法线：原法线 + (新形状法线 − 原形状法线)。不直接 computeVertexNormals，避免 UV 接缝处出现硬边
+  const na = g.attributes.normal;
+  if (na) {
+    const idx = g.index ? g.index.array : Uint32Array.from({ length: n }, (_, i) => i);
+    if (!skin.userData.mpfbN0) { skin.userData.mpfbN0 = new Float32Array(na.array); skin.userData.mpfbNb = vertexNormals(base, idx, n); }
+    const N0 = skin.userData.mpfbN0, Nb = skin.userData.mpfbNb, Nn = vertexNormals(pa.array, idx, n);
+    for (let i = 0; i < n; i++) {
+      let x = N0[i * 3] + Nn[i * 3] - Nb[i * 3], y = N0[i * 3 + 1] + Nn[i * 3 + 1] - Nb[i * 3 + 1], z = N0[i * 3 + 2] + Nn[i * 3 + 2] - Nb[i * 3 + 2];
+      const l = Math.hypot(x, y, z) || 1; na.array[i * 3] = x / l; na.array[i * 3 + 1] = y / l; na.array[i * 3 + 2] = z / l;
+    }
+    na.needsUpdate = true;
+  }
   skin.updateWorldMatrix(true, false);
   const toSkin = (mesh) => { mesh.updateWorldMatrix(true, false); return new THREE.Matrix4().copy(skin.matrixWorld).invert().multiply(mesh.matrixWorld); };
   // 睫毛 / 眉毛：跟随最近皮肤顶点
@@ -65,18 +90,17 @@ export function applyFaceTargets(parts, weights, anchors) {
     }
     pp.needsUpdate = true; pg.computeBoundingSphere();
   }
-  // 眼球：按眼眶附近皮肤平均位移整体平移（左右分开）
-  if (anchors?.eyeL && parts.eyes?.length) {
-    const avg = (c) => { let sx = 0, sy = 0, sz = 0, cnt = 0; const r = (anchors.eyeRad || 0.012) * 1.8; for (let i = 0; i < n; i++) { const dx = base[i * 3] - c.x, dy = base[i * 3 + 1] - c.y, dz = base[i * 3 + 2] - c.z; if (dx * dx + dy * dy + dz * dz < r * r) { sx += D[i * 3]; sy += D[i * 3 + 1]; sz += D[i * 3 + 2]; cnt++; } } return cnt ? [sx / cnt, sy / cnt, sz / cnt] : [0, 0, 0]; };
-    const dL = avg(anchors.eyeL), dR = avg(anchors.eyeR);
+  // 眼球：只随“眼距”平移（与主项目一致）；眼睑形变不带动眼球，否则眼球会错位
+  if (parts.eyes?.length) {
+    const dx = (anchors?.eyeSpacing || 0) * 0.00145;
     for (const e of parts.eyes) {
       const eg = e.geometry; const ep = eg.attributes.position;
       if (!eg.userData.mpfbBase) eg.userData.mpfbBase = new Float32Array(ep.array);
       const eb = eg.userData.mpfbBase;
-      for (let i = 0; i < ep.count; i++) { const d = eb[i * 3] < 0 ? dL : dR; ep.array[i * 3] = eb[i * 3] + d[0]; ep.array[i * 3 + 1] = eb[i * 3 + 1] + d[1]; ep.array[i * 3 + 2] = eb[i * 3 + 2] + d[2]; }
+      for (let i = 0; i < ep.count; i++) { ep.array[i * 3] = eb[i * 3] + (eb[i * 3] >= 0 ? dx : -dx); ep.array[i * 3 + 1] = eb[i * 3 + 1]; ep.array[i * 3 + 2] = eb[i * 3 + 2]; }
       ep.needsUpdate = true; eg.computeBoundingSphere();
     }
-    return { dL, dR };
+    return { dL: [-dx, 0, 0], dR: [dx, 0, 0] };
   }
   return null;
 }

@@ -105,3 +105,15 @@ node 安全/tools/qa_shots.mjs /tmp/qa
 - `skinMaterial.js` v3：面部分区（鼻头/脸颊微红、眼下微暗、T 区与嘴唇更润，锚点=眼球中心+自动求得的鼻尖）+ 逆光透光（Barré-Brisebois 近似，曲率越大越透）。
 - `postChain.js`：新增 8 种滤镜（日系清透/韩系奶油/港风复古/好莱坞青橙/宝丽来/Classic Chrome/古典油画/手机人像）；一键风格扩展到 12 个，每个绑定背景。
 - 胸像全景机位拉近。效果图：工作区 `安全版/效果图/v6_*.jpg`。
+
+### 2026-10-15 · 安全版 阶段 7（架构对齐主项目 + 效果总线 + 发际线 + 骨相 + 脸部脏斑根因修复）
+用户要求：①主项目新头模/发型复制到安全区；②脸经常很怪；③发际线硬边像假发；④**所有画面效果不要写死，要能开关、后期可自己连线**；⑤**安全区架构与主项目一致**。
+- **架构（与主项目同构）**：`安全/package.json`（vite）、`vite.config.js`、`index.html`、`src/main.js`、`src/style.css`、`src/three/*`（渲染模块）、`src/data/*`（数据/目录/总线）、`src/ui/`、`src/textures/`、`public/models/*.glb`、`scripts/build_standalone_html.mjs`（单文件 HTML，模型 base64 内嵌到 `window.__SAFE_EMBEDDED__`）、`scripts/sanitize_assets.mjs`、`scripts/qa_shots.mjs`。开发：`cd 安全 && npx vite`；打包：`node 安全/scripts/build_standalone_html.mjs`。旧的 `build.mjs / tools/ / assets/ / src/template.html / src/app.js` 已移走。
+- **资产**：从主项目同步 37 款纯发型 GLB（`src/data/hairCatalog.js`，按长发/中短/短发/盘编发分组）；**排除 `hair_user_photo.glb` 及所有 `*_ref.jpg` 真人参考照**。头模仍是清洗过的 `bust_head_base.glb`（与主项目 HeadSkin 顶点完全一致，maxdiff=0）。
+- **骨相**：`src/data/eastAsianHeadTargets.js`（MPFB2 CC0 雕刻形变，删除 `user_photo_clone` 配方）+ `src/data/faceArchetypes.js`（39 款，标签去掉所有人名）+ `src/three/faceTargets.js`（叠加到基础顶点；头顶/后脑衰减防发型穿模；法线用“原法线+形状差”避免接缝；眼球只随眼距平移，同主项目）。默认强度 0.6。URL `face=<id>`。
+- **效果总线**：`src/data/effectRegistry.js`（约 65 个效果：皮肤/发际线/布光/后期/镜头/角色/渲染）+ `src/data/effectBus.js`（get/effective/set/enable/on/link/unlink/export/import）。UI 由注册表自动生成，每项左侧勾=开关（关闭时用 off 值，原数值保留）。「🔌 效果开关与连线」面板：源→目标（目标=偏移+倍数×源，可多级、防环）、导入/导出 JSON。控制台：`window.SafeBust.fx`。URL `fxoff=id1,id2` 可批量关闭（QA 二分排查很好用）。连线/开关随藏品保存（`ch.fx`）。
+- **发际线**：`src/three/hairlineBlend.js` —— 按当前发型网格自动计算皮肤覆盖度（发片表面撒点+alpha 检查+法线方向邻域）、拓扑平滑出几毫米过渡带、头皮区域遮罩（脸颊/下颌前的长发不算，否则会像胡茬）；皮肤着色器：发根暗色+细噪声渐隐+头皮遮蔽（**不要用条纹图案，插值方向会出摩尔纹**）；沿额头/太阳穴生成极细短碎发（与 strandHair 同几何格式，独立材质，发片/发丝两种模式都显示）。
+- **脸上脏斑根因（重要）**：用 `fxoff` 二分确认 —— 不是阴影/AO/皮肤分区，而是**照片烘焙的法线贴图里有大块错误低频起伏**。修复：法线高通（减去 mip bias 2 的低频法线，`skin.normalHP`）+ 默认贴图法线强度 0.8→0.3（旧存档自动迁移）+ 去烘焙光影 `skin.delight`（albedo 除以模糊 mip 再乘平均肤色）。
+- **暖阳逆光脸发光/三角面块**：逆光透射原来用屏幕导数曲率 gSkinCurv（逐三角形跳变）且整脸都透 → 改为只在轮廓薄处透光（1-N·V），强度降低。
+- 新增阴影浓度/柔和度（`light.shadowStrength` 0.8、`light.shadowSoft` 1.3，用 three r170 的 `shadow.intensity`）。新镜头 `view=hairline` 发际线特写。
+- 已知待办：卡片模式下 10 款 Stage64 `.mhclo` 发型（HairCardMaterial，贴图 160px 几乎不透明）像头盔，发丝模式正常；唇上方仍有轻微法线残影；低模在逆光暗部能看出面片。

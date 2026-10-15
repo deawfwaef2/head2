@@ -94,7 +94,7 @@ function defaultCharacter() {
     skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.3, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5, regional: 0.7, translucency: 0.8, delight: 0.75, normalHP: 1 },
     film: 'moodyFilm', bg: 'windowShadow', post: { dof: true, aperture: 0.0016 }, eyeOcc: 0.75,
     hairline: { ...HAIRLINE_DEFAULTS }, fx: { bypass: {}, links: [] },
-    faceArch: 'none', faceArchK: 1, eyeShape: {},
+    faceArch: 'none', faceArchK: 0.6, eyeShape: {},
   };
 }
 function defaultSettings() {
@@ -272,10 +272,10 @@ function setupEyeOcclusion(mat) {
 // MPFB2 骨相 + 眼型细调（叠加在基础顶点上）
 function applyFace() {
   if (!parts.skin || !eyeInfo) return;
-  const w = recipeWeights(ch.faceArch, ch.faceArchK ?? 1);
+  const w = recipeWeights(ch.faceArch, ch.faceArchK ?? 0.6);
   for (const [k, v] of Object.entries(eyeSliderWeights(ch.eyeShape))) w[k] = (w[k] || 0) + v;
   const eyeY = (eyeInfo.L0.y + eyeInfo.R0.y) / 2;
-  const r = applyFaceTargets(parts, w, { eyeY, eyeL: eyeInfo.L0, eyeR: eyeInfo.R0, eyeRad: eyeInfo.r });
+  const r = applyFaceTargets(parts, w, { eyeY, eyeL: eyeInfo.L0, eyeR: eyeInfo.R0, eyeRad: eyeInfo.r, eyeSpacing: ch.eyeShape?.spacing || 0 });
   if (r) { eyeInfo.L.copy(eyeInfo.L0).add(new THREE.Vector3(...r.dL)); eyeInfo.R.copy(eyeInfo.R0).add(new THREE.Vector3(...r.dR)); }
   noseTip = null; setupFaceAnchors();
   for (const e of parts.eyes || []) if (e.material?.userData?.eyeUniforms) setupEyeOcclusion(e.material);
@@ -632,7 +632,7 @@ function buildStudio() {
   const top = Object.entries(ch.shape).sort((a, b) => b[1] - a[1])[0];
   if (top) slider(C, '头型强度', 0, 1, 0.01, () => top[1], (v) => { ch.shape[top[0]] = v; applyShape(); }, rebuildStrandsSoon);
   select(C, '骨相预设（MPFB2 雕刻形变，' + (FACE_ARCHETYPES.length - 1) + ' 款）', FACE_ARCHETYPES.map((f) => [f.id, (FACE_REGIONS[f.region] ? '[' + FACE_REGIONS[f.region] + '] ' : '') + f.label]), () => ch.faceArch || 'none', (v) => { ch.faceArch = v; applyShape(); rebuildStrandsSoon(); });
-  slider(C, '骨相强度', 0, 1.5, 0.01, () => ch.faceArchK ?? 1, (v) => { ch.faceArchK = v; applyShape(); }, rebuildStrandsSoon);
+  slider(C, '骨相强度', 0, 1.5, 0.01, () => ch.faceArchK ?? 0.6, (v) => { ch.faceArchK = v; applyShape(); }, rebuildStrandsSoon);
   for (const [k, l] of EYE_SLIDERS) slider(C, l, k === 'bag' ? 0 : -1, 1, 0.01, () => ch.eyeShape?.[k] || 0, (v) => { (ch.eyeShape ||= {})[k] = v; applyShape(); }, rebuildStrandsSoon);
   for (const [k, l] of FACE_SLIDERS) slider(C, l, -1, 1, 0.01, () => ch.face[k] || 0, (v) => { ch.face[k] = v; applyShape(); }, rebuildStrandsSoon);
   slider(C, '微笑', 0, 1, 0.01, () => ch.expr.smile, (v) => { ch.expr.smile = v; applyShape(); });
