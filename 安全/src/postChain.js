@@ -125,8 +125,8 @@ export function createPostChain(renderer, scene, camera, opts = {}) {
   composer.addPass(new RenderPass(scene, camera));
 
   const gtao = new GTAOPass(scene, camera, size.x, size.y);
-  gtao.updateGtaoMaterial({ radius: o.aoRadius, distanceExponent: 1.4, thickness: 1.0, scale: 1.0, samples: 16 });
-  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 16 });
+  gtao.updateGtaoMaterial({ radius: o.aoRadius, distanceExponent: 1.4, thickness: 1.0, scale: 1.0, samples: o.aoSamples ?? 12 });
+  gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: o.aoSamples ?? 12 });
   gtao.blendIntensity = o.aoIntensity;
   composer.addPass(gtao);
 

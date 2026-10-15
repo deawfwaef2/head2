@@ -234,7 +234,7 @@ export function createStudioRig(scene, renderer, presetId = 'softbox', opts = {}
 
   let envTex = null; let lastEnvKey = '';
   let current = null;
-  function apply(id, ov = {}) {
+  function apply(id, ov = {}, o2 = {}) {
     const base = LIGHT_PRESETS[id] || LIGHT_PRESETS.softbox;
     const p = JSON.parse(JSON.stringify(base));
     // —— 用户叠加：主光方位/仰角偏移、强度、软硬、色温、轮廓、补光、环境 ——
@@ -278,7 +278,7 @@ export function createStudioRig(scene, renderer, presetId = 'softbox', opts = {}
     if (p.gobo) key.shadow.radius = Math.min(key.shadow.radius, 2 + 3 * (ov.goboSoft ?? 0.5));
     // 环境贴图只在相关参数变化时重烘焙（避免拖动滑杆时卡顿）
     const envKey = JSON.stringify([id, p.key.dir.map((v) => v.toFixed(2)), p.key.color, p.key.intensity.toFixed(2), p.key.size.toFixed(2), p.rim.map((r) => r.intensity.toFixed(2)), p.fill.intensity.toFixed(2)]);
-    if (envKey !== lastEnvKey) {
+    if (envKey !== lastEnvKey && (!o2.skipEnv || !envTex)) {
       if (envTex) envTex.dispose();
       envTex = buildStudioEnvironment(renderer, p);
       lastEnvKey = envKey;

@@ -15,6 +15,7 @@ const qs = new URLSearchParams(location.search);
 const QA = qs.has('qa');
 const $ = (id) => document.getElementById(id);
 const STORE_KEY = 'safebust-studio-v1';
+const SETTINGS_VER = 2;
 
 // ---------------- 数据定义 ----------------
 const HAIR_COLORS = {
@@ -56,11 +57,18 @@ const LOOKS = {
   mono: { label: '🖤 黑白经典', light: 'rembrandt', film: 'trix400', skin: { scatter: 0.9, roughness: 0.52 }, dof: false },
 };
 
+// 画质档位：决定分辨率上限、抗锯齿、AO 采样、阴影精度、发丝密度
+const QUALITY = {
+  smooth: { label: '流畅（核显/笔记本）', pr: 1.0, msaa: 0, ao: 8, shadow: 1024, density: 'low', hairMode: 'card' },
+  balanced: { label: '均衡（推荐）', pr: 1.25, msaa: 2, ao: 10, shadow: 2048, density: 'low', hairMode: 'strand' },
+  high: { label: '高画质（独显）', pr: 1.5, msaa: 4, ao: 12, shadow: 2048, density: 'mid', hairMode: 'strand' },
+  ultra: { label: '极致（高端独显）', pr: 2.0, msaa: 4, ao: 16, shadow: 4096, density: 'high', hairMode: 'strand' },
+};
 function defaultCharacter() {
   return {
     id: 'B' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name: '未命名胸像', note: '', created: Date.now(), thumb: '',
-    look: 'daylight',
+    look: 'window',
     shape: { mh_head_asian_youth: 0.65 },
     face: Object.fromEntries(FACE_SLIDERS.map(([k]) => [k, 0])),
     expr: { smile: 0.0, serene: 0.15, browUp: 0 },
@@ -68,20 +76,20 @@ function defaultCharacter() {
     hair: HAIRS[0].id, hairColor: 'natural', hairCustom: '',
     hairShine: 1, hairBack: 1,
     stand: 'obsidian',
-    light: 'indoorDay', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5 },
-    skinP: { scatter: 1.05, roughness: 0.55, normalScale: 0.8, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22 },
-    film: 'portra400', post: {},
+    light: 'windowGobo', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5 },
+    skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.8, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5 },
+    film: 'moodyFilm', post: {},
   };
 }
 function defaultSettings() {
-  return { quality: 'auto', hairMode: 'strand', density: 'mid', pixelRatio: 0, shadowRes: 2048, blink: true, idle: true, toneMap: 'neutral', petSize: 340, ao: true, msaa: 4 };
+  return { quality: 'auto', hairMode: 'strand', density: 'low', pixelRatio: 0, shadowRes: 2048, blink: true, idle: true, toneMap: 'neutral', petSize: 340, ao: true, msaa: 2, interactScale: 0.6, maxFps: 60 };
 }
 function loadStore() {
   try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && Array.isArray(s.items)) return s; } catch (e) { /* ignore */ }
   return { items: [], current: null, settings: defaultSettings() };
 }
 const store = loadStore();
-store.settings = { ...defaultSettings(), ...(store.settings || {}) };
+store.settings = (store.settings && store.settings.ver === SETTINGS_VER) ? { ...defaultSettings(), ...store.settings } : { ...defaultSettings(), ver: SETTINGS_VER }; // 旧版设置太重，升级时重置画质
 let storageOK = true;
 function saveStore() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); storageOK = true; } catch (e) { storageOK = false; toast('浏览器禁止本地存储，本次修改只保留在当前会话'); }
@@ -94,17 +102,28 @@ const S = store.settings;
 const canvas = $('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
 const isSoftware = (() => { try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''; return /swiftshader|llvmpipe|software/i.test(r); } catch (e) { return false; } })();
-function pixelRatio() { return S.pixelRatio || Math.min(window.devicePixelRatio || 1, isSoftware ? 1 : 2); }
+function qProfile() { const k = S.quality === 'auto' ? (isSoftware ? 'smooth' : 'balanced') : S.quality; return QUALITY[k] || QUALITY.balanced; }
+let interacting = false;
+function pixelRatio() {
+  const base = S.pixelRatio || Math.min(window.devicePixelRatio || 1, qProfile().pr);
+  return interacting ? Math.max(0.5, base * S.interactScale) : base;
+}
 renderer.setPixelRatio(pixelRatio());
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.VSMShadowMap;
-if (isSoftware && S.quality === 'auto' && S.density !== 'low') S.density = 'low';
+function applyQualityProfile(k) {
+  S.quality = k; const q = qProfile();
+  S.msaa = q.msaa; S.shadowRes = q.shadow; S.density = q.density; S.hairMode = q.hairMode; S.pixelRatio = 0;
+}
+if (!S.qualityApplied) { applyQualityProfile(S.quality || 'auto'); S.qualityApplied = true; }
+renderer.shadowMap.autoUpdate = false; // 阴影只在灯光/形体/姿态变化时更新
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(15, window.innerWidth / window.innerHeight, 0.05, 30);
 const controls = new OrbitControls(camera, canvas);
+controls.addEventListener('change', () => invalidate());
 controls.enableDamping = true; controls.minDistance = 0.35; controls.maxDistance = 2.4; controls.maxPolarAngle = Math.PI * 0.62;
 
 let rig = null; let backdrop = null; let post = null; let basicLights = null;
@@ -114,6 +133,9 @@ const origMats = new Map(); const skinTextures = {};
 let hairMeshes = []; let hairMats = null; let hairCards = null; let strandMesh = null; let strandMat = null;
 const strandCache = new Map();
 let compare = false; // A/B：原始渲染
+let dirty = 3; // 按需渲染：>0 时才渲染（静止画面不占 GPU）
+function invalidate(n = 2) { dirty = Math.max(dirty, n); }
+function invalidateShadow() { renderer.shadowMap.needsUpdate = true; invalidate(); }
 
 const loader = new GLTFLoader();
 function parseGlb(u8) { const buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength); return new Promise((res, rej) => loader.parse(buf, '', res, rej)); }
@@ -178,6 +200,7 @@ function applyShape() {
   setMorph('expr_serene', ch.expr.serene || 0);
   setMorph('mh_brow_up', Math.max(0, ch.expr.browUp || 0));
   setMorph('mh_brow_down', Math.max(0, -(ch.expr.browUp || 0)));
+  invalidateShadow();
 }
 
 // ---------------- 头发 ----------------
@@ -229,7 +252,7 @@ async function buildStrands() {
   strandMesh = new THREE.Mesh(res.geometry, strandMat);
   strandMesh.castShadow = false; strandMesh.receiveShadow = true; strandMesh.frustumCulled = false; strandMesh.renderOrder = 1;
   head.add(strandMesh);
-  busy(null);
+  busy(null); invalidateShadow();
 }
 function applyHairLook() {
   if (hairMats) applyHairColor(hairMats, hairRGB());
@@ -269,6 +292,7 @@ function applyMaterials() {
   }
   if (builtinSkin) setSkinParams(builtinSkin, ch.skinP);
   scene.traverse((o) => { if (o.material && !Array.isArray(o.material)) o.material.needsUpdate = true; });
+  invalidateShadow();
 }
 
 // ---------------- 布光 / 后期 ----------------
@@ -301,8 +325,9 @@ function postParams() {
   const film = FILM_PRESETS[ch.film] || FILM_PRESETS.clean;
   return { ...POST_DEFAULTS, ...film, ...ch.post, ao: S.ao && (ch.post.ao ?? true) };
 }
+function rebuildPost() { post?.dispose(); post = null; applyPost(); onResize(); }
 function applyPost() {
-  if (!post) post = createPostChain(renderer, scene, camera, { samples: isSoftware ? 0 : S.msaa });
+  if (!post) post = createPostChain(renderer, scene, camera, { samples: isSoftware ? 0 : S.msaa, aoSamples: qProfile().ao });
   post.set(postParams());
 }
 async function applyAll() {
@@ -313,6 +338,7 @@ async function applyAll() {
   applyLighting();
   applyPost();
   if (stand) stand.userData.setStyle(ch.stand);
+  invalidateShadow(); invalidate(3);
 }
 
 function setView(id) {
@@ -350,8 +376,13 @@ function check(parent, label, get, set) {
   const c = h('input', { type: 'checkbox' }); c.checked = !!get(); c.onchange = () => set(c.checked);
   parent.append(h('label', { class: 'chk' }, c, label)); return c;
 }
-const relight = () => { if (!compare && rig) { const p = rig.apply(ch.light, ch.lightOv); backdrop?.set(p.backdrop); } };
-const repost = () => post && post.set(postParams());
+let envT = 0;
+const relight = () => {
+  if (compare || !rig) return;
+  const p = rig.apply(ch.light, ch.lightOv, { skipEnv: true }); backdrop?.set(p.backdrop); invalidateShadow();
+  clearTimeout(envT); envT = setTimeout(() => { rig.apply(ch.light, ch.lightOv); invalidateShadow(); }, 180);
+};
+const repost = () => { post && post.set(postParams()); invalidate(); };
 
 // ---------------- 工坊面板 ----------------
 function buildStudio() {
@@ -410,13 +441,16 @@ function buildStudio() {
   slider(Li, '光斑边缘柔和', 0, 1, 0.01, () => o.goboSoft, (v) => { o.goboSoft = v; relight(); });
 
   const Sk = section(P, '🧴 皮肤质感');
-  const sp = ch.skinP; const ss = () => builtinSkin && setSkinParams(builtinSkin, sp);
+  const sp = ch.skinP; const ss = () => { builtinSkin && setSkinParams(builtinSkin, sp); invalidate(); };
   slider(Sk, '次表面散射（通透感）', 0, 2, 0.01, () => sp.scatter, (v) => { sp.scatter = v; ss(); });
   slider(Sk, '粗糙度（低=油亮）', 0.3, 0.85, 0.01, () => sp.roughness, (v) => { sp.roughness = v; ss(); });
   slider(Sk, '毛孔细节', 0, 1.6, 0.01, () => sp.normalScale, (v) => { sp.normalScale = v; ss(); });
   slider(Sk, '面部绒毛柔光', 0, 0.6, 0.01, () => sp.sheen, (v) => { sp.sheen = v; ss(); });
   slider(Sk, '皮脂光泽（第二高光瓣）', 0, 0.4, 0.01, () => sp.dualLobe, (v) => { sp.dualLobe = v; ss(); });
   slider(Sk, '肤色饱和', 0.6, 1.6, 0.01, () => sp.albedoSaturation, (v) => { sp.albedoSaturation = v; ss(); });
+  slider(Sk, '程序化毛孔（近看更真）', 0, 1.5, 0.01, () => sp.micro ?? 0.55, (v) => { sp.micro = v; ss(); });
+  slider(Sk, '高光破碎（去塑料感）', 0, 1.5, 0.01, () => sp.breakup ?? 0.5, (v) => { sp.breakup = v; ss(); });
+  slider(Sk, '肤色斑驳（自然不均）', 0, 1.5, 0.01, () => sp.mottle ?? 0.5, (v) => { sp.mottle = v; ss(); });
 
   const F = section(P, '🎞️ 胶片与后期');
   select(F, '胶片预设', Object.entries(FILM_PRESETS).map(([k, v]) => [k, v.label]), () => ch.film, (v) => { ch.film = v; ch.post = { dof: ch.post.dof, ao: ch.post.ao }; repost(); buildStudio(); });
@@ -520,6 +554,16 @@ function buildSettings() {
   const P = $('p-settings'); P.innerHTML = '';
   P.append(h('h3', {}, '⚙️ 设置'));
   const A = section(P, '画质', true);
+  select(A, '画质档位', [['auto', '自动（' + (isSoftware ? '检测到软件渲染→流畅' : '均衡') + '）'], ...Object.entries(QUALITY).map(([k, v]) => [k, v.label])], () => S.quality, async (v) => {
+    applyQualityProfile(v); saveStore();
+    if (rig) { rig.key.shadow.mapSize.set(S.shadowRes, S.shadowRes); rig.key.shadow.map?.dispose(); rig.key.shadow.map = null; }
+    rebuildPost();
+    if (S.hairMode === 'strand') await buildStrands();
+    applyMaterials(); buildSettings(); toast('已切换：' + qProfile().label);
+  });
+  select(A, '帧率上限', [['30', '30 fps（省电、风扇安静）'], ['60', '60 fps']], () => String(S.maxFps), (v) => { S.maxFps = +v; saveStore(); });
+  slider(A, '拖动时分辨率（越低越跟手）', 0.35, 1, 0.05, () => S.interactScale, (v) => { S.interactScale = v; saveStore(); });
+  A.append(h('div', { class: 'note' }, '画面静止时不再重复渲染（GPU 占用接近 0）；拖动/缩放时自动降分辨率并暂停 AO，松手后渲染一帧满画质。'));
   select(A, '头发渲染', [['strand', '真发丝（发片→发丝转换）'], ['card', '发片（更快）']], () => S.hairMode, async (v) => { S.hairMode = v; saveStore(); if (v === 'strand') await buildStrands(); applyMaterials(); });
   select(A, '发丝密度', Object.entries(DENSITY).map(([k, v]) => [k, v.label]), () => S.density, async (v) => { S.density = v; saveStore(); if (S.hairMode === 'strand') { await buildStrands(); applyMaterials(); } });
   select(A, '渲染分辨率', [['0', '自动'], ['0.75', '75%（省电）'], ['1', '100%'], ['1.5', '150%'], ['2', '200%（高清屏）']], () => String(S.pixelRatio), (v) => { S.pixelRatio = +v; saveStore(); onResize(); });
@@ -544,7 +588,7 @@ function layoutPet() {
   pet.x = Math.min(Math.max(0, pet.x), window.innerWidth - w); pet.y = Math.min(Math.max(0, pet.y), window.innerHeight - hgt - 42);
   win.style.left = pet.x + 'px'; win.style.top = pet.y + 'px';
   renderer.setPixelRatio(pixelRatio()); renderer.setSize(w, hgt, false);
-  camera.clearViewOffset(); camera.aspect = w / hgt; camera.updateProjectionMatrix(); post?.setSize(w, hgt);
+  camera.clearViewOffset(); camera.aspect = w / hgt; camera.updateProjectionMatrix(); post?.setSize(w, hgt); invalidate();
 }
 function enterPet() {
   document.body.classList.add('pet', 'hideui');
@@ -612,7 +656,7 @@ function onResize() {
   renderer.setPixelRatio(pixelRatio());
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight); post?.setSize(window.innerWidth, window.innerHeight);
-  applyViewOffset();
+  applyViewOffset(); invalidate();
 }
 window.addEventListener('resize', onResize);
 
@@ -623,26 +667,56 @@ const blink = { next: 2.5, t: -1 };
 function renderFrame() {
   if (strandMat) { const hpx = renderer.getDrawingBufferSize(_dbs).y; setStrandParams(strandMat, { pxScale: 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.max(1, hpx) }); }
   if (!compare && post) post.render(clock.getElapsedTime()); else renderer.render(scene, camera);
+  if (renderer.shadowMap.needsUpdate) renderer.shadowMap.needsUpdate = false;
 }
-let frames = 0;
-function tick() {
-  const t = clock.getElapsedTime(); const dt = Math.min(0.05, clock.getDelta());
-  if (controls.enabled) controls.update();
+let frames = 0; let lastT = 0; let lastRender = 0;
+// 交互时临时降分辨率并关闭 AO/景深，松手后渲染一帧满画质（渐进式精修）
+let interactT = 0;
+function setInteract(on) {
+  if (interacting === on) return;
+  interacting = on;
+  const pet = document.body.classList.contains('pet');
+  renderer.setPixelRatio(pixelRatio());
+  if (pet) layoutPet(); else { renderer.setSize(window.innerWidth, window.innerHeight); post?.setSize(window.innerWidth, window.innerHeight); }
+  if (post) { const pp = postParams(); post.set(on ? { ao: false, dof: false, diffusion: 0, halation: 0 } : { ao: pp.ao, dof: pp.dof, diffusion: pp.diffusion, halation: pp.halation }); }
+  invalidate();
+}
+function pokeInteract() { setInteract(true); clearTimeout(interactT); interactT = setTimeout(() => setInteract(false), 260); }
+canvas.addEventListener('pointerdown', () => { setInteract(true); clearTimeout(interactT); });
+window.addEventListener('pointerup', () => { if (interacting) { clearTimeout(interactT); interactT = setTimeout(() => setInteract(false), 120); } });
+canvas.addEventListener('wheel', pokeInteract, { passive: true });
+// 任何面板操作都触发重绘
+document.addEventListener('input', () => invalidate());
+document.addEventListener('change', () => invalidate(3));
+
+function tick(now) {
+  requestAnimationFrame(tick);
+  const t = now / 1000; const dt = Math.min(0.05, lastT ? t - lastT : 0.016); lastT = t;
+  if (controls.enabled) controls.update(); // 阻尼惯性期间会触发 change → invalidate
+  const isPet = document.body.classList.contains('pet');
   // 自然眨眼（活人神态）
   if (S.blink && gltfHead && !QA) {
     if (blink.t < 0 && t > blink.next) blink.t = 0;
-    if (blink.t >= 0) { blink.t += 1 / 60; const k = Math.sin(Math.min(1, blink.t / 0.16) * Math.PI); setMorph('blink_left', k); setMorph('blink_right', k); if (blink.t > 0.16) { blink.t = -1; blink.next = t + 2.5 + Math.random() * 4; setMorph('blink_left', 0); setMorph('blink_right', 0); } }
+    if (blink.t >= 0) {
+      blink.t += dt; const k = Math.sin(Math.min(1, blink.t / 0.16) * Math.PI);
+      setMorph('blink_left', k); setMorph('blink_right', k); invalidate(1);
+      if (blink.t > 0.16) { blink.t = -1; blink.next = t + 2.5 + Math.random() * 4; setMorph('blink_left', 0); setMorph('blink_right', 0); invalidate(1); }
+    }
   }
-  if (document.body.classList.contains('pet')) {
-    if (S.idle) head.position.y = Math.sin(t * 1.4) * 0.0012;
-    if (pet.spin) head.rotation.y += dt * 0.8; else head.rotation.y *= 0.92;
+  if (isPet) {
+    if (S.idle) { head.position.y = Math.sin(t * 1.4) * 0.0012; invalidate(1); }
+    if (pet.spin) { head.rotation.y += dt * 0.8; invalidateShadow(); } else if (Math.abs(head.rotation.y) > 1e-3) { head.rotation.y *= 0.9; invalidateShadow(); }
     if (S.idle && Math.random() < 0.0008) say(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
   }
+  if (dirty <= 0) return;
+  // 帧率上限：桌宠待机 30fps，其余按设置
+  const cap = isPet && !pet.spin ? 30 : S.maxFps;
+  if (now - lastRender < 1000 / cap - 2) return;
+  lastRender = now;
+  dirty--;
   renderFrame();
   frames++;
   if (frames === 3) window.__READY__ = true;
-  if (QA && frames >= 3) return;
-  requestAnimationFrame(tick);
 }
 
 // ---------------- 启动 ----------------
@@ -671,7 +745,7 @@ async function boot() {
     ready = true; $('btnStart').textContent = '▶ 点击开始';
     if (wantEnter || QA || qs.has('autostart')) enterApp();
     if (qs.has('pet')) enterPet();
-    requestAnimationFrame(tick);
+    invalidate(4); requestAnimationFrame(tick);
   } catch (err) {
     console.error(err);
     $('startStatus').textContent = '加载失败：' + (err?.message || err) + '（请用 Chrome / Edge 并开启硬件加速）';
