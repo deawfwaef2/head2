@@ -7,7 +7,7 @@ import * as THREE from 'three';
 
 export const LIGHT_PRESETS = {
   softbox: {
-    label: '摄影棚柔光（参考图3）',
+    label: '摄影棚柔光',
     exposure: 0.85,
     key: { dir: [-0.55, 0.42, 0.72], color: 0xfff4ea, intensity: 2.6, size: 1.35 },
     fill: { dir: [0.85, 0.05, 0.55], color: 0xe9eef7, intensity: 0.08 },
@@ -17,7 +17,7 @@ export const LIGHT_PRESETS = {
     backdrop: ['#8c8580', '#3f3b39'],
   },
   window: {
-    label: '窗边自然光（参考图1）',
+    label: '窗边自然光',
     exposure: 1.08,
     key: { dir: [0.85, 0.32, 0.42], color: 0xfff1e0, intensity: 2.9, size: 1.9 },
     fill: { dir: [-0.8, 0.1, 0.6], color: 0xf1e6da, intensity: 0.42 },
@@ -37,7 +37,7 @@ export const LIGHT_PRESETS = {
     backdrop: ['#3a3634', '#121111'],
   },
   overcast: {
-    label: '阴天自拍光（参考图2）',
+    label: '阴天柔光',
     exposure: 1.12,
     key: { dir: [0.15, 0.55, 0.85], color: 0xf4f6ff, intensity: 1.55, size: 2.4 },
     fill: { dir: [-0.6, 0.0, 0.8], color: 0xf2f0ee, intensity: 0.5 },
@@ -46,7 +46,71 @@ export const LIGHT_PRESETS = {
     envIntensity: 1.15,
     backdrop: ['#b8b4b0', '#6d6a68'],
   },
+  goldenBack: {
+    label: '暖阳逆光 · 金色轮廓（参考图3）',
+    exposure: 0.92,
+    key: { dir: [-0.35, 0.38, -0.75], color: 0xffc98a, intensity: 3.4, size: 0.8 },
+    fill: { dir: [0.4, 0.1, 0.9], color: 0xffe2c4, intensity: 0.28 },
+    rim: [{ dir: [-0.85, 0.3, -0.45], color: 0xffb46b, intensity: 2.4 }, { dir: [0.75, 0.25, -0.6], color: 0xffd9a8, intensity: 0.9 }],
+    top: 0.12, floor: [0.22, 0.14, 0.08],
+    envIntensity: 0.5,
+    backdrop: ['#6b4a2c', '#120c08'],
+    haze: 0.35,
+  },
+  windowGobo: {
+    label: '窗格斜射光斑（参考图2）',
+    exposure: 1.0,
+    key: { dir: [0.72, 0.42, 0.55], color: 0xfff0d6, intensity: 3.6, size: 0.55 },
+    fill: { dir: [-0.8, 0.05, 0.6], color: 0x9fb3c6, intensity: 0.22 },
+    rim: [{ dir: [-0.6, 0.3, -0.75], color: 0xbcd0e6, intensity: 0.35 }],
+    top: 0.18, floor: [0.12, 0.13, 0.15],
+    envIntensity: 0.45,
+    backdrop: ['#5d6f78', '#1f2a30'],
+    gobo: 'window',
+  },
+  leafDapple: {
+    label: '树影光斑 · 午后',
+    exposure: 1.0,
+    key: { dir: [0.55, 0.62, 0.55], color: 0xfff1d2, intensity: 3.3, size: 0.6 },
+    fill: { dir: [-0.7, 0.1, 0.7], color: 0xcfe0c8, intensity: 0.3 },
+    rim: [{ dir: [-0.5, 0.4, -0.8], color: 0xfff0d0, intensity: 0.6 }],
+    top: 0.3, floor: [0.18, 0.2, 0.14],
+    envIntensity: 0.6,
+    backdrop: ['#7f8a6e', '#2a2f24'],
+    gobo: 'leaf',
+  },
+  indoorDay: {
+    label: '室内柔和日光（参考图1）',
+    exposure: 1.12,
+    key: { dir: [-0.65, 0.3, 0.7], color: 0xfff6ee, intensity: 2.2, size: 2.2 },
+    fill: { dir: [0.8, 0.05, 0.6], color: 0xf3ece4, intensity: 0.55 },
+    rim: [{ dir: [0.55, 0.35, -0.75], color: 0xfff4ea, intensity: 0.5 }],
+    top: 0.5, floor: [0.42, 0.37, 0.31],
+    envIntensity: 1.1,
+    backdrop: ['#e6ddd2', '#a8998a'],
+  },
+  butterfly: {
+    label: '蝴蝶光 · 美妆棚',
+    exposure: 0.95,
+    key: { dir: [0.0, 0.6, 0.8], color: 0xfff8f2, intensity: 2.5, size: 1.4 },
+    fill: { dir: [0.0, -0.45, 0.9], color: 0xffffff, intensity: 0.45 },
+    rim: [{ dir: [0.75, 0.3, -0.6], color: 0xffffff, intensity: 0.8 }, { dir: [-0.75, 0.3, -0.6], color: 0xffffff, intensity: 0.8 }],
+    top: 0.25, floor: [0.25, 0.24, 0.24],
+    envIntensity: 0.6,
+    backdrop: ['#c9c3bf', '#5b5654'],
+  },
+  cinematicTeal: {
+    label: '电影感 · 冷暖对比',
+    exposure: 0.9,
+    key: { dir: [-0.7, 0.35, 0.6], color: 0xffd7ad, intensity: 2.8, size: 0.9 },
+    fill: { dir: [0.8, 0.0, 0.5], color: 0x6f9ec4, intensity: 0.35 },
+    rim: [{ dir: [0.7, 0.35, -0.65], color: 0x86c3ff, intensity: 1.6 }],
+    top: 0.08, floor: [0.05, 0.08, 0.1],
+    envIntensity: 0.45,
+    backdrop: ['#2c3e4a', '#0b1116'],
+  },
 };
+
 
 function v3(a) { return new THREE.Vector3(a[0], a[1], a[2]).normalize(); }
 
@@ -97,7 +161,52 @@ export function buildStudioEnvironment(renderer, preset) {
   return rt.texture;
 }
 
-/** 在主场景中布置直射光（带柔和阴影）。返回 { group, update(preset) } */
+/** 色温(K) → 线性 RGB 近似（Tanner Helland 拟合） */
+export function kelvinToRGB(k) {
+  const t = k / 100; let r, g, b;
+  if (t <= 66) { r = 255; g = 99.4708025861 * Math.log(t) - 161.1195681661; b = t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307; }
+  else { r = 329.698727446 * Math.pow(t - 60, -0.1332047592); g = 288.1221695283 * Math.pow(t - 60, -0.0755148492); b = 255; }
+  const c = (v) => Math.min(255, Math.max(0, v)) / 255;
+  return new THREE.Color(c(r), c(g), c(b));
+}
+
+const GOBO_LAYER = 5;
+function leafTexture() {
+  const S = 256; const cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'); g.clearRect(0, 0, S, S);
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  g.fillStyle = '#fff';
+  for (let i = 0; i < 70; i++) {
+    const x = rnd() * S, y = rnd() * S, rx = 6 + rnd() * 16, ry = 3 + rnd() * 8;
+    g.save(); g.translate(x, y); g.rotate(rnd() * Math.PI); g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  // 枝条
+  g.strokeStyle = '#fff'; g.lineWidth = 3;
+  for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(rnd() * S, 0); g.quadraticCurveTo(rnd() * S, rnd() * S, rnd() * S, S); g.stroke(); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.6, 1.6);
+  return t;
+}
+/** 只进阴影图、不进主画面（单独 layer）的遮光板：窗格 / 树叶 */
+function buildGobo(type) {
+  const g = new THREE.Group(); g.name = 'Gobo_' + type;
+  const mat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
+  if (type === 'window') {
+    const bar = (w, h, x, y) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.004), mat); m.position.set(x, y, 0); g.add(m); };
+    // 窗框（大外框留出两格玻璃 + 横档），斜放形成参考图那样的斜切光斑
+    for (const x of [-0.25, -0.075, 0.1, 0.27]) bar(0.016, 0.9, x, 0);
+    for (const y of [-0.16, 0.02, 0.2]) bar(0.9, 0.014, 0, y);
+    bar(0.9, 0.5, 0, 0.48); bar(0.9, 0.5, 0, -0.48); bar(0.3, 0.9, -0.45, 0); bar(0.3, 0.9, 0.45, 0);
+    g.rotation.z = 0.42;
+  } else {
+    const t = leafTexture();
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), new THREE.MeshBasicMaterial({ map: t, alphaMap: t, alphaTest: 0.5, transparent: false, side: THREE.DoubleSide }));
+    g.add(m);
+  }
+  g.traverse((o) => { o.layers.set(GOBO_LAYER); o.castShadow = true; o.receiveShadow = false; });
+  return g;
+}
+
+/** 在主场景中布置直射光（带柔和阴影）。apply(id, overrides) 可叠加用户调节 */
 export function createStudioRig(scene, renderer, presetId = 'softbox', opts = {}) {
   const group = new THREE.Group();
   group.name = 'PhotorealStudioRig';
@@ -112,42 +221,77 @@ export function createStudioRig(scene, renderer, presetId = 'softbox', opts = {}
   key.shadow.radius = 6;
   key.shadow.blurSamples = 16;
   const sc = key.shadow.camera;
-  sc.left = -0.2; sc.right = 0.2; sc.top = 0.22; sc.bottom = -0.22; sc.near = 0.2; sc.far = 3.0;
+  sc.left = -0.26; sc.right = 0.26; sc.top = 0.3; sc.bottom = -0.3; sc.near = 0.1; sc.far = 3.0;
+  sc.layers.enable(GOBO_LAYER);
   group.add(key, key.target);
 
   const rims = [new THREE.DirectionalLight(), new THREE.DirectionalLight()];
   rims.forEach((r) => group.add(r, r.target));
   const fill = new THREE.DirectionalLight();
   group.add(fill, fill.target);
+  const gobos = { window: buildGobo('window'), leaf: buildGobo('leaf') };
+  Object.values(gobos).forEach((g) => { g.visible = false; group.add(g); });
 
-  let envTex = null;
-  function apply(id) {
-    const p = LIGHT_PRESETS[id] || LIGHT_PRESETS.softbox;
+  let envTex = null; let lastEnvKey = '';
+  let current = null;
+  function apply(id, ov = {}) {
+    const base = LIGHT_PRESETS[id] || LIGHT_PRESETS.softbox;
+    const p = JSON.parse(JSON.stringify(base));
+    // —— 用户叠加：主光方位/仰角偏移、强度、软硬、色温、轮廓、补光、环境 ——
+    const d = v3(p.key.dir);
+    let az = Math.atan2(d.x, d.z), el = Math.asin(THREE.MathUtils.clamp(d.y, -1, 1));
+    az += THREE.MathUtils.degToRad(ov.azimuth || 0);
+    el = THREE.MathUtils.clamp(el + THREE.MathUtils.degToRad(ov.elevation || 0), -0.3, 1.45);
+    p.key.dir = [Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el)];
+    p.key.intensity *= ov.keyMul ?? 1;
+    p.key.size *= ov.softMul ?? 1;
+    if (ov.kelvin) { const k = kelvinToRGB(ov.kelvin); p.key.color = new THREE.Color(p.key.color).lerp(k, 0.85).getHex(); }
+    p.rim.forEach((r) => { r.intensity *= ov.rimMul ?? 1; });
+    p.fill.intensity *= ov.fillMul ?? 1;
+    p.envIntensity *= ov.envMul ?? 1;
+    if (ov.gobo && ov.gobo !== 'preset') p.gobo = ov.gobo === 'none' ? null : ov.gobo;
+
     key.position.copy(v3(p.key.dir).multiplyScalar(radius));
     key.color.set(p.key.color);
     key.intensity = p.key.intensity;
-    // 柔光箱越大，阴影越软
-    key.shadow.radius = 3 + 5 * p.key.size;
+    key.shadow.radius = 2 + 5 * p.key.size;
     fill.position.copy(v3(p.fill.dir).multiplyScalar(radius));
     fill.color.set(p.fill.color);
     fill.intensity = p.fill.intensity;
     rims.forEach((r, i) => {
-      const d = p.rim[i];
-      r.visible = !!d;
-      if (!d) return;
-      r.position.copy(v3(d.dir).multiplyScalar(radius));
-      r.color.set(d.color);
-      r.intensity = d.intensity;
+      const rd = p.rim[i];
+      r.visible = !!rd;
+      if (!rd) return;
+      r.position.copy(v3(rd.dir).multiplyScalar(radius));
+      r.color.set(rd.color);
+      r.intensity = rd.intensity;
     });
-    if (envTex) envTex.dispose();
-    envTex = buildStudioEnvironment(renderer, p);
+    for (const [k, g] of Object.entries(gobos)) {
+      g.visible = p.gobo === k;
+      if (g.visible) {
+        g.position.copy(v3(p.key.dir).multiplyScalar(0.42 * (ov.goboDist ?? 1)));
+        g.lookAt(key.position);
+        g.rotateZ(k === 'window' ? 0.42 : 0);
+        const s = ov.goboScale ?? 1; g.scale.setScalar(s);
+      }
+    }
+    if (p.gobo) key.shadow.radius = Math.min(key.shadow.radius, 2 + 3 * (ov.goboSoft ?? 0.5));
+    // 环境贴图只在相关参数变化时重烘焙（避免拖动滑杆时卡顿）
+    const envKey = JSON.stringify([id, p.key.dir.map((v) => v.toFixed(2)), p.key.color, p.key.intensity.toFixed(2), p.key.size.toFixed(2), p.rim.map((r) => r.intensity.toFixed(2)), p.fill.intensity.toFixed(2)]);
+    if (envKey !== lastEnvKey) {
+      if (envTex) envTex.dispose();
+      envTex = buildStudioEnvironment(renderer, p);
+      lastEnvKey = envKey;
+    }
     scene.environment = envTex;
     scene.environmentIntensity = p.envIntensity;
-    renderer.toneMappingExposure = p.exposure;
+    renderer.toneMappingExposure = p.exposure * (ov.exposureMul ?? 1);
+    renderer.shadowMap.needsUpdate = true;
+    current = p;
     return p;
   }
-  const preset = apply(presetId);
-  return { group, key, fill, rims, apply, get preset() { return preset; } };
+  apply(presetId);
+  return { group, key, fill, rims, gobos, apply, get preset() { return current; } };
 }
 
 /** 摄影背景布：柔和渐变 + 中心亮斑（背景灯），不是光线方块，仅作背景 */

@@ -2,7 +2,15 @@
 // 颈托包住颈部下端，完全遮住颈部截面，演示只呈现“胸像式”收藏头像。
 import * as THREE from 'three';
 
-export function createDisplayStand(skinMesh) {
+export const STAND_STYLES = {
+  obsidian: { label: '黑石 + 黄铜细线', color: 0x24211f, roughness: 0.62, clearcoat: 0.25, metal: 0xb08d57, transmission: 0 },
+  marble: { label: '白色大理石', color: 0xe9e5df, roughness: 0.35, clearcoat: 0.6, metal: 0xc9a46a, transmission: 0 },
+  walnut: { label: '胡桃木', color: 0x4a2e1d, roughness: 0.55, clearcoat: 0.4, metal: 0x8f7a5a, transmission: 0 },
+  acrylic: { label: '透明亚克力', color: 0xf4f7fa, roughness: 0.05, clearcoat: 1, metal: 0xd8d8d8, transmission: 0.92 },
+  matteWhite: { label: '哑光白（博物馆）', color: 0xd9d6d1, roughness: 0.85, clearcoat: 0, metal: 0x9a9a9a, transmission: 0 },
+};
+
+export function createDisplayStand(skinMesh, styleId = 'obsidian') {
   const pos = skinMesh.geometry.attributes.position;
   let minY = Infinity;
   for (let i = 0; i < pos.count; i++) minY = Math.min(minY, pos.getY(i));
@@ -31,5 +39,13 @@ export function createDisplayStand(skinMesh) {
   g.name = 'DisplayStand';
   g.position.set(cx, 0, cz);
   g.add(m, ring);
+  g.userData.setStyle = (id) => {
+    const st = STAND_STYLES[id] || STAND_STYLES.obsidian;
+    stone.color.set(st.color); stone.roughness = st.roughness; stone.clearcoat = st.clearcoat;
+    stone.transmission = st.transmission; stone.thickness = st.transmission ? 0.02 : 0; stone.ior = 1.49;
+    stone.transparent = false; stone.needsUpdate = true;
+    ring.material.color.set(st.metal);
+  };
+  g.userData.setStyle(styleId);
   return g;
 }
