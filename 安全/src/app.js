@@ -8,6 +8,7 @@ import { upgradeSkinMaterial, setSkinParams } from './skinMaterial.js';
 import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHairMaterials, applyHairColor } from './featureMaterials.js';
 import { createPostChain, createAccumulator, FILM_PRESETS, POST_DEFAULTS } from './postChain.js';
 import { createDisplayStand, STAND_STYLES } from './displayStand.js';
+import { BACKGROUNDS, backgroundTexture } from './backgrounds.js';
 import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture, scalpDistanceAttribute } from './strandHair.js';
 import { HEAD_GLB, HAIRS } from './assets.gen.js';
 
@@ -38,7 +39,7 @@ const FACE_SLIDERS = [['nose_width', '鼻翼宽窄'], ['nose_height', '鼻梁高
 const SKIN_LABELS = { cn_scholar_natural: '自然素颜', cn_porcelain_ivory: '瓷白', kr_dewy_peach: '水光蜜桃', kr_firstlove_camellia: '初恋山茶', cn_jiangnan_jade: '温玉', kr_chaebol_cool: '冷调白皙', cn_intellectual_olive: '橄榄暖调', eurasian_velvet_rose: '玫瑰丝绒', young_asian: '青年原版', natural_makeup: '淡妆原版' };
 const BROW_LABELS = { eyebrow010: '自然毛流眉', eyebrow003: '柳叶眉', eyebrow001: '平直眉', eyebrow002: '细弯眉', eyebrow004: '标准眉', eyebrow005: '细眉', eyebrow008: '浓眉', eyebrow012: '野生眉' };
 const VIEWS = {
-  portrait: { label: '胸像全景', pos: [0.36, 0.06, 1.55], target: [0, -0.045, 0], fov: 18 },
+  portrait: { label: '胸像全景', pos: [0.3, 0.05, 1.32], target: [0, -0.028, 0], fov: 17 },
   front: { label: '正面肖像', pos: [0, 0.012, 1.05], target: [0, 0.005, 0], fov: 15 },
   threequarter: { label: '3/4 侧', pos: [-0.62, 0.05, 0.85], target: [0, 0.008, 0.01], fov: 15 },
   profile: { label: '侧面', pos: [-1.05, 0.02, 0.06], target: [0, 0.005, 0], fov: 15 },
@@ -47,14 +48,18 @@ const VIEWS = {
 };
 // 一键风格（布光 + 胶片 + 皮肤）
 const LOOKS = {
-  daylight: { label: '☀️ 室内日光', light: 'indoorDay', film: 'portra400', skin: { scatter: 1.05, roughness: 0.55 }, dof: true },
-  window: { label: '🪟 窗格光影', light: 'windowGobo', film: 'moodyFilm', skin: { scatter: 1.15, roughness: 0.52 }, dof: true },
-  golden: { label: '🌅 暖阳逆光', light: 'goldenBack', film: 'gold200', skin: { scatter: 1.3, roughness: 0.5 }, dof: true },
-  studio: { label: '📸 棚拍精修', light: 'softbox', film: 'clean', skin: { scatter: 1.0, roughness: 0.56 }, dof: false },
-  leaf: { label: '🌿 树影午后', light: 'leafDapple', film: 'pro400h', skin: { scatter: 1.1, roughness: 0.54 }, dof: false },
-  cine: { label: '🎬 电影冷暖', light: 'cinematicTeal', film: 'cinestill800t', skin: { scatter: 1.0, roughness: 0.5 }, dof: true },
-  mist: { label: '🌸 柔焦唯美', light: 'butterfly', film: 'softMist', skin: { scatter: 1.2, roughness: 0.58 }, dof: false },
-  mono: { label: '🖤 黑白经典', light: 'rembrandt', film: 'trix400', skin: { scatter: 0.9, roughness: 0.52 }, dof: false },
+  daylight: { label: '☀️ 室内日光', light: 'indoorDay', film: 'portra400', bg: 'roomWarm', skin: { scatter: 1.05, roughness: 0.55 }, dof: true },
+  window: { label: '🪟 窗格光影', light: 'windowGobo', film: 'moodyFilm', bg: 'windowShadow', skin: { scatter: 1.15, roughness: 0.52 }, dof: true },
+  golden: { label: '🌅 暖阳逆光', light: 'goldenBack', film: 'gold200', bg: 'goldenHour', skin: { scatter: 1.3, roughness: 0.5 }, dof: true },
+  japan: { label: '🍃 日系清透', light: 'overcast', film: 'japanAiry', bg: 'sheerCurtain', skin: { scatter: 1.2, roughness: 0.58 }, dof: true },
+  korean: { label: '🍦 韩系奶油', light: 'butterfly', film: 'koreanCream', bg: 'sheerCurtain', skin: { scatter: 1.25, roughness: 0.56 }, dof: true },
+  hk: { label: '🏮 港风复古', light: 'cinematicTeal', film: 'hkRetro', bg: 'cityNight', skin: { scatter: 1.0, roughness: 0.48 }, dof: true },
+  cafe: { label: '☕ 咖啡馆暖灯', light: 'rembrandt', film: 'portra400', bg: 'cafe', skin: { scatter: 1.15, roughness: 0.5 }, dof: true },
+  leaf: { label: '🌿 树影午后', light: 'leafDapple', film: 'pro400h', bg: 'garden', skin: { scatter: 1.1, roughness: 0.54 }, dof: true },
+  cine: { label: '🎬 好莱坞青橙', light: 'cinematicTeal', film: 'tealOrange', bg: 'cityNight', skin: { scatter: 1.0, roughness: 0.5 }, dof: true },
+  oil: { label: '🖼 古典油画', light: 'rembrandt', film: 'oilPainting', bg: 'grayWall', skin: { scatter: 1.1, roughness: 0.55 }, dof: false },
+  studio: { label: '📸 棚拍精修', light: 'softbox', film: 'phonePortrait', bg: 'studio', skin: { scatter: 1.0, roughness: 0.56 }, dof: false },
+  mono: { label: '🖤 黑白经典', light: 'rembrandt', film: 'trix400', bg: 'grayWall', skin: { scatter: 0.9, roughness: 0.52 }, dof: false },
 };
 
 // 画质档位：决定分辨率上限、抗锯齿、AO 采样、阴影精度、发丝密度
@@ -77,8 +82,8 @@ function defaultCharacter() {
     hairShine: 1, hairBack: 1,
     stand: 'obsidian',
     light: 'windowGobo', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5, bgMul: 0.55 },
-    skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.8, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5 },
-    film: 'moodyFilm', post: { dof: true, aperture: 0.0016 }, eyeOcc: 0.75,
+    skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.8, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5, regional: 0.7, translucency: 0.8 },
+    film: 'moodyFilm', bg: 'windowShadow', post: { dof: true, aperture: 0.0016 }, eyeOcc: 0.75,
   };
 }
 function defaultSettings() {
@@ -194,7 +199,15 @@ async function loadHead() {
     eyeInfo = { L: L.getCenter(new THREE.Vector3()), R: R.getCenter(new THREE.Vector3()), r: Math.max(L.getSize(v).y, 0.01) * 0.5 };
   }
 }
-let eyeInfo = null;
+let eyeInfo = null; let noseTip = null;
+function setupFaceAnchors() {
+  const u = builtinSkin?.userData?.skinUniforms; if (!u || !eyeInfo) return;
+  if (!noseTip) {
+    const pa = parts.skin.geometry.attributes.position; let best = -1e9; const v = new THREE.Vector3(); noseTip = new THREE.Vector3();
+    for (let i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i); if (Math.abs(v.x) < 0.006 && v.y < eyeInfo.L.y && v.y > eyeInfo.L.y - 0.06 && v.z > best) { best = v.z; noseTip.copy(v); } }
+  }
+  u.uFaceEyeL.value.copy(eyeInfo.L); u.uFaceEyeR.value.copy(eyeInfo.R); u.uFaceNose.value.copy(noseTip);
+}
 function setupEyeOcclusion(mat) {
   const u = mat?.userData?.eyeUniforms; if (!u || !eyeInfo) return;
   u.uEyeL.value.copy(eyeInfo.L); u.uEyeR.value.copy(eyeInfo.R); u.uEyeRad.value = eyeInfo.r; u.uEyeOcc.value = ch.eyeOcc ?? 0.75;
@@ -297,6 +310,7 @@ async function applySkinTexture() {
   if (tex) so.map = tex;
   if (!builtinSkin) builtinSkin = upgradeSkinMaterial(so);
   builtinSkin.map = tex || so.map; builtinSkin.needsUpdate = true; so.needsUpdate = true;
+  setupFaceAnchors();
 }
 function applyMaterials() {
   hairLODActive = false;
@@ -425,7 +439,7 @@ function check(parent, label, get, set) {
   parent.append(h('label', { class: 'chk' }, c, label)); return c;
 }
 let envT = 0;
-function setBackdrop(p) { if (!backdrop) return; const k = ch.lightOv.bgMul ?? 0.55; const sc = (hex) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString(); backdrop.set([sc(p.backdrop[0]), sc(p.backdrop[1])]); }
+function setBackdrop(p) { if (!backdrop) return; const k = ch.lightOv.bgMul ?? 0.55; const sc = (hex) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString(); backdrop.set([sc(p.backdrop[0]), sc(p.backdrop[1])]); backdrop.setTexture(backgroundTexture(ch.bg || 'studio'), k * 1.25); }
 const relight = () => {
   if (compare || !rig) return;
   const p = rig.apply(ch.light, ch.lightOv, { skipEnv: true }); setBackdrop(p); invalidateShadow();
@@ -446,7 +460,7 @@ function buildStudio() {
   for (const [k, v] of Object.entries(LOOKS)) {
     const b = h('button', { class: ch.look === k ? 'on' : '' }, v.label);
     b.onclick = async () => {
-      ch.look = k; ch.light = v.light; ch.film = v.film; ch.skinP = { ...ch.skinP, ...v.skin };
+      ch.look = k; ch.light = v.light; ch.film = v.film; ch.bg = v.bg; ch.skinP = { ...ch.skinP, ...v.skin };
       ch.lightOv = defaultCharacter().lightOv; ch.post = { dof: v.dof, aperture: 0.0016 };
       await applyAll(); buildStudio();
     };
@@ -486,6 +500,7 @@ function buildStudio() {
   slider(Li, '补光', 0, 3, 0.01, () => o.fillMul, (v) => { o.fillMul = v; relight(); });
   slider(Li, '环境反射', 0, 2.5, 0.01, () => o.envMul, (v) => { o.envMul = v; relight(); });
   slider(Li, '曝光', 0.5, 1.8, 0.01, () => o.exposureMul, (v) => { o.exposureMul = v; relight(); });
+  select(Li, '虚化环境背景', Object.entries(BACKGROUNDS).map(([k, v]) => [k, v.label]), () => ch.bg || 'studio', (v) => { ch.bg = v; relight(); });
   slider(Li, '背景亮度（真实照片背景通常更暗）', 0, 1.5, 0.01, () => o.bgMul ?? 0.55, (v) => { o.bgMul = v; relight(); });
   select(Li, '光斑遮挡（Gobo）', [['preset', '跟随预设'], ['none', '无'], ['window', '窗格'], ['leaf', '树叶']], () => o.gobo, (v) => { o.gobo = v; relight(); });
   slider(Li, '光斑尺寸', 0.5, 2, 0.01, () => o.goboScale, (v) => { o.goboScale = v; relight(); });
@@ -501,6 +516,8 @@ function buildStudio() {
   slider(Sk, '肤色饱和', 0.6, 1.6, 0.01, () => sp.albedoSaturation, (v) => { sp.albedoSaturation = v; ss(); });
   slider(Sk, '程序化毛孔（近看更真）', 0, 1.5, 0.01, () => sp.micro ?? 0.55, (v) => { sp.micro = v; ss(); });
   slider(Sk, '高光破碎（去塑料感）', 0, 1.5, 0.01, () => sp.breakup ?? 0.5, (v) => { sp.breakup = v; ss(); });
+  slider(Sk, '面部分区（鼻颊红润/眼下/T区油光/唇润）', 0, 1.5, 0.01, () => sp.regional ?? 0.7, (v) => { sp.regional = v; ss(); });
+  slider(Sk, '逆光透光（耳朵鼻翼透红）', 0, 2, 0.01, () => sp.translucency ?? 0.8, (v) => { sp.translucency = v; ss(); });
   slider(Sk, '肤色斑驳（自然不均）', 0, 1.5, 0.01, () => sp.mottle ?? 0.5, (v) => { sp.mottle = v; ss(); });
 
   const F = section(P, '🎞️ 胶片与后期');
@@ -731,6 +748,7 @@ function renderFrame(forceAccum) {
     const eyeW = head.localToWorld(eyeInfo.L.clone().add(eyeInfo.R).multiplyScalar(0.5));
     const d = camera.position.distanceTo(eyeW); if (Math.abs(post.bokeh.uniforms.focus.value - d) > 1e-4) post.bokeh.uniforms.focus.value = d;
   }
+  if (backdrop) backdrop.update(renderer, camera);
   const useAccum = !compare && post && (S.accum || forceAccum) && !interacting;
   if (useAccum) {
     if (!accum) { accum = createAccumulator(renderer); const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); accum.setSize(sz.x, sz.y); }
@@ -810,7 +828,7 @@ async function boot() {
     await loadHead();
     progress(0.35, '准备发型…'); await new Promise((r) => setTimeout(r, 20));
     if (qs.get('hair')) ch.hair = qs.get('hair');
-    if (qs.get('look') && LOOKS[qs.get('look')]) { const v = LOOKS[qs.get('look')]; ch.look = qs.get('look'); ch.light = v.light; ch.film = v.film; ch.post = { dof: v.dof }; }
+    if (qs.get('look') && LOOKS[qs.get('look')]) { const v = LOOKS[qs.get('look')]; ch.look = qs.get('look'); ch.light = v.light; ch.film = v.film; ch.bg = v.bg; ch.skinP = { ...ch.skinP, ...v.skin }; ch.post = { dof: v.dof, aperture: 0.0016 }; }
     if (qs.get('hairmode')) S.hairMode = qs.get('hairmode');
     if (qs.get('density')) S.density = qs.get('density');
     applyShape();

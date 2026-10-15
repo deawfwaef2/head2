@@ -294,16 +294,28 @@ export function createStudioRig(scene, renderer, presetId = 'softbox', opts = {}
   return { group, key, fill, rims, gobos, apply, get preset() { return current; } };
 }
 
-/** 摄影背景布：柔和渐变 + 中心亮斑（背景灯），不是光线方块，仅作背景 */
+/** 摄影背景：柔和渐变（影棚）或屏幕空间虚化环境图（随相机方位轻微视差） */
 export function createBackdrop(scene, colors) {
   const mat = new THREE.ShaderMaterial({
     depthWrite: false,
     side: THREE.BackSide,
-    uniforms: { cA: { value: new THREE.Color(colors[0]) }, cB: { value: new THREE.Color(colors[1]) } },
+    uniforms: {
+      cA: { value: new THREE.Color(colors[0]) }, cB: { value: new THREE.Color(colors[1]) },
+      tBg: { value: null }, uUseTex: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uPar: { value: new THREE.Vector2() }, uBright: { value: 1 },
+    },
     vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); vec4 p = projectionMatrix*modelViewMatrix*vec4(position,1.0); gl_Position = p.xyww; }',
-    fragmentShader: `uniform vec3 cA; uniform vec3 cB; varying vec3 vP;
-      void main(){ vec3 d = normalize(vP); float spot = smoothstep(1.15, 0.0, length(vec2(d.x*1.1, d.y*1.35 - 0.05) / max(0.2, -d.z+0.6)));
-        vec3 c = mix(cB, cA, spot); gl_FragColor = vec4(c, 1.0);
+    fragmentShader: `uniform vec3 cA; uniform vec3 cB; uniform sampler2D tBg; uniform float uUseTex, uBright; uniform vec2 uRes, uPar; varying vec3 vP;
+      void main(){
+        vec3 c;
+        if (uUseTex > 0.5) {
+          vec2 uv = gl_FragCoord.xy / uRes;
+          uv = (uv - 0.5) * 0.78 + 0.5 + uPar;
+          c = texture2D(tBg, clamp(uv, 0.002, 0.998)).rgb * uBright;
+        } else {
+          vec3 d = normalize(vP); float spot = smoothstep(1.15, 0.0, length(vec2(d.x*1.1, d.y*1.35 - 0.05) / max(0.2, -d.z+0.6)));
+          c = mix(cB, cA, spot);
+        }
+        gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`,
   });
@@ -313,7 +325,14 @@ export function createBackdrop(scene, colors) {
   m.name = 'PhotoBackdrop';
   scene.add(m);
   return {
-    mesh: m,
+    mesh: m, mat,
     set(c) { mat.uniforms.cA.value.set(c[0]); mat.uniforms.cB.value.set(c[1]); },
+    setTexture(tex, bright = 1) { mat.uniforms.tBg.value = tex; mat.uniforms.uUseTex.value = tex ? 1 : 0; mat.uniforms.uBright.value = bright; },
+    update(renderer, camera) {
+      const sz = renderer.getDrawingBufferSize(mat.uniforms.uRes.value);
+      const az = Math.atan2(camera.position.x, camera.position.z); const el = Math.atan2(camera.position.y, Math.hypot(camera.position.x, camera.position.z));
+      mat.uniforms.uPar.value.set(-az * 0.09, el * 0.12);
+      return sz;
+    },
   };
 }
