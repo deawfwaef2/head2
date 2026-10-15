@@ -8,7 +8,7 @@ import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering, injectForensicCrossSectionShader } from './photorealLighting.js';
-import { REAL_HAIR_CATALOG } from '../data/defaultCollectibles.js';
+import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG } from '../data/defaultCollectibles.js';
 import {
   MPFB_SPARSE_HEAD_TARGETS,
   BROW_TO_SKIN_INDEX,
@@ -423,23 +423,34 @@ const PURE_ZERO_BLEND = {
 };
 
 const ARCHETYPE_REAL_TARGET_WEIGHTS = {
-  cn_oval_scholar:       { skinVariant: 'cn_scholar_natural',    mpfbKey: 'user_photo_clone',      headBlend: { ...PURE_ZERO_BLEND } },
-  cn_round_babyface:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'round',                 headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.18 } },
-  kr_idol_vline:         { skinVariant: 'kr_chaebol_cool',       mpfbKey: 'cat_fox_beauty',        headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.22 } },
-  cn_classical_melon:    { skinVariant: 'cn_jiangnan_jade',      mpfbKey: 'melon',                 headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.20 } },
-  kr_sweet_heart:        { skinVariant: 'kr_firstlove_camellia', mpfbKey: 'heart',                 headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.16 } },
-  cn_cold_royal:         { skinVariant: 'cn_intellectual_olive', mpfbKey: 'diamond',               headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.18 } },
-  cn_pure_campus_bell:   { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'asian_youth',           headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.20 } },
-  kr_waterglow_idol:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'k_beauty_waterglow',    headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.18 } },
-  cn_tang_peony:         { skinVariant: 'cn_jiangnan_jade',      mpfbKey: 'oval',                  headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.18 } },
-  cn_northern_danfeng:   { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'northern_danfeng',      headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.22, blend_cn_melon: 0.12 } },
-  cn_cat_fox_siren:      { skinVariant: 'kr_chaebol_cool',       mpfbKey: 'cat_fox_beauty',        headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.20, blend_cn_melon: 0.18 } },
-  cn_wide_catfish_chic:  { skinVariant: 'cn_intellectual_olive', mpfbKey: 'wide_catfish_chic',     headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.10, blend_cn_royal: 0.22 } },
-  cn_imperial_square:    { skinVariant: 'cn_scholar_natural',    mpfbKey: 'imperial_square_charm', headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.24, blend_cn_royal: 0.14 } },
-  jp_yamato_clear:       { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'yamato_clear_pure',     headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.22, blend_cn_baby: 0.12 } },
-  cn_puppy_innocent:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'puppy_innocent_doll',   headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.16, blend_cn_baby: 0.22 } },
-  eurasian_sculpted_mix: { skinVariant: 'eurasian_velvet_rose',  mpfbKey: 'eurasian',              headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.25 } },
+  cn_oval_scholar:       { skinVariant: 'cn_scholar_natural',    mpfbKey: 'cn_oval_scholar',       headBlend: { ...PURE_ZERO_BLEND } },
+  cn_round_babyface:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'cn_round_babyface',     headBlend: { ...PURE_ZERO_BLEND, blend_cn_baby: 0.18 } },
+  kr_idol_vline:         { skinVariant: 'kr_chaebol_cool',       mpfbKey: 'kr_idol_vline',         headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.22 } },
+  cn_classical_melon:    { skinVariant: 'cn_jiangnan_jade',      mpfbKey: 'cn_classical_melon',    headBlend: { ...PURE_ZERO_BLEND, blend_cn_melon: 0.20 } },
+  kr_sweet_heart:        { skinVariant: 'kr_firstlove_camellia', mpfbKey: 'kr_sweet_heart',        headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.16 } },
+  cn_cold_royal:         { skinVariant: 'cn_intellectual_olive', mpfbKey: 'cn_cold_royal',         headBlend: { ...PURE_ZERO_BLEND, blend_cn_royal: 0.18 } },
+  cn_pure_campus_bell:   { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'cn_pure_campus_bell',   headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.20 } },
+  kr_waterglow_idol:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'kr_waterglow_idol',     headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.18 } },
+  cn_tang_peony:         { skinVariant: 'cn_jiangnan_jade',      mpfbKey: 'cn_tang_peony',         headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.18 } },
+  cn_northern_danfeng:   { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'cn_northern_danfeng',   headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.22, blend_cn_melon: 0.12 } },
+  cn_cat_fox_siren:      { skinVariant: 'kr_chaebol_cool',       mpfbKey: 'cn_cat_fox_siren',      headBlend: { ...PURE_ZERO_BLEND, blend_kr_vline: 0.20, blend_cn_melon: 0.18 } },
+  cn_wide_catfish_chic:  { skinVariant: 'cn_intellectual_olive', mpfbKey: 'cn_wide_catfish_chic',  headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.10, blend_cn_royal: 0.22 } },
+  cn_imperial_square:    { skinVariant: 'cn_scholar_natural',    mpfbKey: 'cn_imperial_square',    headBlend: { ...PURE_ZERO_BLEND, blend_cn_scholar: 0.24, blend_cn_royal: 0.14 } },
+  jp_yamato_clear:       { skinVariant: 'cn_porcelain_ivory',    mpfbKey: 'jp_yamato_clear',       headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.22, blend_cn_baby: 0.12 } },
+  cn_puppy_innocent:     { skinVariant: 'kr_dewy_peach',         mpfbKey: 'cn_puppy_innocent',     headBlend: { ...PURE_ZERO_BLEND, blend_asian_youth: 0.16, blend_cn_baby: 0.22 } },
+  eurasian_sculpted_mix: { skinVariant: 'eurasian_velvet_rose',  mpfbKey: 'eurasian_sculpted_mix', headBlend: { ...PURE_ZERO_BLEND, blend_eurasian: 0.25 } },
 };
+for (const fa of FACE_ARCHETYPE_CATALOG) {
+  if (!fa?.id) continue;
+  const existing = ARCHETYPE_REAL_TARGET_WEIGHTS[fa.id] || {};
+  ARCHETYPE_REAL_TARGET_WEIGHTS[fa.id] = {
+    skinVariant: existing.skinVariant || fa.defaultSkinVariant || 'cn_porcelain_ivory',
+    mpfbKey: existing.mpfbKey || fa.id,
+    headBlend: { ...PURE_ZERO_BLEND, ...(fa.headBlend || {}), ...(existing.headBlend || {}) },
+    morphRecipe: fa.morphRecipe || {},
+    defaultEyePreset: fa.defaultEyePreset || null,
+  };
+}
 
 let realWebAssetsPromise = null;
 let realWebAssetsCache = null;
@@ -910,8 +921,11 @@ export function setHeadFaceArchetype(rootGroup, faceArchetype = 'cn_oval_scholar
   rootGroup.userData.faceArchetype = faceArchetype;
   const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
   const blendRecipe = archSpec.headBlend || {};
+  const morphRecipe = archSpec.morphRecipe || {};
   const nextMorphs = {
     ...(rootGroup.userData.currentMorphs || {}),
+    ...morphRecipe,
+    ...(archSpec.defaultEyePreset ? { eyePreset: archSpec.defaultEyePreset } : {}),
     faceArchetype,
     ...blendRecipe,
   };
@@ -1349,7 +1363,200 @@ const ALL_28_VALID_HAIRS = new Set([
   'daz_hair_halfup_princess',
   'daz_hair_twin_braids',
   'daz_hair_sport_ponytail',
+  // Stage 64 · 10 new MakeHuman .mhclo 3D hairstyles
+  'daz_hair_o4saken_long',
+  'daz_hair_blunt_bob_bangs',
+  'daz_hair_inverted_bob_bangs',
+  'daz_hair_french_braid_bun',
+  'daz_hair_double_braid',
+  'daz_hair_unkempt_french_braid',
+  'daz_hair_rehman_bun',
+  'daz_hair_island_princess',
+  'daz_hair_ashley_wave',
+  'daz_hair_bow_bun_braids',
+  ...REAL_HAIR_CATALOG.map(h => h.id).filter(id => id && id !== 'none'),
 ]);
+
+export const HAIR_STYLE_PRESET_RECIPES = {
+  preset_hime_cut_long: {
+    baseStyle: 'hair_long01',
+    frontBangs: 'hime_blunt',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairWispyFeather: 0.28,
+  },
+  preset_jk_twin_ponytail: {
+    baseStyle: 'daz_hair_air_bangs_long',
+    frontBangs: 'wispy_air',
+    sideLocks: 'both_wisps',
+    backAttachment: 'twin_braids',
+    hairWispyFeather: 0.56,
+  },
+  preset_guofeng_twin_buns: {
+    baseStyle: 'daz_hair_twin_buns',
+    frontBangs: 'hime_blunt',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairWispyFeather: 0.32,
+  },
+  preset_kpop_curtain_ponytail: {
+    baseStyle: 'hair_ponytail01',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'curtain_part',
+    sideLocks: 'wavy_tendril',
+    backAttachment: 'none',
+    hairWispyFeather: 0.48,
+  },
+  preset_french_lazy_chignon: {
+    baseStyle: 'daz_hair_low_chignon',
+    frontBangs: 'french_light',
+    sideLocks: 'wavy_tendril',
+    backAttachment: 'none',
+    hairWispyFeather: 0.52,
+  },
+  preset_chaebol_sleek_long: {
+    baseStyle: 'daz_hair_o4saken_long',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'forehead_bare',
+    sideLocks: 'tucked_ear',
+    backAttachment: 'none',
+    hairWispyFeather: 0.35,
+  },
+  preset_sakura_pink_hime_bob: {
+    baseStyle: 'daz_hair_blunt_bob_bangs',
+    frontBangs: 'hime_blunt',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairTipColor: '#a85d74',
+    hairOmbreMix: 0.68,
+    hairWispyFeather: 0.34,
+  },
+  preset_wolf_mullet_cool: {
+    baseStyle: 'daz_hair_wolf_clavicle',
+    frontBangs: 'choppy_micro',
+    sideLocks: 'tucked_ear',
+    backAttachment: 'none',
+    hairWispyFeather: 0.58,
+  },
+  preset_republic_student_braids: {
+    baseStyle: 'daz_hair_double_braid',
+    frontBangs: 'side_swept',
+    sideLocks: 'both_wisps',
+    backAttachment: 'none',
+    hairWispyFeather: 0.45,
+  },
+  preset_hk_retro_glam_wave: {
+    baseStyle: 'daz_hair_ashley_wave',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'side_swept',
+    sideLocks: 'wavy_tendril',
+    backAttachment: 'none',
+    hairWispyFeather: 0.42,
+  },
+  preset_FirstLove_air_bob: {
+    baseStyle: 'daz_hair_inverted_bob_bangs',
+    frontBangs: 'wispy_air',
+    sideLocks: 'tucked_ear',
+    backAttachment: 'none',
+    hairWispyFeather: 0.62,
+  },
+  preset_song_aesthetic_updo: {
+    baseStyle: 'daz_hair_bow_bun_braids',
+    frontBangs: 'curtain_part',
+    sideLocks: 'both_wisps',
+    backAttachment: 'none',
+    hairWispyFeather: 0.46,
+  },
+  preset_ice_queen_silver_wave: {
+    baseStyle: 'daz_hair_mermaid_curl',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'curtain_part',
+    sideLocks: 'default',
+    backAttachment: 'none',
+    hairTipColor: '#8c96a6',
+    hairOmbreMix: 0.65,
+    hairWispyFeather: 0.44,
+  },
+  preset_gentle_sister_clavicle: {
+    baseStyle: 'hair_short04',
+    frontBangs: 'side_swept',
+    sideLocks: 'both_wisps',
+    backAttachment: 'none',
+    hairTipColor: '#4a3528',
+    hairOmbreMix: 0.62,
+    hairWispyFeather: 0.48,
+  },
+  preset_ballet_core_ribbons: {
+    baseStyle: 'daz_hair_ballerina_bun',
+    frontBangs: 'wispy_air',
+    sideLocks: 'wavy_tendril',
+    backAttachment: 'none',
+    hairWispyFeather: 0.56,
+  },
+  preset_ocean_blue_hime_long: {
+    baseStyle: 'daz_hair_hime',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'hime_blunt',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairTipColor: '#29527a',
+    hairOmbreMix: 0.70,
+    hairWispyFeather: 0.32,
+  },
+  preset_burgundy_siren_wave: {
+    baseStyle: 'daz_hair_curtain_wave',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'curtain_part',
+    sideLocks: 'wavy_tendril',
+    backAttachment: 'none',
+    hairTipColor: '#6e1e32',
+    hairOmbreMix: 0.68,
+    hairWispyFeather: 0.44,
+  },
+  preset_mori_girl_unkempt_braid: {
+    baseStyle: 'daz_hair_unkempt_french_braid',
+    frontBangs: 'wispy_air',
+    sideLocks: 'both_wisps',
+    backAttachment: 'none',
+    hairTipColor: '#6e4730',
+    hairOmbreMix: 0.64,
+    hairWispyFeather: 0.58,
+  },
+  preset_clean_fit_sleek_bun: {
+    baseStyle: 'daz_hair_low_chignon',
+    topCrown: 'photo_sleek_crown',
+    frontBangs: 'forehead_bare',
+    sideLocks: 'tucked_ear',
+    backAttachment: 'none',
+    hairWispyFeather: 0.30,
+  },
+  preset_sweet_milk_tea_halfup: {
+    baseStyle: 'daz_hair_halfup_princess',
+    frontBangs: 'hime_blunt',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairTipColor: '#6e4730',
+    hairOmbreMix: 0.68,
+    hairWispyFeather: 0.38,
+  },
+  preset_imperial_crown_braid_hime: {
+    baseStyle: 'daz_hair_crown_braid',
+    frontBangs: 'curtain_part',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairWispyFeather: 0.36,
+  },
+  preset_cyber_hologram_twin: {
+    baseStyle: 'daz_hair_twin_braids',
+    topCrown: 'fluffy_high_crown',
+    frontBangs: 'choppy_micro',
+    sideLocks: 'hime_cheek',
+    backAttachment: 'none',
+    hairTipColor: '#8c96a6',
+    hairOmbreMix: 0.66,
+    hairWispyFeather: 0.42,
+  },
+};
 
 export function resolveRealHairStyle(styleName = 'hair_bob01') {
   if (styleName === 'none') return 'none';
@@ -1615,26 +1822,31 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
 }
 
 const MODULAR_BANGS_DONORS = {
-  wispy_air:    { style: 'hair_user_photo',       filter: (x, y, z) => z > 0.044 && y > 0.012 && y < 0.092 && Math.abs(x) < 0.062 },
-  curtain_part: { style: 'daz_hair_curtain_wave', filter: (x, y, z) => z > 0.036 && y > 0.002 && y < 0.095 && Math.abs(x) < 0.068 },
-  hime_blunt:   { style: 'daz_hair_hime',         filter: (x, y, z) => z > 0.048 && y > 0.015 && y < 0.092 && Math.abs(x) < 0.056 },
-  side_swept:   { style: 'daz_hair_side_long',    filter: (x, y, z) => z > 0.038 && y > 0.008 && y < 0.095 && Math.abs(x) < 0.066 },
-  choppy_micro: { style: 'daz_hair_short_bob',    filter: (x, y, z) => z > 0.046 && y > 0.024 && y < 0.092 && Math.abs(x) < 0.056 },
+  wispy_air:    { style: 'hair_user_photo',         filter: (x, y, z) => z > 0.044 && y > 0.012 && y < 0.092 && Math.abs(x) < 0.062 },
+  curtain_part: { style: 'daz_hair_curtain_wave',   filter: (x, y, z) => z > 0.036 && y > 0.002 && y < 0.095 && Math.abs(x) < 0.068 },
+  hime_blunt:   { style: 'daz_hair_hime',           filter: (x, y, z) => z > 0.048 && y > 0.015 && y < 0.092 && Math.abs(x) < 0.056 },
+  side_swept:   { style: 'daz_hair_side_long',      filter: (x, y, z) => z > 0.038 && y > 0.008 && y < 0.095 && Math.abs(x) < 0.066 },
+  french_light: { style: 'daz_hair_blunt_bob_bangs',filter: (x, y, z) => z > 0.044 && y > 0.012 && y < 0.092 && Math.abs(x) < 0.058 },
+  choppy_micro: { style: 'hair_bob02',              filter: (x, y, z) => z > 0.046 && y > 0.024 && y < 0.092 && Math.abs(x) < 0.056 },
 };
 
 const MODULAR_SIDELOCKS_DONORS = {
-  photo_wisp:   { style: 'hair_user_photo',           filter: (x, y, z) => x > 0.044 && z > 0.002 && z < 0.068 && y > -0.048 && y < 0.045 },
-  both_wisps:   { style: 'daz_hair_korean_bob',       filter: (x, y, z) => Math.abs(x) > 0.045 && z > 0.002 && z < 0.068 && y > -0.052 && y < 0.045 },
-  hime_cheek:   { style: 'daz_hair_hime',             filter: (x, y, z) => Math.abs(x) > 0.044 && z > 0.005 && z < 0.066 && y > -0.062 && y < 0.042 },
-  wavy_tendril: { style: 'daz_hair_french_lazy_roll', filter: (x, y, z) => Math.abs(x) > 0.045 && z > -0.005 && z < 0.068 && y > -0.058 && y < 0.045 },
+  photo_wisp:       { style: 'hair_user_photo',           filter: (x, y, z) => x > 0.044 && z > 0.002 && z < 0.068 && y > -0.048 && y < 0.045 },
+  both_wisps:       { style: 'hair_bob01',                filter: (x, y, z) => Math.abs(x) > 0.045 && z > 0.002 && z < 0.068 && y > -0.052 && y < 0.045 },
+  hime_cheek:       { style: 'daz_hair_hime',             filter: (x, y, z) => Math.abs(x) > 0.044 && z > 0.005 && z < 0.066 && y > -0.062 && y < 0.042 },
+  wavy_tendril:     { style: 'daz_hair_french_lazy_roll', filter: (x, y, z) => Math.abs(x) > 0.045 && z > -0.005 && z < 0.068 && y > -0.058 && y < 0.045 },
+  long_chest_locks: { style: 'daz_hair_o4saken_long',     filter: (x, y, z) => Math.abs(x) > 0.042 && z > -0.005 && z < 0.068 && y > -0.105 && y < 0.045 },
 };
 
 const MODULAR_BACK_DONORS = {
-  high_ponytail: { style: 'daz_hair_sport_ponytail', filter: (x, y, z) => z < -0.032 || (z < -0.012 && y > 0.055) },
-  low_ponytail:  { style: 'hair_user_photo',         filter: (x, y, z) => z < -0.038 && y < 0.062 },
-  low_chignon:   { style: 'daz_hair_low_chignon',    filter: (x, y, z) => z < -0.035 && y < 0.048 },
-  twin_buns:     { style: 'daz_hair_twin_buns',      filter: (x, y, z) => y > 0.068 && Math.abs(x) > 0.042 && z < 0.035 },
-  twin_braids:   { style: 'daz_hair_twin_braids',    filter: (x, y, z) => y < 0.018 && Math.abs(x) > 0.048 && z < 0.028 },
+  high_ponytail:       { style: 'daz_hair_sport_ponytail', filter: (x, y, z) => z < -0.032 || (z < -0.012 && y > 0.055) },
+  low_ponytail:        { style: 'hair_user_photo',         filter: (x, y, z) => z < -0.038 && y < 0.062 },
+  photo_tied_ponytail: { style: 'hair_user_photo',         filter: (x, y, z) => z < -0.038 && y < 0.062 },
+  low_chignon:         { style: 'daz_hair_low_chignon',    filter: (x, y, z) => z < -0.035 && y < 0.048 },
+  twin_buns:           { style: 'daz_hair_twin_buns',      filter: (x, y, z) => y > 0.068 && Math.abs(x) > 0.042 && z < 0.035 },
+  twin_braids:         { style: 'daz_hair_twin_braids',    filter: (x, y, z) => y < 0.018 && Math.abs(x) > 0.048 && z < 0.028 },
+  sleek_long_back:     { style: 'daz_hair_o4saken_long',   filter: (x, y, z) => z < -0.018 && y < 0.055 },
+  wavy_long_back:      { style: 'daz_hair_ashley_wave',    filter: (x, y, z) => z < -0.018 && y < 0.055 },
 };
 
 function filterGeometryByCentroid(geometry, predicate, invert = false) {
@@ -1692,14 +1904,25 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   if (!modelContainer) return null;
 
   rootGroup.userData.neckClearance = Number(config.neckClearance ?? rootGroup.userData.neckClearance ?? 0.45);
-  const topCrownStyle = config.topCrown || config.topCrownStyle || config.morphs?.topCrown || config.morphs?.topCrownStyle || rootGroup.userData.topCrownStyle || 'default';
-  const frontBangsStyle = config.frontBangs || config.frontBangsStyle || config.morphs?.frontBangs || config.morphs?.frontBangsStyle || rootGroup.userData.frontBangsStyle || 'default';
-  const sideLocksStyle = config.sideLocks || config.sideLocksStyle || config.morphs?.sideLocks || config.morphs?.sideLocksStyle || rootGroup.userData.sideLocksStyle || 'default';
-  const backAttachmentStyle = config.backAttachment || config.backAttachmentStyle || config.morphs?.backAttachment || config.morphs?.backAttachmentStyle || rootGroup.userData.backAttachmentStyle || 'none';
-  const hairTipColor = config.hairTipColor || config.morphs?.hairTipColor || rootGroup.userData.hairTipColor || '#4a3528';
-  const hairOmbreMix = Number(config.hairOmbreMix ?? config.morphs?.hairOmbreMix ?? rootGroup.userData.hairOmbreMix ?? 0.0);
+  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_user_photo';
+  const selectedStyle = resolveRealHairStyle(rawStyle);
+  const presetRecipe = HAIR_STYLE_PRESET_RECIPES[selectedStyle] || null;
+  const resolvedStyle = presetRecipe ? presetRecipe.baseStyle : selectedStyle;
+
+  const rawTopCrown = config.topCrown || config.topCrownStyle || config.morphs?.topCrown || config.morphs?.topCrownStyle || rootGroup.userData.topCrownStyle || 'default';
+  const rawFrontBangs = config.frontBangs || config.frontBangsStyle || config.morphs?.frontBangs || config.morphs?.frontBangsStyle || rootGroup.userData.frontBangsStyle || 'default';
+  const rawSideLocks = config.sideLocks || config.sideLocksStyle || config.morphs?.sideLocks || config.morphs?.sideLocksStyle || rootGroup.userData.sideLocksStyle || 'default';
+  const rawBackAttachment = config.backAttachment || config.backAttachmentStyle || config.morphs?.backAttachment || config.morphs?.backAttachmentStyle || rootGroup.userData.backAttachmentStyle || 'none';
+
+  const topCrownStyle = (rawTopCrown === 'default' && presetRecipe?.topCrown) ? presetRecipe.topCrown : rawTopCrown;
+  const frontBangsStyle = (rawFrontBangs === 'default' && presetRecipe?.frontBangs) ? presetRecipe.frontBangs : rawFrontBangs;
+  const sideLocksStyle = (rawSideLocks === 'default' && presetRecipe?.sideLocks) ? presetRecipe.sideLocks : rawSideLocks;
+  const backAttachmentStyle = (rawBackAttachment === 'none' && presetRecipe?.backAttachment) ? presetRecipe.backAttachment : rawBackAttachment;
+
+  const hairTipColor = config.hairTipColor || config.morphs?.hairTipColor || presetRecipe?.hairTipColor || rootGroup.userData.hairTipColor || '#4a3528';
+  const hairOmbreMix = Number(config.hairOmbreMix ?? config.morphs?.hairOmbreMix ?? presetRecipe?.hairOmbreMix ?? rootGroup.userData.hairOmbreMix ?? 0.0);
   const hairWispyFeather = Number(
-    config.hairWispyFeather ?? config.morphs?.hairWispyFeather ?? rootGroup.userData.hairWispyFeather ??
+    config.hairWispyFeather ?? config.morphs?.hairWispyFeather ?? presetRecipe?.hairWispyFeather ?? rootGroup.userData.hairWispyFeather ??
     (frontBangsStyle === 'wispy_air' ? 0.62 : 0.42)
   );
   const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'card';
@@ -1719,9 +1942,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   rootGroup.userData.hairRequestSerial = request;
   const oldHair = modelContainer.getObjectByName('HairGroup');
 
-  const rawStyle = config.hairStyle || config.materials?.hairStyle || 'hair_user_photo';
-  const resolvedStyle = resolveRealHairStyle(rawStyle);
-  if (resolvedStyle === 'none' && !config.customHairUrl) {
+  if (selectedStyle === 'none' && !config.customHairUrl) {
     disposeHeadNode(oldHair);
     delete rootGroup.userData.groomStats;
     rootGroup.userData.currentHairStyle = 'none';
@@ -1972,7 +2193,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     hairGroup.add(loadedScene);
     disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
-    rootGroup.userData.currentHairStyle = resolvedStyle;
+    rootGroup.userData.currentHairStyle = selectedStyle;
     delete rootGroup.userData.hairLoadError;
     rootGroup.userData.hairStats = {
       vertices: totalVerts,
@@ -1981,7 +2202,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       guides: guideCount,
       mode: useStrandMode ? 'strand' : 'card',
       density: strandDensity,
-      style: resolvedStyle,
+      style: selectedStyle,
     };
 
     const mergedMorphs = {
@@ -2016,17 +2237,33 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
   const prevDensity = rootGroup.userData.strandDensity || MASTER_HAIR_CONFIG.density || 'mid';
 
   const nextStyle = patch.hairStyle ? resolveRealHairStyle(patch.hairStyle) : prevStyle;
-  const nextTop = patch.topCrown ?? patch.topCrownStyle ?? prevTop;
-  const nextFront = patch.frontBangs ?? patch.frontBangsStyle ?? prevFront;
-  const nextSide = patch.sideLocks ?? patch.sideLocksStyle ?? prevSide;
-  const nextBack = patch.backAttachment ?? patch.backAttachmentStyle ?? prevBack;
+  const styleChanged = Boolean(patch.hairStyle && nextStyle !== prevStyle);
+  const nextPreset = HAIR_STYLE_PRESET_RECIPES[nextStyle] || null;
+  const prevWasPreset = Boolean(HAIR_STYLE_PRESET_RECIPES[prevStyle]);
+
+  const nextTop = patch.topCrown ?? patch.topCrownStyle ?? (styleChanged ? (nextPreset?.topCrown || (prevWasPreset ? 'default' : prevTop)) : prevTop);
+  const nextFront = patch.frontBangs ?? patch.frontBangsStyle ?? (styleChanged ? (nextPreset?.frontBangs || (prevWasPreset ? 'default' : prevFront)) : prevFront);
+  const nextSide = patch.sideLocks ?? patch.sideLocksStyle ?? (styleChanged ? (nextPreset?.sideLocks || (prevWasPreset ? 'default' : prevSide)) : prevSide);
+  const nextBack = patch.backAttachment ?? patch.backAttachmentStyle ?? (styleChanged ? (nextPreset?.backAttachment || (prevWasPreset ? 'none' : prevBack)) : prevBack);
   const nextMode = patch.hairRenderMode ?? prevMode;
   const nextDensity = patch.strandDensity ?? prevDensity;
 
   if (patch.hairColor) rootGroup.userData.hairColor = patch.hairColor;
-  if (patch.hairTipColor) rootGroup.userData.hairTipColor = patch.hairTipColor;
-  if (patch.hairOmbreMix !== undefined) rootGroup.userData.hairOmbreMix = Number(patch.hairOmbreMix);
-  if (patch.hairWispyFeather !== undefined) rootGroup.userData.hairWispyFeather = Number(patch.hairWispyFeather);
+  if (patch.hairTipColor) {
+    rootGroup.userData.hairTipColor = patch.hairTipColor;
+  } else if (styleChanged && nextPreset?.hairTipColor) {
+    rootGroup.userData.hairTipColor = nextPreset.hairTipColor;
+  }
+  if (patch.hairOmbreMix !== undefined) {
+    rootGroup.userData.hairOmbreMix = Number(patch.hairOmbreMix);
+  } else if (styleChanged) {
+    rootGroup.userData.hairOmbreMix = Number(nextPreset?.hairOmbreMix ?? (prevWasPreset ? 0.0 : (rootGroup.userData.hairOmbreMix ?? 0.0)));
+  }
+  if (patch.hairWispyFeather !== undefined) {
+    rootGroup.userData.hairWispyFeather = Number(patch.hairWispyFeather);
+  } else if (styleChanged && nextPreset?.hairWispyFeather !== undefined) {
+    rootGroup.userData.hairWispyFeather = Number(nextPreset.hairWispyFeather);
+  }
   if (patch.hairSheen !== undefined) rootGroup.userData.hairSheen = Number(patch.hairSheen);
   rootGroup.userData.topCrownStyle = nextTop;
   rootGroup.userData.hairRenderMode = nextMode;

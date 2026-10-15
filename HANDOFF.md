@@ -1321,3 +1321,20 @@
 ## [2026-10-15] Stage 63 UI Cleanup — Permanently Hid All Blocking HUDs / Drawers / Toasts
 - Fixed missing `.hidden { display: none !important; }` and inline `display:flex` overrides that caused `#comfort-reader-drawer`, `#tactile-sculpt-hud-toast`, and `#structure-floating-hud` to remain visible on screen.
 - Disabled automatic popup of `#tactile-sculpt-hud-toast`, `#dopamine-floating-popups`, `#structure-floating-hud`, `#comfort-reader-drawer`, `#heartbeat-anticheat-banner`, `#pet-hover-dossier`, and defaulted `#software-window` (`windowHidden: true`) and `#specimen-placards-layer` (`placardsEnabled: false`) to hidden so the 3D scene has zero blocking panels.
+
+---
+
+## [2026-10-15] Stage 64 — Comprehensive East Asian Face Shape & 3D Hairstyle Expansion (`东亚全覆盖 · 86款MPFB2真实3D雕刻Morph + 38款东亚骨相脸型 + 61款真实3D发型图鉴`)
+- **1. 86 Artist-Sculpted MakeHuman/MPFB2 + Community 3D Facial Morph Targets (`src/data/eastAsianHeadAndEyeTargets.js`)**:
+  - Downloaded 44 official `.target.gz` facial/cranial morph targets from `makehumancommunity/mpfb2` (`src/mpfb/data/targets/{head,chin,cheek,forehead,nose,mouth}`) plus 8 community-sculpted cheek/nose `.target` files (`cheek01_cc0.zip`, `nose01_cc0.zip`) and mapped them 1-to-1 via canonical `base.obj` UV correspondence (`5.96e-8` max UV error) onto the 4,494-vertex `HeadSkin` mesh (`MPFB_SPARSE_HEAD_TARGETS`, expanded from 34 to **86** sparse `[vi, dx, dy, dz]` targets).
+- **2. 38 East Asian Face Shape Archetypes (`FACE_ARCHETYPE_CATALOG` & `EAST_ASIAN_ARCHETYPE_MPFB_RECIPES`)**:
+  - Expanded `FACE_ARCHETYPE_CATALOG` (`src/data/defaultCollectibles.js`) and `ARCHETYPE_REAL_TARGET_WEIGHTS` (`src/three/collectibleHeadAssembler.js`) from 16 to **38** East Asian face shapes across 4 regional/aesthetic groups with regional filter pills in `#obsidian-char-hair-studio`:
+    - **中式古典与地域骨相 (`cn`, 14款)**: `cn_oval_scholar` .. `cn_puppy_innocent`, plus `cn_jiangnan_water_lily`, `cn_sichuan_doll_peach`, `cn_dunhuang_apsara_noble`.
+    - **韩系女团与财阀骨相 (`kr`, 8款)**: `kr_idol_vline`, `kr_sweet_heart`, `kr_waterglow_idol`, `kr_chaebol_heiress`, `kr_cat_idol_ace`, `kr_quail_egg_pure`, `kr_mellow_spoon_chic`, `kr_bunny_firstlove`.
+    - **日系透明感与杂志骨相 (`jp`, 8款)**: `jp_yamato_clear`, `jp_showa_cinema_muse`, `jp_tokyo_sweet_pear`, `jp_kyoto_noble_slender`, `jp_harajuku_fairy_triangle`, `jp_idol_round_dimple`, `jp_cool_model_Clean`, `jp_forest_mori_soft`.
+    - **港台与亚欧混血骨相 (`mix`, 8款)**: `eurasian_sculpted_mix`, `hk_90s_glamour_queen`, `tw_campus_sweet_oxygen`, `cyber_cg_angel_v`, `asia_high_fashion_runway`, `asia_sweet_cool_bambi`, `asia_pear_gentle_sister`, `asia_noble_swan_oval`.
+- **3. 10 New Fitted MakeHuman `.mhclo` 3D Hair GLBs + 22 East Asian Modular 3D Hair Presets = 61 Hairstyles (`REAL_HAIR_CATALOG`)**:
+  - Fitted 10 new community `.mhclo` 3D hair meshes (`hair01_cc0.zip`, `hair02_ccby.zip`, `hair03_ccby.zip`) directly onto the 4,494-vertex `HeadSkin` scalp in `/home/user/public/models/` (`2.30 MB` total across all 10 GLBs, `min_y >= -0.109` above the `y = -0.110` severed neck plane): `daz_hair_o4saken_long.glb`, `daz_hair_blunt_bob_bangs.glb`, `daz_hair_inverted_bob_bangs.glb`, `daz_hair_french_braid_bun.glb`, `daz_hair_double_braid.glb`, `daz_hair_unkempt_french_braid.glb`, `daz_hair_rehman_bun.glb`, `daz_hair_island_princess.glb`, `daz_hair_ashley_wave.glb`, `daz_hair_bow_bun_braids.glb`.
+  - Added 22 East Asian modular 3D hair presets (`HAIR_STYLE_PRESET_RECIPES`, `preset_hime_cut_long` .. `preset_cyber_hologram_twin`) combining the 38 physical 3D hair GLBs with surgical 3D donor bangs/sidelocks/back-attachments and ombre dye recipes (`REAL_HAIR_CATALOG` = 61 entries).
+  - Rebuilt standalone offline HTML `/home/user/点击开始游戏_CERVIX3D.html` (`31.12 MB`, 39 embedded GLBs).
+

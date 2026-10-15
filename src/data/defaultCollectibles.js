@@ -265,6 +265,299 @@ export const REAL_HAIR_CATALOG = [
     desc: 'MakeHuman 名家 Elvs 精雕：蓬松八字刘海配脑后清爽短束发，干练灵动、零遮挡展露颈部切口'
   },
 
+
+  // ================= VII. Stage 64 · 10款新增 MakeHuman/MPFB2 真实 3D 雕刻发型网格 (.mhclo 直导) =================
+  {
+    id: 'daz_hair_o4saken_long',
+    category: '直发长发',
+    shortLabel: '🖤 O4saken 东方垂顺及胸黑长直',
+    label: '【直发长发】O4saken 精雕 · 东方高密度垂顺及胸黑长直 (O4saken Long · 13,268面)',
+    url: '/models/daz_hair_o4saken_long.glb',
+    verts: 15033,
+    desc: 'MakeHuman 名家 O4saken 精雕：1.5万顶点超细腻多层发片垂顺长发，还原东亚清纯黑长直女神质感'
+  },
+  {
+    id: 'daz_hair_blunt_bob_bangs',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 日系漫画齐刘海内扣学生波波',
+    label: '【短发波波】日系清纯漫画齐刘海内扣学生短波波 (Elvs Bob With Bangs · 4,976面)',
+    url: '/models/daz_hair_blunt_bob_bangs.glb',
+    verts: 3113,
+    desc: 'MakeHuman 名家 Elvs 精雕：标准齐眉漫画平刘海配饱满内扣学生头波波，尽显日系 JK 少女感'
+  },
+  {
+    id: 'daz_hair_inverted_bob_bangs',
+    category: '短发波波',
+    shortLabel: '💇‍♀️ 韩系高智A字前长后短波波',
+    label: '【短发波波】韩系高智A字前长后短修颜齐刘海波波 (Elvs Inverted Bob · 4,996面)',
+    url: '/models/daz_hair_inverted_bob_bangs.glb',
+    verts: 3031,
+    desc: 'MakeHuman 名家 Elvs 精雕：前长后短A字修颜轮廓收紧下颌线，后颈清爽高收零遮挡展露颈部断面'
+  },
+  {
+    id: 'daz_hair_french_braid_bun',
+    category: '古典盘发',
+    shortLabel: '🌺 法式交织蝎子辫高定盘发髻',
+    label: '【古典盘发】法式交织蝎子辫盘绕高雅发髻 (Elvs French Braid Bun · 7,622面)',
+    url: '/models/daz_hair_french_braid_bun.glb',
+    verts: 6174,
+    desc: 'MakeHuman 名家 Elvs 精雕：从颅顶顺延至脑后的立体蝎子辫盘发髻，优雅展露修长天鹅颈'
+  },
+  {
+    id: 'daz_hair_double_braid',
+    category: '马尾编发',
+    shortLabel: '🎀 东方邻家少女双侧对称麻花辫',
+    label: '【马尾编发】东方邻家清纯少女双侧对称垂胸麻花辫 (Elvs Double Braid · 9,866面)',
+    url: '/models/daz_hair_double_braid.glb',
+    verts: 8491,
+    desc: 'MakeHuman 名家 Elvs 精雕：近万面立体编织纹理的双侧麻花长辫，年代剧与学院风清纯首选'
+  },
+  {
+    id: 'daz_hair_unkempt_french_braid',
+    category: '马尾编发',
+    shortLabel: '🎀 森系慵懒蓬松微凌乱单侧编发',
+    label: '【马尾编发】日杂森系慵懒蓬松微凌乱法式长辫 (Elvs Unkempt French Braid · 8,200面)',
+    url: '/models/daz_hair_unkempt_french_braid.glb',
+    verts: 6956,
+    desc: 'MakeHuman 名家 Elvs 精雕：自带自然松散碎发丝束的慵懒法式长辫，充满氧气呼吸感'
+  },
+  {
+    id: 'daz_hair_rehman_bun',
+    category: '古典盘发',
+    shortLabel: '🌺 财阀千金清爽高颅顶丸子发髻',
+    label: '【古典盘发】财阀千金清爽高颅顶饱满丸子头盘发 (RehmanPolanski Bun · 4,432面)',
+    url: '/models/daz_hair_rehman_bun.glb',
+    verts: 2756,
+    desc: 'MakeHuman 名家 RehmanPolanski 精雕：高耸利落的颅顶丸子发髻，360° 零遮挡呈现面部骨相与断颈'
+  },
+  {
+    id: 'daz_hair_island_princess',
+    category: '卷发波浪',
+    shortLabel: '🌊 法式复古内扣蓬松卷曲短波波',
+    label: '【卷发波浪】法式复古名媛内扣蓬松卷曲短波波 (Elvs Inverted Curly Bob · 2,980面)',
+    url: '/models/daz_hair_island_princess.glb',
+    verts: 2340,
+    desc: 'MakeHuman 名家 Elvs 精雕：轻盈蓬松的复古法式微卷内扣短波波，凸显下颌线与锁骨切面'
+  },
+  {
+    id: 'daz_hair_ashley_wave',
+    category: '卷发波浪',
+    shortLabel: '🌊 韩系女神丰盈S型水波纹长卷发',
+    label: '【卷发波浪】韩系女团丰盈S型水波纹披肩长卷发 (Elvs Ashley Wave · 8,467面)',
+    url: '/models/daz_hair_ashley_wave.glb',
+    verts: 8208,
+    desc: 'MakeHuman 名家 Elvs 精雕：柔美蓬松的S型水波纹长卷发，完美修饰颧弓与面颊轮廓'
+  },
+  {
+    id: 'daz_hair_bow_bun_braids',
+    category: '古典盘发',
+    shortLabel: '🌺 国风蝴蝶结双发髻编发盘发',
+    label: '【古典盘发】新中式国风蝴蝶结发髻交织编发盘发 (Elvs Bow Bun Braids · 5,372面)',
+    url: '/models/daz_hair_bow_bun_braids.glb',
+    verts: 3794,
+    desc: 'MakeHuman 名家 Elvs 精雕：精巧蝴蝶结造型发髻配双侧编发纹理，极具汉服国风少女韵味'
+  },
+
+  // ================= VIII. Stage 64 · 22款东亚全覆盖高定模块化 3D 发型流派 (中/日/韩/二次元/新中式) =================
+  {
+    id: 'preset_hime_cut_long',
+    category: '直发长发',
+    shortLabel: '🗡️ 京都正统齐腮一刀切黑长直姬发',
+    label: '【直发长发】京都正统漫画齐刘海+齐腮一刀切黑长直姬发 (Full Hime Cut)',
+    url: '/models/hair_long01.glb',
+    verts: 12576,
+    desc: '东亚经典姬发式：平直漫画齐眉刘海 + 齐腮一刀切公主切侧鬓 + 垂顺及胸黑长直后发'
+  },
+  {
+    id: 'preset_jk_twin_ponytail',
+    category: '马尾编发',
+    shortLabel: '🎀 东京学院JK空气刘海双马尾辫',
+    label: '【马尾编发】东京女子高校 JK 空气碎刘海+修颜碎鬓双编发马尾',
+    url: '/models/daz_hair_air_bangs_long.glb',
+    verts: 11552,
+    desc: '轻盈透额空气碎刘海配双侧耳前甜美碎鬓与学院风对称双垂辫'
+  },
+  {
+    id: 'preset_guofeng_twin_buns',
+    category: '古典盘发',
+    shortLabel: '🍒 新中式齐刘海公主切双丸子哪吒头',
+    label: '【古典盘发】新中式国风甜酷齐眉刘海+齐腮公主切高颅顶双丸子头',
+    url: '/models/daz_hair_twin_buns.glb',
+    verts: 7899,
+    desc: '新中式爆款甜酷造型：漫画齐刘海配齐腮公主切侧发与双侧高耸丸子头'
+  },
+  {
+    id: 'preset_kpop_curtain_ponytail',
+    category: '马尾编发',
+    shortLabel: '✨ 首尔女团高颅顶八字刘海高马尾',
+    label: '【马尾编发】首尔女团打歌舞台 · 高颅顶八字中分刘海+S型龙须高扎马尾',
+    url: '/models/hair_ponytail01.glb',
+    verts: 19840,
+    desc: '韩系高颅顶八字修颜长刘海配灵动S型微卷龙须鬓角与飒爽高扎长马尾'
+  },
+  {
+    id: 'preset_french_lazy_chignon',
+    category: '古典盘发',
+    shortLabel: '🌙 法式微凌乱碎刘海S龙须低盘发',
+    label: '【古典盘发】法式慵懒千金微凌乱碎刘海+S型微卷龙须名媛低盘发髻',
+    url: '/models/daz_hair_low_chignon.glb',
+    verts: 7420,
+    desc: '法式慵懒碎刘海搭配耳侧S型微卷龙须与温婉脑后低挽发髻，尽显松弛感贵气'
+  },
+  {
+    id: 'preset_chaebol_sleek_long',
+    category: '直发长发',
+    shortLabel: '💎 财阀千金露额挽耳后高定黑长直',
+    label: '【直发长发】财阀千金高颅顶露额大光明+双侧挽耳后垂顺黑长直',
+    url: '/models/daz_hair_o4saken_long.glb',
+    verts: 14200,
+    desc: '彻底移除前额刘海与耳侧遮挡，100% 展露饱满额头、野生眉、双耳轮廓与及胸垂顺长发'
+  },
+  {
+    id: 'preset_sakura_pink_hime_bob',
+    category: '短发波波',
+    shortLabel: '🌸 涩谷地雷系樱粉挑染公主切短波波',
+    label: '【短发波波】东京涩谷地雷系 · 雾感樱粉尾染齐刘海公主切短波波',
+    url: '/models/daz_hair_blunt_bob_bangs.glb',
+    verts: 6962,
+    desc: '二次元地雷系少女标志造型：齐眉平刘海+齐腮公主切+乌黑配雾感樱粉渐变发梢'
+  },
+  {
+    id: 'preset_wolf_mullet_cool',
+    category: '短发波波',
+    shortLabel: '🐺 日杂清冷少年感挂耳狼尾锁骨发',
+    label: '【短发波波】日杂清冷高智少年感微碎短刘海+挽耳后层次狼尾锁骨发',
+    url: '/models/daz_hair_wolf_clavicle.glb',
+    verts: 5420,
+    desc: '眉上轻薄微碎刘海配双侧挽耳后利落轮廓与外翘层次锁骨发尾，少年感拉满'
+  },
+  {
+    id: 'preset_republic_student_braids',
+    category: '马尾编发',
+    shortLabel: '📖 民国书香学堂三七斜分清纯双麻花辫',
+    label: '【马尾编发】民国江南女校 · 温婉三七斜分刘海配清纯对称双麻花长辫',
+    url: '/models/daz_hair_double_braid.glb',
+    verts: 10240,
+    desc: '温婉三七斜分书卷刘海搭配双侧垂胸麻花长辫，还原江南民国闺秀清纯神韵'
+  },
+  {
+    id: 'preset_hk_retro_glam_wave',
+    category: '卷发波浪',
+    shortLabel: '🌹 90年代港风红毯大偏分丰盈大波浪',
+    label: '【卷发波浪】90年代香港红毯女神 · 高颅顶三七大偏分S型丰盈大波浪',
+    url: '/models/daz_hair_ashley_wave.glb',
+    verts: 10860,
+    desc: '蓬松高颅顶三七大偏分弧度刘海配丰盈披肩水波纹大卷发，港风明艳氛围感天花板'
+  },
+  {
+    id: 'preset_FirstLove_air_bob',
+    category: '短发波波',
+    shortLabel: '🍑 韩系初恋空气碎刘海挂耳内扣短发',
+    label: '【短发波波】韩剧初恋女主 · 轻薄空气碎刘海+双侧挽耳后内扣A字波波',
+    url: '/models/daz_hair_inverted_bob_bangs.glb',
+    verts: 5890,
+    desc: '轻盈透额空气碎刘海配挽耳后清爽耳廓与内扣短波波，凸显幼态苹果肌与天鹅颈'
+  },
+  {
+    id: 'preset_song_aesthetic_updo',
+    category: '古典盘发',
+    shortLabel: '🦢 宋制清雅八字龙须蝴蝶结高盘髻',
+    label: '【古典盘发】宋制清雅仕女 · 中分八字长刘海+耳前碎鬓蝴蝶结编发高髻',
+    url: '/models/daz_hair_bow_bun_braids.glb',
+    verts: 6840,
+    desc: '融合中分八字修颜长刘海与国风蝴蝶结交织发髻，温婉古典且完整展露颈部断面'
+  },
+  {
+    id: 'preset_ice_queen_silver_wave',
+    category: '卷发波浪',
+    shortLabel: '❄️ 极光月白银灰挑染人鱼大波浪长发',
+    label: '【卷发波浪】清冷神女 · 八字刘海极光月白银灰渐变挑染人鱼羊毛卷长发',
+    url: '/models/daz_hair_mermaid_curl.glb',
+    verts: 12450,
+    desc: '1.67万面细腻螺旋人鱼长卷发配八字刘海与月白银灰渐变挑染，冷艳梦幻'
+  },
+  {
+    id: 'preset_gentle_sister_clavicle',
+    category: '直发长发',
+    shortLabel: '🍵 冷茶棕挑染三七斜分温柔锁骨发',
+    label: '【直发长发】都市温柔学姐 · 三七斜分刘海+冷茶青棕挑染柔顺锁骨发',
+    url: '/models/hair_short04.glb',
+    verts: 7420,
+    desc: '知性三七斜分刘海配耳前修颜碎鬓与冷茶青棕渐变锁骨中长发'
+  },
+  {
+    id: 'preset_ballet_core_ribbons',
+    category: '古典盘发',
+    shortLabel: '🩰 芭蕾少女空气刘海S龙须高丸子头',
+    label: '【古典盘发】Balletcore 芭蕾少女 · 轻薄空气刘海+S型微卷龙须高耸芭蕾盘发',
+    url: '/models/daz_hair_ballerina_bun.glb',
+    verts: 7180,
+    desc: '在露额芭蕾丸子头基础上嫁接轻薄空气碎刘海与S型微卷龙须，甜美灵动且修饰脸型'
+  },
+  {
+    id: 'preset_ocean_blue_hime_long',
+    category: '直发长发',
+    shortLabel: '🌊 雾霾星空蓝挑染高颅顶姬发黑长直',
+    label: '【直发长发】二次元冷艳歌姬 · 雾霾星空蓝渐变尾染齐刘海公主切黑长直',
+    url: '/models/daz_hair_hime.glb',
+    verts: 8920,
+    desc: '高颅顶齐眉姬发式公主切长直发，发梢融入深邃雾霾星空蓝渐变挑染'
+  },
+  {
+    id: 'preset_burgundy_siren_wave',
+    category: '卷发波浪',
+    shortLabel: '🍷 微醺波尔多酒红尾染八字女神大卷',
+    label: '【卷发波浪】钓系冷艳名伶 · 微醺波尔多酒红渐变八字刘海披肩女神卷',
+    url: '/models/daz_hair_curtain_wave.glb',
+    verts: 8420,
+    desc: '冷白皮显白神器：高颅顶八字中分大波浪配微醺波尔多红酒色发梢挑染'
+  },
+  {
+    id: 'preset_mori_girl_unkempt_braid',
+    category: '马尾编发',
+    shortLabel: '🍃 森系氧气少女空气刘海慵懒松散长辫',
+    label: '【马尾编发】北海道森系少女 · 轻薄空气刘海+焦糖暖棕挑染慵懒法式长辫',
+    url: '/models/daz_hair_unkempt_french_braid.glb',
+    verts: 8650,
+    desc: '轻盈空气刘海配自然微凌乱法式长辫与焦糖摩卡暖棕光泽'
+  },
+  {
+    id: 'preset_clean_fit_sleek_bun',
+    category: '古典盘发',
+    shortLabel: '✨ 高智CleanFit贴头皮露耳低发髻',
+    label: '【古典盘发】高智感 Clean Fit · 贴头皮完全露双耳+无刘海极简名媛低盘发',
+    url: '/models/daz_hair_low_chignon.glb',
+    verts: 4120,
+    desc: '专为高智御姐与解剖观察打造：露额无刘海+双侧挽耳后+脑后极简低挽发髻'
+  },
+  {
+    id: 'preset_sweet_milk_tea_halfup',
+    category: '马尾编发',
+    shortLabel: '🧋 焦糖奶茶棕齐刘海公主切半扎长发',
+    label: '【马尾编发】甜妹千金 · 漫画齐刘海+齐腮公主切+焦糖摩卡半扎披肩长发',
+    url: '/models/daz_hair_halfup_princess.glb',
+    verts: 10890,
+    desc: '仙气半扎公主披肩长发搭配漫画齐眉刘海、齐腮公主切与焦糖奶茶挑染'
+  },
+  {
+    id: 'preset_imperial_crown_braid_hime',
+    category: '古典盘发',
+    shortLabel: '👑 殿堂皇冠编发盘髻配齐腮公主切',
+    label: '【古典盘发】东方宫廷贵女 · 2.1万面皇冠交织盘发髻+国风齐腮公主切双鬓',
+    url: '/models/daz_hair_crown_braid.glb',
+    verts: 13450,
+    desc: '殿堂级皇冠交织盘发配齐腮一刀切公主切侧鬓，端庄华贵且后颈完全展露'
+  },
+  {
+    id: 'preset_cyber_hologram_twin',
+    category: '马尾编发',
+    shortLabel: '⚡ 赛博机能风银蓝挑染高颅顶双丸子双辫',
+    label: '【马尾编发】赛博机能少女 · 极光银挑染眉上微碎刘海+双侧麻花长辫',
+    url: '/models/daz_hair_twin_braids.glb',
+    verts: 10680,
+    desc: '眉上俏皮微碎短刘海配高颅顶双侧编发长辫与极光月白银灰渐变挑染'
+  },
+
   // ================= VI. 医学解剖无发模式 =================
   {
     id: 'none',
@@ -675,6 +968,7 @@ export const CHAR_MATERIAL_PRESET_CATALOG = [
 export const FACE_ARCHETYPE_CATALOG = [
   {
     id: 'cn_oval_scholar',
+    region: 'cn',
     shortLabel: '📖 纯净中式书卷鹅蛋脸 (方尧平)',
     label: '📖 纯净中式书卷清秀鹅蛋脸 · 原生校服照清纯杏眼骨相 (19岁女状元方尧平默认)',
     desc: '还原方尧平校服照的19岁东方少女清秀鹅蛋脸，温和圆润下颌、自然苹果肌与清澈杏眼',
@@ -688,6 +982,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_round_babyface',
+    region: 'cn',
     shortLabel: '🍑 韩系甜妹幼态圆润脸 (初夏)',
     label: '🍑 韩系甜妹幼态胶原圆润脸 · 饱满婴儿肥配圆润大杏眼骨相 (初夏默认)',
     desc: '19岁音乐系甜妹校花骨相，饱满婴儿肥面颊、短翘幼态下巴与无辜圆润大杏眼',
@@ -701,6 +996,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'kr_idol_vline',
+    region: 'kr',
     shortLabel: '✨ 韩系财阀千金V脸 (林汐)',
     label: '✨ 韩系财阀千金高定V脸 · 利落下颌线与冷艳微挑丹凤眼骨相 (林汐默认)',
     desc: '21岁常春藤投行女王高定骨相，凌厉收窄V字下颌、高挺细鼻梁与冷傲上挑狭长凤眼',
@@ -714,6 +1010,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_classical_melon',
+    region: 'cn',
     shortLabel: '🌙 江南古典瓜子仕女脸 (苏晚)',
     label: '🌙 江南古典温婉瓜子仕女脸 · 羊脂白玉柳叶眉古典骨相 (苏晚默认)',
     desc: '古典东方闺秀瓜子脸面容，修长温婉鹅蛋瓜子轮廓、琼鼻樱唇与含情杏眼',
@@ -727,6 +1024,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'kr_sweet_heart',
+    region: 'kr',
     shortLabel: '💖 韩系女团初恋心形脸 (千雪)',
     label: '💖 韩系女团初恋舞台心形脸 · 饱满上镜桃花骨相 (千雪默认)',
     desc: '18岁古典舞首席领舞心形面庞，饱满苹果肌配精致尖翘下巴与灵动大眼',
@@ -740,6 +1038,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_cold_royal',
+    region: 'cn',
     shortLabel: '❄️ 中式清冷高智御姐脸 (沈知微)',
     label: '❄️ 中式清冷高智菱形御姐脸 · 立体颧弓与高鼻梁冷艳骨相 (沈知微默认)',
     desc: '23岁法学院首席知性御姐骨相，清晰立体颧弓、高挺鼻梁、修长脸型与深邃眉眼',
@@ -753,6 +1052,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_pure_campus_bell',
+    region: 'cn',
     shortLabel: '🌸 纯净东方冷白校花脸',
     label: '🌸 纯净东方冷白凝脂校花脸 · 零混合素颜初恋原模骨相',
     desc: '100% 纯净无混合的清纯校花原模，配零瑕疵冷白凝脂肌',
@@ -766,6 +1066,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'kr_waterglow_idol',
+    region: 'kr',
     shortLabel: '💎 首尔水光画报神颜脸',
     label: '💎 首尔水光画报神颜 · 奶油水光肌精致小V脸骨相',
     desc: '韩系画报少女精致骨相，水润饱满、上镜立体',
@@ -779,6 +1080,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_tang_peony',
+    region: 'cn',
     shortLabel: '🌺 京派端庄世家贵女头模',
     label: '🌺 京派端庄珠圆玉润贵女头模 · 三庭五眼正统大家闺秀骨相',
     desc: '华北世家贵女丰盈端庄面庞，国泰民安大气鹅蛋轮廓与温润杏眼',
@@ -793,6 +1095,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_northern_danfeng',
+    region: 'cn',
     shortLabel: '🦢 华北古典丹凤瑞凤头模',
     label: '🦢 华北古典丹凤瑞凤头模 · 平缓眉弓配内尖外挑细长丹凤眼骨相',
     desc: '正统东方古典仕女骨相，平缓流畅眉弓、内眦微勾、外眦优雅上挑的丹凤瑞凤眼',
@@ -808,6 +1111,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_cat_fox_siren',
+    region: 'cn',
     shortLabel: '🦊 钓系狐系清冷名伶头模',
     label: '🦊 钓系狐系清冷名伶头模 · 窄长中庭微翘尖颏配魅惑狐狸吊梢眼',
     desc: '极具东方魅惑感的狐系清冷骨相，外眼角凌厉上扬、内眼角尖锐深邃、薄唇微勾',
@@ -823,6 +1127,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_wide_catfish_chic',
+    region: 'cn',
     shortLabel: '🐟 电影感宽眼距高级脸头模',
     label: '🐟 电影感宽眼距留白高级脸头模 · 舒展眼距微方下颌东方超模骨相',
     desc: '东亚大银幕电影感高级脸，舒展宽眼距、原生东方单睑/内双、微方折角下颌与饱满厚唇',
@@ -838,6 +1143,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_imperial_square',
+    region: 'cn',
     shortLabel: '🏛️ 东方英气端方青衣头模',
     label: '🏛️ 东方英气端方折角青衣头模 · 清晰下颌折角与温润开扇双眼皮骨相',
     desc: '正剧大青衣端方骨相，清晰利落的下颌骨折角、高挺直鼻与端庄开扇型内双杏眼',
@@ -853,6 +1159,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'jp_yamato_clear',
+    region: 'jp',
     shortLabel: '🍃 日系透明感森系少女头模',
     label: '🍃 日系透明感森系少女头模 · 短人中窄鼻梁配灵动小鹿圆眼骨相',
     desc: '东京透明感森系美少女骨相，柔和短下巴、微翘小巧鼻尖与清澈圆润小鹿眼',
@@ -868,6 +1175,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'cn_puppy_innocent',
+    region: 'cn',
     shortLabel: '🐶 纯欲无辜小狗下至头模',
     label: '🐶 纯欲无辜小狗下至幼态头模 · 满胶原软糯苹果肌配眼睑下至无辜眼',
     desc: '极致减龄的纯欲学妹骨相，饱满苹果肌、饱满卧蚕与外眼角微垂的小狗下至眼',
@@ -883,6 +1191,7 @@ export const FACE_ARCHETYPE_CATALOG = [
   },
   {
     id: 'eurasian_sculpted_mix',
+    region: 'mix',
     shortLabel: '🌍 东亚西域轻混血深邃头模',
     label: '🌍 东亚西域丝绒玫瑰轻混血头模 · 深邃眉弓高挺鼻梁配明艳平行大双',
     desc: '东亚与西域/欧亚混血浓颜骨相，立体眉弓深眼窝、高挺琼鼻与明艳平行大双眼皮',
@@ -895,7 +1204,361 @@ export const FACE_ARCHETYPE_CATALOG = [
       eyeEpicanthus: -0.62, eyeCrease: 0.88, eyeBag: 0.52,
       lipFullness: 0.24, mouthSmile: 0.04, foreheadHeight: 0.04, headWidth: -0.03, headLength: 0.02
     }
+  }  ,
+  // ================= Stage 64 · 新增 22 款东亚全覆盖真实 MPFB2 雕刻骨相头模 (中/韩/日/亚欧混血 共38款) =================
+  {
+    id: 'cn_jiangnan_water_lily',
+    region: 'cn',
+    shortLabel: '🪷 江南烟雨清瘦白莲脸',
+    label: '🪷 江南烟雨清瘦白莲脸 · 窄长鹅蛋清减双颊配古典内双细杏眼',
+    desc: '江南水乡书香闺秀骨相，窄长清隽鹅蛋轮廓、纤细琼鼻与含蓄内双瑞凤杏眼',
+    defaultSkinVariant: 'cn_jiangnan_jade',
+    defaultEyePreset: 'in_out_double',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.16, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.22, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.24, chinLength: 0.06, cheekSoftness: -0.08, noseBridge: 0.16, noseWidth: -0.18,
+      eyeSize: 0.10, eyeAperture: 0.06, eyeAlmond: 0.20, eyeTilt: -0.08, eyeSpacing: 0.06,
+      eyeEpicanthus: 0.36, eyeCrease: 0.24, eyeBag: 0.22,
+      lipFullness: 0.06, mouthSmile: 0.02, foreheadHeight: 0.06, headWidth: -0.04, headLength: 0.03
+    }
+  },
+  {
+    id: 'cn_sichuan_doll_peach',
+    region: 'cn',
+    shortLabel: '🍑 川渝灵动蜜桃甜妹脸',
+    label: '🍑 川渝灵动蜜桃甜妹脸 · 高位饱满苹果肌短翘尖下巴配灵动桃花大眼',
+    desc: '川渝辣妹甜妹兼具的灵动骨相，高位饱满苹果肌、短小微翘尖颏与水灵桃花电眼',
+    defaultSkinVariant: 'kr_dewy_peach',
+    defaultEyePreset: 'peach_blossom',
+    headBlend: { blend_asian_youth: 0.18, blend_cn_scholar: 0.0, blend_cn_baby: 0.16, blend_kr_vline: 0.14, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.26, chinLength: -0.14, cheekSoftness: 0.32, noseBridge: 0.12, noseWidth: -0.12,
+      eyeSize: 0.32, eyeAperture: 0.28, eyeAlmond: 0.10, eyeTilt: 0.12, eyeSpacing: 0.0,
+      eyeEpicanthus: -0.15, eyeCrease: 0.56, eyeBag: 0.54,
+      lipFullness: 0.26, mouthSmile: 0.10, foreheadHeight: 0.06, headWidth: -0.01, headLength: -0.025
+    }
+  },
+  {
+    id: 'cn_dunhuang_apsara_noble',
+    region: 'cn',
+    shortLabel: '🏺 敦煌飞天盛唐浓颜神女脸',
+    label: '🏺 敦煌飞天盛唐浓颜神女脸 · 饱满额弓希腊直鼻配瑞凤长眸',
+    desc: '丝路敦煌壁画飞天浓颜骨相，立体额弓直通鼻梁、饱满面颊与古典上挑瑞凤长眸',
+    defaultSkinVariant: 'cn_jiangnan_jade',
+    defaultEyePreset: 'danfeng_phoenix',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.18, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.14, blend_eurasian: 0.14 },
+    morphRecipe: {
+      jawVLine: 0.08, chinLength: 0.08, cheekSoftness: 0.14, noseBridge: 0.32, noseWidth: -0.10,
+      eyeSize: 0.18, eyeAperture: 0.10, eyeAlmond: 0.26, eyeTilt: 0.42, eyeSpacing: -0.02,
+      eyeEpicanthus: 0.22, eyeCrease: 0.42, eyeBag: 0.28,
+      lipFullness: 0.28, mouthSmile: 0.08, foreheadHeight: 0.08, headWidth: 0.0, headLength: 0.02
+    }
+  },
+  {
+    id: 'kr_chaebol_heiress',
+    region: 'kr',
+    shortLabel: '🥂 首尔清潭洞财阀长女鹅蛋脸',
+    label: '🥂 首尔清潭洞财阀长女鹅蛋脸 · 修长窄鹅蛋高直鼻清冷名媛骨相',
+    desc: '韩国顶级豪门长女骨相，修长窄鹅蛋轮廓、零凸出颧弓、笔直细鼻梁与清冷内双杏眼',
+    defaultSkinVariant: 'kr_chaebol_cool',
+    defaultEyePreset: 'cool_slender',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.16, blend_cn_baby: 0.0, blend_kr_vline: 0.20, blend_cn_melon: 0.0, blend_cn_royal: 0.12, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.24, chinLength: 0.12, cheekSoftness: -0.10, noseBridge: 0.28, noseWidth: -0.18,
+      eyeSize: 0.08, eyeAperture: 0.04, eyeAlmond: 0.24, eyeTilt: 0.22, eyeSpacing: -0.02,
+      eyeEpicanthus: 0.18, eyeCrease: 0.30, eyeBag: 0.24,
+      lipFullness: 0.10, mouthSmile: 0.0, foreheadHeight: 0.06, headWidth: -0.035, headLength: 0.035
+    }
+  },
+  {
+    id: 'kr_cat_idol_ace',
+    region: 'kr',
+    shortLabel: '🐈 韩团四代神颜猫系ACE脸',
+    label: '🐈 韩团四代神颜猫系ACE脸 · 短宽精致小V脸配奶凶上挑猫眼',
+    desc: '韩国四代五代女团视觉中心猫系骨相，精致紧致小V脸、微翘小巧鼻尖与奶凶上挑猫眼',
+    defaultSkinVariant: 'kr_firstlove_camellia',
+    defaultEyePreset: 'cat_upturned',
+    headBlend: { blend_asian_youth: 0.12, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.26, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.34, chinLength: -0.10, cheekSoftness: 0.12, noseBridge: 0.20, noseWidth: -0.16,
+      eyeSize: 0.26, eyeAperture: 0.18, eyeAlmond: 0.22, eyeTilt: 0.56, eyeSpacing: 0.04,
+      eyeEpicanthus: -0.22, eyeCrease: 0.52, eyeBag: 0.46,
+      lipFullness: 0.24, mouthSmile: 0.08, foreheadHeight: 0.04, headWidth: -0.02, headLength: -0.02
+    }
+  },
+  {
+    id: 'kr_quail_egg_pure',
+    region: 'kr',
+    shortLabel: '🥚 韩系零棱角流畅鹌鹑蛋脸',
+    label: '🥚 韩系零棱角流畅鹌鹑蛋脸 · 360°无死角头包脸柔光鹅蛋骨相',
+    desc: '韩国整形教科书级「鹌鹑蛋脸」，颧弓与下颌角零外扩、360° 柔和顺滑的饱满小鹅蛋轮廓',
+    defaultSkinVariant: 'kr_dewy_peach',
+    defaultEyePreset: 'almond_classic',
+    headBlend: { blend_asian_youth: 0.20, blend_cn_scholar: 0.14, blend_cn_baby: 0.0, blend_kr_vline: 0.12, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.18, chinLength: -0.06, cheekSoftness: 0.24, noseBridge: 0.14, noseWidth: -0.12,
+      eyeSize: 0.20, eyeAperture: 0.16, eyeAlmond: 0.14, eyeTilt: 0.04, eyeSpacing: 0.0,
+      eyeEpicanthus: 0.10, eyeCrease: 0.44, eyeBag: 0.42,
+      lipFullness: 0.18, mouthSmile: 0.06, foreheadHeight: 0.08, headWidth: -0.03, headLength: -0.01
+    }
+  },
+  {
+    id: 'kr_mellow_spoon_chic',
+    region: 'kr',
+    shortLabel: '🎬 忠武路电影女主淡颜单眼皮脸',
+    label: '🎬 忠武路电影感淡颜系女主脸 · 留白清冷鹅蛋配高级感单睑杏眼',
+    desc: '韩国忠武路文艺片影后淡颜骨相，舒展面部留白、干净内双/单睑与清冷文艺气质',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    defaultEyePreset: 'pure_monolid',
+    headBlend: { blend_asian_youth: 0.10, blend_cn_scholar: 0.20, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.12, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.06, chinLength: 0.04, cheekSoftness: 0.06, noseBridge: 0.12, noseWidth: -0.08,
+      eyeSize: 0.02, eyeAperture: -0.10, eyeAlmond: 0.20, eyeTilt: 0.12, eyeSpacing: 0.14,
+      eyeEpicanthus: 0.56, eyeCrease: -0.60, eyeBag: 0.26,
+      lipFullness: 0.16, mouthSmile: 0.02, foreheadHeight: 0.04, headWidth: -0.01, headLength: 0.01
+    }
+  },
+  {
+    id: 'kr_bunny_firstlove',
+    region: 'kr',
+    shortLabel: '🐰 首尔国民初恋元气兔系甜妹脸',
+    label: '🐰 首尔国民初恋元气兔系甜妹脸 · 澎润苹果肌饱满卧蚕月牙笑眼',
+    desc: '韩国国民初恋兔系美少女骨相，澎润高位苹果肌、饱满蚕宝宝卧蚕与弯弯月牙笑眼',
+    defaultSkinVariant: 'kr_firstlove_camellia',
+    defaultEyePreset: 'crescent_smile',
+    headBlend: { blend_asian_youth: 0.20, blend_cn_scholar: 0.0, blend_cn_baby: 0.20, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.08, chinLength: -0.16, cheekSoftness: 0.36, noseBridge: 0.08, noseWidth: -0.10,
+      eyeSize: 0.28, eyeAperture: 0.24, eyeAlmond: 0.08, eyeTilt: -0.14, eyeSpacing: 0.02,
+      eyeEpicanthus: 0.05, eyeCrease: 0.48, eyeBag: 0.76,
+      lipFullness: 0.26, mouthSmile: 0.18, foreheadHeight: 0.06, headWidth: 0.01, headLength: -0.025
+    }
+  },
+  {
+    id: 'jp_showa_cinema_muse',
+    region: 'jp',
+    shortLabel: '🎞️ 昭和银幕绝代佳人鹅蛋脸',
+    label: '🎞️ 昭和黄金时代银幕女神鹅蛋脸 · 端庄明眸皓齿古典平行双杏眼',
+    desc: '日本昭和年代银幕传奇美人骨相，端正大气鹅蛋轮廓、挺拔鼻梁与含情脉脉大杏眼',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    defaultEyePreset: 'parallel_double',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.22, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.14, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.12, chinLength: 0.04, cheekSoftness: 0.16, noseBridge: 0.22, noseWidth: -0.10,
+      eyeSize: 0.28, eyeAperture: 0.26, eyeAlmond: 0.16, eyeTilt: -0.06, eyeSpacing: 0.0,
+      eyeEpicanthus: -0.20, eyeCrease: 0.68, eyeBag: 0.42,
+      lipFullness: 0.20, mouthSmile: 0.06, foreheadHeight: 0.04, headWidth: -0.01, headLength: 0.01
+    }
+  },
+  {
+    id: 'jp_tokyo_sweet_pear',
+    region: 'jp',
+    shortLabel: '🍐 东京日杂甜美微梨形幼态脸',
+    label: '🍐 东京甜系读者模特微梨形软糯脸 · 下颊软糯婴儿肥配无辜下至圆眼',
+    desc: '日系甜美读者模特特有的微梨形幼态脸，腮部软糯胶原感十足，配楚楚可怜下至圆眼',
+    defaultSkinVariant: 'kr_dewy_peach',
+    defaultEyePreset: 'puppy_downturned',
+    headBlend: { blend_asian_youth: 0.18, blend_cn_scholar: 0.0, blend_cn_baby: 0.24, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: -0.20, chinLength: -0.16, cheekSoftness: 0.36, noseBridge: 0.02, noseWidth: -0.06,
+      eyeSize: 0.34, eyeAperture: 0.36, eyeAlmond: -0.12, eyeTilt: -0.48, eyeSpacing: 0.08,
+      eyeEpicanthus: 0.08, eyeCrease: 0.56, eyeBag: 0.66,
+      lipFullness: 0.24, mouthSmile: 0.08, foreheadHeight: 0.06, headWidth: 0.02, headLength: -0.025
+    }
+  },
+  {
+    id: 'jp_kyoto_noble_slender',
+    region: 'jp',
+    shortLabel: '⛩️ 京都华族清冷狭长古典瓜子脸',
+    label: '⛩️ 京都华族千金清冷狭长瓜子脸 · 纤薄骨相细长柳叶单凤眼',
+    desc: '京都传统名门华族千金骨相，修长纤薄瓜子脸、精巧小鼻与古典细长单凤眼',
+    defaultSkinVariant: 'cn_jiangnan_jade',
+    defaultEyePreset: 'cool_slender',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.16, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.24, blend_cn_royal: 0.10, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.26, chinLength: 0.12, cheekSoftness: -0.14, noseBridge: 0.18, noseWidth: -0.20,
+      eyeSize: -0.06, eyeAperture: -0.14, eyeAlmond: 0.28, eyeTilt: 0.18, eyeSpacing: 0.02,
+      eyeEpicanthus: 0.46, eyeCrease: -0.24, eyeBag: 0.12,
+      lipFullness: -0.06, mouthSmile: 0.0, foreheadHeight: 0.06, headWidth: -0.045, headLength: 0.04
+    }
+  },
+  {
+    id: 'jp_harajuku_fairy_triangle',
+    region: 'jp',
+    shortLabel: '🧚‍♀️ 原宿二次元精灵倒三角巴掌脸',
+    label: '🧚‍♀️ 原宿二次元建模精灵倒三角小脸 · 宽额头尖下巴超大漫画鹿眼',
+    desc: '突破次元壁的原宿精灵少女骨相，饱满宽额头急速收拢至小巧尖颏，配超大灵动漫画圆眼',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    defaultEyePreset: 'fawn_round',
+    headBlend: { blend_asian_youth: 0.18, blend_cn_scholar: 0.0, blend_cn_baby: 0.10, blend_kr_vline: 0.24, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.38, chinLength: -0.14, cheekSoftness: 0.16, noseBridge: 0.14, noseWidth: -0.18,
+      eyeSize: 0.42, eyeAperture: 0.52, eyeAlmond: -0.06, eyeTilt: -0.12, eyeSpacing: 0.08,
+      eyeEpicanthus: -0.18, eyeCrease: 0.72, eyeBag: 0.62,
+      lipFullness: 0.18, mouthSmile: 0.08, foreheadHeight: 0.08, headWidth: -0.02, headLength: -0.03
+    }
+  },
+  {
+    id: 'jp_idol_round_dimple',
+    region: 'jp',
+    shortLabel: '🍓 坂道系元气酒窝团宠小圆脸',
+    label: '🍓 乃木坂/坂道系元气酒窝团宠小圆脸 · 甜美梨涡配弯弯笑眼',
+    desc: '日本坂道系王道偶像团宠骨相，圆润小巧苹果肌、两颊甜美深酒窝与治愈系弯弯笑眼',
+    defaultSkinVariant: 'kr_firstlove_camellia',
+    defaultEyePreset: 'crescent_smile',
+    headBlend: { blend_asian_youth: 0.20, blend_cn_scholar: 0.0, blend_cn_baby: 0.22, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: -0.14, chinLength: -0.14, cheekSoftness: 0.32, noseBridge: 0.06, noseWidth: -0.08,
+      eyeSize: 0.28, eyeAperture: 0.28, eyeAlmond: 0.04, eyeTilt: -0.16, eyeSpacing: 0.04,
+      eyeEpicanthus: 0.06, eyeCrease: 0.50, eyeBag: 0.68,
+      lipFullness: 0.20, mouthSmile: 0.20, foreheadHeight: 0.06, headWidth: 0.02, headLength: -0.02
+    }
+  },
+  {
+    id: 'jp_cool_model_Clean',
+    region: 'jp',
+    shortLabel: '🖤 东京高冷盐系厌世超模脸',
+    label: '🖤 东京银座高冷盐系厌世杂志超模脸 · 清癯微凹面颊与利落骨相',
+    desc: '日本高定时尚杂志盐系厌世模特骨相，清瘦微凹面颊、清晰颧骨线条与疏离感冷冽眼神',
+    defaultSkinVariant: 'cn_intellectual_olive',
+    defaultEyePreset: 'cool_slender',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.10, blend_cn_baby: 0.0, blend_kr_vline: 0.14, blend_cn_melon: 0.0, blend_cn_royal: 0.24, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.22, chinLength: 0.08, cheekSoftness: -0.24, noseBridge: 0.24, noseWidth: -0.16,
+      eyeSize: 0.02, eyeAperture: -0.12, eyeAlmond: 0.24, eyeTilt: 0.24, eyeSpacing: 0.04,
+      eyeEpicanthus: 0.28, eyeCrease: 0.20, eyeBag: 0.16,
+      lipFullness: 0.08, mouthSmile: -0.06, foreheadHeight: 0.04, headWidth: -0.03, headLength: 0.02
+    }
+  },
+  {
+    id: 'jp_forest_mori_soft',
+    region: 'jp',
+    shortLabel: '🌿 北海道苍井优式氧气森女脸',
+    label: '🌿 北海道氧气感森女淡颜鹅蛋脸 · 自然宽眼距微翘小鼻治愈骨相',
+    desc: '如同北海道清晨微风般的氧气森女骨相，毫无攻击性的柔和鹅蛋轮廓与清澈微垂杏眼',
+    defaultSkinVariant: 'cn_scholar_natural',
+    defaultEyePreset: 'almond_classic',
+    headBlend: { blend_asian_youth: 0.22, blend_cn_scholar: 0.14, blend_cn_baby: 0.08, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.04, chinLength: -0.08, cheekSoftness: 0.20, noseBridge: 0.08, noseWidth: -0.06,
+      eyeSize: 0.20, eyeAperture: 0.20, eyeAlmond: 0.08, eyeTilt: -0.12, eyeSpacing: 0.14,
+      eyeEpicanthus: 0.16, eyeCrease: 0.38, eyeBag: 0.36,
+      lipFullness: 0.16, mouthSmile: 0.10, foreheadHeight: 0.04, headWidth: 0.0, headLength: -0.015
+    }
+  },
+  {
+    id: 'hk_90s_glamour_queen',
+    region: 'mix',
+    shortLabel: '🌹 90年代香江绝代风华明艳浓颜脸',
+    label: '🌹 90年代香港黄金时代绝代风华浓颜女神脸 · 英气微方颌美人沟桃花大眼',
+    desc: '90年代港风红毯传奇美人骨相，兼具英气下颌折角、性感微浅美人沟下巴与明艳大桃花眼',
+    defaultSkinVariant: 'kr_firstlove_camellia',
+    defaultEyePreset: 'peach_blossom',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.18, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.18, blend_eurasian: 0.10 },
+    morphRecipe: {
+      jawVLine: -0.08, chinLength: 0.08, cheekSoftness: 0.10, noseBridge: 0.24, noseWidth: -0.10,
+      eyeSize: 0.30, eyeAperture: 0.26, eyeAlmond: 0.20, eyeTilt: 0.18, eyeSpacing: -0.04,
+      eyeEpicanthus: -0.18, eyeCrease: 0.64, eyeBag: 0.44,
+      lipFullness: 0.28, mouthSmile: 0.08, foreheadHeight: 0.04, headWidth: 0.0, headLength: 0.02
+    }
+  },
+  {
+    id: 'tw_campus_sweet_oxygen',
+    region: 'mix',
+    shortLabel: '🧋 台北文艺校园甜润氧气校花脸',
+    label: '🧋 台北文艺电影校园氧气甜妹校花脸 · 温润无棱角鹅蛋配清亮大杏眼',
+    desc: '台湾青春校园电影女主骨相，温润流畅无棱角鹅蛋脸、饱满苹果肌与清澈含笑大杏眼',
+    defaultSkinVariant: 'cn_scholar_natural',
+    defaultEyePreset: 'almond_classic',
+    headBlend: { blend_asian_youth: 0.20, blend_cn_scholar: 0.16, blend_cn_baby: 0.08, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.12, chinLength: -0.04, cheekSoftness: 0.24, noseBridge: 0.12, noseWidth: -0.08,
+      eyeSize: 0.26, eyeAperture: 0.24, eyeAlmond: 0.12, eyeTilt: -0.04, eyeSpacing: 0.02,
+      eyeEpicanthus: 0.08, eyeCrease: 0.52, eyeBag: 0.50,
+      lipFullness: 0.20, mouthSmile: 0.12, foreheadHeight: 0.06, headWidth: -0.01, headLength: 0.0
+    }
+  },
+  {
+    id: 'cyber_cg_angel_v',
+    region: 'mix',
+    shortLabel: '⚡ 次世代CG建模级完美黄金V脸',
+    label: '⚡ 次世代3D虚拟偶像建模级黄金比例V脸 · 极致对称小头包脸大眼骨相',
+    desc: '超越真人的次世代CG数字人骨相，极致紧致小V脸、翘鼻樱唇与黄金比例平行大眼',
+    defaultSkinVariant: 'cn_porcelain_ivory',
+    defaultEyePreset: 'parallel_double',
+    headBlend: { blend_asian_youth: 0.16, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.28, blend_cn_melon: 0.16, blend_cn_royal: 0.0, blend_eurasian: 0.12 },
+    morphRecipe: {
+      jawVLine: 0.38, chinLength: -0.06, cheekSoftness: 0.14, noseBridge: 0.26, noseWidth: -0.22,
+      eyeSize: 0.38, eyeAperture: 0.38, eyeAlmond: 0.18, eyeTilt: 0.24, eyeSpacing: 0.0,
+      eyeEpicanthus: -0.42, eyeCrease: 0.80, eyeBag: 0.54,
+      lipFullness: 0.24, mouthSmile: 0.08, foreheadHeight: 0.06, headWidth: -0.04, headLength: -0.01
+    }
+  },
+  {
+    id: 'asia_high_fashion_runway',
+    region: 'mix',
+    shortLabel: '👠 东亚高定T台冰山超模钻石脸',
+    label: '👠 四大时装周东亚高定T台超模钻石脸 · 高颧弓削瘦双颊上挑丹凤眼',
+    desc: '国际高定秀场东亚超模骨相，高耸立体颧弓、微凹修容双颊、利落折角下颌与凌厉丹凤眼',
+    defaultSkinVariant: 'cn_intellectual_olive',
+    defaultEyePreset: 'danfeng_phoenix',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.0, blend_cn_baby: 0.0, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.32, blend_eurasian: 0.08 },
+    morphRecipe: {
+      jawVLine: 0.14, chinLength: 0.12, cheekSoftness: -0.28, noseBridge: 0.24, noseWidth: -0.14,
+      eyeSize: -0.06, eyeAperture: -0.18, eyeAlmond: 0.30, eyeTilt: 0.62, eyeSpacing: 0.18,
+      eyeEpicanthus: 0.48, eyeCrease: -0.30, eyeBag: 0.08,
+      lipFullness: 0.22, mouthSmile: -0.08, foreheadHeight: 0.04, headWidth: -0.02, headLength: 0.03
+    }
+  },
+  {
+    id: 'asia_sweet_cool_bambi',
+    region: 'mix',
+    shortLabel: '🦌 亚洲甜酷纯欲芭比小鹿脸',
+    label: '🦌 亚洲甜酷混血感纯欲芭比小鹿脸 · 饱满额头微翘小鼻配芭比大圆眼',
+    desc: '融合幼态甜美与混血立体感的芭比小鹿骨相，微翘盒型小鼻、嘟嘟花瓣唇与水汪汪小鹿眼',
+    defaultSkinVariant: 'kr_dewy_peach',
+    defaultEyePreset: 'fawn_round',
+    headBlend: { blend_asian_youth: 0.20, blend_cn_scholar: 0.0, blend_cn_baby: 0.18, blend_kr_vline: 0.16, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.12 },
+    morphRecipe: {
+      jawVLine: 0.24, chinLength: -0.14, cheekSoftness: 0.28, noseBridge: 0.20, noseWidth: -0.16,
+      eyeSize: 0.38, eyeAperture: 0.44, eyeAlmond: -0.04, eyeTilt: 0.08, eyeSpacing: 0.04,
+      eyeEpicanthus: -0.24, eyeCrease: 0.74, eyeBag: 0.60,
+      lipFullness: 0.32, mouthSmile: 0.06, foreheadHeight: 0.08, headWidth: -0.01, headLength: -0.02
+    }
+  },
+  {
+    id: 'asia_pear_gentle_sister',
+    region: 'mix',
+    shortLabel: '🌷 亚洲温婉知性名门姐姐微方圆脸',
+    label: '🌷 亚洲温婉知性大家闺秀微方圆脸 · 柔和下颌支点配温柔笑眼',
+    desc: '极具亲和力与贵气的豪门温婉姐姐骨相，适度下颌支撑感、饱满面中与温柔微垂杏眼',
+    defaultSkinVariant: 'cn_jiangnan_jade',
+    defaultEyePreset: 'in_out_double',
+    headBlend: { blend_asian_youth: 0.10, blend_cn_scholar: 0.22, blend_cn_baby: 0.10, blend_kr_vline: 0.0, blend_cn_melon: 0.0, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: -0.16, chinLength: 0.02, cheekSoftness: 0.22, noseBridge: 0.14, noseWidth: -0.06,
+      eyeSize: 0.18, eyeAperture: 0.16, eyeAlmond: 0.12, eyeTilt: -0.16, eyeSpacing: 0.04,
+      eyeEpicanthus: 0.18, eyeCrease: 0.38, eyeBag: 0.44,
+      lipFullness: 0.18, mouthSmile: 0.12, foreheadHeight: 0.04, headWidth: 0.02, headLength: 0.0
+    }
+  },
+  {
+    id: 'asia_noble_swan_oval',
+    region: 'mix',
+    shortLabel: '🦢 亚洲古典天鹅颈修长名媛鹅蛋脸',
+    label: '🦢 亚洲古典芭蕾首席修长天鹅鹅蛋脸 · 黄金三庭五眼零死角正统名媛骨相',
+    desc: '教科书级黄金三庭五眼修长鹅蛋骨相，线条流畅高贵，搭配任何盘发或长发皆惊艳',
+    defaultSkinVariant: 'kr_chaebol_cool',
+    defaultEyePreset: 'almond_classic',
+    headBlend: { blend_asian_youth: 0.0, blend_cn_scholar: 0.24, blend_cn_baby: 0.0, blend_kr_vline: 0.14, blend_cn_melon: 0.14, blend_cn_royal: 0.0, blend_eurasian: 0.0 },
+    morphRecipe: {
+      jawVLine: 0.20, chinLength: 0.08, cheekSoftness: 0.08, noseBridge: 0.24, noseWidth: -0.16,
+      eyeSize: 0.22, eyeAperture: 0.20, eyeAlmond: 0.18, eyeTilt: 0.10, eyeSpacing: 0.0,
+      eyeEpicanthus: 0.06, eyeCrease: 0.52, eyeBag: 0.38,
+      lipFullness: 0.16, mouthSmile: 0.06, foreheadHeight: 0.06, headWidth: -0.03, headLength: 0.03
+    }
   }
+
 ];
 
 /**

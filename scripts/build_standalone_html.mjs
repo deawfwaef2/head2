@@ -50,7 +50,17 @@ const glbFiles = [
   'daz_hair_twin_buns.glb',
   'daz_hair_halfup_princess.glb',
   'daz_hair_twin_braids.glb',
-  'daz_hair_sport_ponytail.glb'
+  'daz_hair_sport_ponytail.glb',
+  'daz_hair_o4saken_long.glb',
+  'daz_hair_blunt_bob_bangs.glb',
+  'daz_hair_inverted_bob_bangs.glb',
+  'daz_hair_french_braid_bun.glb',
+  'daz_hair_double_braid.glb',
+  'daz_hair_unkempt_french_braid.glb',
+  'daz_hair_rehman_bun.glb',
+  'daz_hair_island_princess.glb',
+  'daz_hair_ashley_wave.glb',
+  'daz_hair_bow_bun_braids.glb'
 ];
 
 const embeddedGlbs = {};

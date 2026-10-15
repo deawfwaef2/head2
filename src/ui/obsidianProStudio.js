@@ -5,47 +5,127 @@
 // - 100% Exact Catalog IDs & Two-Way Sync with Desktop 3D Specimens + Studio 3D
 // ============================================================================
 
+import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG } from '../data/defaultCollectibles.js';
+
 const HAIRSTYLE_CARDS = [
+  // I. 短发波波 (12款)
   { id: 'hair_bob01', name: '空气刘海短波波', cat: 'bob', tag: '5,116面', svg: 'bob_air' },
   { id: 'hair_user_photo', name: '清透斜碎波波', cat: 'bob', tag: '方尧平同款', svg: 'bob_side' },
   { id: 'hair_bob02', name: '中分内扣A字波波', cat: 'bob', tag: '修饰下颌', svg: 'bob_center' },
   { id: 'hair_short02', name: '中式清纯学生短发', cat: 'bob', tag: '多层次', svg: 'bob_wave' },
   { id: 'daz_hair_asym_short', name: '法式复古齐眉波波', cat: 'bob', tag: '齐颌复古', svg: 'bob_air' },
   { id: 'daz_hair_pixie_chic', name: '智感露耳精灵短发', cat: 'bob', tag: '清爽露耳', svg: 'pixie' },
+  { id: 'daz_hair_blunt_bob_bangs', name: '日系漫画齐眉学生波波', cat: 'bob', tag: '4,976面', svg: 'bob_air' },
+  { id: 'daz_hair_inverted_bob_bangs', name: '韩系A字前长后短波波', cat: 'bob', tag: '4,996面', svg: 'bob_center' },
+  { id: 'preset_sakura_pink_hime_bob', name: '涩谷樱粉公主切波波', cat: 'bob', tag: '地雷系尾染', svg: 'hime' },
+  { id: 'preset_wolf_mullet_cool', name: '日杂少年感挂耳狼尾', cat: 'bob', tag: '清冷碎发', svg: 'clavicle' },
+  { id: 'preset_FirstLove_air_bob', name: '韩系初恋挂耳内扣短发', cat: 'bob', tag: '空气碎刘海', svg: 'bob_air' },
+
+  // II. 直发长发与锁骨发 (13款)
   { id: 'daz_hair_air_bangs_long', name: '空气刘海披肩中发', cat: 'straight', tag: '状元同款', svg: 'clavicle' },
   { id: 'hair_long01', name: '高颅顶八字黑长直', cat: 'straight', tag: '柔顺丝缎', svg: 'long_center' },
   { id: 'daz_hair_hime', name: '国风姬发式公主切', cat: 'straight', tag: '齐腮阶梯', svg: 'hime' },
   { id: 'hair_short04', name: '都市柔顺锁骨发', cat: 'straight', tag: '齐眉轻熟', svg: 'clavicle' },
   { id: 'daz_hair_side_long', name: '知性大偏分长直发', cat: 'straight', tag: '御姐气场', svg: 'long_straight' },
   { id: 'daz_hair_wolf_clavicle', name: '日杂碎发层次锁骨', cat: 'straight', tag: '轻盈羽化', svg: 'clavicle' },
+  { id: 'daz_hair_o4saken_long', name: '东方垂顺及胸黑长直', cat: 'straight', tag: '13,268面', svg: 'long_straight' },
+  { id: 'preset_hime_cut_long', name: '京都齐腮一刀切姬发', cat: 'straight', tag: '正统公主切', svg: 'hime' },
+  { id: 'preset_chaebol_sleek_long', name: '财阀露额挽耳黑长直', cat: 'straight', tag: '高定露双耳', svg: 'long_center' },
+  { id: 'preset_gentle_sister_clavicle', name: '冷茶棕三七斜分锁骨发', cat: 'straight', tag: '温柔学姐', svg: 'clavicle' },
+  { id: 'preset_ocean_blue_hime_long', name: '星空蓝挑染姬发黑长直', cat: 'straight', tag: '二次元歌姬', svg: 'hime' },
+
+  // III. 浪漫卷发与大波浪 (11款)
   { id: 'daz_hair_curtain_wave', name: '港风八字大波浪', cat: 'wave', tag: '高颅蓬松', svg: 'wave_big' },
   { id: 'daz_hair_hazel_wave', name: '千金中分浪漫卷发', cat: 'wave', tag: '温柔披肩', svg: 'wave_side' },
   { id: 'daz_hair_wavy_bob', name: '复古名伶偏分短卷', cat: 'wave', tag: '名伶波浪', svg: 'bob_wave' },
   { id: 'daz_hair_glam_wave', name: '超模大背头女神卷', cat: 'wave', tag: '丰盈气场', svg: 'wave_cloud' },
   { id: 'daz_hair_mermaid_curl', name: '法式丰盈人鱼卷发', cat: 'wave', tag: '羊毛长卷', svg: 'wave_water' },
   { id: 'daz_hair_french_lazy_roll', name: '慵懒法式内扣卷波', cat: 'wave', tag: '螺旋微卷', svg: 'bob_wave' },
+  { id: 'daz_hair_island_princess', name: '法式名媛内扣卷曲短发', cat: 'wave', tag: '2,980面', svg: 'bob_wave' },
+  { id: 'daz_hair_ashley_wave', name: '韩系S型水波纹长卷发', cat: 'wave', tag: '8,467面', svg: 'wave_big' },
+  { id: 'preset_hk_retro_glam_wave', name: '90港风大偏分大波浪', cat: 'wave', tag: '红毯明艳', svg: 'wave_big' },
+  { id: 'preset_ice_queen_silver_wave', name: '极光银灰挑染人鱼卷', cat: 'wave', tag: '清冷神女', svg: 'wave_water' },
+  { id: 'preset_burgundy_siren_wave', name: '波尔多酒红八字女神卷', cat: 'wave', tag: '冷白显白', svg: 'wave_side' },
+
+  // IV. 新中式古典盘发与发髻 (13款)
   { id: 'hair_braid01', name: '新中式斜刘海盘发', cat: 'updo', tag: '古典温婉', svg: 'updo_high' },
   { id: 'daz_hair_adrienne_updo', name: '法式名媛编发盘发', cat: 'updo', tag: '微卷斜分', svg: 'updo_braid' },
   { id: 'daz_hair_low_chignon', name: '温婉八字低挽发髻', cat: 'updo', tag: '江南学姐', svg: 'updo_low' },
   { id: 'daz_hair_crown_braid', name: '古典皇冠交织盘发', cat: 'updo', tag: '21,016面', svg: 'updo_braid' },
   { id: 'daz_hair_ballerina_bun', name: '芭蕾露额高丸子头', cat: 'updo', tag: '天鹅颈线', svg: 'bun_high' },
+  { id: 'daz_hair_french_braid_bun', name: '法式蝎子辫高定盘髻', cat: 'updo', tag: '7,622面', svg: 'updo_braid' },
+  { id: 'daz_hair_rehman_bun', name: '财阀千金高颅丸子髻', cat: 'updo', tag: '4,432面', svg: 'bun_high' },
+  { id: 'daz_hair_bow_bun_braids', name: '国风蝴蝶结双髻盘发', cat: 'updo', tag: '5,372面', svg: 'updo_high' },
+  { id: 'preset_guofeng_twin_buns', name: '新中式公主切双丸子', cat: 'updo', tag: '甜酷哪吒头', svg: 'twin_buns' },
+  { id: 'preset_french_lazy_chignon', name: '法式碎刘海龙须低盘发', cat: 'updo', tag: '松弛感贵气', svg: 'updo_low' },
+  { id: 'preset_song_aesthetic_updo', name: '宋制八字蝴蝶结高髻', cat: 'updo', tag: '清雅仕女', svg: 'updo_high' },
+  { id: 'preset_ballet_core_ribbons', name: '芭蕾空气刘海高丸子', cat: 'updo', tag: 'S型龙须', svg: 'bun_high' },
+  { id: 'preset_clean_fit_sleek_bun', name: '高智露耳极简低盘发', cat: 'updo', tag: 'CleanFit', svg: 'updo_low' },
+  { id: 'preset_imperial_crown_braid_hime', name: '宫廷皇冠盘髻公主切', cat: 'updo', tag: '华贵贵女', svg: 'updo_braid' },
+
+  // V. 元气束发、马尾与编发 (12款)
   { id: 'hair_ponytail01', name: '千金露耳高扎长辫', cat: 'tail', tag: '27,816面', svg: 'ponytail_high' },
   { id: 'daz_hair_twin_buns', name: '甜酷高颅双丸子头', cat: 'tail', tag: '元气幼态', svg: 'twin_buns' },
   { id: 'daz_hair_halfup_princess', name: '千金中分半扎公主', cat: 'tail', tag: '仙气披肩', svg: 'half_up' },
   { id: 'daz_hair_twin_braids', name: '学院风中分双麻花', cat: 'tail', tag: '清纯初恋', svg: 'braids' },
   { id: 'daz_hair_sport_ponytail', name: '元气八字清爽短束', cat: 'tail', tag: '利落收颈', svg: 'ponytail_low' },
+  { id: 'daz_hair_double_braid', name: '邻家少女对称双麻花辫', cat: 'tail', tag: '9,866面', svg: 'braids' },
+  { id: 'daz_hair_unkempt_french_braid', name: '森系微凌乱单侧长辫', cat: 'tail', tag: '8,200面', svg: 'ponytail_low' },
+  { id: 'preset_jk_twin_ponytail', name: '东京JK空气刘海双辫', cat: 'tail', tag: '学院甜妹', svg: 'braids' },
+  { id: 'preset_kpop_curtain_ponytail', name: '韩团八字刘海高马尾', cat: 'tail', tag: '打歌舞台', svg: 'ponytail_high' },
+  { id: 'preset_republic_student_braids', name: '民国三七斜分双麻花', cat: 'tail', tag: '江南女校', svg: 'braids' },
+  { id: 'preset_mori_girl_unkempt_braid', name: '森系焦糖棕慵懒长辫', cat: 'tail', tag: '氧气少女', svg: 'ponytail_low' },
+  { id: 'preset_sweet_milk_tea_halfup', name: '焦糖奶茶公主切半扎', cat: 'tail', tag: '甜妹千金', svg: 'half_up' },
+  { id: 'preset_cyber_hologram_twin', name: '赛博银挑染微碎双辫', cat: 'tail', tag: '机能少女', svg: 'braids' },
   { id: 'none', name: '无发解剖观察态', cat: 'tail', tag: '完整露颅', svg: 'pixie' },
 ];
 
 const CHARACTER_CARDS = [
-  { id: 'cn_oval_scholar', preset: 'fangyaoping', name: '方尧平 · 书卷鹅蛋', sub: '19岁怀集状元原生脸', skin: 'cn_scholar_natural' },
-  { id: 'cn_round_babyface', preset: 'user_photo', name: '初夏 · 幼态甜妹', sub: '饱满婴儿肥圆润杏眼', skin: 'kr_dewy_peach' },
-  { id: 'kr_idol_vline', preset: 'linxi', name: '林汐 · 财阀千金V脸', sub: '利落下颌冷艳丹凤', skin: 'kr_chaebol_cool' },
-  { id: 'cn_classical_melon', preset: 'suwan', name: '苏晚 · 江南古典瓜子', sub: '温婉柳叶眉仕女骨相', skin: 'cn_jiangnan_jade' },
-  { id: 'kr_sweet_heart', preset: 'qianxue', name: '千雪 · 女团初恋心形', sub: '饱满上镜桃花眼骨相', skin: 'kr_firstlove_camellia' },
-  { id: 'cn_cold_royal', preset: 'shenzhiwei', name: '沈知微 · 高智御姐', sub: '立体颧弓高鼻梁冷艳', skin: 'cn_intellectual_olive' },
-  { id: 'cn_pure_campus_bell', preset: 'fangyaoping', name: '东方冷白校花脸', sub: '纯净素颜初恋原模', skin: 'cn_porcelain_ivory' },
-  { id: 'eurasian_sculpted_mix', preset: 'shenzhiwei', name: '西域丝绒轻混血', sub: '深邃眉弓平行大双', skin: 'eurasian_velvet_rose' },
+  // --- 中式骨相 (14款) ---
+  { id: 'cn_oval_scholar', region: 'cn', preset: 'fangyaoping', name: '方尧平 · 书卷鹅蛋', sub: '19岁怀集状元原生脸', skin: 'cn_scholar_natural' },
+  { id: 'cn_round_babyface', region: 'cn', preset: 'user_photo', name: '初夏 · 幼态娃娃圆脸', sub: '饱满婴儿肥圆润杏眼', skin: 'kr_dewy_peach' },
+  { id: 'cn_classical_melon', region: 'cn', preset: 'suwan', name: '苏晚 · 江南古典瓜子', sub: '温婉柳叶眉仕女骨相', skin: 'cn_jiangnan_jade' },
+  { id: 'cn_cold_royal', region: 'cn', preset: 'shenzhiwei', name: '沈知微 · 清冷高智菱形', sub: '立体颧弓高鼻梁冷艳', skin: 'cn_intellectual_olive' },
+  { id: 'cn_pure_campus_bell', region: 'cn', preset: 'fangyaoping', name: '东方冷白校花鹅蛋', sub: '纯净素颜初恋原模', skin: 'cn_porcelain_ivory' },
+  { id: 'cn_tang_peony', region: 'cn', preset: 'suwan', name: '京派珠圆玉润贵女', sub: '国泰民安端庄鹅蛋脸', skin: 'cn_jiangnan_jade' },
+  { id: 'cn_northern_danfeng', region: 'cn', preset: 'shenzhiwei', name: '华北古典丹凤瑞凤', sub: '平缓眉弓内尖外挑凤眼', skin: 'cn_porcelain_ivory' },
+  { id: 'cn_cat_fox_siren', region: 'cn', preset: 'linxi', name: '钓系狐系清冷名伶', sub: '窄长中庭魅惑吊梢狐眼', skin: 'kr_chaebol_cool' },
+  { id: 'cn_wide_catfish_chic', region: 'cn', preset: 'shenzhiwei', name: '宽眼距电影高级脸', sub: '舒展留白微方颌单睑', skin: 'cn_intellectual_olive' },
+  { id: 'cn_imperial_square', region: 'cn', preset: 'fangyaoping', name: '东方英气端方青衣', sub: '清晰下颌折角开扇内双', skin: 'cn_scholar_natural' },
+  { id: 'cn_puppy_innocent', region: 'cn', preset: 'user_photo', name: '纯欲无辜小狗下至', sub: '满胶原苹果肌下至圆眼', skin: 'kr_dewy_peach' },
+  { id: 'cn_jiangnan_water_lily', region: 'cn', preset: 'suwan', name: '江南烟雨清瘦白莲', sub: '窄长清减双颊古典内双', skin: 'cn_jiangnan_jade' },
+  { id: 'cn_sichuan_doll_peach', region: 'cn', preset: 'qianxue', name: '川渝灵动蜜桃甜妹', sub: '高位苹果肌短翘尖下巴', skin: 'kr_dewy_peach' },
+  { id: 'cn_dunhuang_apsara_noble', region: 'cn', preset: 'suwan', name: '敦煌飞天盛唐神女', sub: '饱满额弓希腊鼻瑞凤眸', skin: 'cn_jiangnan_jade' },
+
+  // --- 韩系女团与财阀骨相 (8款) ---
+  { id: 'kr_idol_vline', region: 'kr', preset: 'linxi', name: '林汐 · 财阀千金V脸', sub: '利落下颌冷艳丹凤', skin: 'kr_chaebol_cool' },
+  { id: 'kr_sweet_heart', region: 'kr', preset: 'qianxue', name: '千雪 · 女团初恋心形', sub: '饱满上镜桃花眼骨相', skin: 'kr_firstlove_camellia' },
+  { id: 'kr_waterglow_idol', region: 'kr', preset: 'user_photo', name: '首尔水光画报神颜', sub: '奶油肌饱满卧蚕小V脸', skin: 'kr_dewy_peach' },
+  { id: 'kr_chaebol_heiress', region: 'kr', preset: 'linxi', name: '清潭洞财阀长女鹅蛋', sub: '修长窄鹅蛋高直鼻名媛', skin: 'kr_chaebol_cool' },
+  { id: 'kr_cat_idol_ace', region: 'kr', preset: 'qianxue', name: '韩团四代神颜猫系ACE', sub: '精致短V脸奶凶上挑猫眼', skin: 'kr_firstlove_camellia' },
+  { id: 'kr_quail_egg_pure', region: 'kr', preset: 'user_photo', name: '韩系零棱角流畅鹌鹑蛋', sub: '360°无死角头包脸小鹅蛋', skin: 'kr_dewy_peach' },
+  { id: 'kr_mellow_spoon_chic', region: 'kr', preset: 'fangyaoping', name: '忠武路电影感淡颜女主', sub: '留白清冷鹅蛋高级单睑', skin: 'cn_porcelain_ivory' },
+  { id: 'kr_bunny_firstlove', region: 'kr', preset: 'qianxue', name: '首尔国民初恋兔系甜妹', sub: '澎润苹果肌弯弯月牙眼', skin: 'kr_firstlove_camellia' },
+
+  // --- 日系透明感与杂志骨相 (8款) ---
+  { id: 'jp_yamato_clear', region: 'jp', preset: 'fangyaoping', name: '日系透明感森系少女', sub: '短人中微翘鼻小鹿圆眼', skin: 'cn_porcelain_ivory' },
+  { id: 'jp_showa_cinema_muse', region: 'jp', preset: 'suwan', name: '昭和银幕绝代佳人鹅蛋', sub: '端庄明眸皓齿平行大杏眼', skin: 'cn_porcelain_ivory' },
+  { id: 'jp_tokyo_sweet_pear', region: 'jp', preset: 'user_photo', name: '东京日杂甜美微梨形脸', sub: '下颊软糯胶原无辜下至眼', skin: 'kr_dewy_peach' },
+  { id: 'jp_kyoto_noble_slender', region: 'jp', preset: 'suwan', name: '京都华族清冷狭长瓜子', sub: '纤薄骨相古典细长单凤眼', skin: 'cn_jiangnan_jade' },
+  { id: 'jp_harajuku_fairy_triangle', region: 'jp', preset: 'qianxue', name: '原宿二次元精灵倒三角', sub: '饱满额头尖颏漫画大鹿眼', skin: 'cn_porcelain_ivory' },
+  { id: 'jp_idol_round_dimple', region: 'jp', preset: 'user_photo', name: '坂道系元气酒窝小圆脸', sub: '甜美梨涡苹果肌治愈笑眼', skin: 'kr_firstlove_camellia' },
+  { id: 'jp_cool_model_Clean', region: 'jp', preset: 'shenzhiwei', name: '东京银座高冷盐系超模', sub: '清癯微凹面颊疏离眼神', skin: 'cn_intellectual_olive' },
+  { id: 'jp_forest_mori_soft', region: 'jp', preset: 'fangyaoping', name: '北海道氧气感森女淡颜', sub: '柔和宽眼距微翘小鼻杏眼', skin: 'cn_scholar_natural' },
+
+  // --- 港台与亚欧混血骨相 (8款) ---
+  { id: 'eurasian_sculpted_mix', region: 'mix', preset: 'shenzhiwei', name: '东亚西域丝绒轻混血', sub: '深邃眉弓高鼻梁平行大双', skin: 'eurasian_velvet_rose' },
+  { id: 'hk_90s_glamour_queen', region: 'mix', preset: 'linxi', name: '90年代香江浓颜女神', sub: '英气微方颌美人沟桃花眼', skin: 'kr_firstlove_camellia' },
+  { id: 'tw_campus_sweet_oxygen', region: 'mix', preset: 'fangyaoping', name: '台北文艺校园氧气校花', sub: '温润无棱角鹅蛋含笑杏眼', skin: 'cn_scholar_natural' },
+  { id: 'cyber_cg_angel_v', region: 'mix', preset: 'qianxue', name: '次世代CG建模黄金V脸', sub: '极致对称小头包脸大眼', skin: 'cn_porcelain_ivory' },
+  { id: 'asia_high_fashion_runway', region: 'mix', preset: 'shenzhiwei', name: '高定T台冰山超模钻石脸', sub: '高颧弓削瘦双颊上挑凤眼', skin: 'cn_intellectual_olive' },
+  { id: 'asia_sweet_cool_bambi', region: 'mix', preset: 'user_photo', name: '亚洲甜酷纯欲芭比小鹿', sub: '混血翘鼻嘟嘟唇芭比圆眼', skin: 'kr_dewy_peach' },
+  { id: 'asia_pear_gentle_sister', region: 'mix', preset: 'suwan', name: '名门温婉知性姐姐方圆脸', sub: '柔和下颌支点温柔笑眼', skin: 'cn_jiangnan_jade' },
+  { id: 'asia_noble_swan_oval', region: 'mix', preset: 'linxi', name: '古典芭蕾天鹅修长鹅蛋脸', sub: '黄金三庭五眼正统名媛', skin: 'kr_chaebol_cool' },
 ];
 
 const SKIN_CARDS = [
@@ -118,12 +198,51 @@ function renderHairSvg(type) {
 function setFormValueAndTrigger(id, value, eventType = 'input') {
   const el = document.getElementById(id);
   if (!el) return false;
+  if (el.tagName === 'SELECT' && value !== undefined && value !== null) {
+    const strVal = String(value);
+    const hasOpt = Array.from(el.options || []).some((o) => o.value === strVal);
+    if (!hasOpt) {
+      const opt = document.createElement('option');
+      opt.value = strVal;
+      opt.textContent = strVal;
+      el.appendChild(opt);
+    }
+  }
   el.value = value;
   el.dispatchEvent(new Event(eventType, { bubbles: true }));
   if (eventType !== 'change') {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
   return true;
+}
+
+function syncCatalogSelectOptions() {
+  for (const selId of ['vcd-hair-style', 'sel-hair-style']) {
+    const sel = document.getElementById(selId);
+    if (!sel) continue;
+    const existing = new Set(Array.from(sel.options).map((o) => o.value));
+    for (const h of REAL_HAIR_CATALOG) {
+      if (!existing.has(h.id)) {
+        const opt = document.createElement('option');
+        opt.value = h.id;
+        opt.textContent = h.shortLabel || h.label || h.id;
+        sel.appendChild(opt);
+      }
+    }
+  }
+  for (const selId of ['vcd-sel-face-archetype', 'sel-face-archetype']) {
+    const sel = document.getElementById(selId);
+    if (!sel) continue;
+    const existing = new Set(Array.from(sel.options).map((o) => o.value));
+    for (const fa of FACE_ARCHETYPE_CATALOG) {
+      if (!existing.has(fa.id)) {
+        const opt = document.createElement('option');
+        opt.value = fa.id;
+        opt.textContent = fa.shortLabel || fa.label || fa.id;
+        sel.appendChild(opt);
+      }
+    }
+  }
 }
 
 function formatSliderDisplay(val, fmt) {
@@ -176,6 +295,7 @@ export function initObsidianProStudio() {
 
   // 2. Transform #desktop-overlay-bar into a sleek Minimalist Capsule Dock
   transformTopOverlayBar();
+  syncCatalogSelectOptions();
 
   // 3. Clean up verbose slider labels across existing drawers/windows
   cleanExistingVerboseLabels();
@@ -216,18 +336,18 @@ export function initObsidianProStudio() {
       <div class="obs-pane active" data-obs-pane="hair">
         <div class="obs-section">
           <div class="obs-sec-head">
-            <span class="obs-sec-title">29款高定发型图鉴</span>
+            <span class="obs-sec-title">61款东亚全覆盖3D高定发型图鉴</span>
             <span id="obs-hair-current-label" class="obs-sec-sub">清透斜碎波波</span>
           </div>
           <div class="obs-filter-strip" id="obs-hair-cat-strip">
-            <button class="obs-filter-pill active" data-hair-cat="all">全部 (29)</button>
+            <button class="obs-filter-pill active" data-hair-cat="all">全部 (${HAIRSTYLE_CARDS.length})</button>
             <button class="obs-filter-pill" data-hair-cat="bob">波波短发</button>
             <button class="obs-filter-pill" data-hair-cat="straight">直发锁骨</button>
             <button class="obs-filter-pill" data-hair-cat="wave">浪漫卷发</button>
             <button class="obs-filter-pill" data-hair-cat="updo">古典盘发</button>
             <button class="obs-filter-pill" data-hair-cat="tail">马尾编发</button>
           </div>
-          <div class="obs-card-grid" id="obs-hair-card-grid">
+          <div class="obs-card-grid" id="obs-hair-card-grid" style="max-height:250px;overflow-y:auto;padding-right:2px;">
             ${HAIRSTYLE_CARDS.map((h) => `
               <div class="obs-visual-card ${h.id === 'hair_user_photo' ? 'active' : ''}" data-hair-id="${h.id}" data-hair-cat="${h.cat}">
                 <div class="obs-card-thumb">${renderHairSvg(h.svg)}</div>
@@ -345,12 +465,19 @@ export function initObsidianProStudio() {
       <div class="obs-pane" data-obs-pane="character">
         <div class="obs-section">
           <div class="obs-sec-head">
-            <span class="obs-sec-title">8款东方女性头模流派</span>
-            <span class="obs-sec-sub">点选切换骨相与原皮</span>
+            <span class="obs-sec-title">38款东亚全覆盖真实3D骨相脸型</span>
+            <span id="obs-char-current-label" class="obs-sec-sub">点选切换骨相与原皮</span>
           </div>
-          <div class="obs-card-grid cols-2" id="obs-char-card-grid">
+          <div class="obs-filter-strip" id="obs-char-region-strip" style="margin-bottom:8px;">
+            <button class="obs-filter-pill active" data-char-region="all">全部 (${CHARACTER_CARDS.length})</button>
+            <button class="obs-filter-pill" data-char-region="cn">中式骨相 (14)</button>
+            <button class="obs-filter-pill" data-char-region="kr">韩系女团 (8)</button>
+            <button class="obs-filter-pill" data-char-region="jp">日系透明 (8)</button>
+            <button class="obs-filter-pill" data-char-region="mix">港台与混血 (8)</button>
+          </div>
+          <div class="obs-card-grid cols-2" id="obs-char-card-grid" style="max-height:245px;overflow-y:auto;padding-right:2px;">
             ${CHARACTER_CARDS.map((c, i) => `
-              <div class="obs-visual-card ${i === 0 ? 'active' : ''}" data-char-arch="${c.id}" data-char-preset="${c.preset}" style="flex-direction:row;text-align:left;padding:8px 10px;gap:9px;">
+              <div class="obs-visual-card ${i === 0 ? 'active' : ''}" data-char-arch="${c.id}" data-char-region="${c.region || 'cn'}" data-char-preset="${c.preset}" style="flex-direction:row;text-align:left;padding:8px 10px;gap:9px;">
                 <div style="width:10px;height:28px;border-radius:4px;background:rgba(212,180,131,0.45);flex-shrink:0;"></div>
                 <div style="min-width:0;flex:1;">
                   <div class="obs-card-title" style="font-size:12px;font-weight:600;">${c.name}</div>
@@ -942,15 +1069,27 @@ function wireObsidianStudioEvents(studio) {
     setFormValueAndTrigger('col-hair-tip', e.target.value, 'input');
   });
 
-  // 8 Character archetype cards
+  // Character regional filter pills (cn / kr / jp / mix)
+  studio.querySelectorAll('#obs-char-region-strip .obs-filter-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const reg = pill.dataset.charRegion;
+      studio.querySelectorAll('#obs-char-region-strip .obs-filter-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      studio.querySelectorAll('#obs-char-card-grid .obs-visual-card').forEach((card) => {
+        const match = reg === 'all' || card.dataset.charRegion === reg;
+        card.style.display = match ? 'flex' : 'none';
+      });
+    });
+  });
+
+  // 38 Character archetype cards
   studio.querySelectorAll('#obs-char-card-grid .obs-visual-card').forEach((card) => {
     card.addEventListener('click', () => {
       const archId = card.dataset.charArch;
-      const presetId = card.dataset.charPreset;
       studio.querySelectorAll('#obs-char-card-grid .obs-visual-card').forEach((c) => c.classList.toggle('active', c === card));
+      const lbl = document.getElementById('obs-char-current-label');
+      if (lbl) lbl.textContent = card.querySelector('.obs-card-title')?.textContent || archId;
       setFormValueAndTrigger('vcd-sel-face-archetype', archId, 'change');
       setFormValueAndTrigger('sel-face-archetype', archId, 'change');
-      if (presetId) setFormValueAndTrigger('sel-base-model', presetId, 'change');
     });
   });
 
