@@ -6,7 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createStudioRig, createBackdrop, LIGHT_PRESETS } from './studioLighting.js';
 import { upgradeSkinMaterial, setSkinParams } from './skinMaterial.js';
 import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHairMaterials, applyHairColor } from './featureMaterials.js';
-import { createPostChain, FILM_PRESETS, POST_DEFAULTS } from './postChain.js';
+import { createPostChain, createAccumulator, FILM_PRESETS, POST_DEFAULTS } from './postChain.js';
 import { createDisplayStand, STAND_STYLES } from './displayStand.js';
 import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture, scalpDistanceAttribute } from './strandHair.js';
 import { HEAD_GLB, HAIRS } from './assets.gen.js';
@@ -15,7 +15,7 @@ const qs = new URLSearchParams(location.search);
 const QA = qs.has('qa');
 const $ = (id) => document.getElementById(id);
 const STORE_KEY = 'safebust-studio-v1';
-const SETTINGS_VER = 2;
+const SETTINGS_VER = 3;
 
 // ---------------- 数据定义 ----------------
 const HAIR_COLORS = {
@@ -59,10 +59,10 @@ const LOOKS = {
 
 // 画质档位：决定分辨率上限、抗锯齿、AO 采样、阴影精度、发丝密度
 const QUALITY = {
-  smooth: { label: '流畅（核显/笔记本）', pr: 1.0, msaa: 0, ao: 8, shadow: 1024, density: 'low', hairMode: 'card' },
-  balanced: { label: '均衡（推荐）', pr: 1.25, msaa: 2, ao: 10, shadow: 2048, density: 'low', hairMode: 'strand' },
-  high: { label: '高画质（独显）', pr: 1.5, msaa: 4, ao: 12, shadow: 2048, density: 'mid', hairMode: 'strand' },
-  ultra: { label: '极致（高端独显）', pr: 2.0, msaa: 4, ao: 16, shadow: 4096, density: 'high', hairMode: 'strand' },
+  smooth: { label: '流畅（核显/笔记本）', pr: 1.0, msaa: 0, ao: 8, shadow: 2048, density: 'low', hairMode: 'strand', accum: 12 },
+  balanced: { label: '均衡（推荐）', pr: 1.25, msaa: 2, ao: 12, shadow: 2048, density: 'mid', hairMode: 'strand', accum: 20 },
+  high: { label: '高画质（独显）', pr: 1.5, msaa: 4, ao: 16, shadow: 4096, density: 'high', hairMode: 'strand', accum: 28 },
+  ultra: { label: '极致（高端独显）', pr: 2.0, msaa: 4, ao: 16, shadow: 4096, density: 'ultra', hairMode: 'strand', accum: 40 },
 };
 function defaultCharacter() {
   return {
@@ -82,7 +82,7 @@ function defaultCharacter() {
   };
 }
 function defaultSettings() {
-  return { quality: 'auto', hairMode: 'strand', density: 'low', pixelRatio: 0, shadowRes: 2048, blink: true, idle: true, toneMap: 'neutral', petSize: 340, ao: true, msaa: 2, interactScale: 0.6, maxFps: 60 };
+  return { quality: 'auto', hairMode: 'strand', density: 'low', pixelRatio: 0, shadowRes: 2048, blink: true, idle: true, toneMap: 'neutral', petSize: 340, ao: true, msaa: 2, interactScale: 0.6, maxFps: 60, accum: true, hairLOD: true };
 }
 function loadStore() {
   try { const s = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); if (s && Array.isArray(s.items)) return s; } catch (e) { /* ignore */ }
@@ -104,7 +104,9 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPrefere
 const isSoftware = (() => { try { const gl = renderer.getContext(); const ext = gl.getExtension('WEBGL_debug_renderer_info'); const r = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''; return /swiftshader|llvmpipe|software/i.test(r); } catch (e) { return false; } })();
 function qProfile() { const k = S.quality === 'auto' ? (isSoftware ? 'smooth' : 'balanced') : S.quality; return QUALITY[k] || QUALITY.balanced; }
 let interacting = false;
+let prOverride = 0;
 function pixelRatio() {
+  if (prOverride) return prOverride;
   const base = S.pixelRatio || Math.min(window.devicePixelRatio || 1, qProfile().pr);
   return interacting ? Math.max(0.5, base * S.interactScale) : base;
 }
@@ -134,7 +136,8 @@ let hairMeshes = []; let hairMats = null; let hairCards = null; let strandMesh =
 const strandCache = new Map();
 let compare = false; // A/B：原始渲染
 let dirty = 3; // 按需渲染：>0 时才渲染（静止画面不占 GPU）
-function invalidate(n = 2) { dirty = Math.max(dirty, n); }
+let accum = null;
+function invalidate(n = 2) { dirty = Math.max(dirty, n); accum?.reset(); }
 function invalidateShadow() { renderer.shadowMap.needsUpdate = true; invalidate(); }
 
 const loader = new GLTFLoader();
@@ -260,6 +263,21 @@ function applyHairLook() {
   applyMaterials();
 }
 
+// 头发 LOD：拖动/缩放时临时显示发片（很快），停下后换回真发丝做精修
+let hairLODActive = false;
+function setHairLOD(cards) {
+  if (!strandMesh || compare || S.hairMode !== 'strand' || cards === hairLODActive) return;
+  hairLODActive = cards;
+  strandMesh.visible = !cards;
+  for (const m of hairMeshes) if (m.userData.afterOnly) m.visible = cards;
+  if (hairMats) {
+    hairMats.shared.uScalpFade.value = cards ? 0.0 : 0.010;
+    hairMats.shared.uInset.value = cards ? 0.0 : 0.0025;
+    hairMats.core.alphaTest = cards ? 0.45 : 0.62;
+    hairMats.core.color.setRGB(...hairRGB().map((v) => v * (cards ? 1 : 0.3)));
+  }
+}
+
 // ---------------- 材质（A/B 对比） ----------------
 async function applySkinTexture() {
   const tex = await loadSkinTexture(ch.skin);
@@ -269,6 +287,7 @@ async function applySkinTexture() {
   builtinSkin.map = tex || so.map; builtinSkin.needsUpdate = true; so.needsUpdate = true;
 }
 function applyMaterials() {
+  hairLODActive = false;
   const after = !compare;
   parts.skin.material = after ? builtinSkin : origMats.get(parts.skin);
   for (const e of parts.eyes || []) {
@@ -562,6 +581,8 @@ function buildSettings() {
     applyMaterials(); buildSettings(); toast('已切换：' + qProfile().label);
   });
   select(A, '帧率上限', [['30', '30 fps（省电、风扇安静）'], ['60', '60 fps']], () => String(S.maxFps), (v) => { S.maxFps = +v; saveStore(); });
+  check(A, '静止时多帧超采样精修（越停越清晰）', () => S.accum, (v) => { S.accum = v; saveStore(); invalidate(); });
+  check(A, '拖动时头发切换为发片（大幅减少卡顿）', () => S.hairLOD, (v) => { S.hairLOD = v; saveStore(); });
   slider(A, '拖动时分辨率（越低越跟手）', 0.35, 1, 0.05, () => S.interactScale, (v) => { S.interactScale = v; saveStore(); });
   A.append(h('div', { class: 'note' }, '画面静止时不再重复渲染（GPU 占用接近 0）；拖动/缩放时自动降分辨率并暂停 AO，松手后渲染一帧满画质。'));
   select(A, '头发渲染', [['strand', '真发丝（发片→发丝转换）'], ['card', '发片（更快）']], () => S.hairMode, async (v) => { S.hairMode = v; saveStore(); if (v === 'strand') await buildStrands(); applyMaterials(); });
@@ -572,7 +593,7 @@ function buildSettings() {
   check(A, '全局环境光遮蔽（GTAO）', () => S.ao, (v) => { S.ao = v; saveStore(); repost(); });
   const B = section(P, '神态与桌宠', true);
   check(B, '自然眨眼', () => S.blink, (v) => { S.blink = v; saveStore(); });
-  check(B, '桌宠轻微呼吸起伏 / 偶尔说话', () => S.idle, (v) => { S.idle = v; saveStore(); });
+  check(B, '桌宠偶尔说话提醒', () => S.idle, (v) => { S.idle = v; saveStore(); });
   slider(B, '桌宠窗口大小', 220, 560, 10, () => S.petSize, (v) => { S.petSize = v; saveStore(); if (document.body.classList.contains('pet')) layoutPet(); });
   const C = section(P, '数据');
   C.append(h('button', { class: 'btn ghost', onclick: () => { if (!confirm('清空全部收藏与设置？此操作不可恢复（建议先导出）。')) return; localStorage.removeItem(STORE_KEY); location.reload(); } }, '🗑 清空本地数据'));
@@ -588,7 +609,7 @@ function layoutPet() {
   pet.x = Math.min(Math.max(0, pet.x), window.innerWidth - w); pet.y = Math.min(Math.max(0, pet.y), window.innerHeight - hgt - 42);
   win.style.left = pet.x + 'px'; win.style.top = pet.y + 'px';
   renderer.setPixelRatio(pixelRatio()); renderer.setSize(w, hgt, false);
-  camera.clearViewOffset(); camera.aspect = w / hgt; camera.updateProjectionMatrix(); post?.setSize(w, hgt); invalidate();
+  camera.clearViewOffset(); camera.aspect = w / hgt; camera.updateProjectionMatrix(); post?.setSize(w, hgt); resizeAccum(); invalidate();
 }
 function enterPet() {
   document.body.classList.add('pet', 'hideui');
@@ -642,7 +663,12 @@ function bindChrome() {
     $('abLabel').style.display = compare ? 'block' : 'none'; $('abLabel').textContent = '⬜ 原始渲染（未启用写实管线）';
     applyMaterials(); applyLighting();
   };
-  $('btnShot').onclick = () => { renderFrame(); canvas.toBlob((b) => download(`${ch.name}_${Date.now()}.png`, b), 'image/png'); };
+  $('btnShot').onclick = async () => {
+    busy('正在渲染超清截图（2 倍分辨率 × 32 帧超采样）…'); await new Promise((r) => setTimeout(r, 40));
+    const pr0 = renderer.getPixelRatio(); prOverride = Math.min(3, pr0 * 2); onResize(); setHairLOD(false);
+    accum?.reset(); for (let i = 0; i < 32; i++) renderFrame(true);
+    canvas.toBlob((b) => { download(`${ch.name}_超清_${Date.now()}.png`, b); prOverride = 0; onResize(); busy(null); }, 'image/png');
+  };
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('pet')) exitPet(); });
 }
 function applyViewOffset() {
@@ -656,17 +682,33 @@ function onResize() {
   renderer.setPixelRatio(pixelRatio());
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight); post?.setSize(window.innerWidth, window.innerHeight);
-  applyViewOffset(); invalidate();
+  resizeAccum(); applyViewOffset(); invalidate();
 }
+function resizeAccum() { if (!accum) return; const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); accum.setSize(sz.x, sz.y); }
 window.addEventListener('resize', onResize);
 
 // ---------------- 主循环 ----------------
 const clock = new THREE.Clock();
 const _dbs = new THREE.Vector2();
 const blink = { next: 2.5, t: -1 };
-function renderFrame() {
+function accumTarget() { return QA ? Math.min(6, qProfile().accum) : qProfile().accum; }
+function renderFrame(forceAccum) {
   if (strandMat) { const hpx = renderer.getDrawingBufferSize(_dbs).y; setStrandParams(strandMat, { pxScale: 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.max(1, hpx) }); }
-  if (!compare && post) post.render(clock.getElapsedTime()); else renderer.render(scene, camera);
+  const useAccum = !compare && post && (S.accum || forceAccum) && !interacting;
+  if (useAccum) {
+    if (!accum) { accum = createAccumulator(renderer); const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); accum.setSize(sz.x, sz.y); }
+    const sz = renderer.getDrawingBufferSize(_dbs);
+    const [jx, jy] = accum.count === 0 ? [0, 0] : accum.jitter(accum.count);
+    camera.updateProjectionMatrix();
+    camera.projectionMatrix.elements[8] += (jx * 2) / sz.x; camera.projectionMatrix.elements[9] += (jy * 2) / sz.y;
+    camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();
+    post.composer.renderToScreen = false;
+    post.render(0.5); // 固定颗粒种子：累积时颗粒不被平均掉
+    post.composer.renderToScreen = true;
+    camera.updateProjectionMatrix();
+    accum.accumulate(post.composer.readBuffer.texture);
+  } else if (!compare && post) post.render(clock.getElapsedTime());
+  else renderer.render(scene, camera);
   if (renderer.shadowMap.needsUpdate) renderer.shadowMap.needsUpdate = false;
 }
 let frames = 0; let lastT = 0; let lastRender = 0;
@@ -677,7 +719,8 @@ function setInteract(on) {
   interacting = on;
   const pet = document.body.classList.contains('pet');
   renderer.setPixelRatio(pixelRatio());
-  if (pet) layoutPet(); else { renderer.setSize(window.innerWidth, window.innerHeight); post?.setSize(window.innerWidth, window.innerHeight); }
+  if (pet) layoutPet(); else { renderer.setSize(window.innerWidth, window.innerHeight); post?.setSize(window.innerWidth, window.innerHeight); resizeAccum(); }
+  if (S.hairLOD) setHairLOD(on);
   if (post) { const pp = postParams(); post.set(on ? { ao: false, dof: false, diffusion: 0, halation: 0 } : { ao: pp.ao, dof: pp.dof, diffusion: pp.diffusion, halation: pp.halation }); }
   invalidate();
 }
@@ -704,19 +747,19 @@ function tick(now) {
     }
   }
   if (isPet) {
-    if (S.idle) { head.position.y = Math.sin(t * 1.4) * 0.0012; invalidate(1); }
     if (pet.spin) { head.rotation.y += dt * 0.8; invalidateShadow(); } else if (Math.abs(head.rotation.y) > 1e-3) { head.rotation.y *= 0.9; invalidateShadow(); }
     if (S.idle && Math.random() < 0.0008) say(PET_LINES[Math.floor(Math.random() * PET_LINES.length)]);
   }
-  if (dirty <= 0) return;
+  const accumulating = S.accum && accum && !interacting && !compare && accum.count > 0 && accum.count < accumTarget();
+  if (dirty <= 0 && !accumulating) return;
   // 帧率上限：桌宠待机 30fps，其余按设置
   const cap = isPet && !pet.spin ? 30 : S.maxFps;
   if (now - lastRender < 1000 / cap - 2) return;
   lastRender = now;
-  dirty--;
+  if (dirty > 0) dirty--;
   renderFrame();
   frames++;
-  if (frames === 3) window.__READY__ = true;
+  if (QA ? (accum && accum.count >= accumTarget()) || frames > 40 : frames === 3) window.__READY__ = true;
 }
 
 // ---------------- 启动 ----------------

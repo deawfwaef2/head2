@@ -167,3 +167,42 @@ export function createPostChain(renderer, scene, camera, opts = {}) {
     dispose() { composer.dispose?.(); rt.dispose(); },
   };
 }
+
+// ———————— 静止画面渐进式超采样（多帧亚像素抖动累积）————————
+// 画面静止时每帧把相机投影偏移不到 1 像素（Halton 序列），把后期链的最终结果做滑动平均：
+// 16~32 帧后等效 16~32 倍超采样，发丝、睫毛、高光边缘都会变得干净细腻。交互时不累积。
+export function createAccumulator(renderer) {
+  const mk = () => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+  let A = mk(), B = mk();
+  const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  const blendMat = new THREE.ShaderMaterial({
+    uniforms: { tPrev: { value: null }, tCur: { value: null }, uW: { value: 1 } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: 'uniform sampler2D tPrev, tCur; uniform float uW; varying vec2 vUv; void main(){ gl_FragColor = mix(texture2D(tPrev, vUv), texture2D(tCur, vUv), uW); }',
+    depthTest: false, depthWrite: false,
+  });
+  const copyMat = new THREE.ShaderMaterial({
+    uniforms: { tSrc: { value: null } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: 'uniform sampler2D tSrc; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(tSrc, vUv).rgb, 1.0); }',
+    depthTest: false, depthWrite: false,
+  });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), blendMat);
+  const qs = new THREE.Scene(); qs.add(quad);
+  let n = 0;
+  const halton = (i, b) => { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; };
+  return {
+    get count() { return n; },
+    reset() { n = 0; },
+    jitter(i) { return [halton(i + 1, 2) - 0.5, halton(i + 1, 3) - 0.5]; },
+    setSize(w, h) { A.setSize(w, h); B.setSize(w, h); n = 0; },
+    /** curTex：本帧后期链结果；返回累积后的帧数 */
+    accumulate(curTex) {
+      blendMat.uniforms.tPrev.value = A.texture; blendMat.uniforms.tCur.value = curTex; blendMat.uniforms.uW.value = 1 / (n + 1);
+      quad.material = blendMat; renderer.setRenderTarget(B); renderer.render(qs, quadCam);
+      [A, B] = [B, A]; n++;
+      copyMat.uniforms.tSrc.value = A.texture; quad.material = copyMat; renderer.setRenderTarget(null); renderer.render(qs, quadCam);
+      return n;
+    },
+  };
+}
