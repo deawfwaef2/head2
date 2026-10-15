@@ -853,17 +853,17 @@
             <div>
               <label style="font-size:11px;color:#6ee7b7;font-weight:700;">✨ 发丝渲染模式 (Artist Card / 3D Strand)</label>
               <select id="vcd-master-hair-mode">
-                <option value="card" selected>✨ 原版精雕多层羽毛发片模式 (默认推荐·100%还原发型与零黑块)</option>
-                <option value="strand">🧬 复合 3D 真发丝加密模式 (发片基底 + 2.7万根3D发丝)</option>
+                <option value="card">✨ 高清发丝纹理发片（手动流畅档；拖拽时会自动降级）</option>
+                <option value="strand" selected>🧬 真实 3D 发丝（默认低密度；软件预览按性能降采样）</option>
               </select>
             </div>
             <div>
-              <label style="font-size:11px;color:#6ee7b7;font-weight:700;">🧬 真发丝密度档位 (XGen平行标架插值)</label>
-              <select id="vcd-master-hair-density">
-                <option value="low">流畅 (约 2.0 万根真发丝)</option>
-                <option value="mid" selected>标准 (约 4.5 万根真发丝·默认推荐)</option>
-                <option value="high">高精 (约 8.5 万根真发丝)</option>
-                <option value="ultra">极致 (约 14 万根真发丝·需独显)</option>
+              <label style="font-size:11px;color:#6ee7b7;font-weight:700;">🧬 真 3D 发丝专属密度（GPU 近似数量；软件预览降采样）</label>
+              <select id="vcd-master-hair-density" title="仅在真实 3D 发丝模式有效；高清纹理发片不生成独立发丝">
+                <option value="low" selected>流畅（GPU 约 1.1 万根，默认）</option>
+                <option value="mid">标准（GPU 约 2.7 万根）</option>
+                <option value="high">高精（GPU 约 4.8 万根）</option>
+                <option value="ultra">极致（GPU 约 8.8 万根，需独显）</option>
               </select>
             </div>
           </div>
@@ -1942,7 +1942,7 @@
             <!-- SUB-TAB 2: 22-AXIS FULL-RANGE CRANIOFACIAL, EYE SIZE/SHAPE & FEATURE FINE-TUNING -->
             <div class="card-block studio-subtab-panel" data-subtab-panel="shape">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <h3 style="margin:0;">📐 模块 2：12种东亚经典3D眼型预设 & 25轴全量程头骨五官微调</h3>
+                <h3 style="margin:0;">📐 模块 2：12种东亚经典3D眼型预设 & 眼鼻口真实网格精雕</h3>
                 <button type="button" id="btn-reset-shape-morphs" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置五官形状</button>
               </div>
               <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
@@ -2014,6 +2014,11 @@
                   <span id="val-morph-eye-depth">+0.00</span>
                 </div>
                 <div class="slider-row">
+                  <span>👁️ 外眼角局部高度 · 下垂(-) ↔ 上扬(+)</span>
+                  <input type="range" id="morph-outer-canthus" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <span id="val-morph-outer-canthus">+0.00</span>
+                </div>
+                <div class="slider-row">
                   <span>🔮 虹膜/美瞳直径大小缩放 (Iris Diameter · 68%–138%)</span>
                   <input type="range" id="morph-iris-scale" min="0.68" max="1.38" step="0.02" value="1.00" />
                   <span id="val-morph-iris-scale">100%</span>
@@ -2059,6 +2064,11 @@
                   <span id="val-morph-nose-tip">+0.00</span>
                 </div>
                 <div class="slider-row">
+                  <span>👃 鼻头横向宽度 · 收窄(-) ↔ 饱满(+)</span>
+                  <input type="range" id="morph-nose-tip-width" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <span id="val-morph-nose-tip-width">+0.00</span>
+                </div>
+                <div class="slider-row">
                   <span>✒️ 眉眼间距高低微调 · 压眉(-) ↔ 挑高(+)</span>
                   <input type="range" id="morph-brow-height" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-brow-height">+0.00</span>
@@ -2082,6 +2092,11 @@
                   <span>👄 真正调整嘴部几何宽度 · 窄(-) ↔ 宽(+)</span>
                   <input type="range" id="morph-mouth-width" min="-0.70" max="0.70" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-width">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👄 唇部纵向比例 · 扁薄(-) ↔ 饱满加高(+)</span>
+                  <input type="range" id="morph-mouth-height" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <span id="val-morph-mouth-height">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 唇峰弧度 · 圆润(-) ↔ 明显丘比特弓(+)</span>
@@ -2806,6 +2821,16 @@
                     </select>
                   </div>
                 </div>
+                <fieldset class="placard-create-fields" id="studio-placard-create-fields">
+                  <legend>🏷️ 建档标牌 · 仅创建此档案时可填写</legend>
+                  <p id="studio-placard-lock-hint">新角色保存后，名字、年龄、来源及段落故事将锁定；日后仍可改脸型与发型。</p>
+                  <div class="two-col-inputs">
+                    <div><label for="inp-placard-name">标牌名字 / 头衔</label><input id="inp-placard-name" type="text" value="叶知秋 · Ye Zhiqiu" maxlength="160" /></div>
+                    <div><label for="inp-placard-age">标牌年龄</label><input id="inp-placard-age" type="text" value="19岁" maxlength="80" /></div>
+                  </div>
+                  <div><label for="inp-placard-origin">身份 / 来源</label><input id="inp-placard-origin" type="text" value="东亚头部收藏品" maxlength="1800" /></div>
+                  <div><label for="inp-placard-story">标牌故事（可分段，按内容自动增高）</label><textarea id="inp-placard-story" rows="4" maxlength="12000" placeholder="在创建档案前写下人物故事；用回车分段"></textarea></div>
+                </fieldset>
                 <div class="two-col-inputs">
                   <div>
                     <label>🧪 专属容器放置器</label>

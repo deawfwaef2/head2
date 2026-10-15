@@ -76,8 +76,8 @@ body.obs-show-triumph #study-triumph-hud {
   left: 50% !important;
   right: auto !important;
   transform: translateX(-50%) !important;
-  width: auto !important;
-  max-width: min(98vw, 1520px) !important;
+  width: min(920px, calc(100vw - 24px)) !important;
+  max-width: calc(100vw - 24px) !important;
   min-height: 46px !important;
   padding: 6px 12px !important;
   background: rgba(10, 15, 28, 0.95) !important;
@@ -96,8 +96,19 @@ body.obs-show-triumph #study-triumph-hud {
 
 /* Do not cover the 3D hat/eye preview with the desktop-only command dock. */
 body.studio-preview-mode #desktop-overlay-bar,
-body.studio-preview-mode #obs-more-popover {
+body.studio-preview-mode #obs-more-popover,
+body.studio-preview-mode #specimen-placards-layer {
   display: none !important;
+}
+/* In the editor, the full-screen pet canvas must sit behind the modelling
+   window. Otherwise its opaque scene hides the entire workbench even though
+   the software-window and studio-preview canvases are technically visible. */
+body.studio-preview-mode #desktop-pet-canvas,
+body.studio-preview-mode #desktop-software-lens {
+  z-index: 15 !important;
+}
+body.software-webgl #software-window {
+  transition: none !important;
 }
 
 #desktop-overlay-bar .overlay-brand {
@@ -173,6 +184,24 @@ body.studio-preview-mode #obs-more-popover {
   font-weight: 700 !important;
 }
 
+#desktop-overlay-bar .obs-dock-select-row {
+  display: flex;
+  align-items: center;
+  flex: 1 1 260px;
+  min-width: 245px;
+  gap: 9px;
+  padding: 0 4px;
+  color: #fef3c7;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#desktop-overlay-bar .obs-dock-select-row .obs-top-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 1px;
+}
+
 #desktop-overlay-bar .obs-top-select {
   background: rgba(15, 23, 42, 0.95) !important;
   border: 1px solid rgba(148, 163, 184, 0.48) !important;
@@ -229,10 +258,12 @@ body.studio-preview-mode #obs-more-popover {
 }
 
 #obs-more-popover {
-  position: fixed;
-  top: 66px;
+  position: absolute;
+  top: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
+  max-height: min(65vh, 480px);
+  overflow-y: auto;
   width: min(620px, 94vw);
   background: var(--obs-bg-deep);
   backdrop-filter: blur(28px) saturate(160%);
@@ -276,7 +307,9 @@ body.studio-preview-mode #obs-more-popover {
   color: var(--obs-text-primary);
   display: flex;
   flex-direction: column;
-  z-index: 9400;
+  /* Drawer must stay clickable even when the command dock wraps to 3 rows
+     at tablet widths; its tab strip used to sit *under* that dock. */
+  z-index: 9550;
   overflow: hidden;
   pointer-events: auto;
   transition: opacity 0.18s ease, transform 0.18s ease;
@@ -840,9 +873,12 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 12px !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85) !important;
   padding: 10px 12px !important;
-  width: 326px !important;
-  min-width: 296px !important;
+  box-sizing: border-box !important;
+  width: min(352px, calc(100vw - 20px)) !important;
+  min-width: 0 !important;
   max-width: 352px !important;
+  max-height: calc(100dvh - 112px) !important;
+  overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
@@ -929,10 +965,13 @@ input[type="range"]::-webkit-slider-thumb {
   white-space: normal !important;
   text-overflow: unset !important;
   -webkit-line-clamp: unset !important;
-  max-height: 98px !important;
+  max-height: min(44dvh, 400px) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  white-space: pre-wrap !important;
   word-break: break-word !important;
+  user-select: text !important;
+  touch-action: pan-y !important;
   color: #f1f5f9 !important;
   font-size: 11.2px !important;
   line-height: 1.48 !important;
@@ -1122,3 +1161,10 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: var(--obs-shadow) !important;
   color: #ffffff !important;
 }
+
+.obs-placard-editor-status { margin:2px 0 10px; padding:9px 10px; border-radius:8px; border:1px solid rgba(251,191,36,.34); background:rgba(98,66,22,.18); color:#fef3c7; font-size:11.5px; line-height:1.6; }
+#obsidian-char-hair-studio .obs-pane[data-obs-pane="character"] input:disabled,
+#obsidian-char-hair-studio .obs-pane[data-obs-pane="character"] textarea:disabled { opacity:.72; cursor:not-allowed; }
+#obsidian-char-hair-studio label:has(#obs-placard-photo-upload:disabled) { opacity:.48; cursor:not-allowed!important; }
+#obsidian-char-hair-studio #obs-btn-clone-char-slot:disabled,
+#obsidian-char-hair-studio #obs-placard-photo-reset:disabled { opacity:.48; cursor:not-allowed!important; }

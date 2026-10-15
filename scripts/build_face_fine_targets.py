@@ -30,6 +30,12 @@ QUANTIZATION = 100000  # the consumer divides each integer by 1e5 metres
 SOURCES = {
     'mouth_scale_horiz_incr': ['mouth/mouth-scale-horiz-incr.target.gz'],
     'mouth_scale_horiz_decr': ['mouth/mouth-scale-horiz-decr.target.gz'],
+    # Independent local nose-tip width and vertical mouth proportions. These
+    # are official CC0 MPFB2 sculpts, not rescaled UI numbers or shader tricks.
+    'nose_point_width_incr': ['nose/nose-point-width-incr.target.gz'],
+    'nose_point_width_decr': ['nose/nose-point-width-decr.target.gz'],
+    'mouth_scale_vert_incr': ['mouth/mouth-scale-vert-incr.target.gz'],
+    'mouth_scale_vert_decr': ['mouth/mouth-scale-vert-decr.target.gz'],
     'eye_bag_decr': ['eyes/l-eye-bag-decr.target.gz', 'eyes/r-eye-bag-decr.target.gz'],
     'eye_bag_height_decr': [
         'eyes/l-eye-bag-height-decr.target.gz',

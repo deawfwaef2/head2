@@ -22,6 +22,7 @@ import {
   requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
+import { updateSoftwarePetLens } from './softwarePetLens.js';
 import { createBokehDust } from './atmosphere.js';
 import { BACKGROUNDS, makeBackdropTexture } from './masterQuality/backgrounds.js';
 import {
@@ -176,6 +177,7 @@ export class DesktopBoxSpaceEngine {
     }
 
     applyCustomVisualConfigToEngine(this, this.visualConfig);
+    updateSoftwarePetLens(this, this.visualConfig);
     this.updateCameraProjection();
   }
 
@@ -746,6 +748,7 @@ export class DesktopBoxSpaceEngine {
   applyVisualCustomConfig(cfg = {}) {
     this.visualConfig = { ...this.visualConfig, ...cfg };
     applyCustomVisualConfigToEngine(this, this.visualConfig);
+    updateSoftwarePetLens(this, this.visualConfig);
   }
 
   async summonCollectible(collectible) {
@@ -2334,6 +2337,7 @@ export class DesktopBoxSpaceEngine {
       const lvl = this.currentRenderQuality || 'high';
       this.beautyPost.setEnabled(lvl !== 'low' && this.beautyPostUserEnabled);
     }
+    updateSoftwarePetLens(this, this.visualConfig);
     this.wakeRender(1.2);
   }
 

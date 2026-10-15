@@ -242,6 +242,19 @@ body.real-desktop-manager #win-btn-close { display: inline-flex; }
   z-index: 15;
 }
 
+/* Software-WebGL-only optical preview. Always behind labels and controls. */
+#desktop-software-lens {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 63;
+  pointer-events: none;
+  isolation: isolate;
+}
+#desktop-software-lens[hidden] { display: none !important; }
+#desktop-pet-canvas.pets-behind-window + #desktop-software-lens { z-index: 16; }
+
 /* =========================================================================
    HOVER DOSSIER FLOATING HUD WINDOW (On Mouseover of Desktop Pet)
    ========================================================================= */
@@ -2283,3 +2296,12 @@ body.pure-screen-mode #pet-hover-dossier {
   display: none !important;
 }
 
+
+/* Character-creation-only placard fields: subsequent appearance saves remain read-only. */
+.placard-create-fields { min-width:0; margin:12px 0; padding:13px; border:1px solid #ba914f; border-radius:10px; background:rgba(87,57,21,.12); display:grid; gap:10px; }
+.placard-create-fields legend { padding:0 5px; color:#fde68a; font-size:12px; font-weight:700; }
+.placard-create-fields p { margin:0; color:#cbd5e1; font-size:11px; line-height:1.6; }
+.placard-create-fields label { display:block; margin-bottom:4px; font-size:11px; color:#e9decc; }
+.placard-create-fields input,.placard-create-fields textarea { box-sizing:border-box; width:100%; padding:8px; border:1px solid #6b7280; border-radius:6px; background:#18202d; color:#f8fafc; font:inherit; }
+.placard-create-fields textarea { resize:vertical; min-height:86px; line-height:1.5; }
+.placard-create-fields input:disabled,.placard-create-fields textarea:disabled { opacity:.65; cursor:not-allowed; }

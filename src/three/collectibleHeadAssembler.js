@@ -1383,9 +1383,16 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   }
   const eyeDepth = fineValue('eyeDepth');
   addW(eyeDepth >= 0 ? 'eye_depth_deep' : 'eye_depth_shallow', Math.abs(eyeDepth) * 0.55);
+  // MPFB2 corner1 is the *lateral* canthus. The older sparse table calls it
+  // "eye_inner_corner"; keep the established key but give this fine slider its
+  // anatomically correct label. Unlike overall eye tilt, only the corner sculpt moves.
+  const outerCanthus = fineValue('outerCanthusLift');
+  addW(outerCanthus >= 0 ? 'eye_inner_corner_up' : 'eye_inner_corner_down', Math.abs(outerCanthus) * 0.82);
 
   const mouthWidth = fineValue('mouthWidth');
   addW(mouthWidth >= 0 ? 'mouth_scale_horiz_incr' : 'mouth_scale_horiz_decr', Math.abs(mouthWidth) * 0.68);
+  const mouthHeight = fineValue('mouthHeight');
+  addW(mouthHeight >= 0 ? 'mouth_scale_vert_incr' : 'mouth_scale_vert_decr', Math.abs(mouthHeight) * 0.60);
   const cupidBow = fineValue('cupidBow');
   addW(cupidBow >= 0 ? 'mouth_cupidsbow_incr' : 'mouth_cupidsbow_decr', Math.abs(cupidBow) * 0.70);
   const lowerLip = fineValue('lowerLipCenter');
@@ -1394,6 +1401,8 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   addW(chinWidth >= 0 ? 'chin_width_incr' : 'chin_width_decr', Math.abs(chinWidth) * 0.70);
   const noseTip = fineValue('noseTipAngle');
   addW(noseTip >= 0 ? 'nose_point_up' : 'nose_point_down', Math.abs(noseTip) * 0.68);
+  const noseTipWidth = fineValue('noseTipWidth');
+  addW(noseTipWidth >= 0 ? 'nose_point_width_incr' : 'nose_point_width_decr', Math.abs(noseTipWidth) * 0.84);
 
   // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)
   if (!skinMesh.userData.hasMpfbClone) {
@@ -2132,6 +2141,10 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   );
   const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'card';
   const strandDensity = config.strandDensity || config.morphs?.strandDensity || rootGroup.userData.strandDensity || MASTER_HAIR_CONFIG.density || 'mid';
+  const groomSoftware = Boolean(config.groomSoftware ?? rootGroup.userData.groomSoftware);
+  const groomLod = config.groomLod || rootGroup.userData.groomLod || 'studio';
+  rootGroup.userData.groomSoftware = groomSoftware;
+  rootGroup.userData.groomLod = groomLod;
 
   rootGroup.userData.topCrownStyle = topCrownStyle;
   rootGroup.userData.frontBangsStyle = frontBangsStyle;
@@ -2260,7 +2273,12 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     let guideCount = 0;
     const customAsset = Boolean(config.customHairUrl);
     const strandRgb = hexToMasterStrandRgb(hairColorHex);
-    const strandCacheKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${strandDensity}`;
+    // Keep the full artist strand budget on hardware GPUs. Software WebGL
+    // still renders *real 3D strand meshes*, but at an adaptive per-view LOD
+    // so three desk pets + the workbench do not stall the browser for minutes.
+    const strandRuntimeLod = groomSoftware
+      ? (groomLod === 'desktop' ? 'software-desktop' : 'software-studio') : 'gpu';
+    const strandCacheKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${strandDensity}|${strandRuntimeLod}`;
     let strandRes = useStrandMode ? masterStrandGeometryCache.get(strandCacheKey) : null;
     const headSkinMesh = modelContainer.getObjectByName('HeadSkinMesh');
     const headSoup = (useStrandMode && !strandRes && headSkinMesh) ? morphedHeadSoup(headSkinMesh, true) : null;
@@ -2357,7 +2375,14 @@ export async function attachRealHairModel(rootGroup, config = {}) {
 
     if (useStrandMode && (strandRes || (headSoup && strandEntries.length > 0))) {
       if (!strandRes) {
-        const densitySpec = MASTER_HAIR_DENSITIES[strandDensity] || MASTER_HAIR_DENSITIES.mid;
+        const baseDensity = MASTER_HAIR_DENSITIES[strandDensity] || MASTER_HAIR_DENSITIES.mid;
+        const desktopSoftware = strandRuntimeLod === 'software-desktop';
+        const densitySpec = groomSoftware ? {
+          ...baseDensity,
+          guides: Math.max(260, Math.round(baseDensity.guides * (desktopSoftware ? .38 : .55))),
+          childrenPerGuide: Math.max(4, Math.round(baseDensity.childrenPerGuide * (desktopSoftware ? .63 : .72))),
+          fuzzPerGuide: baseDensity.fuzzPerGuide * (desktopSoftware ? .80 : .82),
+        } : baseDensity;
         strandRes = generateStrands(strandEntries, null, null, headSoup, densitySpec);
         if (strandRes?.geometry) {
           strandRes.geometry.userData.sharedBuiltinGeo = true;
@@ -2392,6 +2417,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           window.__STRAND_STATS__ = {
             id: resolvedStyle,
             density: strandDensity,
+            runtimeLod: strandRuntimeLod,
             guides: strandRes.guides,
             strands: strandRes.strandCount,
             main: strandRes.mainStrands,
@@ -2416,6 +2442,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       guides: guideCount,
       mode: useStrandMode ? 'strand' : 'card',
       density: strandDensity,
+      runtimeLod: strandRuntimeLod,
       style: selectedStyle,
     };
 
@@ -2557,6 +2584,8 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
       backAttachmentStyle: nextBack,
       hairRenderMode: nextMode,
       strandDensity: nextDensity,
+      groomSoftware: rootGroup.userData.groomSoftware,
+      groomLod: rootGroup.userData.groomLod,
       hairColor: rootGroup.userData.hairColor,
       hairTipColor: rootGroup.userData.hairTipColor,
       hairOmbreMix: rootGroup.userData.hairOmbreMix,
