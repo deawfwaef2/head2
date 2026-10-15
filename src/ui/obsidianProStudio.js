@@ -7,8 +7,11 @@
 
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
-import { applyCustomVisualConfigToEngine } from '../three/photorealLighting.js';
 import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
+
+const escapeMarkup = value => String(value ?? '').replace(/[&<>"']/g, c => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+})[c]);
 
 const NEW_32_HAIR_IDS = new Set([
   'daz_hair_o4saken_long',
@@ -377,8 +380,6 @@ export function initObsidianProStudio() {
       <div class="obs-pane active" data-obs-pane="hair">
         <div class="obs-section">
           <div class="obs-sec-head">
-            <span class="obs-sec-title">61款东亚全覆盖3D高定发型图鉴</span>
-          <div class="obs-sec-head">
             <span class="obs-sec-title">61款东亚全覆盖3D高定发型图鉴 (新增32款置顶)</span>
             <span id="obs-hair-current-label" class="obs-sec-sub">清透斜碎波波</span>
           </div>
@@ -472,8 +473,8 @@ export function initObsidianProStudio() {
           <div class="obs-sec-head">
             <span class="obs-sec-title">发色染膏与渲染管线</span>
             <select class="obs-select" style="width:auto;padding:3px 8px;font-size:11px;" data-obs-bind="vcd-master-hair-mode">
-              <option value="card">精雕发片 (完整丰盈发量)</option>
-              <option value="strand">3D真发丝 (微距单根发丝)</option>
+              <option value="card">高清发丝纹理发片（手动流畅档）</option>
+              <option value="strand" selected>真实3D发丝（默认低密度；软件降采样）</option>
             </select>
           </div>
           <div class="obs-swatch-row" id="obs-hair-swatches" style="flex-wrap:wrap;gap:6px;">
@@ -552,11 +553,16 @@ export function initObsidianProStudio() {
       <div class="obs-pane" data-obs-pane="character">
         <div class="obs-section" style="border-color:rgba(251,191,36,0.65);">
           <div class="obs-sec-head">
-            <span class="obs-sec-title" style="color:#fef08a;">🏷️ 标牌完整信息与故事设置 (照片 · 名字 · 年龄 · 身份 · 完整故事)</span>
+            <span class="obs-sec-title" style="color:#fef08a;">🏷️ 建档标牌（新建时可编辑 · 保存后永久锁定 · 自动适配段落）</span>
             <label style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#f8fafc;cursor:pointer;">
               <input type="checkbox" id="obs-chk-placards-visible" checked style="accent-color:#fbbf24;cursor:pointer;" />
               <span>显示桌面标牌</span>
             </label>
+          </div>
+          <p id="obs-placard-editor-status" class="obs-placard-editor-status">🔒 当前角色档案已锁定。若要写新标牌，请先创建新档案草稿。</p>
+          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
+            <button type="button" id="obs-btn-new-placard-draft" class="obs-footer-btn primary-cyan">➕ 创建新档案草稿</button>
+            <button type="button" id="obs-btn-cancel-placard-draft" class="obs-footer-btn hidden">取消草稿</button>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start;">
             <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
@@ -573,24 +579,24 @@ export function initObsidianProStudio() {
               <div style="display:grid;grid-template-columns:1fr 86px;gap:7px;">
                 <div>
                   <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物名字与头衔</div>
-                  <input type="text" id="obs-placard-name-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="输入名字 (如：林汐 · 高三理科尖子)" />
+                  <input type="text" id="obs-placard-name-input" class="obs-select" style="width:100%;padding:5px 8px;" maxlength="160" placeholder="输入名字 (如：林汐 · 高三理科尖子)" />
                 </div>
                 <div>
                   <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物年龄</div>
-                  <input type="text" id="obs-placard-age-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="如：18岁" />
+                  <input type="text" id="obs-placard-age-input" class="obs-select" style="width:100%;padding:5px 8px;" maxlength="80" placeholder="如：18岁" />
                 </div>
               </div>
               <div>
                 <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">身份来源 / 副标题 (显示在名字下方)</div>
-                <input type="text" id="obs-placard-origin-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="如：重点高中高三（1）班 · 省物理竞赛一等奖" />
+                  <input type="text" id="obs-placard-origin-input" class="obs-select" style="width:100%;padding:5px 8px;" maxlength="1800" placeholder="如：重点高中高三（1）班 · 省物理竞赛一等奖" />
               </div>
               <div>
-                <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">完整故事与经过 (在桌面标牌完整显示，支持滚动查阅)</div>
-                <textarea id="obs-placard-story-input" class="obs-select" rows="3" style="width:100%;padding:6px 8px;resize:vertical;line-height:1.45;" placeholder="输入人物生前身份、收集经过或故事..."></textarea>
+                  <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">故事段落（标牌按行增高，极长内容才滚动）</div>
+                  <textarea id="obs-placard-story-input" class="obs-select" rows="4" maxlength="12000" style="width:100%;padding:6px 8px;resize:vertical;line-height:1.45;" placeholder="输入人物身份与故事，可按回车分段..."></textarea>
               </div>
               <div style="display:flex;flex-wrap:wrap;gap:6px;padding-top:2px;">
-                <button type="button" id="obs-btn-save-char-now" class="obs-footer-btn primary-gold" style="flex:1;justify-content:center;">💾 保存当前角色修改</button>
-                <button type="button" id="obs-btn-clone-char-slot" class="obs-footer-btn primary-cyan" style="flex:1;justify-content:center;">➕ 另存为新角色槽位</button>
+                <button type="button" id="obs-btn-save-char-now" class="obs-footer-btn primary-gold" style="flex:1;justify-content:center;">💾 保存外观（标牌不变）</button>
+                <button type="button" id="obs-btn-clone-char-slot" class="obs-footer-btn primary-cyan" style="flex:1;justify-content:center;">🔐 建档并锁定新标牌</button>
                 <button type="button" id="obs-btn-open-full-dossier" class="obs-footer-btn" style="justify-content:center;">📖 展开完整档案卡</button>
               </div>
             </div>
@@ -774,7 +780,7 @@ export function initObsidianProStudio() {
         </div>
 
         <details class="obs-accordion" open>
-          <summary>眼部与虹膜精调 (15项)</summary>
+          <summary>眼部与虹膜精调 (16项)</summary>
           <div class="obs-accordion-body">
             ${makeShortSliderRow({ label: '眼睛大小', targetId: 'vcd-eye-size', fallbackId: 'morph-eye-size', min: -0.45, max: 0.55, step: 0.02, val: 0.12, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '杏眼圆长', targetId: 'vcd-eye-almond', fallbackId: 'morph-eye', min: -0.45, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
@@ -786,6 +792,7 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '卧蚕饱满', targetId: 'vcd-eye-bag', fallbackId: 'morph-eye-bag', min: 0, max: 0.65, step: 0.02, val: 0.20, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '下眼缘平直', targetId: 'morph-lower-lid-flatness', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '眼窝深浅', targetId: 'morph-eye-depth', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '外眼角高低', targetId: 'morph-outer-canthus', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '虹膜大小', targetId: 'vcd-iris-scale', fallbackId: 'morph-iris-scale', min: 0.78, max: 1.25, step: 0.01, val: 1.02, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '瞳孔缩放', targetId: 'vcd-pupil-size', fallbackId: 'morph-pupil-size', min: 0.55, max: 1.45, step: 0.02, val: 1.00, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '虹膜通透', targetId: 'vcd-iris-brightness', fallbackId: 'slider-iris-brightness', min: 0.60, max: 1.80, step: 0.02, val: 1.15, fmt: 'pct' })}
@@ -795,7 +802,7 @@ export function initObsidianProStudio() {
         </details>
 
         <details class="obs-accordion">
-          <summary>面部骨相精雕 (13项)</summary>
+          <summary>面部骨相精雕 (15项)</summary>
           <div class="obs-accordion-body">
             ${makeShortSliderRow({ label: '下颌V线', targetId: 'morph-jaw', min: -0.50, max: 0.60, step: 0.02, val: -0.08, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '下巴长度', targetId: 'morph-chin', min: -0.45, max: 0.50, step: 0.02, val: -0.04, fmt: 'signed' })}
@@ -803,9 +810,11 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '面颊胶原', targetId: 'morph-cheek', min: -0.45, max: 0.55, step: 0.02, val: 0.16, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '鼻梁高度', targetId: 'morph-nose', min: -0.45, max: 0.55, step: 0.02, val: 0.04, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '鼻翼宽窄', targetId: 'morph-nose-width', min: -0.45, max: 0.45, step: 0.02, val: 0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻头宽度', targetId: 'morph-nose-tip-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '鼻尖翘垂', targetId: 'morph-nose-tip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴唇丰满', targetId: 'morph-lip', min: -0.40, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴部宽度', targetId: 'morph-mouth-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '口唇纵向比例', targetId: 'morph-mouth-height', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '唇峰弧度', targetId: 'morph-cupid-bow', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '下唇中央', targetId: 'morph-lower-lip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴角笑意', targetId: 'morph-mouth-smile', min: -0.45, max: 0.45, step: 0.02, val: 0.06, fmt: 'signed' })}
@@ -951,7 +960,7 @@ export function initObsidianProStudio() {
 
         <div class="obs-section" style="border-color:rgba(167,139,250,0.55);">
           <div class="obs-sec-head">
-            <span class="obs-sec-title" style="color:#ddd6fe;">🌫️ 桌面宠物后期模糊滤镜 (6种光学模糊)</span>
+            <span class="obs-sec-title" style="color:#ddd6fe;">🌫️ 桌宠镜头虚化 (6种不同方式)</span>
             <span id="obs-blur-current-label" class="obs-sec-sub">无模糊 (4K超清锐利)</span>
           </div>
           <div class="obs-pill-grid" id="obs-pet-blur-pills" style="margin-bottom:10px;">
@@ -969,11 +978,12 @@ export function initObsidianProStudio() {
             <input type="range" id="obs-pet-blur-focus-y" min="0.15" max="0.85" step="0.02" value="0.52" />
             <span id="obs-pet-blur-focus-y-val">52%</span>
           </div>
+          <div id="obs-blur-quality-note" class="obs-sec-sub" style="margin-top:8px;line-height:1.6;"></div>
         </div>
 
         <div class="obs-section" style="border-color:rgba(244,114,182,0.55);">
           <div class="obs-sec-head">
-            <span class="obs-sec-title" style="color:#fbcfe8;">🎞️ 桌面宠物光影与胶片滤镜 (12款光影色调)</span>
+            <span class="obs-sec-title" style="color:#fbcfe8;">🎞️ 桌面宠物布光与胶片处理 (14款，不同布光/色调)</span>
             <span id="obs-filter-current-label" class="obs-sec-sub">原片直出</span>
           </div>
           <div class="obs-pill-grid" id="obs-pet-filter-pills" style="margin-bottom:10px;">
@@ -1064,8 +1074,8 @@ export function initObsidianProStudio() {
     <!-- ==================== PERSISTENT STICKY SAVE / LOAD FOOTER BAR ==================== -->
     <div class="obs-studio-footer">
       <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-        <button type="button" id="obs-footer-save-char" class="obs-footer-btn primary-gold" title="将当前头模的所有脸型、发型、彩妆与标牌修改保存到当前角色">💾 保存当前角色</button>
-        <button type="button" id="obs-footer-new-char" class="obs-footer-btn primary-cyan" title="将当前设计另存为一个全新的角色槽位并召唤上桌">➕ 另存新角色槽</button>
+        <button type="button" id="obs-footer-save-char" class="obs-footer-btn primary-gold" title="只保存脸型、发型与彩妆；已建档的标牌不可改动">💾 保存角色外观</button>
+        <button type="button" id="obs-footer-new-char" class="obs-footer-btn primary-cyan" title="先填写草稿，再建档锁定新角色标牌">➕ 建档新角色</button>
         <button type="button" id="obs-footer-save-visual" class="obs-footer-btn" title="将当前屏幕的滤镜、模糊、灯光、色调与机位保存为画面效果存档">🎬 保存当前画面</button>
       </div>
       <div style="display:flex;gap:5px;align-items:center;">
@@ -1140,34 +1150,91 @@ function syncObsidianCardsFromDOM(studio) {
   }
 }
 
+let pendingPlacardBaseId = '';
+let pendingPlacardPhotoUrl = '';
+
+function setPlacardDraftEditing(editing) {
+  for (const id of ['obs-placard-name-input', 'obs-placard-age-input',
+    'obs-placard-origin-input', 'obs-placard-story-input',
+    'obs-placard-photo-upload', 'obs-placard-photo-reset']) {
+    const input = document.getElementById(id);
+    if (input) input.disabled = !editing;
+  }
+  const create = document.getElementById('obs-btn-new-placard-draft');
+  if (create) create.classList.toggle('hidden', editing);
+  const cancel = document.getElementById('obs-btn-cancel-placard-draft');
+  if (cancel) cancel.classList.toggle('hidden', !editing);
+  const commit = document.getElementById('obs-btn-clone-char-slot');
+  if (commit) commit.disabled = !editing;
+  const status = document.getElementById('obs-placard-editor-status');
+  if (status) status.textContent = editing
+    ? '✍️ 新档案草稿：现在可编辑照片、名字、年龄、身份与多段故事。点击「建档并锁定」后不可再改标牌。'
+    : '🔒 已建立的角色档案只读；保存外观、换发型或覆盖角色槽位均不会改动其标牌。';
+}
+
 function syncPlacardEditorFromCollectible(col) {
   if (!col) return;
+  if (pendingPlacardBaseId === col.id) return; // Do not overwrite an unfinished new-archive draft.
+  pendingPlacardBaseId = '';
+  pendingPlacardPhotoUrl = '';
   const qa = window.__cervixQA;
-  const displayName = col.customDisplayName || col.name || '未命名标本';
-  const parsedAge = (col.fateRecord?.vitalityStatus || col.subtitle || '').match(/\d+\s*岁/)?.[0] || '19岁';
-  const displayAge = col.customAge || col.fateRecord?.ageAtCollection || parsedAge;
-  const originText = col.dossier?.origin || col.subtitle || '';
-  const briefStory = col.customBriefStory
-    || col.customContrastText
-    || col.fateRecord?.causeOfDeath
-    || col.fateRecord?.cause
-    || col.fateRecord?.vitalityStatus
-    || col.subtitle
-    || '静默案头藏品 · 任由主人端详摆布';
-  const photoSrc = qa?.resolveCollectibleLifePhotoSrc ? qa.resolveCollectibleLifePhotoSrc(col) : (col.customLifePhotoUrl || '');
-
-  const nameInp = document.getElementById('obs-placard-name-input');
-  if (nameInp && document.activeElement !== nameInp) nameInp.value = displayName;
-  const ageInp = document.getElementById('obs-placard-age-input');
-  if (ageInp && document.activeElement !== ageInp) ageInp.value = displayAge;
-  const originInp = document.getElementById('obs-placard-origin-input');
-  if (originInp && document.activeElement !== originInp) originInp.value = originText;
-  const storyInp = document.getElementById('obs-placard-story-input');
-  if (storyInp && document.activeElement !== storyInp) storyInp.value = briefStory;
-  const photoImg = document.getElementById('obs-placard-photo-preview');
-  if (photoImg && photoSrc) photoImg.src = photoSrc;
+  const fixed = qa?.getPlacardDossier?.(col);
+  if (!fixed) return;
+  for (const [id, key] of [
+    ['obs-placard-name-input', 'displayName'], ['obs-placard-age-input', 'age'],
+    ['obs-placard-origin-input', 'origin'], ['obs-placard-story-input', 'story'],
+  ]) {
+    const field = document.getElementById(id);
+    if (field) field.value = fixed[key] || '';
+  }
+  const photo = document.getElementById('obs-placard-photo-preview');
+  if (photo) photo.src = qa?.getPlacardPhotoSrc?.(col) || '';
+  setPlacardDraftEditing(false);
 }
 window.__syncPlacardEditorFields = syncPlacardEditorFromCollectible;
+
+function beginPlacardDraft() {
+  const qa = window.__cervixQA;
+  const col = qa?.getActiveCollectible?.();
+  if (!col) return;
+  syncPlacardEditorFromCollectible(col);
+  pendingPlacardBaseId = col.id;
+  pendingPlacardPhotoUrl = qa.getPlacardDossier?.(col)?.photoUrl || '';
+  setPlacardDraftEditing(true);
+  qa.showToast?.('✍️ 请先填写新档案标牌，再点击「建档并锁定新标牌」。原角色的标牌不受影响。');
+}
+
+function cancelPlacardDraft() {
+  pendingPlacardBaseId = '';
+  pendingPlacardPhotoUrl = '';
+  syncPlacardEditorFromCollectible(window.__cervixQA?.getActiveCollectible?.());
+}
+
+async function commitPlacardDraft() {
+  const qa = window.__cervixQA;
+  const col = qa?.getActiveCollectible?.();
+  if (!col || !pendingPlacardBaseId || col.id !== pendingPlacardBaseId) {
+    qa?.showToast?.('请先创建新档案草稿，再保存并锁定标牌。');
+    return;
+  }
+  const draft = {
+    displayName: document.getElementById('obs-placard-name-input')?.value?.trim(),
+    age: document.getElementById('obs-placard-age-input')?.value?.trim(),
+    origin: document.getElementById('obs-placard-origin-input')?.value?.trim(),
+    story: document.getElementById('obs-placard-story-input')?.value?.trim(),
+    photoUrl: pendingPlacardPhotoUrl,
+  };
+  if (!draft.displayName) {
+    qa.showToast?.('请填写新角色的标牌名字。');
+    return;
+  }
+  const created = await qa.saveAsNewCharacterSlot?.(draft);
+  if (created) {
+    pendingPlacardBaseId = '';
+    pendingPlacardPhotoUrl = '';
+    syncPlacardEditorFromCollectible(created);
+  }
+}
 
 function transformTopOverlayBar() {
   const bar = document.getElementById('desktop-overlay-bar');
@@ -1228,9 +1295,15 @@ function transformTopOverlayBar() {
     blurSelect.className = 'obs-top-select';
     blurSelect.title = '桌面宠物后期模糊模式切换';
     blurSelect.innerHTML = DESKTOP_PET_BLUR_MODES.map(
-      (bm) => `<option value="${bm.id}">🌫️ ${bm.label.split(' ')[0]}</option>`
+      (bm) => `<option value="${bm.id}">${bm.shortLabel || bm.label}</option>`
     ).join('');
-    actions.appendChild(blurSelect);
+    blurSelect.setAttribute('aria-label', '桌宠镜头虚化模式');
+    const row = document.createElement('label');
+    row.className = 'obs-dock-select-row';
+    const caption = document.createElement('span');
+    caption.textContent = '镜头虚化';
+    row.append(caption, blurSelect);
+    actions.appendChild(row);
   }
 
   let filterSelect = document.getElementById('top-pet-filter-select');
@@ -1240,9 +1313,15 @@ function transformTopOverlayBar() {
     filterSelect.className = 'obs-top-select';
     filterSelect.title = '桌面宠物光影与色调滤镜切换';
     filterSelect.innerHTML = DESKTOP_PET_FILTER_PRESETS.map(
-      (fp) => `<option value="${fp.id}">${fp.label}</option>`
+      (fp) => `<option value="${fp.id}">${fp.shortLabel || fp.label}</option>`
     ).join('');
-    actions.appendChild(filterSelect);
+    filterSelect.setAttribute('aria-label', '桌宠摄影布光与色调');
+    const row = document.createElement('label');
+    row.className = 'obs-dock-select-row';
+    const caption = document.createElement('span');
+    caption.textContent = '摄影布光';
+    row.append(caption, filterSelect);
+    actions.appendChild(row);
   }
 
   // Shorten tactile mode button labels using [data-tactile-mode]
@@ -1791,83 +1870,58 @@ function wireObsidianStudioEvents(studio) {
     }
   });
 
-  const nameInput = document.getElementById('obs-placard-name-input');
-  nameInput?.addEventListener('input', () => {
-    const qa = window.__cervixQA;
-    const col = qa?.getActiveCollectible?.();
-    if (!col) return;
-    col.customDisplayName = nameInput.value.trim();
-    qa.persistCollectibles?.();
-    qa.refreshPlacards?.();
-  });
-
-  const ageInput = document.getElementById('obs-placard-age-input');
-  ageInput?.addEventListener('input', () => {
-    const qa = window.__cervixQA;
-    const col = qa?.getActiveCollectible?.();
-    if (!col) return;
-    const rawAge = ageInput.value.trim();
-    col.customAge = rawAge;
-    if (col.fateRecord && rawAge) col.fateRecord.ageAtCollection = rawAge;
-    qa.persistCollectibles?.();
-    qa.refreshPlacards?.();
-  });
-
-  const originInput = document.getElementById('obs-placard-origin-input');
-  originInput?.addEventListener('input', () => {
-    const qa = window.__cervixQA;
-    const col = qa?.getActiveCollectible?.();
-    if (!col) return;
-    const rawOrigin = originInput.value.trim();
-    col.subtitle = rawOrigin;
-    col.dossier = { ...(col.dossier || {}), origin: rawOrigin };
-    qa.persistCollectibles?.();
-    qa.refreshPlacards?.();
-  });
-
-  const storyInput = document.getElementById('obs-placard-story-input');
-  storyInput?.addEventListener('input', () => {
-    const qa = window.__cervixQA;
-    const col = qa?.getActiveCollectible?.();
-    if (!col) return;
-    const text = storyInput.value.trim();
-    col.customBriefStory = text;
-    col.customContrastText = text;
-    qa.persistCollectibles?.();
-    qa.refreshPlacards?.();
-  });
+  document.getElementById('obs-btn-new-placard-draft')?.addEventListener('click', beginPlacardDraft);
+  document.getElementById('obs-btn-cancel-placard-draft')?.addEventListener('click', cancelPlacardDraft);
 
   const photoUpload = document.getElementById('obs-placard-photo-upload');
-  photoUpload?.addEventListener('change', (ev) => {
+  photoUpload?.addEventListener('change', ev => {
     const file = ev.target.files?.[0];
-    if (!file) return;
+    const qa = window.__cervixQA;
+    const baseId = pendingPlacardBaseId;
+    if (!file || !baseId || file.size > 16_000_000 || !file.type.startsWith('image/')) {
+      qa?.showToast?.('⚠️ 请在新档案草稿中选择不超过 16 MB 的图片。');
+      photoUpload.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
-      const dataUrl = String(reader.result || '');
-      const qa = window.__cervixQA;
-      const col = qa?.getActiveCollectible?.();
-      if (!col || !dataUrl) return;
-      col.customLifePhotoUrl = dataUrl;
-      const preview = document.getElementById('obs-placard-photo-preview');
-      if (preview) preview.src = dataUrl;
-      qa.persistCollectibles?.();
-      qa.refreshPlacards?.();
-      qa.showToast?.('📷 已更新人物标牌照片！');
+      const img = new Image();
+      img.onload = () => {
+        if (pendingPlacardBaseId !== baseId) return;
+        try {
+          const ratio = Math.min(1, 640 / Math.max(img.naturalWidth, img.naturalHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * ratio));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * ratio));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#f7f2e9';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compact = canvas.toDataURL('image/jpeg', 0.78);
+          if (compact.length > 750_000) throw new Error('too large');
+          pendingPlacardPhotoUrl = compact;
+          const preview = document.getElementById('obs-placard-photo-preview');
+          if (preview) preview.src = compact;
+          qa?.showToast?.('📷 照片已压缩并放入新档案草稿；建档后才会锁定保存。');
+        } catch (_) {
+          qa?.showToast?.('⚠️ 照片处理失败，请换一张 JPG/PNG/WebP。');
+        }
+      };
+      img.onerror = () => qa?.showToast?.('⚠️ 无法读取此照片。');
+      img.src = String(reader.result || '');
     };
     reader.readAsDataURL(file);
+    photoUpload.value = '';
   });
 
   document.getElementById('obs-placard-photo-reset')?.addEventListener('click', () => {
+    if (!pendingPlacardBaseId) return;
+    pendingPlacardPhotoUrl = '';
     const qa = window.__cervixQA;
     const col = qa?.getActiveCollectible?.();
-    if (!col) return;
-    delete col.customLifePhotoUrl;
-    const src = qa.resolveCollectibleLifePhotoSrc?.(col) || '';
     const preview = document.getElementById('obs-placard-photo-preview');
-    if (preview && src) preview.src = src;
-    qa.persistCollectibles?.();
-    qa.refreshPlacards?.();
-    qa.showToast?.('↺ 已恢复人物默认生前照片');
+    if (preview && col) preview.src = qa.resolveCollectibleLifePhotoSrc?.(col) || '';
+    qa?.showToast?.('↺ 新档案草稿将沿用原生前照片；已存角色不受影响。');
   });
 
   // 2. Desktop Pet Mode Toggle (Hides 3D Floor/Shelves so monitor screen is never blocked)
@@ -1954,6 +2008,10 @@ function wireObsidianStudioEvents(studio) {
   });
 
   // 4. Desktop Pet Blur Modes (6 modes + blurPower + focusCenterY)
+  const blurQualityNote = document.getElementById('obs-blur-quality-note');
+  if (blurQualityNote) blurQualityNote.textContent = window.__cervixQA?.desktop?.softwareRenderer
+    ? '当前为软件渲染：轻量合成预览有可见效果，但不等同于硬件 GPU 的主体保留/旋焦/高光散景。'
+    : '硬件加速渲染：使用镜头后期采样；可随时调模糊强度与焦点高度。';
   const applyPetBlurState = (blurMode, blurPower, focusCenterY) => {
     const qa = window.__cervixQA;
     const bm = blurMode ?? document.getElementById('top-pet-blur-select')?.value ?? 'none';
@@ -1971,8 +2029,15 @@ function wireObsidianStudioEvents(studio) {
       qa.desktop._activeVisualState.blurPower = effectivePower;
       qa.desktop._activeVisualState.focusCenterY = fy;
     }
-    qa?.desktop?.beautyPost?.setGradeParams?.({ blurMode: bm, blurPower: effectivePower, focusCenterY: fy });
-    qa?.studio?.beautyPost?.setGradeParams?.({ blurMode: bm, blurPower: effectivePower, focusCenterY: fy });
+    const blurPatch = { blurMode: bm, blurPower: effectivePower, focusCenterY: fy };
+    qa?.desktop?.applyVisualCustomConfig?.(blurPatch);
+    qa?.studio?.applyVisualCustomConfig?.(blurPatch);
+    qa?.desktop?.beautyPost?.setGradeParams?.(blurPatch);
+    qa?.studio?.beautyPost?.setGradeParams?.(blurPatch);
+    if (qa?.desktop?.softwareRenderer) {
+      const select = document.getElementById('top-pet-blur-select');
+      if (select) select.title = '软件渲染：轻量近似虚化预览；硬件加速时使用精确镜头后期';
+    }
     qa?.desktop?.wakeRender?.(2.2, true);
     qa?.studio?.wakeRender?.(2.2, true);
 
@@ -2016,13 +2081,24 @@ function wireObsidianStudioEvents(studio) {
     applyPetBlurState(undefined, undefined, v);
   });
 
-  // 5. Desktop Pet Lighting & Film Filter Presets (12 presets) + 9 Bokeh Backdrops
+  // 5. Desktop Pet Lighting & Film Filter Presets + Bokeh Backdrops
+  const physicalLightKeys = [
+    'keyColor', 'fillColor', 'rimColor', 'keyAzimuthDeg', 'keyElevationDeg',
+    'keyIntensity', 'fillIntensity', 'rimIntensity', 'hemiIntensity', 'chiaroscuro',
+    'dynamicLightMode',
+  ];
+  const originalPhysicalLight = Object.fromEntries(physicalLightKeys.map(k =>
+    [k, window.__cervixQA?.state?.visualCustomConfig?.[k]]));
   const applyPetFilterPreset = (presetId) => {
     const qa = window.__cervixQA;
     const fp = DESKTOP_PET_FILTER_PRESETS.find((p) => p.id === presetId) || DESKTOP_PET_FILTER_PRESETS[0];
     if (!fp) return;
     const g = fp.grade || fp;
     if (qa?.state?.visualCustomConfig) {
+      // A new physical-light recipe must not leak into the next preset.
+      for (const k of physicalLightKeys) {
+        if (originalPhysicalLight[k] !== undefined) qa.state.visualCustomConfig[k] = originalPhysicalLight[k];
+      }
       Object.assign(qa.state.visualCustomConfig, {
         ...g,
         filterPreset: fp.id,
@@ -2030,12 +2106,8 @@ function wireObsidianStudioEvents(studio) {
         windowGobo: fp.gobo || 'none',
         hdrMode: fp.lightPreset || 'softbox',
       });
-      if (qa.desktop) {
-        applyCustomVisualConfigToEngine(qa.desktop, qa.state.visualCustomConfig);
-      }
-      if (qa.studio) {
-        applyCustomVisualConfigToEngine(qa.studio, qa.state.visualCustomConfig);
-      }
+      qa.desktop?.applyVisualCustomConfig?.(qa.state.visualCustomConfig);
+      qa.studio?.applyVisualCustomConfig?.(qa.state.visualCustomConfig);
     }
     qa?.desktop?.beautyPost?.setGradeParams?.({ ...g, filterPreset: fp.id });
     qa?.studio?.beautyPost?.setGradeParams?.({ ...g, filterPreset: fp.id });
@@ -2108,8 +2180,8 @@ function wireObsidianStudioEvents(studio) {
       const qa = window.__cervixQA;
       if (qa?.state?.visualCustomConfig) {
         qa.state.visualCustomConfig[k] = v;
-        if (qa.desktop) applyCustomVisualConfigToEngine(qa.desktop, qa.state.visualCustomConfig);
-        if (qa.studio) applyCustomVisualConfigToEngine(qa.studio, qa.state.visualCustomConfig);
+        qa.desktop?.applyVisualCustomConfig?.(qa.state.visualCustomConfig);
+        qa.studio?.applyVisualCustomConfig?.(qa.state.visualCustomConfig);
         qa.desktop?.beautyPost?.setGradeParams?.({ [k]: v });
         qa.studio?.beautyPost?.setGradeParams?.({ [k]: v });
         qa.desktop?.wakeRender?.(2.0, true);
@@ -2130,30 +2202,30 @@ function wireObsidianStudioEvents(studio) {
     grid.innerHTML = qa.state.collectibles.map((col, idx) => {
       const isSelected = col.id === activeId;
       const isSummoned = summonedSet.has(col.id);
-      const title = col.customDisplayName || col.name || `角色槽位 #${idx + 1}`;
-      const parsedAge = (col.fateRecord?.vitalityStatus || col.subtitle || '').match(/\d+\s*岁/)?.[0] || '19岁';
-      const age = col.customAge || col.fateRecord?.ageAtCollection || parsedAge;
-      const photoSrc = qa.resolveCollectibleLifePhotoSrc ? qa.resolveCollectibleLifePhotoSrc(col) : (col.customLifePhotoUrl || '');
+      const record = qa.getPlacardDossier?.(col);
+      const title = record?.displayName || col.name || `角色槽位 #${idx + 1}`;
+      const age = record?.age || '19岁';
+      const photoSrc = qa.getPlacardPhotoSrc?.(col) || '';
       const hairObj = REAL_HAIR_CATALOG.find(h => h.id === col.hairStyle);
       const hairName = (hairObj?.label || col.hairStyle || '默认发型').replace(/^[^\s]+\s/, '').slice(0, 10);
       const statusBadge = isSummoned
         ? '<span style="color:#4ade80;font-weight:700;">● 在屏</span>'
         : '<span style="color:#94a3b8;">○ 库中</span>';
       return `
-        <div class="obs-save-slot-card ${isSelected ? 'active-slot' : ''}" data-char-slot-id="${col.id}">
+        <div class="obs-save-slot-card ${isSelected ? 'active-slot' : ''}" data-char-slot-id="${escapeMarkup(col.id)}">
           <div class="obs-slot-top">
-            <img class="obs-slot-thumb" src="${photoSrc}" alt="${title}" />
+            <img class="obs-slot-thumb" src="${escapeMarkup(photoSrc)}" alt="${escapeMarkup(title)}" />
             <div class="obs-slot-meta">
-              <div class="obs-slot-title">${title}</div>
-              <div class="obs-slot-sub">${statusBadge} · ${age} · ${hairName}</div>
+              <div class="obs-slot-title">${escapeMarkup(title)}</div>
+              <div class="obs-slot-sub">${statusBadge} · ${escapeMarkup(age)} · ${escapeMarkup(hairName)}</div>
             </div>
           </div>
           <div class="obs-slot-actions">
-            <button type="button" class="obs-slot-btn" data-char-slot-act="select" data-id="${col.id}" title="选中或读取该角色的参数与标牌">📂 读档/选中</button>
-            <button type="button" class="obs-slot-btn" data-char-slot-act="apply" data-id="${col.id}" title="将该角色的脸型/发型/彩妆套用到当前正在编辑的头模">🎨 套用外观</button>
-            <button type="button" class="obs-slot-btn" data-char-slot-act="overwrite" data-id="${col.id}" title="将当前头模的设计覆盖保存到此角色槽位">💾 覆盖此槽</button>
-            <button type="button" class="obs-slot-btn" data-char-slot-act="summon" data-id="${col.id}" title="召唤到桌面或从桌面撤回">${isSummoned ? '📦 撤回' : '✨ 召唤'}</button>
-            <button type="button" class="obs-slot-btn" data-char-slot-act="delete" data-id="${col.id}" title="${col.isCustomUserSlot ? '删除此自定义存档槽' : '恢复该角色为出厂默认'}">${col.isCustomUserSlot ? '🗑️ 删除' : '↺ 重置'}</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="select" data-id="${escapeMarkup(col.id)}" title="选中或读取该角色的参数与标牌">📂 读档/选中</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="apply" data-id="${escapeMarkup(col.id)}" title="将该角色的脸型/发型/彩妆套用到当前正在编辑的头模">🎨 套用外观</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="overwrite" data-id="${escapeMarkup(col.id)}" title="将当前头模的设计覆盖保存到此角色槽位">💾 覆盖此槽</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="summon" data-id="${escapeMarkup(col.id)}" title="召唤到桌面或从桌面撤回">${isSummoned ? '📦 撤回' : '✨ 召唤'}</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="delete" data-id="${escapeMarkup(col.id)}" title="${col.isCustomUserSlot ? '删除此自定义存档槽' : '恢复该角色为出厂默认'}">${col.isCustomUserSlot ? '🗑️ 删除' : '↺ 重置'}</button>
           </div>
         </div>
       `;
@@ -2181,19 +2253,19 @@ function wireObsidianStudioEvents(studio) {
   document.getElementById('obs-footer-save-char')?.addEventListener('click', () => {
     window.__cervixQA?.saveActiveCharacterDesign?.();
   });
-  document.getElementById('obs-btn-clone-char-slot')?.addEventListener('click', () => {
-    const customName = document.getElementById('obs-placard-name-input')?.value?.trim() || '';
-    window.__cervixQA?.saveAsNewCharacterSlot?.(customName);
-  });
+  document.getElementById('obs-btn-clone-char-slot')?.addEventListener('click', commitPlacardDraft);
   document.getElementById('obs-footer-new-char')?.addEventListener('click', () => {
-    const customName = document.getElementById('obs-placard-name-input')?.value?.trim() || '';
-    window.__cervixQA?.saveAsNewCharacterSlot?.(customName);
+    studio.querySelector('.obs-tab-btn[data-obs-tab="character"]')?.click();
+    if (pendingPlacardBaseId) commitPlacardDraft();
+    else beginPlacardDraft();
   });
   document.getElementById('obs-btn-open-full-dossier')?.addEventListener('click', () => {
     const qa = window.__cervixQA;
     const col = qa?.getActiveCollectible?.();
     if (!col) return;
-    const placardBtn = document.querySelector(`[data-placard-dossier="${col.id}"]`);
+    const placardCard = [...document.querySelectorAll('.specimen-placard-card')]
+      .find(el => el.dataset.placardPetId === col.id);
+    const placardBtn = placardCard?.querySelector('[data-placard-dossier]');
     if (placardBtn) {
       placardBtn.click();
     } else {
@@ -2309,34 +2381,34 @@ function wireObsidianStudioEvents(studio) {
     const quickSel = document.getElementById('obs-footer-quick-visual-select');
     if (quickSel) {
       quickSel.innerHTML = `<option value="">📂 快速读档画面效果 (${visualSaveSlots.filter(s => !s.isEmpty).length}个存档)…</option>` +
-        visualSaveSlots.filter(s => !s.isEmpty).map(s => `<option value="${s.id}" ${s.id === activeVisualSlotId ? 'selected' : ''}>🎬 ${s.name}</option>`).join('');
+        visualSaveSlots.filter(s => !s.isEmpty).map(s => `<option value="${escapeMarkup(s.id)}" ${s.id === activeVisualSlotId ? 'selected' : ''}>🎬 ${escapeMarkup(s.name)}</option>`).join('');
     }
     if (!grid) return;
 
     grid.innerHTML = visualSaveSlots.map((slot, idx) => {
       const fpLabel = (DESKTOP_PET_FILTER_PRESETS.find(f => f.id === slot.filterPreset)?.label || '标准影棚').replace(/^[^\s]+\s/, '');
-      const bmLabel = (DESKTOP_PET_BLUR_MODES.find(b => b.id === slot.blurMode)?.label || '无模糊').split(' ')[0];
+      const bmLabel = DESKTOP_PET_BLUR_MODES.find(b => b.id === slot.blurMode)?.shortLabel || '无模糊';
       const modeTag = slot.desktopPetMode ? '🐾无地板' : '🪵含案台';
       const camTag = slot.cameraState ? ' · 🎥含机位' : '';
       const subText = slot.isEmpty
         ? '点击「💾 覆盖保存」即可将当前画面效果存入此槽位'
         : `${fpLabel} · ${bmLabel} · ${modeTag}${camTag} (${slot.savedAt || '已存'})`;
       return `
-        <div class="obs-save-slot-card ${slot.id === activeVisualSlotId ? 'active-slot' : ''}" data-vis-slot-id="${slot.id}">
+        <div class="obs-save-slot-card ${slot.id === activeVisualSlotId ? 'active-slot' : ''}" data-vis-slot-id="${escapeMarkup(slot.id)}">
           <div class="obs-slot-top">
             <div style="width:34px;height:34px;border-radius:7px;background:linear-gradient(135deg,rgba(52,211,153,0.28),rgba(56,189,248,0.22));border:1px solid rgba(52,211,153,0.55);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#a7f3d0;flex-shrink:0;">
               #${idx + 1}
             </div>
             <div class="obs-slot-meta">
-              <div class="obs-slot-title">${slot.name}</div>
-              <div class="obs-slot-sub">${subText}</div>
+              <div class="obs-slot-title">${escapeMarkup(slot.name)}</div>
+              <div class="obs-slot-sub">${escapeMarkup(subText)}</div>
             </div>
           </div>
           <div class="obs-slot-actions">
-            <button type="button" class="obs-slot-btn" data-vis-slot-act="load" data-id="${slot.id}" ${slot.isEmpty ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>▶ 读档应用</button>
-            <button type="button" class="obs-slot-btn" data-vis-slot-act="save" data-id="${slot.id}">💾 覆盖保存</button>
-            <button type="button" class="obs-slot-btn" data-vis-slot-act="export" data-id="${slot.id}" ${slot.isEmpty ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>📤 导出</button>
-            ${idx >= 4 ? `<button type="button" class="obs-slot-btn" data-vis-slot-act="delete" data-id="${slot.id}">🗑️ 清空</button>` : ''}
+            <button type="button" class="obs-slot-btn" data-vis-slot-act="load" data-id="${escapeMarkup(slot.id)}" ${slot.isEmpty ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>▶ 读档应用</button>
+            <button type="button" class="obs-slot-btn" data-vis-slot-act="save" data-id="${escapeMarkup(slot.id)}">💾 覆盖保存</button>
+            <button type="button" class="obs-slot-btn" data-vis-slot-act="export" data-id="${escapeMarkup(slot.id)}" ${slot.isEmpty ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>📤 导出</button>
+            ${idx >= 4 ? `<button type="button" class="obs-slot-btn" data-vis-slot-act="delete" data-id="${escapeMarkup(slot.id)}">🗑️ 清空</button>` : ''}
           </div>
         </div>
       `;

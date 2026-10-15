@@ -734,7 +734,7 @@ export function createStrandMaterial(headCenter = [0.0, 0.02, -0.01], opts = {})
     uPxScale: { value: 0.00068 },
     uGainR: { value: o.gainR }, uGainTT: { value: o.gainTT }, uGainTRT: { value: o.gainTRT }, uGainD: { value: o.gainDiffuse },
     uAlphaR: { value: o.alphaR }, uBetaR: { value: o.betaR },
-    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.65 }, uMinAlpha: { value: 0.82 },
+    uColorVar: { value: o.colorVariation }, uTipLighten: { value: o.tipLighten }, uCovGain: { value: 1.65 }, uMinAlpha: { value: 0.96 },
     uHairOmbreMix: { value: Number(o.hairOmbreMix ?? 0.0) },
     uHairTipColor: { value: new THREE.Color(o.hairTipColor || '#4a3528') },
     uHairFineTune0: { value: new THREE.Vector4(0, 0, 0, 0) },
@@ -896,19 +896,19 @@ export function createStrandMaterial(headCenter = [0.0, 0.02, -0.01], opts = {})
         gHairAR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.12 + sin(vT * 23.0 + vRand * 61.0) * 0.035;
         gHairSV = 0.25 + 1.5 * fract(vRand * 3.97);
         diffuseColor.rgb *= vAO;
-        // 覆盖率 + 随机抖动（MSAA 只有 4 个样本，alpha < 1/8 会直接消失；抖动让期望值正确）
-        float hcov = fract(sin(dot(gl_FragCoord.xy + vRand * 97.0, vec2(12.9898, 78.233))) * 43758.5453);
-        // 发量主体基本不透明（真实头发是几十层叠在一起的），只有发梢、飞发、绒毛才半透明
+        // Stable MSAA coverage: screen-space random alpha made the fringe
+        // glitter with black speckles in software WebGL and while rotating.
+        // The undercoat supplies opacity; only real free tips fade softly.
         float aBody = max(vCov * uCovGain, uMinAlpha);
-        float tipFade = 1.0 - 0.7 * smoothstep(0.7, 1.0, vT);
-        float thin = vW < 0.6 ? 0.55 : 1.0;
-        diffuseColor.a = clamp(aBody * tipFade * thin + (hcov - 0.5) * 0.12, 0.0, 1.0);`)
+        float tipFade = 1.0 - 0.55 * smoothstep(0.78, 1.0, vT);
+        float thin = vW < 0.6 ? 0.74 : 1.0;
+        diffuseColor.a = clamp(aBody * tipFade * thin, 0.0, 1.0);`)
       .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
         normal = normalize(vNormal);
         gHairT = normalize(vHT);`);
   };
   mat.userData.isMasterStrandHair = true;
-  mat.customProgramCacheKey = () => 'photoreal-strand-hair-v3';
+  mat.customProgramCacheKey = () => 'photoreal-strand-hair-v4-stable-coverage';
   return mat;
 }
 

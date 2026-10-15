@@ -1,4 +1,5 @@
 import { createVisualRepair } from './ui/visualRepair.js';
+import { createPlacardDossier, getPlacardDossier, getPlacardPhotoSrc, lockPlacardDossier } from './data/placardDossier.js';
 import { initObsidianProStudio } from './ui/obsidianProStudio.js';
 import { initMorbidStudyToolkit } from './ui/morbidStudyToolkit.js';
 import './ui/obsidianProStudio.css';
@@ -130,7 +131,12 @@ let syncStudioShapeUI = () => {};
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    // A later hair-rendering key must not hide an existing complete archive.
+    // Migrate full Stage69f or Stage69d/70 saves, including edited built-in
+    // characters and locked dossiers; the older legacy path only keeps new IDs.
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ||
+      localStorage.getItem('cervix3d-collectibles-stage69f-hdcard-v1') ||
+      localStorage.getItem('cervix3d-collectibles-stage69d-save-load-v1') || '[]');
     if (Array.isArray(saved) && saved.length > 0) {
       const byId = new Map(defaults.map(item => [item.id, item]));
       for (const item of saved) {
@@ -192,7 +198,7 @@ function persistCollectibles() {
   } catch (_) { return false; }
 }
 const state = {
-  collectibles: restoreCollectibles(),
+  collectibles: restoreCollectibles().map(col => { lockPlacardDossier(col); return col; }),
   archiveItems: [],
   selectedArchiveIndex: 0,
   windowHidden: true,
@@ -374,10 +380,13 @@ const state = {
       eyeSpacing: 0.0,
       lowerLidFlatness: 0.0,
       eyeDepth: 0.0,
+      outerCanthusLift: 0.0,
       chinWidth: 0.0,
       noseTipAngle: 0.0,
+      noseTipWidth: 0.0,
       lipFullness: 0.08,
       mouthWidth: 0.0,
+      mouthHeight: 0.0,
       cupidBow: 0.0,
       lowerLipCenter: 0.0,
       mouthSmile: 0.06,
@@ -399,6 +408,8 @@ const state = {
     }
   }
 };
+// One-time migration: capture old placard text/photo before any appearance edits can alter it.
+persistCollectibles();
 
 let desktopEngine = null;
 let studioEngine = null;
@@ -758,325 +769,249 @@ function renderSpecimenPlacards(placardsList = []) {
   const svgEl = document.getElementById('specimen-placards-svg');
   const cardsEl = document.getElementById('specimen-placards-cards');
   if (!layer || !svgEl || !cardsEl) return;
-
-  if (!state.placardsEnabled || placardsList.length === 0) {
+  if (!state.placardsEnabled || !placardsList.length) {
     layer.classList.add('hidden');
     svgEl.innerHTML = '';
-    cardsEl.innerHTML = '';
+    cardsEl.replaceChildren();
     return;
   }
   layer.classList.remove('hidden');
 
   const winW = window.innerWidth;
   const winH = window.innerHeight;
-  const cardHalfW = 156;
-  const cardHalfH = 98;
-  const existingCards = new Map();
-  cardsEl.querySelectorAll('.specimen-placard-card').forEach((el) => {
-    existingCards.set(el.dataset.placardPetId, el);
-  });
+  const bar = document.getElementById('desktop-overlay-bar');
+  const barRect = bar && getComputedStyle(bar).display !== 'none'
+    ? bar.getBoundingClientRect() : null;
+  const swWin = document.getElementById('software-window');
+  const dockRect = swWin && !state.windowHidden && swWin.classList.contains('window-dock-right')
+    && !document.body.classList.contains('pure-screen-mode') ? swWin.getBoundingClientRect() : null;
+  const oldCards = new Map([...cardsEl.querySelectorAll('.specimen-placard-card')]
+    .map(el => [el.dataset.placardPetId, el]));
+  const active = new Set();
+  const occupied = [];
+  const lines = [];
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(Math.max(lo, hi), v));
 
-  const activeIds = new Set();
-  const svgParts = [];
-
-  const layoutItems = placardsList.filter((it) => it && it.collectible).map((item) => {
-    const userOff = state.placardOffsets?.[item.id] || { dx: 0, dy: 0 };
-    const hasCustomOffset = Math.abs(userOff.dx) > 1 || Math.abs(userOff.dy) > 1;
-    let maxRight = winW - cardHalfW - 12;
-    const swWin = document.getElementById('software-window');
-    if (!hasCustomOffset && swWin && !state.windowHidden && swWin.classList.contains('window-dock-right') && !document.body.classList.contains('pure-screen-mode')) {
-      const rect = swWin.getBoundingClientRect();
-      if (rect.width > 80 && item.anchorX < rect.left) {
-        maxRight = Math.min(maxRight, rect.left - cardHalfW - 10);
-      }
-    }
-    const baseCx = hasCustomOffset ? (item.cardX + userOff.dx) : item.anchorX;
-    const baseCy = hasCustomOffset
-      ? (item.cardY + userOff.dy)
-      : Math.max(item.anchorY + cardHalfH + 18, winH - cardHalfH - 14);
-    return {
-      item,
-      hasCustomOffset,
-      maxRight,
-      cx: Math.max(cardHalfW + 12, Math.min(maxRight, baseCx)),
-      cy: Math.max(cardHalfH + 16, Math.min(winH - cardHalfH - 12, baseCy)),
-    };
-  });
-
-  // De-overlap non-custom placards horizontally so cards never stack on top of each other
-  const autoItems = layoutItems.filter((x) => !x.hasCustomOffset).sort((a, b) => a.cx - b.cx);
-  const minGap = cardHalfW * 2 + 14;
-  for (let i = 1; i < autoItems.length; i++) {
-    if (autoItems[i].cx - autoItems[i - 1].cx < minGap) {
-      autoItems[i].cx = Math.min(autoItems[i].maxRight, autoItems[i - 1].cx + minGap);
-    }
-  }
-  for (let i = autoItems.length - 2; i >= 0; i--) {
-    if (autoItems[i + 1].cx - autoItems[i].cx < minGap) {
-      autoItems[i].cx = Math.max(cardHalfW + 12, autoItems[i + 1].cx - minGap);
-    }
-  }
-
-  for (const entry of layoutItems) {
-    const { item, cx, cy } = entry;
+  for (const item of placardsList) {
     const col = item.collectible;
-    activeIds.add(item.id);
-
-    // Dynamic 4-Edge Brass Callout Leader Line from 3D Neck Cut (anchorX, anchorY) -> Elbow -> Nearest Card Edge
-    const dxCard = cx - item.anchorX;
-    const dyCard = cy - item.anchorY;
-    let attachX = cx;
-    let attachY = cy;
-    let elbowX = item.anchorX;
-    let elbowY = item.anchorY;
-    if (Math.abs(dyCard) > Math.abs(dxCard) * 0.68 && Math.abs(dyCard) > cardHalfH + 10) {
-      // Attach to Top or Bottom edge of placard
-      attachX = Math.max(cx - cardHalfW + 18, Math.min(cx + cardHalfW - 18, item.anchorX + dxCard * 0.25));
-      attachY = dyCard > 0 ? cy - cardHalfH + 3 : cy + cardHalfH - 3;
-      elbowX = attachX;
-      elbowY = item.anchorY + (attachY - item.anchorY) * 0.52;
-    } else {
-      // Attach to Left or Right edge of placard
-      attachX = dxCard >= 0 ? cx - cardHalfW + 4 : cx + cardHalfW - 4;
-      attachY = Math.max(cy - cardHalfH + 10, Math.min(cy + cardHalfH - 10, cy));
-      elbowX = item.anchorX + (attachX - item.anchorX) * 0.45;
-      elbowY = attachY;
-    }
-
-    const isSelectedPet = state.activeStripPetId === item.id;
-    const strokeCol = (item.isHovered || isSelectedPet) ? 'rgba(251, 191, 36, 0.96)' : 'rgba(217, 179, 130, 0.76)';
-    const glowCol = (item.isHovered || isSelectedPet) ? 'rgba(245, 158, 11, 0.44)' : 'rgba(15, 12, 10, 0.55)';
-
-    svgParts.push(`
-      <g>
-        <polyline points="${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${elbowX.toFixed(1)},${elbowY.toFixed(1)} ${attachX.toFixed(1)},${attachY.toFixed(1)}"
-          fill="none" stroke="${glowCol}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
-        <polyline points="${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${elbowX.toFixed(1)},${elbowY.toFixed(1)} ${attachX.toFixed(1)},${attachY.toFixed(1)}"
-          fill="none" stroke="${strokeCol}" stroke-width="1.4" stroke-dasharray="${(item.isHovered || isSelectedPet) ? 'none' : '4 2.5'}" stroke-linecap="round" stroke-linejoin="round" />
-        <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.5" fill="#fde68a" stroke="#451a03" stroke-width="1.2" />
-        <circle cx="${attachX.toFixed(1)}" cy="${attachY.toFixed(1)}" r="2.7" fill="#d9b382" />
-      </g>
-    `);
-
-    let cardEl = existingCards.get(item.id);
-    const photoSrc = resolveCollectibleLifePhotoSrc(col);
-    const displayName = col.customDisplayName || col.name || '未命名标本';
-    const parsedAge = (col.fateRecord?.vitalityStatus || col.subtitle || '').match(/\d+\s*岁/)?.[0] || '19岁';
-    const displayAge = col.customAge || col.fateRecord?.ageAtCollection || parsedAge;
-    const originText = col.dossier?.origin || col.subtitle || '私密典藏标本';
-    const briefStory = col.customBriefStory
-      || col.customContrastText
-      || col.fateRecord?.causeOfDeath
-      || col.fateRecord?.cause
-      || col.fateRecord?.vitalityStatus
-      || col.subtitle
-      || '静默案头藏品 · 任由主人端详摆布';
-
+    if (!col) continue;
+    active.add(item.id);
+    const record = getPlacardDossier(col);
+    const displayName = record.displayName || '未命名标本';
+    const photoSrc = getPlacardPhotoSrc(col, resolveCollectibleLifePhotoSrc);
+    let cardEl = oldCards.get(item.id);
     if (!cardEl) {
       cardEl = document.createElement('div');
       cardEl.className = 'specimen-placard-card';
       cardEl.dataset.placardPetId = item.id;
-      cardEl.title = '按住鼠标左键可自由拖拽此标牌 · 双击标牌归位 · 点击文字可直接修改名字/年龄/简要故事';
+      cardEl.title = '建档后标牌内容已锁定 · 可拖拽标牌，双击恢复位置';
+      // The skeleton contains no user text. All archive fields use textContent,
+      // never interpolated HTML/attributes (including imported JSON archives).
       cardEl.innerHTML = `
         <div class="placard-header-main">
-          <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看完整生平档案">
-            <img data-placard-photo src="${photoSrc}" alt="${displayName}照片" draggable="false" />
+          <div class="placard-photo-wrap" data-placard-dossier title="查看完整生平档案">
+            <img data-placard-photo alt="人物照片" draggable="false" />
           </div>
           <div class="placard-info-col">
             <div class="placard-top-row">
-              <span class="placard-name" data-placard-title contenteditable="true" spellcheck="false" title="点击直接修改人物名字">${displayName}</span>
-              <span class="placard-age-badge" data-placard-age contenteditable="true" spellcheck="false" title="点击直接修改人物年龄">${displayAge}</span>
+              <span class="placard-name" data-placard-title></span>
+              <span class="placard-age-badge" data-placard-age></span>
             </div>
-            <div class="placard-origin-line" data-placard-origin>${originText}</div>
+            <div class="placard-origin-line" data-placard-origin></div>
           </div>
         </div>
-        <div class="placard-brief-line" data-placard-brief contenteditable="true" spellcheck="false" title="可上下滚动查看完整故事 · 点击文字可直接修改内容">${briefStory}</div>
+        <div class="placard-brief-line" data-placard-brief></div>
         <div class="placard-action-bar">
-          <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开完整生前状态、死因经过与反差语录">📖 完整生平档案</button>
-          <button type="button" class="placard-mini-btn" data-placard-edit-studio="${item.id}" title="打开人物标牌与角色存档编辑器">✍️ 编辑标牌 / 存档</button>
-        </div>
-      `;
-      const titleEditEl = cardEl.querySelector('[data-placard-title]');
-      titleEditEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-      titleEditEl?.addEventListener('blur', () => {
-        const raw = titleEditEl.textContent?.trim();
-        if (raw) {
-          col.customDisplayName = raw;
-          persistCollectibles();
-          if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
-          if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
-          showToast(`✍️ 已更新标牌名字为「${raw}」`);
-        }
-      });
-      titleEditEl?.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          titleEditEl.blur();
-        }
-      });
-
-      const ageEditEl = cardEl.querySelector('[data-placard-age]');
-      ageEditEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-      ageEditEl?.addEventListener('blur', () => {
-        const rawAge = ageEditEl.textContent?.trim();
-        if (rawAge) {
-          col.customAge = rawAge;
-          if (col.fateRecord) col.fateRecord.ageAtCollection = rawAge;
-          persistCollectibles();
-          if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
-          if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
-          showToast(`✍️ 已更新标牌年龄为「${rawAge}」`);
-        }
-      });
-      ageEditEl?.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          ageEditEl.blur();
-        }
-      });
-
-      const briefEl = cardEl.querySelector('[data-placard-brief]');
-      briefEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-      briefEl?.addEventListener('blur', () => {
-        const text = briefEl.textContent?.trim();
-        if (text) {
-          col.customBriefStory = text;
-          col.customContrastText = text;
-          persistCollectibles();
-          if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
-          if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
-          showToast('✍️ 已保存人物简要故事！');
-        }
-      });
-      briefEl?.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') {
-          ev.preventDefault();
-          briefEl.blur();
-        }
-      });
-
-      cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
-        btn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-        btn.addEventListener('click', (ev) => {
+          <button type="button" class="placard-mini-btn" data-placard-dossier>📖 完整生平档案</button>
+          <button type="button" class="placard-mini-btn" data-placard-open-slot>🔒 查看建档 / 外观</button>
+        </div>`;
+      cardEl.querySelectorAll('[data-placard-dossier]').forEach(btn => {
+        btn.addEventListener('pointerdown', ev => ev.stopPropagation());
+        btn.addEventListener('click', ev => {
           if (cardEl.dataset.justDragged === '1') return;
           ev.stopPropagation();
           state.activeStripPetId = item.id;
-          if (typeof window.__syncVcdSelectedPetUI === 'function') {
-            window.__syncVcdSelectedPetUI(item.id);
-          }
+          window.__syncVcdSelectedPetUI?.(item.id);
           togglePinnedDossierForPet(item.id);
         });
       });
-
-      cardEl.querySelectorAll('[data-placard-edit-studio]').forEach((btn) => {
-        btn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
-        btn.addEventListener('click', (ev) => {
-          if (cardEl.dataset.justDragged === '1') return;
-          ev.stopPropagation();
-          state.activeStripPetId = item.id;
-          if (typeof window.__syncVcdSelectedPetUI === 'function') {
-            window.__syncVcdSelectedPetUI(item.id);
-          }
-          const studio = document.getElementById('obsidian-char-hair-studio');
-          if (studio) {
-            studio.classList.remove('hidden');
-            document.getElementById('btn-open-obsidian-studio')?.classList.add('active-top');
-            const charTab = studio.querySelector('.obs-tab-btn[data-obs-tab="char"]');
-            charTab?.click();
-            if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
-            if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
-          }
-        });
-      });
-
-      // Stage 43 · Free Pointer Dragging & Double-Click Reset for Connected Specimen Placards
-      cardEl.addEventListener('pointerdown', (ev) => {
-        if (ev.button !== 0) return;
-        if (ev.target.closest('[contenteditable="true"]')) return;
+      const openSlot = cardEl.querySelector('[data-placard-open-slot]');
+      openSlot?.addEventListener('pointerdown', ev => ev.stopPropagation());
+      openSlot?.addEventListener('click', ev => {
+        if (cardEl.dataset.justDragged === '1') return;
         ev.stopPropagation();
         state.activeStripPetId = item.id;
-        if (typeof window.__syncVcdSelectedPetUI === 'function') {
-          window.__syncVcdSelectedPetUI(item.id);
-        }
-        const curOff = state.placardOffsets[item.id] || { dx: 0, dy: 0 };
-        const startX = ev.clientX;
-        const startY = ev.clientY;
-        const startDx = curOff.dx;
-        const startDy = curOff.dy;
+        window.__syncVcdSelectedPetUI?.(item.id);
+        const studio = document.getElementById('obsidian-char-hair-studio');
+        if (!studio) return;
+        studio.classList.remove('hidden');
+        document.getElementById('btn-open-obsidian-studio')?.classList.add('active-top');
+        studio.querySelector('.obs-tab-btn[data-obs-tab="character"]')?.click();
+        const current = state.collectibles.find(c => c.id === item.id);
+        if (current) window.__syncPlacardEditorFields?.(current);
+        window.__refreshObsCharSaveSlots?.();
+      });
+      cardEl.addEventListener('pointerdown', ev => {
+        if (ev.button !== 0 || ev.target.closest('button, [data-placard-dossier]')) return;
+        ev.stopPropagation();
+        state.activeStripPetId = item.id;
+        window.__syncVcdSelectedPetUI?.(item.id);
+        const off = state.placardOffsets[item.id] || { dx: 0, dy: 0 };
+        const x0 = ev.clientX, y0 = ev.clientY;
         let moved = false;
         cardEl.setPointerCapture(ev.pointerId);
         cardEl.classList.add('is-dragging');
-
-        const onMove = (mev) => {
-          const dX = mev.clientX - startX;
-          const dY = mev.clientY - startY;
-          if (Math.hypot(dX, dY) > 3) moved = true;
-          state.placardOffsets[item.id] = { dx: startDx + dX, dy: startDy + dY };
-          if (desktopEngine) {
-            renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
-          }
+        const move = mev => {
+          const dx = mev.clientX - x0, dy = mev.clientY - y0;
+          if (Math.hypot(dx, dy) > 3) moved = true;
+          state.placardOffsets[item.id] = { dx: off.dx + dx, dy: off.dy + dy };
+          if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
         };
-        const onUp = (uev) => {
-          cardEl.releasePointerCapture(uev.pointerId);
+        const up = uev => {
+          if (cardEl.hasPointerCapture(uev.pointerId)) cardEl.releasePointerCapture(uev.pointerId);
           cardEl.classList.remove('is-dragging');
-          cardEl.removeEventListener('pointermove', onMove);
-          cardEl.removeEventListener('pointerup', onUp);
-          cardEl.removeEventListener('pointercancel', onUp);
+          cardEl.removeEventListener('pointermove', move);
+          cardEl.removeEventListener('pointerup', up);
+          cardEl.removeEventListener('pointercancel', up);
           if (moved) {
             cardEl.dataset.justDragged = '1';
             setTimeout(() => { delete cardEl.dataset.justDragged; }, 160);
           }
         };
-        cardEl.addEventListener('pointermove', onMove);
-        cardEl.addEventListener('pointerup', onUp);
-        cardEl.addEventListener('pointercancel', onUp);
+        cardEl.addEventListener('pointermove', move);
+        cardEl.addEventListener('pointerup', up);
+        cardEl.addEventListener('pointercancel', up);
       });
-
-      cardEl.addEventListener('dblclick', (ev) => {
-        if (ev.target.closest('[contenteditable="true"]')) return;
+      cardEl.addEventListener('dblclick', ev => {
+        if (ev.target.closest('button')) return;
         ev.stopPropagation();
         delete state.placardOffsets[item.id];
         if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
-        showToast(`🏷️ 已将「${displayName}」连接标牌归位至默认锚点`);
+        showToast(`🏷️ 已将「${getPlacardDossier(item.collectible).displayName}」连接标牌归位`);
       });
-
       cardsEl.appendChild(cardEl);
-    } else {
-      const photoImg = cardEl.querySelector('[data-placard-photo]');
-      if (photoImg && photoImg.getAttribute('src') !== photoSrc) {
-        photoImg.setAttribute('src', photoSrc);
-      }
-      const titleEl = cardEl.querySelector('[data-placard-title]');
-      if (titleEl && document.activeElement !== titleEl) {
-        titleEl.textContent = displayName;
-      }
-      const ageEl = cardEl.querySelector('[data-placard-age]');
-      if (ageEl && document.activeElement !== ageEl) {
-        ageEl.textContent = displayAge;
-      }
-      const originEl = cardEl.querySelector('[data-placard-origin]');
-      if (originEl) {
-        originEl.textContent = originText;
-      }
-      const briefEl = cardEl.querySelector('[data-placard-brief]');
-      if (briefEl && document.activeElement !== briefEl) {
-        briefEl.textContent = briefStory;
-      }
     }
 
-    cardEl.classList.toggle('is-hovered', Boolean(item.isHovered || isSelectedPet));
+    if (cardEl._photoSrc !== photoSrc) {
+      cardEl.querySelector('[data-placard-photo]').src = photoSrc;
+      cardEl.querySelector('[data-placard-photo]').alt = `${displayName}照片`;
+      cardEl._photoSrc = photoSrc;
+    }
+    for (const [selector, textValue] of [
+      ['[data-placard-title]', displayName], ['[data-placard-age]', record.age],
+      ['[data-placard-origin]', record.origin], ['[data-placard-brief]', record.story],
+    ]) {
+      const el = cardEl.querySelector(selector);
+      if (el && el.textContent !== textValue) el.textContent = textValue || '';
+    }
+
+    // Measure the real card after text wrapping, not the old fixed 114×30 estimate.
+    // Keep even a multi-paragraph archive entirely inside the usable viewport.
+    const halfW = cardEl.offsetWidth * 0.5 || 175;
+    const halfH = cardEl.offsetHeight * 0.5 || 95;
+    const off = state.placardOffsets[item.id] || { dx: 0, dy: 0 };
+    const manuallyPlaced = Math.abs(off.dx) > 1 || Math.abs(off.dy) > 1;
+    const leftBound = halfW + 10;
+    let rightBound = winW - halfW - 10;
+    if (!manuallyPlaced && dockRect?.width > 80 && item.anchorX < dockRect.left) {
+      rightBound = Math.min(rightBound, dockRect.left - halfW - 10);
+    }
+    const bottomBound = winH - halfH - 12;
+    const wishX = item.cardX + off.dx;
+    let cx = clamp(wishX, leftBound, rightBound);
+    const topBoundAt = x => {
+      const barOverlap = barRect
+        ? Math.min(x + halfW, barRect.right) - Math.max(x - halfW, barRect.left) : 0;
+      const clearance = barOverlap > 18 ? Math.min(winH * 0.40, barRect.bottom + 8) : 46;
+      return Math.min(clearance + halfH, winH - halfH - 8);
+    };
+    const topBound = topBoundAt(cx);
+    // Prefer the Stage69g location below the neck, measured with the *actual*
+    // Stage70 dossier height. If a long placard cannot fit there, fall back to
+    // the upper/side lane rather than cover a face or clip its paragraphs.
+    const belowCenter = item.anchorY + halfH + 18;
+    const canFitBelow = belowCenter <= bottomBound;
+    const wishY = manuallyPlaced ? item.cardY + off.dy
+      : canFitBelow ? Math.min(bottomBound, Math.max(belowCenter, winH - halfH - 22))
+        : Math.min(item.cardY, item.anchorY - halfH - 190);
+    let cy = clamp(wishY, topBound, bottomBound);
+    const overlaps = (x, y, p) =>
+      Math.abs(x - p.x) < halfW + p.halfW + 12 && Math.abs(y - p.y) < halfH + p.halfH + 12;
+    // Check *every* head, even when no two cards overlap. Otherwise a fourth
+    // dossier can pass the card-card test yet hide a different pet's eyes.
+    const faceCoverPenalty = ([x,y]) => placardsList.reduce((sum,p) => {
+      const overlapX = Math.max(0, Math.min(x + halfW, p.anchorX + 76)
+        - Math.max(x - halfW, p.anchorX - 76));
+      const overlapY = Math.max(0, Math.min(y + halfH, p.anchorY + 14)
+        - Math.max(y - halfH, p.anchorY - 125));
+      return sum + overlapX * overlapY * .10;
+    }, 0);
+    const placementScore = ([x,y]) =>
+      Math.hypot(x - wishX, (y - wishY) * 1.15) + faceCoverPenalty([x,y]);
+    if (!manuallyPlaced) {
+      // Separate labels and protect *all* faces, not only the anchor's owner.
+      for (let attempt = 0; attempt < occupied.length + 2; attempt++) {
+        const hit = occupied.find(p => overlaps(cx, cy, p));
+        if (!hit && faceCoverPenalty([cx,cy]) < 40) break;
+        const nextRow = occupied.length
+          ? Math.max(...occupied.map(p => p.y + p.halfH)) + halfH + 12 : cy;
+        const candidates = [
+          [cx, topBoundAt(cx)], [cx, bottomBound],
+          [clamp(wishX, leftBound, rightBound), topBoundAt(clamp(wishX, leftBound, rightBound))],
+          [clamp(wishX, leftBound, rightBound), bottomBound],
+          ...(hit ? [
+            [hit.x + hit.halfW + halfW + 12, cy],
+            [hit.x - hit.halfW - halfW - 12, cy],
+            [cx, hit.y - hit.halfH - halfH - 12],
+            [cx, hit.y + hit.halfH + halfH + 12],
+          ] : []),
+          // The closest free row may be to the *side* of a neighbour's face.
+          ...[wishX, winW * .38, winW * .5, winW * .6, winW * .72]
+            .map(x => [clamp(x, leftBound, rightBound), nextRow]),
+        ].filter(([x,y]) => x >= leftBound && x <= rightBound && y >= topBoundAt(x) && y <= bottomBound
+          && !occupied.some(p => overlaps(x, y, p)));
+        if (!candidates.length) break;
+        candidates.sort((a,b) => placementScore(a) - placementScore(b));
+        if (!hit && placementScore(candidates[0]) >= placementScore([cx,cy])) break;
+        [cx, cy] = candidates[0];
+      }
+    }
+    occupied.push({ x: cx, y: cy, halfW, halfH });
+    cardEl.classList.toggle('is-hovered', Boolean(item.isHovered || state.activeStripPetId === item.id));
     cardEl.style.left = `${cx.toFixed(1)}px`;
     cardEl.style.top = `${cy.toFixed(1)}px`;
-  }
 
-  // Remove stale placard DOM elements for dismissed heads
-  for (const [id, el] of existingCards.entries()) {
-    if (!activeIds.has(id)) {
-      el.remove();
+    const dx = cx - item.anchorX, dy = cy - item.anchorY;
+    let ax, ay, ex, ey, points;
+    if (!manuallyPlaced && cy + halfH < item.anchorY - 85 && winW > 800) {
+      // A straight neck-to-placard wire used to bisect the portrait's eyes.
+      // Lead out *below* the neck first, then rise beyond the silhouette.
+      const sideX = clamp(item.anchorX + (item.anchorX < winW * .5 ? -110 : 110), 18, winW - 18);
+      ax = clamp(sideX, cx - halfW + 24, cx + halfW - 24);
+      ay = cy + halfH - 3;
+      points = `${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${sideX.toFixed(1)},${(item.anchorY + 18).toFixed(1)} ${sideX.toFixed(1)},${(ay + 12).toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`;
+    } else {
+      if (Math.abs(dy) > Math.abs(dx) * 0.68 && Math.abs(dy) > halfH + 10) {
+        ax = clamp(item.anchorX + dx * 0.25, cx - halfW + 18, cx + halfW - 18);
+        ay = dy > 0 ? cy - halfH + 3 : cy + halfH - 3;
+        ex = ax; ey = item.anchorY + (ay - item.anchorY) * 0.52;
+      } else {
+        ax = dx >= 0 ? cx - halfW + 4 : cx + halfW - 4;
+        ay = clamp(item.anchorY, cy - halfH + 10, cy + halfH - 10);
+        ex = item.anchorX + (ax - item.anchorX) * 0.45; ey = ay;
+      }
+      points = `${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`;
     }
+    const selected = item.isHovered || state.activeStripPetId === item.id;
+    lines.push(`<g>
+      <polyline points="${points}" fill="none" stroke="${selected ? 'rgba(245,158,11,.44)' : 'rgba(15,12,10,.55)'}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="${points}" fill="none" stroke="${selected ? 'rgba(251,191,36,.96)' : 'rgba(217,179,130,.76)'}" stroke-width="1.4" stroke-dasharray="${selected ? 'none' : '4 2.5'}" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.5" fill="#fde68a" stroke="#451a03" stroke-width="1.2"/>
+      <circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.7" fill="#d9b382"/>
+    </g>`);
   }
-
-  svgEl.innerHTML = svgParts.join('');
+  for (const [id, el] of oldCards) if (!active.has(id)) el.remove();
+  svgEl.innerHTML = lines.join('');
 }
 
 function updateStructureFloatingHUD(info) {
@@ -1908,7 +1843,7 @@ async function refreshStudio3DModel() {
   }
   const groomStatus = document.getElementById('groom-quality-status');
   if (groomStatus) groomStatus.textContent = error ? `发型加载失败：${error}。请重新导入原件。` :
-    hStats ? `${state.studioDraft.customHairUrl ? '导入发型 · 保留原 PBR 材质' : '内置发片 · 单层覆盖 / 场景光照'} · ${hStats.vertices.toLocaleString()} 顶点 · ${Math.round(hStats.triangles).toLocaleString()} 三角面。轮廓与照片一致性仍取决于资产。` : '无发模式';
+    hStats ? `${hStats.mode === 'strand' ? `真实 3D 发丝 · ${hStats.strands.toLocaleString()} 根${hStats.runtimeLod?.startsWith('software-') ? '（软件预览降采样）' : ''}` : (state.studioDraft.customHairUrl ? '导入发型 · 保留原 PBR 材质' : '高清发丝纹理发片（默认流畅）')} · ${hStats.vertices.toLocaleString()} 顶点 · ${Math.round(hStats.triangles).toLocaleString()} 三角面。轮廓与照片一致性仍取决于资产。` : '无发模式';
   const sheen = state.studioDraft.hairSheen ?? 0.45;
   const sheenInput = document.getElementById('slider-hair-sheen');
   if (sheenInput) {
@@ -1935,6 +1870,26 @@ function syncStudioHairUI(hairStyle) {
   document.querySelectorAll('[data-hair-preset]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.hairPreset === resolved);
   });
+}
+
+function syncStudioPlacardArchiveFields() {
+  const id = document.getElementById('inp-col-id')?.value?.trim();
+  const archived = state.collectibles.find(c => c.id === id);
+  const fixed = archived ? getPlacardDossier(archived) : null;
+  const fields = [
+    ['inp-placard-name', 'displayName'], ['inp-placard-age', 'age'],
+    ['inp-placard-origin', 'origin'], ['inp-placard-story', 'story'],
+  ];
+  for (const [controlId, key] of fields) {
+    const input = document.getElementById(controlId);
+    if (!input) continue;
+    if (fixed) input.value = fixed[key] || '';
+    input.disabled = Boolean(fixed);
+  }
+  const hint = document.getElementById('studio-placard-lock-hint');
+  if (hint) hint.textContent = fixed
+    ? '🔒 此编号已有档案：标牌内容与照片已锁定。再次保存只会更新外观，不会修改原有标牌。另建档案请换一个新编号。'
+    : '新角色保存后，名字、年龄、来源及段落故事将锁定；日后仍可改脸型与发型。';
 }
 
 function loadCollectibleIntoStudio(col) {
@@ -2082,6 +2037,7 @@ function loadCollectibleIntoStudio(col) {
   if (inpVit && col.fateRecord?.vitalityStatus) inpVit.value = col.fateRecord.vitalityStatus;
   const inpCause = document.getElementById('inp-col-cause');
   if (inpCause && col.fateRecord?.causeOfDeath) inpCause.value = col.fateRecord.causeOfDeath;
+  syncStudioPlacardArchiveFields();
 
   refreshStudio3DModel();
 }
@@ -2359,6 +2315,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
   });
+  // SwiftShader may spend tens of seconds drawing the artist strand groom.
+  // CSS transitions otherwise freeze the software window at opacity:0 after
+  // clicking Start, leaving a technically active but invisible workbench.
+  document.body.classList.toggle('software-webgl', Boolean(desktopEngine.softwareRenderer));
 
   document.getElementById('btn-struct-hud-closer')?.addEventListener('click', () => {
     const hud = document.getElementById('structure-floating-hud');
@@ -2495,6 +2455,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     state,
     persistCollectibles,
     resolveCollectibleLifePhotoSrc,
+    getPlacardDossier,
+    getPlacardPhotoSrc: col => getPlacardPhotoSrc(col, resolveCollectibleLifePhotoSrc),
     showToast,
     renderVaultGrid,
     refreshPlacards() {
@@ -2506,10 +2468,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     },
     syncLivePetToCollectible(col) {
       if (!col) return null;
+      const fixedPlacard = lockPlacardDossier(col);
       const pet = desktopEngine?.pets?.get(col.id);
       if (pet?.collectible) {
         Object.assign(col, JSON.parse(JSON.stringify(pet.collectible)));
       }
+      col.placardDossier = fixedPlacard;
       const headGroup = pet?.node || pet?.headNode;
       if (headGroup?.userData?.currentMorphs) {
         col.morphs = { ...(col.morphs || {}), ...JSON.parse(JSON.stringify(headGroup.userData.currentMorphs)) };
@@ -2526,40 +2490,65 @@ window.addEventListener('DOMContentLoaded', async () => {
       const col = this.getActiveCollectible();
       if (!col) return null;
       this.syncLivePetToCollectible(col);
-      const nameInp = document.getElementById('obs-placard-name-input');
-      const ageInp = document.getElementById('obs-placard-age-input');
-      const storyInp = document.getElementById('obs-placard-story-input');
-      if (nameInp?.value?.trim()) col.customDisplayName = nameInp.value.trim();
-      if (ageInp?.value?.trim()) {
-        col.customAge = ageInp.value.trim();
-        if (col.fateRecord) col.fateRecord.ageAtCollection = col.customAge;
-      }
-      if (storyInp?.value?.trim()) {
-        col.customBriefStory = storyInp.value.trim();
-        col.customContrastText = col.customBriefStory;
-      }
+      // Existing dossiers are read-only: saving a face/hair look cannot rewrite the placard.
+      lockPlacardDossier(col);
       persistCollectibles();
       renderVaultGrid();
       this.refreshPlacards();
       if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
       const title = col.customDisplayName || col.name;
-      showToast(`💾 已保存角色「${title}」的全部脸型、发型、彩妆与标牌设定！`);
+      showToast(`💾 已保存「${title}」的脸型、发型与彩妆；建档标牌保持锁定。`);
       return col;
     },
-    async saveAsNewCharacterSlot(customTitle = '') {
+    async saveAsNewCharacterSlot(placardDraft = null) {
+      if (!placardDraft || typeof placardDraft !== 'object') {
+        showToast('🔒 请先点击「创建新档案草稿」，填好标牌，再点击建档锁定。');
+        return null;
+      }
       const baseCol = this.saveActiveCharacterDesign() || this.getActiveCollectible();
       if (!baseCol) return null;
       const cloned = JSON.parse(JSON.stringify(baseCol));
-      const suffix = String(Date.now()).slice(-4);
-      cloned.id = `SPEC-USER-${suffix}`;
-      const baseName = customTitle.trim() || `${(baseCol.customDisplayName || baseCol.name.split('·')[0]).trim()} · 自定义存档#${state.collectibles.length + 1}`;
+      cloned.id = `SPEC-USER-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const baseName = String(placardDraft.displayName || '').trim().replace(/[<>]/g, '')
+        || `${baseCol.name.split('·')[0].trim()} · 新档案`;
       cloned.name = baseName;
       cloned.customDisplayName = baseName;
+      cloned.customAge = String(placardDraft.age || '').trim();
+      cloned.subtitle = String(placardDraft.origin || '').trim();
+      cloned.dossier = { ...(cloned.dossier || {}), origin: cloned.subtitle };
+      cloned.customBriefStory = String(placardDraft.story || '').trim();
+      cloned.customContrastText = cloned.customBriefStory;
+      cloned.customLifePhotoUrl = String(placardDraft.photoUrl || '');
+      if (cloned.fateRecord) cloned.fateRecord.ageAtCollection = cloned.customAge;
+      delete cloned.placardDossier;
+      lockPlacardDossier(cloned, placardDraft);
       cloned.isCustomUserSlot = true;
       cloned.summoned = true;
+      // A new dossier duplicates the *appearance*, not the desk location.
+      // Placing it at the source head's coordinates used to stack both heads
+      // on top of each other (and made four-card visual QA misleading).
+      if (desktopEngine?.pets?.size) {
+        const zMm = Number(cloned.boxPosition?.z ?? -160);
+        const depth = zMm / 10;
+        const scale = desktopEngine.computeMacroTargetScale(depth, 0.76);
+        const bounds = desktopEngine.getBoxBoundsAtZ(depth, scale);
+        const others = [...desktopEngine.pets.values()];
+        let bestX = Number(cloned.boxPosition?.x ?? 0), bestClearance = -Infinity;
+        for (const x of [0, -12, 12, -24, 24, -36, 36, -48, 48]) {
+          if (x < bounds.minX || x > bounds.maxX) continue;
+          const clearance = Math.min(...others.map(p => Math.hypot(x - p.pos.x, (depth - p.pos.z) * 0.45)));
+          if (clearance > bestClearance) { bestX = x; bestClearance = clearance; }
+        }
+        if (bestClearance > 10) cloned.boxPosition = { ...cloned.boxPosition, x: bestX };
+      }
       state.collectibles.unshift(cloned);
       state.activeStripPetId = cloned.id;
-      persistCollectibles();
+      if (!persistCollectibles()) {
+        state.collectibles.shift();
+        state.activeStripPetId = baseCol.id;
+        showToast('⚠️ 浏览器存储空间不足：新档案尚未保存。请缩小照片或导出旧角色档案后重试。');
+        return null;
+      }
       if (desktopEngine) {
         try {
           await desktopEngine.summonCollectible(cloned);
@@ -2628,7 +2617,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       const keepId = dstCol.id;
       const keepSummoned = dstCol.summoned;
-      Object.assign(dstCol, JSON.parse(JSON.stringify(curCol)), { id: keepId, summoned: keepSummoned });
+      const originalIdentity = {
+        name: dstCol.name, folderName: dstCol.folderName, subtitle: dstCol.subtitle,
+        customDisplayName: dstCol.customDisplayName, customAge: dstCol.customAge,
+        customBriefStory: dstCol.customBriefStory, customContrastText: dstCol.customContrastText,
+        customLifePhotoUrl: dstCol.customLifePhotoUrl, createdAt: dstCol.createdAt,
+        dossier: dstCol.dossier, fateRecord: dstCol.fateRecord,
+        placardDossier: lockPlacardDossier(dstCol),
+      };
+      Object.assign(dstCol, JSON.parse(JSON.stringify(curCol)), originalIdentity,
+        { id: keepId, summoned: keepSummoned });
       persistCollectibles();
       if (desktopEngine?.pets?.has(keepId)) {
         desktopEngine.recallCollectible(keepId);
@@ -2637,7 +2635,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       renderVaultGrid();
       this.refreshPlacards();
       if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
-      showToast(`💾 已将当前外观与标牌覆盖保存至槽位「${dstCol.customDisplayName || dstCol.name}」！`);
+      showToast(`💾 已覆盖「${dstCol.customDisplayName || dstCol.name}」的外观；其建档标牌未改动。`);
     },
     async toggleSummonCollectibleById(colId) {
       const col = state.collectibles.find(c => c.id === colId);
@@ -2666,6 +2664,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (def) {
         const fresh = JSON.parse(JSON.stringify(def));
         fresh.summoned = col.summoned;
+        lockPlacardDossier(fresh);
         state.collectibles[idx] = fresh;
         persistCollectibles();
         if (desktopEngine?.pets?.has(colId)) {
@@ -2714,7 +2713,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         return null;
       }
       const imported = JSON.parse(JSON.stringify(charData));
-      imported.id = `SPEC-IMPORT-${String(Date.now()).slice(-4)}`;
+      imported.id = `SPEC-IMPORT-${Date.now().toString(36)}`;
+      lockPlacardDossier(imported);
       imported.isCustomUserSlot = true;
       imported.summoned = true;
       state.collectibles.unshift(imported);
@@ -3284,6 +3284,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-eye-bag', 'val-morph-eye-bag', 'eyeBag', ''],
       ['morph-lower-lid-flatness', 'val-morph-lower-lid-flatness', 'lowerLidFlatness', ''],
       ['morph-eye-depth', 'val-morph-eye-depth', 'eyeDepth', ''],
+      ['morph-outer-canthus', 'val-morph-outer-canthus', 'outerCanthusLift', ''],
       ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
       ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
       ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
@@ -3293,8 +3294,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-nose', 'val-morph-nose', 'noseBridge', ''],
       ['morph-nose-width', 'val-morph-nose-width', 'noseWidth', ''],
       ['morph-nose-tip', 'val-morph-nose-tip', 'noseTipAngle', ''],
+      ['morph-nose-tip-width', 'val-morph-nose-tip-width', 'noseTipWidth', ''],
       ['morph-lip', 'val-morph-lip', 'lipFullness', ''],
       ['morph-mouth-width', 'val-morph-mouth-width', 'mouthWidth', ''],
+      ['morph-mouth-height', 'val-morph-mouth-height', 'mouthHeight', ''],
       ['morph-cupid-bow', 'val-morph-cupid-bow', 'cupidBow', ''],
       ['morph-lower-lip', 'val-morph-lower-lip', 'lowerLipCenter', ''],
       ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
@@ -3633,6 +3636,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       showToast(expanded ? '📑 已展开右侧工作台全部 7 大微调面板' : '🗂️ 已切换回清爽分类子页签模式');
     });
   }
+  // Visible shortcuts in the face editor locate the actual bound input rows;
+  // this is navigation only, not a second fake set of shape sliders.
+  document.querySelectorAll('[data-jump-face]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = document.getElementById(btn.dataset.jumpFace)?.closest('.slider-row');
+      row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
 
   const getTargetDesktopPetsList = () => {
     if (!desktopEngine || desktopEngine.pets.size === 0) return [];
@@ -3714,6 +3725,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-eye-bag', 'val-morph-eye-bag', 'eyeBag', ''],
     ['morph-lower-lid-flatness', 'val-morph-lower-lid-flatness', 'lowerLidFlatness', ''],
     ['morph-eye-depth', 'val-morph-eye-depth', 'eyeDepth', ''],
+    ['morph-outer-canthus', 'val-morph-outer-canthus', 'outerCanthusLift', ''],
     ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
     ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
     ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
@@ -3723,11 +3735,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-nose', 'val-morph-nose', 'noseBridge', ''],
     ['morph-nose-width', 'val-morph-nose-width', 'noseWidth', ''],
     ['morph-nose-tip', 'val-morph-nose-tip', 'noseTipAngle', ''],
+    ['morph-nose-tip-width', 'val-morph-nose-tip-width', 'noseTipWidth', ''],
     ['morph-brow-height', 'val-morph-brow-height', 'browHeight', ''],
     ['morph-brow-tilt', 'val-morph-brow-tilt', 'browTilt', ''],
     ['morph-brow-thick', 'val-morph-brow-thick', 'browThickness', '%'],
     ['morph-lip', 'val-morph-lip', 'lipFullness', ''],
     ['morph-mouth-width', 'val-morph-mouth-width', 'mouthWidth', ''],
+    ['morph-mouth-height', 'val-morph-mouth-height', 'mouthHeight', ''],
     ['morph-cupid-bow', 'val-morph-cupid-bow', 'cupidBow', ''],
     ['morph-lower-lip', 'val-morph-lower-lip', 'lowerLipCenter', ''],
     ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
@@ -4478,6 +4492,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // 11. Save Collectible Dossier, Generate Folder Archive & Summon to Screen
+  document.getElementById('inp-col-id')?.addEventListener('input', syncStudioPlacardArchiveFields);
+  const archiveNameInput = document.getElementById('inp-col-name');
+  let previousArchiveName = archiveNameInput?.value || '';
+  archiveNameInput?.addEventListener('input', () => {
+    const placardName = document.getElementById('inp-placard-name');
+    if (placardName && !placardName.disabled && placardName.value === previousArchiveName) {
+      placardName.value = archiveNameInput.value;
+    }
+    previousArchiveName = archiveNameInput.value;
+  });
+  syncStudioPlacardArchiveFields();
   document.getElementById('btn-save-and-summon').addEventListener('click', async () => {
     const name = document.getElementById('inp-col-name').value.trim() || '未命名藏品';
     const id = document.getElementById('inp-col-id').value.trim() || `SPEC-${Date.now().toString().slice(-4)}`;
@@ -4585,8 +4610,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const existingIdx = state.collectibles.findIndex(c => c.id === id);
     if (existingIdx >= 0) {
+      newCollectible.placardDossier = lockPlacardDossier(state.collectibles[existingIdx]);
       state.collectibles[existingIdx] = newCollectible;
     } else {
+      lockPlacardDossier(newCollectible, {
+        displayName: document.getElementById('inp-placard-name')?.value?.trim() || name,
+        age: document.getElementById('inp-placard-age')?.value?.trim() || '19岁',
+        origin: document.getElementById('inp-placard-origin')?.value?.trim() || subtitle,
+        story: document.getElementById('inp-placard-story')?.value?.trim() || causeOfDeath,
+      });
       state.collectibles.unshift(newCollectible);
     }
 
@@ -4611,6 +4643,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     const nextNum = state.collectibles.length + 1;
     document.getElementById('inp-col-id').value = `SPEC-2026-00${nextNum}`;
+    syncStudioPlacardArchiveFields();
     showToast(diskSaved
       ? `已在本地服务目录生成档案并登记「${name}」。`
       : savedLocally
@@ -4833,8 +4866,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         const imported = JSON.parse(ev.target.result);
         if (typeof imported.id !== 'string' || typeof imported.name !== 'string') throw new Error('档案格式不正确');
         const existing = state.collectibles.findIndex(item => item.id === imported.id);
-        if (existing >= 0) state.collectibles[existing] = imported;
-        else state.collectibles.unshift(imported);
+        if (existing >= 0) {
+          imported.placardDossier = lockPlacardDossier(state.collectibles[existing]);
+          state.collectibles[existing] = imported;
+        } else {
+          lockPlacardDossier(imported);
+          state.collectibles.unshift(imported);
+        }
         persistCollectibles();
         if (location.protocol !== 'file:' && !location.hostname.endsWith('.github.io')) {
           try {
@@ -5439,6 +5477,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     setSliderUI('vcd-limbal-ring', 'val-vcd-limbal-ring', m.limbalRing ?? col.limbalRing ?? 1.0, 'pct');
     setSliderUI('vcd-sclera-brightness', 'val-vcd-sclera-brightness', m.scleraBrightness ?? col.scleraBrightness ?? 1.08, 'pct');
 
+    const hairMode = pet.node?.userData?.hairStats?.mode || getMasterHairConfig().mode;
+    const hairDensity = pet.node?.userData?.hairStats?.density || getMasterHairConfig().density;
+    const hairModeSelect = document.getElementById('vcd-master-hair-mode');
+    if (hairModeSelect) hairModeSelect.value = hairMode;
+    const obsHairModeSelect = document.querySelector('[data-obs-bind="vcd-master-hair-mode"]');
+    if (obsHairModeSelect) obsHairModeSelect.value = hairMode;
+    const hairDensitySelect = document.getElementById('vcd-master-hair-density');
+    if (hairDensitySelect) {
+      hairDensitySelect.value = hairDensity;
+      hairDensitySelect.disabled = hairMode !== 'strand';
+    }
     const hs = document.getElementById('vcd-hair-style');
     if (hs && col.hairStyle) hs.value = col.hairStyle;
     const ht = document.getElementById('vcd-hair-top');
@@ -5602,6 +5651,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Stage 56 · Master Card-to-Strand v2 Hair Mode & Density Controls
   const applyMasterHairPatch = async (patch) => {
     const nextCfg = setMasterHairConfig(patch);
+    for (const select of [document.getElementById('vcd-master-hair-mode'), document.querySelector('[data-obs-bind="vcd-master-hair-mode"]')]) {
+      if (select) select.value = nextCfg.mode;
+    }
+    const hairDensitySelect = document.getElementById('vcd-master-hair-density');
+    if (hairDensitySelect) {
+      hairDensitySelect.value = nextCfg.density;
+      hairDensitySelect.disabled = nextCfg.mode !== 'strand';
+    }
     const hairPatch = { hairRenderMode: nextCfg.mode, strandDensity: nextCfg.density };
     if (studioEngine?.headNode) {
       await updateHairDesignOnGroup(studioEngine.headNode, hairPatch);
@@ -5611,7 +5668,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       await desktopEngine.rebuildAllPetsHair(hairPatch);
     }
     const modeLabel = nextCfg.mode === 'strand'
-      ? `✨ 真发丝模式 (${MASTER_HAIR_DENSITIES[nextCfg.density]?.label || nextCfg.density})`
+      ? `✨ 真发丝模式 (${MASTER_HAIR_DENSITIES[nextCfg.density]?.label || nextCfg.density})${desktopEngine?.softwareRenderer ? '；软件渲染按性能降采样，仍为真实3D发丝' : ''}`
       : '⬜ 原版发片模式';
     showToast(`💇‍♀️ 已切换发丝渲染管线：${modeLabel}`);
   };
@@ -5656,7 +5713,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const updatedPet = desktopEngine.pets.get(pet.id);
       if (updatedPet && savedPos) {
         updatedPet.pos.copy(savedPos);
-        updatedPet.targetPos.copy(savedPos);
+        // DesktopBoxSpaceEngine pets use pos/vel; targetPos is not an entry field.
         updatedPet.node.position.copy(savedPos);
       }
     }
@@ -7183,6 +7240,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.__cervixQA.updateMaterialsLive = updateCollectibleMaterialsLive;
   }
   initObsidianProStudio();
+  // Obsidian's mode selector is created after the first desktop-pet sync.
+  syncVcdSelectedPetUI();
   initMorbidStudyToolkit();
 
   if (bootStatus) bootStatus.remove();

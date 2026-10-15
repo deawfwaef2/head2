@@ -1734,7 +1734,7 @@
             <!-- Stage 36: Clean Categorized Sub-Tab Bar (solves dense UI wall & obstruction) -->
             <div class="studio-subtab-bar" id="studio-subtab-bar">
               <button type="button" class="studio-subtab-btn active" data-studio-subtab="base">👤 基底/头模</button>
-              <button type="button" class="studio-subtab-btn" data-studio-subtab="shape">📐 形状微调</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="shape" title="眼睛与嘴部的真实3D网格滑杆在此">👁️👄 眼嘴捏脸</button>
               <button type="button" class="studio-subtab-btn" data-studio-subtab="color">🎨 颜色微调</button>
               <button type="button" class="studio-subtab-btn" data-studio-subtab="texture">🖼️ 贴图/肤质</button>
               <button type="button" class="studio-subtab-btn" data-studio-subtab="hair">💇‍♀️ 发型设计</button>
@@ -1944,6 +1944,11 @@
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <h3 style="margin:0;">📐 模块 2：12种东亚经典3D眼型预设 & 眼鼻口真实网格精雕</h3>
                 <button type="button" id="btn-reset-shape-morphs" class="chip-btn" style="font-size:11px;padding:2px 8px;color:#7dd3fc;">↺ 重置五官形状</button>
+              </div>
+              <div class="studio-face-jump-bar" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 9px;padding:7px;border:1px solid rgba(125,211,252,.45);border-radius:8px;background:rgba(8,47,73,.4);">
+                <button type="button" class="chip-btn" data-jump-face="morph-eye-size">👁️ 跳到眼睛/眼尾滑杆</button>
+                <button type="button" class="chip-btn" data-jump-face="morph-mouth-width">👄 跳到嘴宽/唇高滑杆</button>
+                <span style="font-size:11px;color:#bae6fd;align-self:center;">拖动即改3D网格；右侧的值与预览同时更新</span>
               </div>
               <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;">
                 <span style="font-size:11.5px;color:#bae6fd;white-space:nowrap;font-weight:600;">👁️ 东亚3D眼型预设：</span>

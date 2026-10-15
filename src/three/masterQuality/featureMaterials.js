@@ -257,6 +257,12 @@ function patchHairShader(s, o, tipsPass, shared) {
          diffuseColor.a *= hTex.a;
        #endif
        gHairTint = normalize(diffuseColor.rgb + 1e-4) * 1.2;
+       // Directional root-fiber variation prevents sparse scalp undercoat
+       // polygons from looking like a single flat, smooth cut-out at profile.
+       float crownPhi = atan(vHairLocalPos.z + 0.010, vHairLocalPos.x);
+       float rootLock = 0.5 + 0.5 * sin(crownPhi * 139.0 + vHairLocalPos.y * 74.0);
+       float rootFiber = 0.5 + 0.5 * sin(crownPhi * 447.0 + vHairLocalPos.y * 128.0);
+       diffuseColor.rgb *= 0.70 + 0.24 * rootLock + 0.16 * rootFiber;
        // 内层发丝更暗（发量体积感），越靠近头皮越暗
        gHairAO = mix(0.35, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
        diffuseColor.rgb *= gHairAO;`,
@@ -271,16 +277,17 @@ function patchHairShader(s, o, tipsPass, shared) {
          gHairT = normalize(f - normal * dot(f, normal));
        }`,
     );
-  // 发丝模式：发片底衬只保留贴近头皮的部分（距头皮 > uScalpFade 的发片剔除），且前额刘海下方绝不渲染低模底衬发片
+  // The authored alpha-textured cards are the *undercoat* for sparse real
+  // strands. Stage69h discarded nearly every front-bang fragment based on z/y
+  // alone, leaving skin-colored pinholes. Keep the near-head bang cards while
+  // rejecting only far away tips and floating foreground slabs.
   s.fragmentShader = s.fragmentShader.replace(
     '#include <alphatest_fragment>',
     `#include <alphatest_fragment>
      if (uScalpFade > 0.0) {
-       if (vScalpD > uScalpFade) discard;
-       if (vHairLocalPos.z > 0.044 && vHairLocalPos.y < 0.082) {
-         float fhKeep = (1.0 - smoothstep(0.044, 0.056, vHairLocalPos.z)) * smoothstep(0.068, 0.082, vHairLocalPos.y);
-         if (fhKeep < 0.5) discard;
-       }
+       float isForeheadBangs = step(0.044, vHairLocalPos.z) * (1.0 - step(0.082, vHairLocalPos.y));
+       float maxDepth = mix(uScalpFade, min(uScalpFade, 0.039), isForeheadBangs);
+       if (vScalpD > maxDepth) discard;
      }`,
   );
   if (tipsPass) {
@@ -312,7 +319,7 @@ export function buildHairMaterials(src, opts = {}) {
   const shared = { uInset: { value: o.inset }, uScalpFade: { value: 0 } };
   const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.22, alphaToCoverage: true });
   core.onBeforeCompile = (s) => patchHairShader(s, o, false, shared);
-  core.customProgramCacheKey = () => 'photoreal-hair-core-v5';
+  core.customProgramCacheKey = () => 'photoreal-hair-core-v7-root-fibers';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
   tips.onBeforeCompile = (s) => patchHairShader(s, o, true, shared);
   tips.customProgramCacheKey = () => 'photoreal-hair-tips-v5';

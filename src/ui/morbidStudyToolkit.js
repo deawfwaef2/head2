@@ -247,7 +247,9 @@ export function initMorbidStudyToolkit() {
   const archModal = document.createElement('div');
   archModal.id = 'arch-prop-selector-modal';
   archModal.className = 'mst-floating-panel hidden';
-  archModal.style.cssText = 'top: 66px; left: 50%; transform: translateX(-50%); width: min(760px, 95vw); max-height: 85vh; overflow-y: auto;';
+  // Must be above the 9500 command dock AND the 10050 workbench: otherwise
+  // the dock intercepts clicks on the modal's Clear/Close header buttons.
+  archModal.style.cssText = 'top: 66px; left: 50%; transform: translateX(-50%); width: min(760px, 95vw); max-height: 85vh; overflow-y: auto; z-index: 11050;';
 
   const classicContainers = CONTAINER_STYLE_CATALOG.filter((c) => c.category !== 'morbid_prop');
   const morbidProps = CONTAINER_STYLE_CATALOG.filter((c) => c.category === 'morbid_prop');
@@ -544,9 +546,9 @@ export function initMorbidStudyToolkit() {
   const getActiveDesktopPet = () => {
     const qa = window.__cervixQA;
     const eng = qa?.desktop;
-    if (!eng || !eng.pets) return null;
-    const petsArr = Array.from(eng.pets.values());
-    return petsArr[0] || null;
+    if (!eng?.pets?.size) return null;
+    const id = eng.selectedPetId || qa.state?.activeStripPetId;
+    return eng.pets.get(id) || eng.pets.values().next().value || null;
   };
 
   const triggerMorbidHeadPhysicalReaction = (mode = 'stare_monitor') => {
@@ -603,34 +605,26 @@ export function initMorbidStudyToolkit() {
     const shouldSnapHead = !forceEmpty && (!snapChk || snapChk.checked);
     const activePet = getActiveDesktopPet();
 
+    // DesktopBoxSpaceEngine's public API uses `pos`, `placeContainerStructure`
+    // and `snapHeadIntoStructure`. The old, nonexistent spawnContainerStructure
+    // method made every selector click throw before anything appeared.
     let structState = null;
-    if (shouldSnapHead && activePet && activePet.position) {
-      // Spawn right under the active head's X/Z position and snap the head into the socket!
-      const px = activePet.position.x;
-      const pz = activePet.position.z;
-      const py = typeof eng.getSurfaceYAt === 'function' ? eng.getSurfaceYAt(px, pz, activePet.position.y) : -14.8;
-      structState = eng.spawnContainerStructure(styleId, { x: px, y: py, z: pz });
-      if (structState && typeof eng.snapPetToStructure === 'function') {
-        eng.snapPetToStructure(activePet, structState);
-      } else if (structState && activePet.position) {
-        const entry = eng.structures?.get(structState.id);
-        const socketY = entry?.node?.userData?.headSocketLocalY ?? 13.2;
-        activePet.position.set(structState.position.x, structState.position.y + socketY, structState.position.z - 0.35);
-        activePet.snappedStructureId = structState.id;
-        if (activePet.node) activePet.node.position.copy(activePet.position);
-      }
+    if (shouldSnapHead && activePet?.pos) {
+      eng.setPetContainerStyle(activePet.id, styleId);
+      structState = eng.structures.get(activePet.snappedStructureId);
     } else {
-      structState = eng.spawnContainerStructure(styleId);
+      structState = eng.placeContainerStructure(styleId);
+    }
+    if (!structState) {
+      qa?.showToast?.('建筑未能放入当前场景，请检查展台模式。');
+      return false;
     }
 
     eng.wakeRender?.(2.0, true);
     const catItem = CONTAINER_STYLE_CATALOG.find((c) => c.id === styleId);
-    qa?.showToast?.(`🏛️ 已自选放置【${catItem?.shortLabel || styleId}】${shouldSnapHead ? '并承接当前断头标本！' : '（可将任意断头拖入其中）'}`);
-
-    // If this is a morbid study prop, also offer/open its linked utility tool
-    if (catItem?.toolAction) {
-      openLinkedMorbidTool(catItem.toolAction);
-    }
+    qa?.showToast?.(`🏛️ 已放置【${catItem?.shortLabel || styleId}】${shouldSnapHead && activePet ? '并承接当前头模' : '（可拖动头模至此）'}`);
+    if (catItem?.toolAction) openLinkedMorbidTool(catItem.toolAction);
+    return true;
   };
 
   const openLinkedMorbidTool = (toolAction) => {
@@ -650,20 +644,22 @@ export function initMorbidStudyToolkit() {
   document.getElementById('mst-close-arch-modal')?.addEventListener('click', () => archModal.classList.add('hidden'));
   document.getElementById('mst-btn-clear-all-structs')?.addEventListener('click', () => {
     const qa = window.__cervixQA;
-    qa?.desktop?.clearAllStructures?.();
-    qa?.showToast?.('🗑️ 已清空桌面上所有已放置的建筑与底座');
+    const eng = qa?.desktop;
+    if (!eng) return;
+    for (const [id, entry] of [...eng.structures]) {
+      if (!entry.isStageGenerated) eng.removeContainerStructure(id, false);
+    }
+    qa?.showToast?.('🗑️ 已清空自行放置的建筑与底座（保留原有展台）');
   });
 
   archModal.querySelectorAll('[data-place-struct]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      placeSelectedStructureOrProp(btn.dataset.placeStruct, false);
-      archModal.classList.add('hidden');
+      if (placeSelectedStructureOrProp(btn.dataset.placeStruct, false)) archModal.classList.add('hidden');
     });
   });
   archModal.querySelectorAll('[data-place-struct-empty]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      placeSelectedStructureOrProp(btn.dataset.placeStructEmpty, true);
-      archModal.classList.add('hidden');
+      if (placeSelectedStructureOrProp(btn.dataset.placeStructEmpty, true)) archModal.classList.add('hidden');
     });
   });
   archModal.querySelectorAll('[data-open-tool]').forEach((btn) => {

@@ -34,22 +34,33 @@ function wire(group, coordinates, radius, material, name, closed = false) {
 function glassesAsset(style) {
   const root = new THREE.Group();
   root.name = `Glasses_${style}`;
-  const metallic = style !== 'acetate_square';
+  const acetate = style === 'acetate_square';
   const frameMat = new THREE.MeshPhysicalMaterial({
-    color: '#a07857', metalness: metallic ? 0.76 : 0.02,
-    roughness: metallic ? 0.30 : 0.28,
-    clearcoat: metallic ? 0.28 : 0.72,
-    clearcoatRoughness: 0.19,
+    color: acetate ? '#342523' : '#524740', metalness: acetate ? 0.035 : 0.82,
+    roughness: acetate ? 0.32 : 0.29, clearcoat: acetate ? 0.78 : 0.22,
+    clearcoatRoughness: acetate ? 0.19 : 0.26, envMapIntensity: 0.68,
     side: THREE.DoubleSide,
   });
+  const hardwareMat = new THREE.MeshPhysicalMaterial({
+    color: '#aca69d', metalness: 0.92, roughness: 0.25,
+    clearcoat: 0.35, envMapIntensity: 0.88,
+  });
+  // A gently convex, clear optical lens with a weak anti-reflection cast.
+  // Transmission is deliberately avoided so offline/software WebGL remains fast.
   const lensMat = new THREE.MeshPhysicalMaterial({
-    color: '#e3edf3', metalness: 0, roughness: 0.08,
-    transparent: true, opacity: 0.045, depthWrite: false,
-    side: THREE.DoubleSide,
+    color: '#e8f3fa', metalness: 0, roughness: 0.16,
+    specularIntensity: 0.95, specularColor: '#f3f9ff',
+    clearcoat: 0.92, clearcoatRoughness: 0.13,
+    transparent: true, opacity: 0.12, depthWrite: false,
+    side: THREE.DoubleSide, envMapIntensity: 0.65,
+  });
+  const reflexMat = new THREE.MeshBasicMaterial({
+    color: '#d7efff', transparent: true, opacity: 0.16,
+    depthWrite: false, side: THREE.DoubleSide,
   });
   const padMat = new THREE.MeshPhysicalMaterial({
-    color: '#e8d2b7', roughness: 0.47, metalness: 0,
-    transparent: true, opacity: 0.82,
+    color: '#d9e0db', roughness: 0.38, metalness: 0,
+    transparent: true, opacity: 0.42, depthWrite: false,
   });
   root.userData.frameMaterial = frameMat;
   root.userData.lensMaterial = lensMat;
@@ -57,61 +68,115 @@ function glassesAsset(style) {
   for (const side of [-1, 1]) {
     const cx = side * 0.032;
     const rx = style === 'aviator' ? 0.027 : style === 'wire_oval' ? 0.0253 : 0.0263;
-    const ry = style === 'aviator' ? 0.0190 : style === 'wire_oval' ? 0.0164 : 0.0154;
-    const pts = [];
-    const shape = new THREE.Shape();
-    const square = style === 'acetate_square';
+    const ry = style === 'aviator' ? 0.019 : style === 'wire_oval' ? 0.0164 : 0.0154;
+    const cy = style === 'aviator' ? 0.0205 : 0.020;
     const steps = 64;
+    const xy = (t, inset = 0) => {
+      const c = Math.cos(t), s = Math.sin(t);
+      const ex = acetate ? Math.sign(c) * Math.pow(Math.abs(c), 0.67) : c;
+      const ey = acetate ? Math.sign(s) * Math.pow(Math.abs(s), 0.75) : s;
+      return [cx + (rx - inset) * ex, cy - EYE_Y + (ry - inset) * ey];
+    };
+    const rim = [];
     for (let i = 0; i < steps; i++) {
-      const t = i * Math.PI * 2 / steps;
-      const co = Math.cos(t), si = Math.sin(t);
-      const x = cx + rx * (square ? Math.sign(co) * Math.pow(Math.abs(co), 0.60) : co);
-      const y = (style === 'aviator' ? 0.0205 : 0.0200) + ry * (square ? Math.sign(si) * Math.pow(Math.abs(si), 0.68) : si);
-      // The real temples recede gently around the skull, unlike a flat 2D sticker.
-      const z = FRAME_Z - 0.0012 * Math.pow(Math.abs(x - cx) / rx, 2);
-      pts.push([x, y - FRAME_ANCHOR.y, z - FRAME_ANCHOR.z]);
-      if (i === 0) shape.moveTo(x, y - FRAME_ANCHOR.y);
-      else shape.lineTo(x, y - FRAME_ANCHOR.y);
+      const [x, y] = xy(i * Math.PI * 2 / steps);
+      rim.push([x, y, -0.0012 * ((x - cx) / rx) ** 2]);
     }
-    shape.closePath();
-    wire(root, pts, square ? 0.0020 : 0.00125, frameMat, `Rim_${side}`, true);
-    const lens = mesh(root, new THREE.ShapeGeometry(shape, 8), lensMat, `ClearLens_${side}`, false);
-    lens.position.z = -0.0014;
+    if (acetate) {
+      // A bevelled 3D annular acetate band, rather than a round gold pipe.
+      const outline = new THREE.Shape();
+      for (let i = 0; i < steps; i++) {
+        const [x, y] = xy(i * Math.PI * 2 / steps);
+        if (i === 0) outline.moveTo(x, y); else outline.lineTo(x, y);
+      }
+      outline.closePath();
+      const aperture = new THREE.Path();
+      for (let i = steps - 1; i >= 0; i--) {
+        const [x, y] = xy(i * Math.PI * 2 / steps, 0.00205);
+        if (i === steps - 1) aperture.moveTo(x, y); else aperture.lineTo(x, y);
+      }
+      aperture.closePath();
+      outline.holes.push(aperture);
+      const ring = mesh(root, new THREE.ExtrudeGeometry(outline, {
+        depth: 0.0017, steps: 1, bevelEnabled: true,
+        bevelThickness: 0.00034, bevelSize: 0.00026, bevelSegments: 2,
+      }), frameMat, `AcetateBevel_${side}`, false);
+      ring.position.z = -0.0014;
+    } else {
+      wire(root, rim, style === 'aviator' ? 0.00091 : 0.00079,
+        frameMat, `TitaniumRim_${side}`, true);
+      // A fine secondary rear eye-wire catches the studio key light.
+      const inner = rim.map(([x, y, z]) => [
+        cx + (x - cx) * 0.977, cy - EYE_Y + (y - (cy - EYE_Y)) * 0.977, z - 0.00115,
+      ]);
+      wire(root, inner, 0.00027, hardwareMat, `InnerWire_${side}`, true);
+    }
+
+    const lensVerts = [cx, cy - EYE_Y, -0.00115];
+    const lensIdx = [];
+    for (let i = 0; i <= steps; i++) {
+      const [x, y] = xy(i * Math.PI * 2 / steps, acetate ? 0.00225 : 0.00075);
+      lensVerts.push(x, y, -0.0021 - 0.00045 * ((x - cx) / rx) ** 2);
+      if (i < steps) lensIdx.push(0, i + 1, i + 2);
+    }
+    const lensGeo = new THREE.BufferGeometry();
+    lensGeo.setAttribute('position', new THREE.Float32BufferAttribute(lensVerts, 3));
+    lensGeo.setIndex(lensIdx);
+    lensGeo.computeVertexNormals();
+    const lens = mesh(root, lensGeo, lensMat, `ConvexOpticalLens_${side}`, false);
     lens.renderOrder = 4;
-    // Joined hinges and tapered temples follow the sides of the head and tuck
-    // behind, rather than ending abruptly at the outside of the eye.
+    // Asymmetrical, low-opacity blue AR reflection (the face remains visible).
+    wire(root, [
+      [cx - rx * 0.72, cy - EYE_Y + ry * 0.30, -0.00154],
+      [cx - rx * 0.44, cy - EYE_Y + ry * 0.60, -0.00128],
+      [cx - rx * 0.15, cy - EYE_Y + ry * 0.67, -0.00128],
+    ], 0.00028, reflexMat, `AntiReflectGlint_${side}`);
+
+    // Mechanical endpieces, real receding temples and two tiny hinge screws.
+    const templeStart = side * (Math.abs(cx) + rx);
     const arm = [
-      [side * (Math.abs(cx) + rx), 0.0225 - EYE_Y, FRAME_Z - 0.0012 - FRAME_Z],
+      [templeStart, 0.0222 - EYE_Y, -0.0014],
       [side * 0.065, 0.0220 - EYE_Y, 0.091 - FRAME_Z],
       [side * 0.071, 0.0200 - EYE_Y, 0.048 - FRAME_Z],
       [side * 0.074, 0.0160 - EYE_Y, 0.005 - FRAME_Z],
       [side * 0.073, 0.0090 - EYE_Y, -0.020 - FRAME_Z],
       [side * 0.068, 0.0040 - EYE_Y, -0.026 - FRAME_Z],
     ];
-    wire(root, arm, square ? 0.00165 : 0.00105, frameMat, `Temple_${side}`);
-    const hinge = mesh(root, new THREE.SphereGeometry(0.0024, 10, 6), frameMat, `Hinge_${side}`, false);
-    hinge.position.set(...arm[0]);
-    // Small semitranslucent pads visually seat the bridge on the nose.
-    const pad = mesh(root, new THREE.SphereGeometry(0.0032, 10, 8), padMat, `NosePad_${side}`, false);
-    pad.position.set(side * 0.0094, 0.010 - EYE_Y, 0.098 - FRAME_Z);
-    pad.scale.set(0.55, 1.0, 0.48);
+    wire(root, arm, acetate ? 0.00130 : 0.00068, frameMat, `Temple_${side}`);
+    const hinge = mesh(root, new THREE.BoxGeometry(0.0028, 0.0025, 0.0033), hardwareMat, `Hinge_${side}`, false);
+    hinge.position.set(templeStart, arm[0][1], -0.0012);
+    for (const h of [-1, 1]) {
+      const screw = mesh(root, new THREE.SphereGeometry(0.00043, 8, 6),
+        hardwareMat, `HingePin_${side}_${h}`, false);
+      screw.position.set(templeStart + side * 0.0003, arm[0][1] + h * 0.0007, 0.0007);
+    }
+    if (!acetate) {
+      const pad = mesh(root, new THREE.SphereGeometry(0.0025, 12, 10),
+        padMat, `SiliconeNosePad_${side}`, false);
+      pad.position.set(side * 0.0094, 0.010 - EYE_Y, 0.098 - FRAME_Z);
+      pad.scale.set(0.70, 1.07, 0.45);
+      wire(root, [
+        [side * 0.0090, 0.020 - EYE_Y, 0.103 - FRAME_Z],
+        [side * 0.0085, 0.015 - EYE_Y, 0.101 - FRAME_Z],
+        [side * 0.0094, 0.010 - EYE_Y, 0.098 - FRAME_Z],
+      ], 0.00032, hardwareMat, `PadArm_${side}`);
+    }
   }
-  const bridge = [
-    [-0.0071, 0.027 - EYE_Y, 0.104 - FRAME_Z],
-    [-0.0047, 0.033 - EYE_Y, 0.106 - FRAME_Z],
-    [0, 0.035 - EYE_Y, 0.107 - FRAME_Z],
-    [0.0047, 0.033 - EYE_Y, 0.106 - FRAME_Z],
-    [0.0071, 0.027 - EYE_Y, 0.104 - FRAME_Z],
-  ];
-  wire(root, bridge, style === 'acetate_square' ? 0.00185 : 0.00115, frameMat, 'NoseBridge');
+  // The former high round loop hovered in the fringe; eyewear has a low,
+  // nose-following saddle bridge, not a cartoon arch between the lenses.
+  wire(root, [
+    [-0.0079, 0.0275 - EYE_Y, -0.0014],
+    [-0.0049, 0.0300 - EYE_Y, 0.0010],
+    [0, 0.0309 - EYE_Y, 0.0017],
+    [0.0049, 0.0300 - EYE_Y, 0.0010],
+    [0.0079, 0.0275 - EYE_Y, -0.0014],
+  ], acetate ? 0.00110 : 0.00074, frameMat, 'NasalSaddleBridge');
   if (style === 'aviator') {
     wire(root, [
-      [-0.013, 0.040 - EYE_Y, 0.103 - FRAME_Z],
-      [-0.006, 0.042 - EYE_Y, 0.104 - FRAME_Z],
-      [0, 0.0425 - EYE_Y, 0.105 - FRAME_Z],
-      [0.006, 0.042 - EYE_Y, 0.104 - FRAME_Z],
-      [0.013, 0.040 - EYE_Y, 0.103 - FRAME_Z],
-    ], 0.0009, frameMat, 'UpperAviatorBridge');
+      [-0.012, 0.039 - EYE_Y, -0.0020], [-0.006, 0.041 - EYE_Y, -0.0010],
+      [0, 0.0412 - EYE_Y, -0.0007], [0.006, 0.041 - EYE_Y, -0.0010],
+      [0.012, 0.039 - EYE_Y, -0.0020],
+    ], 0.00067, hardwareMat, 'UpperAviatorBridge');
   }
   return root;
 }
@@ -233,7 +298,7 @@ function hairCrownFit(modelContainer) {
   let top = 0.122;
   hair.traverse(obj => {
     if (!obj.isMesh || !obj.geometry?.attributes?.position) return;
-    if (obj.name === 'MasterStrandHairMesh' || obj.name.includes('ScalpCap')) return;
+    if (obj.name === 'MasterStrandHairMesh' || obj.name === 'ScalpRootStrands' || obj.name.includes('ScalpCap')) return;
     if (!obj.geometry.boundingBox) obj.geometry.computeBoundingBox();
     const box = obj.geometry.boundingBox.clone().applyMatrix4(obj.matrixWorld).applyMatrix4(toLocal);
     if (Number.isFinite(box.max.y)) top = Math.max(top, box.max.y);
@@ -281,10 +346,13 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
     const s = limit(morphs.glassesSize, 1, 0.82, 1.18);
     glasses.scale.set(s * (1 + limit(morphs.eyeSpacing, 0, -1.2, 1.2) * 0.035), s, s);
     glasses.rotation.set(limit(morphs.glassesTilt, 0, -12, 12) * Math.PI / 180, 0, 0);
-    glasses.userData.frameMaterial.color.set(hex(morphs.glassesColor, '#a07857'));
+    // Optical frames are dark polished acetate / brushed metal. Apply the
+    // editable tint as a pigment, not a fully saturated gold tube.
+    const frameTint = new THREE.Color(hex(morphs.glassesColor, '#a07857'));
+    glasses.userData.frameMaterial.color.copy(frameTint).multiplyScalar(glassesStyle === 'acetate_square' ? 0.17 : 0.35);
     const tint = limit(morphs.glassesLensTint, 0, 0, 0.8);
-    glasses.userData.lensMaterial.color.set(tint > 0.12 ? '#4c6070' : '#e3edf3');
-    glasses.userData.lensMaterial.opacity = 0.045 + tint * 0.66;
+    glasses.userData.lensMaterial.color.set(tint > 0.12 ? '#536879' : '#e8f3fa');
+    glasses.userData.lensMaterial.opacity = 0.12 + tint * 0.55;
   }
   const hat = holder.getObjectByName(`Hat_${hatStyle}`);
   if (hat) {
