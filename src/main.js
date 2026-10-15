@@ -2665,10 +2665,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   }));
   let hairCycleIdx = 0;
 
-  // Dynamically populate #sel-hair-style with all 28 hairstyles grouped by category
-  const selHairEl = document.getElementById('sel-hair-style');
-  if (selHairEl) {
+  // Stage 65: Dynamically populate #sel-hair-style, #vcd-hair-style, and #hair-style-quick-chips with all 61 hairstyles (surfacing the 32 new hairstyles prominently at the top!)
+  const NEW_32_HAIR_IDS = new Set([
+    'daz_hair_o4saken_long', 'daz_hair_blunt_bob_bangs', 'daz_hair_inverted_bob_bangs',
+    'daz_hair_french_braid_bun', 'daz_hair_double_braid', 'daz_hair_unkempt_french_braid',
+    'daz_hair_rehman_bun', 'daz_hair_island_princess', 'daz_hair_ashley_wave', 'daz_hair_bow_bun_braids',
+    ...REAL_HAIR_CATALOG.filter(x => x.id.startsWith('preset_')).map(x => x.id),
+  ]);
+  const buildFullHairSelectHtml = (selectedId) => {
+    const newList = REAL_HAIR_CATALOG.filter(x => NEW_32_HAIR_IDS.has(x.id));
     const groups = new Map();
+    groups.set('✨ 新增32款东亚高定发型 (NEW)', newList);
     for (const item of REAL_HAIR_CATALOG) {
       const cat = item.category || '精选发型';
       if (!groups.has(cat)) groups.set(cat, []);
@@ -2678,11 +2685,96 @@ window.addEventListener('DOMContentLoaded', async () => {
     for (const [catName, list] of groups.entries()) {
       html += `<optgroup label="── ${catName} (${list.length}款) ──">`;
       for (const hp of list) {
-        html += `<option value="${hp.id}" ${hp.id === state.studioDraft.hairStyle ? 'selected' : ''}>${hp.label}</option>`;
+        const badge = NEW_32_HAIR_IDS.has(hp.id) && !catName.includes('新增') ? '✨ ' : '';
+        html += `<option value="${hp.id}" ${hp.id === selectedId ? 'selected' : ''}>${badge}${hp.label}</option>`;
       }
       html += `</optgroup>`;
     }
-    selHairEl.innerHTML = html;
+    return html;
+  };
+  const selHairEl = document.getElementById('sel-hair-style');
+  if (selHairEl) selHairEl.innerHTML = buildFullHairSelectHtml(state.studioDraft.hairStyle);
+  const vcdHairEl = document.getElementById('vcd-hair-style');
+  if (vcdHairEl) vcdHairEl.innerHTML = buildFullHairSelectHtml(state.studioDraft.hairStyle);
+
+  const hairQuickChipsEl = document.getElementById('hair-style-quick-chips');
+  if (hairQuickChipsEl) {
+    const orderedHairs = [
+      ...REAL_HAIR_CATALOG.filter(x => NEW_32_HAIR_IDS.has(x.id)),
+      ...REAL_HAIR_CATALOG.filter(x => !NEW_32_HAIR_IDS.has(x.id)),
+    ];
+    hairQuickChipsEl.innerHTML = orderedHairs.map(hp => {
+      const isNew = NEW_32_HAIR_IDS.has(hp.id);
+      return `<button type="button" class="chip-btn ${hp.id === state.studioDraft.hairStyle ? 'active' : ''}" data-hair-preset="${hp.id}" title="${hp.label} — ${hp.desc || ''}" style="${isNew ? 'border-color:rgba(245,196,81,0.55);' : ''}">${isNew ? '✨ ' : ''}${hp.shortLabel || hp.label}</button>`;
+    }).join('');
+  }
+
+  // Stage 65: Dynamically populate #sel-face-archetype, #vcd-sel-face-archetype, and #face-archetype-quick-chips with all 38 East Asian head models
+  const REGION_NAMES = {
+    cn: '🇨🇳 中式古典与现代骨相 (14款)',
+    kr: '🇰🇷 韩系财阀与女团骨相 (8款)',
+    jp: '🇯🇵 日系透明感与昭和骨相 (8款)',
+    mix: '🌏 港台浓颜与亚欧混血骨相 (8款)',
+  };
+  const buildFullFaceSelectHtml = (selectedArch) => {
+    const groups = new Map([['cn', []], ['kr', []], ['jp', []], ['mix', []]]);
+    for (const fa of FACE_ARCHETYPE_CATALOG) {
+      const r = groups.has(fa.region) ? fa.region : 'cn';
+      groups.get(r).push(fa);
+    }
+    let html = '';
+    for (const [rKey, list] of groups.entries()) {
+      if (!list.length) continue;
+      html += `<optgroup label="── ${REGION_NAMES[rKey] || rKey} ──">`;
+      for (const fa of list) {
+        html += `<option value="${fa.id}" ${fa.id === selectedArch ? 'selected' : ''}>${fa.shortLabel || fa.label}</option>`;
+      }
+      html += `</optgroup>`;
+    }
+    return html;
+  };
+  const selFaceEl = document.getElementById('sel-face-archetype');
+  if (selFaceEl) selFaceEl.innerHTML = buildFullFaceSelectHtml(state.studioDraft.faceArchetype);
+  const vcdFaceEl = document.getElementById('vcd-sel-face-archetype');
+  if (vcdFaceEl) vcdFaceEl.innerHTML = buildFullFaceSelectHtml(state.studioDraft.faceArchetype);
+
+  const faceQuickChipsEl = document.getElementById('face-archetype-quick-chips');
+  if (faceQuickChipsEl) {
+    faceQuickChipsEl.innerHTML = FACE_ARCHETYPE_CATALOG.map(fa =>
+      `<button type="button" class="chip-btn ${fa.id === state.studioDraft.faceArchetype ? 'active' : ''}" data-face-arch="${fa.id}" title="${fa.label} — ${fa.desc || ''}">${fa.shortLabel || fa.label}</button>`
+    ).join('');
+  }
+
+  // Stage 65: Dynamically populate #studio-head-blend-sliders and #vcd-head-blend-sliders with ALL 38 head models + ON/OFF switches (开关) + 0%-100% weight sliders
+  const buildAll38BlendRowsHtml = (mode = 'studio') => {
+    const dataSliderAttr = mode === 'studio' ? 'data-studio-head-blend' : 'data-head-blend';
+    const dataSwitchAttr = mode === 'studio' ? 'data-studio-head-blend-on' : 'data-head-blend-on';
+    const dataValAttr = mode === 'studio' ? 'data-studio-head-blend-val' : 'data-head-blend-val';
+    return HEAD_BLEND_CHANNELS.map((ch, idx) => `
+      <div class="vcd-slider-row head-blend-38-row" data-blend-region="${ch.region || 'cn'}" style="display:grid;grid-template-columns:44px minmax(112px,1.25fr) 1fr 38px;align-items:center;gap:6px;padding:3px 4px;border-radius:6px;background:rgba(255,255,255,0.02);">
+        <label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10px;color:#cbd5e1;user-select:none;" title="开启/关闭「${ch.label}」头模混合开关">
+          <input type="checkbox" ${dataSwitchAttr}="${ch.id}" style="accent-color:#10b981;width:13px;height:13px;cursor:pointer;" />
+          <span>开关</span>
+        </label>
+        <span style="font-size:11px;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${idx + 1}. ${ch.label}">${ch.shortLabel}</span>
+        <input type="range" ${dataSliderAttr}="${ch.id}" data-last-weight="0.50" min="0" max="1" step="0.01" value="0" style="width:100%;" />
+        <span class="mono-val" ${dataValAttr}="${ch.id}" style="font-size:10px;text-align:right;">0%</span>
+      </div>
+    `).join('');
+  };
+  const studioBlendContainer = document.getElementById('studio-head-blend-sliders');
+  if (studioBlendContainer) {
+    studioBlendContainer.style.maxHeight = '290px';
+    studioBlendContainer.style.overflowY = 'auto';
+    studioBlendContainer.style.paddingRight = '4px';
+    studioBlendContainer.innerHTML = buildAll38BlendRowsHtml('studio');
+  }
+  const vcdBlendContainer = document.getElementById('vcd-head-blend-sliders');
+  if (vcdBlendContainer) {
+    vcdBlendContainer.style.maxHeight = '290px';
+    vcdBlendContainer.style.overflowY = 'auto';
+    vcdBlendContainer.style.paddingRight = '4px';
+    vcdBlendContainer.innerHTML = buildAll38BlendRowsHtml('vcd');
   }
 
   document.getElementById('btn-test-scan-glb').addEventListener('click', async () => {
@@ -2725,9 +2817,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       const k = inp.dataset.studioHeadBlend;
       const v = Number(blendState[k] ?? 0);
       inp.value = String(v);
+      const chk = document.querySelector(`[data-studio-head-blend-on="${k}"]`);
+      if (chk) chk.checked = v > 0.005;
       const valSpan = document.querySelector(`[data-studio-head-blend-val="${k}"]`);
       if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
       state.studioDraft.morphs[k] = v;
+      state.studioDraft.morphs['on_' + k] = v > 0.005;
+    });
+    document.querySelectorAll('[data-obs-blend-val]').forEach(inp => {
+      const k = inp.dataset.obsBlendVal;
+      const v = Number(blendState[k] ?? 0);
+      inp.value = String(v);
+      const chk = document.querySelector(`[data-obs-blend-on="${k}"]`);
+      if (chk) chk.checked = v > 0.005;
+      const txt = document.querySelector(`[data-obs-blend-txt="${k}"]`);
+      if (txt) txt.textContent = `${Math.round(v * 100)}%`;
     });
   };
 
@@ -2861,18 +2965,54 @@ window.addEventListener('DOMContentLoaded', async () => {
     inp.addEventListener('input', (e) => {
       const k = inp.dataset.studioHeadBlend;
       const v = parseFloat(e.target.value);
+      if (v > 0.01) inp.dataset.lastWeight = String(v);
+      const isOn = v > 0.005;
+      const chk = document.querySelector(`[data-studio-head-blend-on="${k}"]`);
+      if (chk) chk.checked = isOn;
       const valSpan = document.querySelector(`[data-studio-head-blend-val="${k}"]`);
       if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
       state.studioDraft.morphs[k] = v;
+      state.studioDraft.morphs['on_' + k] = isOn;
       if (studioEngine?.headNode) {
         studioEngine.headNode.userData.morphs = {
           ...(studioEngine.headNode.userData.morphs || {}),
           ...state.studioDraft.morphs,
           [k]: v,
+          ['on_' + k]: isOn,
         };
         applyHeadMorphsToGroup(studioEngine.headNode, studioEngine.headNode.userData.morphs);
         studioEngine.wakeRender(1.5, true);
       }
+      for (const pet of getTargetDesktopPetsList()) {
+        const headGroup = pet?.node || pet?.headNode;
+        if (headGroup) {
+          headGroup.userData.morphs = {
+            ...(headGroup.userData.morphs || {}),
+            ...(pet.collectible?.morphs || {}),
+            [k]: v,
+            ['on_' + k]: isOn,
+          };
+          applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
+          if (pet.collectible) pet.collectible.morphs = { ...headGroup.userData.morphs };
+        }
+      }
+      if (desktopEngine) desktopEngine.wakeRender(1.5, true);
+    });
+  });
+
+  document.querySelectorAll('[data-studio-head-blend-on]').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const k = chk.dataset.studioHeadBlendOn;
+      const isOn = Boolean(e.target.checked);
+      const inp = document.querySelector(`[data-studio-head-blend="${k}"]`);
+      if (!inp) return;
+      if (isOn && parseFloat(inp.value) <= 0.01) {
+        inp.value = inp.dataset.lastWeight || '0.50';
+      } else if (!isOn) {
+        if (parseFloat(inp.value) > 0.01) inp.dataset.lastWeight = inp.value;
+        inp.value = '0';
+      }
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
     });
   });
 
@@ -5070,6 +5210,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     inp.addEventListener('input', (e) => {
       const k = inp.dataset.headBlend;
       const v = parseFloat(e.target.value);
+      if (v > 0.01) inp.dataset.lastWeight = String(v);
+      const isOn = v > 0.005;
+      const chk = document.querySelector(`[data-head-blend-on="${k}"]`);
+      if (chk) chk.checked = isOn;
       const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
       if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
       const pet = getTargetDesktopPet();
@@ -5080,6 +5224,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         ...(headGroup.userData.morphs || {}),
         ...(pet.collectible.morphs || {}),
         [k]: v,
+        ['on_' + k]: isOn,
       };
       applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
       pet.collectible.morphs = { ...headGroup.userData.morphs };
@@ -5092,21 +5237,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Reset Multi-Head Blend to 0% Pure Single Head buttons
+  document.querySelectorAll('[data-head-blend-on]').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const k = chk.dataset.headBlendOn;
+      const isOn = Boolean(e.target.checked);
+      const inp = document.querySelector(`[data-head-blend="${k}"]`);
+      if (!inp) return;
+      if (isOn && parseFloat(inp.value) <= 0.01) {
+        inp.value = inp.dataset.lastWeight || '0.50';
+      } else if (!isOn) {
+        if (parseFloat(inp.value) > 0.01) inp.dataset.lastWeight = inp.value;
+        inp.value = '0';
+      }
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
+  // Reset Multi-Head Blend to 0% Pure Single Head buttons (all 38 head models)
   const resetZeroBlend = () => {
-    const zeroBlend = {
-      blend_asian_youth: 0.0,
-      blend_cn_scholar: 0.0,
-      blend_cn_baby: 0.0,
-      blend_kr_vline: 0.0,
-      blend_cn_melon: 0.0,
-      blend_cn_royal: 0.0,
-      blend_eurasian: 0.0,
-    };
+    const zeroBlend = {};
+    for (const ch of HEAD_BLEND_CHANNELS) {
+      zeroBlend[ch.id] = 0.0;
+      zeroBlend['on_' + ch.id] = false;
+    }
     syncStudioHeadBlendSliders(zeroBlend);
     document.querySelectorAll('[data-head-blend]').forEach(inp => {
       const k = inp.dataset.headBlend;
       inp.value = '0';
+      const chk = document.querySelector(`[data-head-blend-on="${k}"]`);
+      if (chk) chk.checked = false;
       const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
       if (valSpan) valSpan.textContent = '0%';
     });
@@ -5131,7 +5290,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (pet.collectible) pet.collectible.morphs = { ...headGroup.userData.morphs };
       desktopEngine.wakeRender(1.5, true);
     }
-    showToast('✨ 已归零全部多头模混合权重，恢复纯净无违和单脸骨相！');
+    showToast('✨ 已归零全部 38 款头模混合开关与权重，恢复纯净无违和单脸骨相！');
   };
   document.getElementById('btn-vcd-reset-blend')?.addEventListener('click', resetZeroBlend);
   document.getElementById('btn-studio-reset-blend')?.addEventListener('click', resetZeroBlend);

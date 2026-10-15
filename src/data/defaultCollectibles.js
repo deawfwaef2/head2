@@ -691,56 +691,350 @@ export const HAIR_DYE_PRESET_CATALOG = [
 ];
 
 /**
- * Stage 35 · 7 通道多头模自由混合器 (`HEAD_BLEND_CHANNELS` · 默认全部 0.0 关闭混合，保证初始脸型 100% 纯净自然；玩家可按需手动拉动滑杆自由混合)
+ * Stage 65 · 38 通道全头模自由混合器 (`HEAD_BLEND_CHANNELS` · 覆盖全部 38 款东亚头模，每个头模配备独立 ON/OFF 开关与 0%~100% 混合权重滑杆)
+ * 默认全部 0.0 关闭混合，保证初始脸型 100% 纯净自然；玩家可开启任意多个头模开关自由叠加混合骨相、MPFB 3D 靶向形变与 2K 摄影肤质！
  */
 export const HEAD_BLEND_CHANNELS = [
   {
-    id: 'blend_asian_youth',
-    morphKey: 'mh_head_asian_youth',
-    shortLabel: '🇨🇳 中式少女头模',
-    label: '🇨🇳 中式清纯少女头模 (Asian Youth · 柔和额弓与饱满胶原感)',
-    defaultVal: 0.0
-  },
-  {
     id: 'blend_cn_scholar',
+    archId: 'cn_oval_scholar',
+    region: 'cn',
     morphKey: 'mh_head_oval',
-    shortLabel: '📖 书卷鹅蛋头模',
-    label: '📖 中式书卷鹅蛋头模 (Scholar Oval · 端庄标准东方鹅蛋脸)',
+    shortLabel: '📖 方尧平·书卷鹅蛋模',
+    label: '📖 纯净中式书卷鹅蛋头模 (方尧平 · Scholar Oval)',
     defaultVal: 0.0
   },
   {
     id: 'blend_cn_baby',
+    archId: 'cn_round_babyface',
+    region: 'cn',
     morphKey: 'mh_head_round',
-    shortLabel: '🍑 幼态娃娃头模',
-    label: '🍑 中式圆润娃娃头模 (Plump Babyface · 软糯苹果肌与短圆下巴)',
+    shortLabel: '🍑 初夏·幼态娃娃模',
+    label: '🍑 甜妹幼态圆润娃娃头模 (初夏 · Plump Babyface)',
     defaultVal: 0.0
   },
   {
     id: 'blend_kr_vline',
+    archId: 'kr_idol_vline',
+    region: 'kr',
     morphKey: 'mh_head_heart',
-    shortLabel: '✨ 韩系心形V脸模',
-    label: '✨ 韩系财阀心形V脸头模 (Korean Heart V-Line · 饱满上庭与精致V型下颌)',
+    shortLabel: '✨ 林汐·韩系心形V脸模',
+    label: '✨ 韩系财阀千金心形V脸头模 (林汐 · Korean Heart V-Line)',
     defaultVal: 0.0
   },
   {
     id: 'blend_cn_melon',
+    archId: 'cn_classical_melon',
+    region: 'cn',
     morphKey: 'mh_head_melon',
-    shortLabel: '🌙 江南古典瓜子模',
-    label: '🌙 江南古典瓜子头模 (Classical Melon · 柔美内收颧弓与纤巧尖颏)',
+    shortLabel: '🌙 苏晚·江南古典瓜子模',
+    label: '🌙 江南古典瓜子仕女头模 (苏晚 · Classical Melon)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_sweet_heart',
+    archId: 'kr_sweet_heart',
+    region: 'kr',
+    morphKey: 'mh_head_heart',
+    shortLabel: '💖 千雪·女团初恋心形模',
+    label: '💖 韩系女团初恋心形头模 (千雪 · Sweet Heart)',
     defaultVal: 0.0
   },
   {
     id: 'blend_cn_royal',
+    archId: 'cn_cold_royal',
+    region: 'cn',
     morphKey: 'mh_head_diamond',
-    shortLabel: '❄️ 清冷高智御姐模',
-    label: '❄️ 中式清冷高智御姐头模 (Sculpted Diamond · 清瘦骨相与利落折角)',
+    shortLabel: '❄️ 沈知微·清冷高智御姐模',
+    label: '❄️ 中式清冷高智御姐头模 (沈知微 · Sculpted Diamond)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_asian_youth',
+    archId: 'cn_pure_campus_bell',
+    region: 'cn',
+    morphKey: 'mh_head_asian_youth',
+    shortLabel: '🌸 东方冷白校花少女模',
+    label: '🌸 纯净东方冷白校花少女头模 (Asian Youth)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_waterglow_idol',
+    archId: 'kr_waterglow_idol',
+    region: 'kr',
+    morphKey: 'mh_head_heart',
+    shortLabel: '💎 首尔水光画报神颜模',
+    label: '💎 首尔水光画报神颜头模 (Waterglow Idol)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_tang_peony',
+    archId: 'cn_tang_peony',
+    region: 'cn',
+    morphKey: 'mh_head_round',
+    shortLabel: '🌺 京派世家贵女珠圆模',
+    label: '🌺 京派端庄世家贵女珠圆玉润头模 (Tang Peony)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_northern_danfeng',
+    archId: 'cn_northern_danfeng',
+    region: 'cn',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🦢 华北古典丹凤瑞凤模',
+    label: '🦢 华北古典丹凤瑞凤修长头模 (Northern Danfeng)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_cat_fox_siren',
+    archId: 'cn_cat_fox_siren',
+    region: 'cn',
+    morphKey: 'mh_head_melon',
+    shortLabel: '🦊 钓系狐系清冷名伶模',
+    label: '🦊 钓系狐系清冷名伶小V头模 (Cat-Fox Siren)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_wide_catfish_chic',
+    archId: 'cn_wide_catfish_chic',
+    region: 'cn',
+    morphKey: 'mh_head_diamond',
+    shortLabel: '🐟 电影感宽眼距高级模',
+    label: '🐟 电影感宽眼距舒淇式高级脸头模 (Cinema Wide-Eye)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_imperial_square',
+    archId: 'cn_imperial_square',
+    region: 'cn',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🏛️ 东方英气端方青衣模',
+    label: '🏛️ 东方英气端方国泰民安青衣头模 (Imperial Heroine)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_yamato_clear',
+    archId: 'jp_yamato_clear',
+    region: 'jp',
+    morphKey: 'mh_head_asian_youth',
+    shortLabel: '🍃 日系透明感森系少女模',
+    label: '🍃 日系透明感森系清纯少女头模 (Yamato Clear)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_puppy_innocent',
+    archId: 'cn_puppy_innocent',
+    region: 'cn',
+    morphKey: 'mh_head_round',
+    shortLabel: '🐶 纯欲无辜小狗下至模',
+    label: '🐶 纯欲无辜圆润小狗眼下至头模 (Puppy Innocent)',
     defaultVal: 0.0
   },
   {
     id: 'blend_eurasian',
+    archId: 'eurasian_sculpted_mix',
+    region: 'mix',
     morphKey: 'mh_head_eurasian',
-    shortLabel: '🌍 欧风/混血立体模',
-    label: '🌍 欧风/亚欧混血立体头模 (Eurasian Deep-Set · 保留深邃眼窝高眉弓供自由混合)',
+    shortLabel: '🌍 东亚西域轻混血深邃模',
+    label: '🌍 东亚西域轻混血深邃高眉弓立体头模 (Eurasian Deep-Set)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_jiangnan_water_lily',
+    archId: 'cn_jiangnan_water_lily',
+    region: 'cn',
+    morphKey: 'mh_head_melon',
+    shortLabel: '🪷 江南烟雨清瘦白莲模',
+    label: '🪷 江南烟雨清瘦白莲古典淡颜头模 (Jiangnan Water Lily)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_sichuan_doll_peach',
+    archId: 'cn_sichuan_doll_peach',
+    region: 'cn',
+    morphKey: 'mh_head_round',
+    shortLabel: '🍑 川渝灵动蜜桃甜妹模',
+    label: '🍑 川渝灵动水蜜桃饱满卧蚕甜妹头模 (Sichuan Doll Peach)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cn_dunhuang_apsara_noble',
+    archId: 'cn_dunhuang_apsara_noble',
+    region: 'cn',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🏺 敦煌飞天盛唐神女模',
+    label: '🏺 敦煌飞天盛唐浓颜丰润神女头模 (Dunhuang Apsara)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_chaebol_heiress',
+    archId: 'kr_chaebol_heiress',
+    region: 'kr',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🥂 清潭洞财阀长女鹅蛋模',
+    label: '🥂 首尔清潭洞财阀长女高贵鹅蛋头模 (Chaebol Heiress)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_cat_idol_ace',
+    archId: 'kr_cat_idol_ace',
+    region: 'kr',
+    morphKey: 'mh_head_heart',
+    shortLabel: '🐈 韩团四代神颜猫系ACE模',
+    label: '🐈 韩团四代神颜上挑猫系ACE头模 (Cat Idol Ace)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_quail_egg_pure',
+    archId: 'kr_quail_egg_pure',
+    region: 'kr',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🥚 韩系零棱角鹌鹑蛋模',
+    label: '🥚 韩系零棱角流畅饱满鹌鹑蛋头模 (Quail Egg Pure)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_mellow_spoon_chic',
+    archId: 'kr_mellow_spoon_chic',
+    region: 'kr',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🎬 忠武路电影女主淡颜模',
+    label: '🎬 忠武路电影女主高级淡颜单眼皮头模 (Chungmuro Muse)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_kr_bunny_firstlove',
+    archId: 'kr_bunny_firstlove',
+    region: 'kr',
+    morphKey: 'mh_head_round',
+    shortLabel: '🐰 首尔国民初恋兔系模',
+    label: '🐰 首尔国民初恋元气苹果肌兔系头模 (Bunny First-Love)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_showa_cinema_muse',
+    archId: 'jp_showa_cinema_muse',
+    region: 'jp',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🎞️ 昭和银幕绝代佳人模',
+    label: '🎞️ 昭和银幕绝代佳人端庄古典鹅蛋头模 (Showa Cinema Muse)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_tokyo_sweet_pear',
+    archId: 'jp_tokyo_sweet_pear',
+    region: 'jp',
+    morphKey: 'mh_head_round',
+    shortLabel: '🍐 东京日杂甜美微梨形模',
+    label: '🍐 东京日杂甜美微梨形幼态软糯头模 (Tokyo Sweet Pear)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_kyoto_noble_slender',
+    archId: 'jp_kyoto_noble_slender',
+    region: 'jp',
+    morphKey: 'mh_head_melon',
+    shortLabel: '⛩️ 京都华族清冷狭长模',
+    label: '⛩️ 京都华族清冷狭长古典瓜子头模 (Kyoto Noble Slender)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_harajuku_fairy_triangle',
+    archId: 'jp_harajuku_fairy_triangle',
+    region: 'jp',
+    morphKey: 'mh_head_heart',
+    shortLabel: '🧚‍♀️ 原宿精灵倒三角巴掌模',
+    label: '🧚‍♀️ 原宿二次元精灵倒三角巴掌小脸头模 (Harajuku Fairy)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_idol_round_dimple',
+    archId: 'jp_idol_round_dimple',
+    region: 'jp',
+    morphKey: 'mh_head_round',
+    shortLabel: '🍓 坂道系元气酒窝小圆模',
+    label: '🍓 坂道系元气酒窝团宠可爱小圆头模 (Idol Round Dimple)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_cool_model_Clean',
+    archId: 'jp_cool_model_Clean',
+    region: 'jp',
+    morphKey: 'mh_head_diamond',
+    shortLabel: '🖤 东京高冷盐系厌世超模',
+    label: '🖤 东京银座高冷盐系厌世超模利落头模 (Tokyo Salt Model)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_jp_forest_mori_soft',
+    archId: 'jp_forest_mori_soft',
+    region: 'jp',
+    morphKey: 'mh_head_asian_youth',
+    shortLabel: '🌿 北海道氧气感森女淡颜模',
+    label: '🌿 北海道苍井优式氧气感森女柔和头模 (Hokkaido Mori)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_hk_90s_glamour_queen',
+    archId: 'hk_90s_glamour_queen',
+    region: 'mix',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🌹 90年代香江浓颜女神模',
+    label: '🌹 90年代香江绝代风华明艳浓颜女神头模 (HK 90s Glamour)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_tw_campus_sweet_oxygen',
+    archId: 'tw_campus_sweet_oxygen',
+    region: 'mix',
+    morphKey: 'mh_head_asian_youth',
+    shortLabel: '🧋 台北文艺校园氧气校花模',
+    label: '🧋 台北文艺校园甜润氧气感校花头模 (Taipei Oxygen Bell)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_cyber_cg_angel_v',
+    archId: 'cyber_cg_angel_v',
+    region: 'mix',
+    morphKey: 'mh_head_heart',
+    shortLabel: '⚡ 次世代CG建模黄金V脸模',
+    label: '⚡ 次世代CG建模级完美黄金比例V脸头模 (Cyber CG Angel)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_asia_high_fashion_runway',
+    archId: 'asia_high_fashion_runway',
+    region: 'mix',
+    morphKey: 'mh_head_diamond',
+    shortLabel: '👠 东亚高定T台冰山钻石模',
+    label: '👠 东亚高定T台冰山超模棱角钻石头模 (High Fashion Runway)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_asia_sweet_cool_bambi',
+    archId: 'asia_sweet_cool_bambi',
+    region: 'mix',
+    morphKey: 'mh_head_heart',
+    shortLabel: '🦌 亚洲甜酷纯欲芭比小鹿模',
+    label: '🦌 亚洲甜酷纯欲芭比无辜小鹿眼头模 (Sweet-Cool Bambi)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_asia_pear_gentle_sister',
+    archId: 'asia_pear_gentle_sister',
+    region: 'mix',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🌷 名门温婉知性姐姐方圆模',
+    label: '🌷 亚洲温婉知性名门姐姐大气微方圆头模 (Gentle Sister)',
+    defaultVal: 0.0
+  },
+  {
+    id: 'blend_asia_noble_swan_oval',
+    archId: 'asia_noble_swan_oval',
+    region: 'mix',
+    morphKey: 'mh_head_oval',
+    shortLabel: '🦢 古典芭蕾天鹅修长鹅蛋模',
+    label: '🦢 亚洲古典天鹅颈修长名媛鹅蛋头模 (Noble Swan Oval)',
     defaultVal: 0.0
   }
 ];

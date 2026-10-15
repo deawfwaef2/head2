@@ -99,7 +99,7 @@ export function fitArtistHairOutsideScalp(geometry, head) {
     const ti = Math.min(NT, Math.max(0, Math.round((theta / Math.PI) * NT)));
     const pi = ((Math.round((phi / (Math.PI * 2)) * NP) % NP) + NP) % NP;
     const radius = grid[ti * NP + pi];
-    const safe = radius + 0.0012;
+    const safe = radius + 0.0022;
     if (radius > 0 && distance < safe && safe - distance < size.x * 0.22) {
       const scale = safe / distance;
       p.setXYZ(i, center.x + dx * scale, center.y + dy * scale, center.z + dz * scale);

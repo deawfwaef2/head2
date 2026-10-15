@@ -5,7 +5,42 @@
 // - 100% Exact Catalog IDs & Two-Way Sync with Desktop 3D Specimens + Studio 3D
 // ============================================================================
 
-import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG } from '../data/defaultCollectibles.js';
+import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
+
+const NEW_32_HAIR_IDS = new Set([
+  'daz_hair_o4saken_long',
+  'daz_hair_blunt_bob_bangs',
+  'daz_hair_inverted_bob_bangs',
+  'daz_hair_french_braid_bun',
+  'daz_hair_double_braid',
+  'daz_hair_unkempt_french_braid',
+  'daz_hair_rehman_bun',
+  'daz_hair_island_princess',
+  'daz_hair_ashley_wave',
+  'daz_hair_bow_bun_braids',
+  'preset_sakura_pink_hime_bob',
+  'preset_wolf_mullet_cool',
+  'preset_FirstLove_air_bob',
+  'preset_hime_cut_long',
+  'preset_chaebol_sleek_long',
+  'preset_gentle_sister_clavicle',
+  'preset_ocean_blue_hime_long',
+  'preset_hk_retro_glam_wave',
+  'preset_ice_queen_silver_wave',
+  'preset_burgundy_siren_wave',
+  'preset_guofeng_twin_buns',
+  'preset_french_lazy_chignon',
+  'preset_song_aesthetic_updo',
+  'preset_ballet_core_ribbons',
+  'preset_clean_fit_sleek_bun',
+  'preset_imperial_crown_braid_hime',
+  'preset_jk_twin_ponytail',
+  'preset_kpop_curtain_ponytail',
+  'preset_republic_student_braids',
+  'preset_mori_girl_unkempt_braid',
+  'preset_sweet_milk_tea_halfup',
+  'preset_cyber_hologram_twin',
+]);
 
 const HAIRSTYLE_CARDS = [
   // I. 短发波波 (12款)
@@ -337,24 +372,34 @@ export function initObsidianProStudio() {
         <div class="obs-section">
           <div class="obs-sec-head">
             <span class="obs-sec-title">61款东亚全覆盖3D高定发型图鉴</span>
+          <div class="obs-sec-head">
+            <span class="obs-sec-title">61款东亚全覆盖3D高定发型图鉴 (新增32款置顶)</span>
             <span id="obs-hair-current-label" class="obs-sec-sub">清透斜碎波波</span>
           </div>
           <div class="obs-filter-strip" id="obs-hair-cat-strip">
             <button class="obs-filter-pill active" data-hair-cat="all">全部 (${HAIRSTYLE_CARDS.length})</button>
+            <button class="obs-filter-pill" data-hair-cat="new32" style="border-color:rgba(245,196,81,0.55);color:#fde68a;">✨ 新增32款</button>
             <button class="obs-filter-pill" data-hair-cat="bob">波波短发</button>
             <button class="obs-filter-pill" data-hair-cat="straight">直发锁骨</button>
             <button class="obs-filter-pill" data-hair-cat="wave">浪漫卷发</button>
             <button class="obs-filter-pill" data-hair-cat="updo">古典盘发</button>
             <button class="obs-filter-pill" data-hair-cat="tail">马尾编发</button>
           </div>
-          <div class="obs-card-grid" id="obs-hair-card-grid" style="max-height:250px;overflow-y:auto;padding-right:2px;">
-            ${HAIRSTYLE_CARDS.map((h) => `
-              <div class="obs-visual-card ${h.id === 'hair_user_photo' ? 'active' : ''}" data-hair-id="${h.id}" data-hair-cat="${h.cat}">
+          <div class="obs-card-grid" id="obs-hair-card-grid" style="max-height:260px;overflow-y:auto;padding-right:2px;">
+            ${[
+              ...HAIRSTYLE_CARDS.filter((h) => NEW_32_HAIR_IDS.has(h.id)),
+              ...HAIRSTYLE_CARDS.filter((h) => !NEW_32_HAIR_IDS.has(h.id)),
+            ].map((h) => {
+              const isNew = NEW_32_HAIR_IDS.has(h.id);
+              return `
+              <div class="obs-visual-card ${h.id === 'hair_user_photo' ? 'active' : ''}" data-hair-id="${h.id}" data-hair-cat="${h.cat}" data-hair-new="${isNew ? '1' : '0'}" style="${isNew ? 'border-color:rgba(245,196,81,0.42);position:relative;' : 'position:relative;'}">
+                ${isNew ? '<span style="position:absolute;top:4px;right:4px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#111;font-size:9px;font-weight:800;padding:1px 4px;border-radius:4px;line-height:1.2;">NEW</span>' : ''}
                 <div class="obs-card-thumb">${renderHairSvg(h.svg)}</div>
                 <div class="obs-card-title">${h.name}</div>
-                <div class="obs-card-meta">${h.tag}</div>
+                <div class="obs-card-meta">${isNew ? '✨ ' + h.tag : h.tag}</div>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
 
@@ -475,7 +520,7 @@ export function initObsidianProStudio() {
             <button class="obs-filter-pill" data-char-region="jp">日系透明 (8)</button>
             <button class="obs-filter-pill" data-char-region="mix">港台与混血 (8)</button>
           </div>
-          <div class="obs-card-grid cols-2" id="obs-char-card-grid" style="max-height:245px;overflow-y:auto;padding-right:2px;">
+          <div class="obs-card-grid cols-2" id="obs-char-card-grid" style="max-height:225px;overflow-y:auto;padding-right:2px;">
             ${CHARACTER_CARDS.map((c, i) => `
               <div class="obs-visual-card ${i === 0 ? 'active' : ''}" data-char-arch="${c.id}" data-char-region="${c.region || 'cn'}" data-char-preset="${c.preset}" style="flex-direction:row;text-align:left;padding:8px 10px;gap:9px;">
                 <div style="width:10px;height:28px;border-radius:4px;background:rgba(212,180,131,0.45);flex-shrink:0;"></div>
@@ -483,6 +528,38 @@ export function initObsidianProStudio() {
                   <div class="obs-card-title" style="font-size:12px;font-weight:600;">${c.name}</div>
                   <div class="obs-card-meta">${c.sub}</div>
                 </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="obs-section">
+          <div class="obs-sec-head" style="flex-wrap:wrap;gap:6px;">
+            <span class="obs-sec-title">🧬 38款全头模自由混合矩阵 (独立开关 + 权重滑块)</span>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span id="obs-blend-active-count" style="font-size:10.5px;color:#34d399;font-weight:600;">已开启 0 / 38 款</span>
+              <button id="obs-btn-random-blend-2" class="obs-icon-btn" style="padding:2px 7px;font-size:10px;" title="随机开启2款东亚头模进行混血融合">🎲 随机混血</button>
+              <button id="obs-btn-zero-blend" class="obs-icon-btn" style="padding:2px 7px;font-size:10px;" title="关闭全部38款头模混合开关，恢复纯净单脸">↺ 全部关闭</button>
+            </div>
+          </div>
+          <div class="obs-filter-strip" id="obs-blend-region-strip" style="margin-bottom:6px;">
+            <button class="obs-filter-pill active" data-blend-filter="all">全部 (${HEAD_BLEND_CHANNELS.length})</button>
+            <button class="obs-filter-pill" data-blend-filter="active" style="border-color:rgba(52,211,153,0.5);color:#6ee7b7;">⚡ 已开启</button>
+            <button class="obs-filter-pill" data-blend-filter="cn">中式 (14)</button>
+            <button class="obs-filter-pill" data-blend-filter="kr">韩系 (8)</button>
+            <button class="obs-filter-pill" data-blend-filter="jp">日系 (8)</button>
+            <button class="obs-filter-pill" data-blend-filter="mix">港台与混血 (8)</button>
+          </div>
+          <div id="obs-head-blend-38-list" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:4px;">
+            ${HEAD_BLEND_CHANNELS.map((ch, idx) => `
+              <div class="obs-blend-38-row" data-obs-blend-row="${ch.id}" data-obs-blend-region="${ch.region || 'cn'}" style="display:grid;grid-template-columns:48px minmax(118px,1.25fr) 1fr 38px;align-items:center;gap:6px;padding:4px 6px;border-radius:7px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);">
+                <label style="display:inline-flex;align-items:center;gap:3px;cursor:pointer;font-size:10.5px;color:#cbd5e1;user-select:none;" title="开启/关闭「${ch.label}」头模混合开关">
+                  <input type="checkbox" data-obs-blend-on="${ch.id}" style="accent-color:#10b981;width:13px;height:13px;cursor:pointer;" />
+                  <span>开关</span>
+                </label>
+                <span style="font-size:11px;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${idx + 1}. ${ch.label}">${ch.shortLabel}</span>
+                <input type="range" class="obs-range" data-obs-blend-val="${ch.id}" data-last-weight="0.50" min="0" max="1" step="0.01" value="0" />
+                <span class="obs-slider-val" data-obs-blend-txt="${ch.id}" style="font-size:10.5px;text-align:right;">0%</span>
               </div>
             `).join('')}
           </div>
@@ -854,18 +931,15 @@ function transformTopOverlayBar() {
 }
 
 function cleanExistingVerboseLabels() {
-  // 1. Hide duplicate Facial & Hair sections inside #visual-customizer-drawer so it focuses on Lighting/Camera
+  // 1. Keep #visual-customizer-drawer sections visible so users can access 61 hairstyles & 38 head blends from any drawer
   const vcd = document.getElementById('visual-customizer-drawer');
   if (vcd) {
     const sections = vcd.querySelectorAll('.vcd-section');
     sections.forEach((sec) => {
-      const title = sec.querySelector('.vcd-sec-title')?.textContent || '';
-      if (title.includes('面部五官') || title.includes('发型与刘海')) {
-        sec.style.display = 'none';
-      }
+      sec.style.display = '';
     });
     const headerTitle = vcd.querySelector('.vcd-title');
-    if (headerTitle) headerTitle.textContent = '光影、镜头与陈列环境';
+    if (headerTitle) headerTitle.textContent = '全功能快捷微调 · 38头模混合 / 61发型 / 光影';
   }
 
   // 2. Clean main software window navigation tabs & titlebar
@@ -990,13 +1064,13 @@ function wireObsidianStudioEvents(studio) {
     });
   });
 
-  // Hairstyle category filter
+  // Hairstyle category filter (including ✨ 新增32款 'new32')
   studio.querySelectorAll('#obs-hair-cat-strip .obs-filter-pill').forEach((pill) => {
     pill.addEventListener('click', () => {
       const cat = pill.dataset.hairCat;
       studio.querySelectorAll('#obs-hair-cat-strip .obs-filter-pill').forEach((p) => p.classList.toggle('active', p === pill));
       studio.querySelectorAll('#obs-hair-card-grid .obs-visual-card').forEach((card) => {
-        const match = cat === 'all' || card.dataset.hairCat === cat;
+        const match = cat === 'all' || (cat === 'new32' ? card.dataset.hairNew === '1' : card.dataset.hairCat === cat);
         card.style.display = match ? 'flex' : 'none';
       });
     });
@@ -1113,9 +1187,105 @@ function wireObsidianStudioEvents(studio) {
     });
   });
 
-  // Reset multi-head blend
+  // Stage 65: 38-Model Multi-Head Blend Matrix (ON/OFF Switches + Weight Sliders + Regional Filter + Random Mix)
+  const updateObsBlendActiveBadge = () => {
+    let activeCount = 0;
+    studio.querySelectorAll('[data-obs-blend-val]').forEach((inp) => {
+      const k = inp.dataset.obsBlendVal;
+      const v = parseFloat(inp.value) || 0;
+      const isOn = v > 0.005;
+      if (isOn) activeCount++;
+      const row = studio.querySelector(`[data-obs-blend-row="${k}"]`);
+      if (row) {
+        row.style.borderColor = isOn ? 'rgba(52,211,153,0.45)' : 'rgba(255,255,255,0.05)';
+        row.style.background = isOn ? 'rgba(16,185,129,0.10)' : 'rgba(255,255,255,0.03)';
+      }
+    });
+    const badge = document.getElementById('obs-blend-active-count');
+    if (badge) badge.textContent = `已开启 ${activeCount} / ${HEAD_BLEND_CHANNELS.length} 款`;
+  };
+
+  const applyObsBlendChannelValue = (k, v) => {
+    const numV = Math.max(0, Math.min(1, parseFloat(v) || 0));
+    const isOn = numV > 0.005;
+    const obsInp = studio.querySelector(`[data-obs-blend-val="${k}"]`);
+    if (obsInp) {
+      if (numV > 0.01) obsInp.dataset.lastWeight = String(numV);
+      obsInp.value = String(numV);
+    }
+    const obsChk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
+    if (obsChk) obsChk.checked = isOn;
+    const obsTxt = studio.querySelector(`[data-obs-blend-txt="${k}"]`);
+    if (obsTxt) obsTxt.textContent = `${Math.round(numV * 100)}%`;
+
+    const vcdInp = document.querySelector(`[data-head-blend="${k}"]`);
+    if (vcdInp) {
+      vcdInp.value = String(numV);
+      vcdInp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    const stuInp = document.querySelector(`[data-studio-head-blend="${k}"]`);
+    if (stuInp) {
+      stuInp.value = String(numV);
+      stuInp.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    updateObsBlendActiveBadge();
+  };
+
+  studio.querySelectorAll('[data-obs-blend-val]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      applyObsBlendChannelValue(inp.dataset.obsBlendVal, inp.value);
+    });
+  });
+
+  studio.querySelectorAll('[data-obs-blend-on]').forEach((chk) => {
+    chk.addEventListener('change', () => {
+      const k = chk.dataset.obsBlendOn;
+      const inp = studio.querySelector(`[data-obs-blend-val="${k}"]`);
+      if (chk.checked) {
+        const w = (inp && parseFloat(inp.value) > 0.01) ? inp.value : (inp?.dataset.lastWeight || '0.50');
+        applyObsBlendChannelValue(k, w);
+      } else {
+        if (inp && parseFloat(inp.value) > 0.01) inp.dataset.lastWeight = inp.value;
+        applyObsBlendChannelValue(k, 0);
+      }
+    });
+  });
+
+  studio.querySelectorAll('#obs-blend-region-strip .obs-filter-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const filter = pill.dataset.blendFilter;
+      studio.querySelectorAll('#obs-blend-region-strip .obs-filter-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      studio.querySelectorAll('#obs-head-blend-38-list .obs-blend-38-row').forEach((row) => {
+        const k = row.dataset.obsBlendRow;
+        const inp = row.querySelector(`[data-obs-blend-val="${k}"]`);
+        const isOn = inp && parseFloat(inp.value) > 0.005;
+        const match = filter === 'all' || (filter === 'active' ? isOn : row.dataset.obsBlendRegion === filter);
+        row.style.display = match ? 'grid' : 'none';
+      });
+    });
+  });
+
   document.getElementById('obs-btn-zero-blend')?.addEventListener('click', () => {
     document.getElementById('btn-vcd-reset-blend')?.click();
+    studio.querySelectorAll('[data-obs-blend-val]').forEach((inp) => {
+      const k = inp.dataset.obsBlendVal;
+      inp.value = '0';
+      const chk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
+      if (chk) chk.checked = false;
+      const txt = studio.querySelector(`[data-obs-blend-txt="${k}"]`);
+      if (txt) txt.textContent = '0%';
+    });
+    updateObsBlendActiveBadge();
+  });
+
+  document.getElementById('obs-btn-random-blend-2')?.addEventListener('click', () => {
+    document.getElementById('btn-vcd-reset-blend')?.click();
+    const n = HEAD_BLEND_CHANNELS.length;
+    const i1 = Math.floor(Math.random() * n);
+    let i2 = Math.floor(Math.random() * (n - 1));
+    if (i2 >= i1) i2++;
+    applyObsBlendChannelValue(HEAD_BLEND_CHANNELS[i1].id, 0.55);
+    applyObsBlendChannelValue(HEAD_BLEND_CHANNELS[i2].id, 0.45);
   });
 
   // 12 Eye shape cards

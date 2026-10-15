@@ -1338,3 +1338,18 @@
   - Added 22 East Asian modular 3D hair presets (`HAIR_STYLE_PRESET_RECIPES`, `preset_hime_cut_long` .. `preset_cyber_hologram_twin`) combining the 38 physical 3D hair GLBs with surgical 3D donor bangs/sidelocks/back-attachments and ombre dye recipes (`REAL_HAIR_CATALOG` = 61 entries).
   - Rebuilt standalone offline HTML `/home/user/点击开始游戏_CERVIX3D.html` (`31.12 MB`, 39 embedded GLBs).
 
+---
+
+## [2026-10-15] Stage 65 — All 38 Head Models Multi-Blend Matrix with Individual ON/OFF Switches + Full 61 Hairstyle UI Visibility + Zero Scalp/Hairline Poke-Through (`38款全头模独立开关自由混合器 + 61款发型全面板置顶可见 + 彻底根除多头模混合露头皮/露底发穿模`)
+- **1. All 38 Head Models Blendable with Individual ON/OFF Toggle Switches + 0%–100% Weight Sliders (`HEAD_BLEND_CHANNELS`)**:
+  - Expanded `HEAD_BLEND_CHANNELS` (`src/data/defaultCollectibles.js`) from 7 to **all 38 East Asian head models** (`FACE_ARCHETYPE_CATALOG`, preserving the 7 legacy `blend_*` IDs and adding all 31 regional East Asian head models).
+  - Rendered the full 38-model Multi-Head Blend Matrix (`🧬 38款全头模自由混合矩阵 · 独立开关 + 权重滑块`) across `#obsidian-char-hair-studio` (`#obs-head-blend-38-list` with active counter badge, regional filter pills `全部 38 / ⚡已开启 / 中式 14 / 韩系 8 / 日系 8 / 港台混血 8`, `🎲 随机混血`, and `↺ 全部关闭`), `#vcd-head-blend-sliders`, and `#studio-head-blend-sliders`.
+  - Updated `applyHeadMorphsToGroup` and `applyMpfbEastAsianTargetsToGroup` (`src/three/collectibleHeadAssembler.js`) to blend base head morphs, facial bone recipes, and all 86 MPFB2 `.target` recipes across any combination of switched-on head models with automatic soft normalization (`normScale = sumW > 1.25 ? 1.25 / sumW : 1.0`).
+- **2. All 61 Hairstyles Prominently Surfaced Across Every UI Panel (`#obs-hair-card-grid`, `#hair-style-quick-chips`, `#sel-hair-style`, `#vcd-hair-style`)**:
+  - Placed the **32 newly added Stage 64/65 hairstyles** (10 new `.mhclo` 3D hair GLBs + 22 East Asian `preset_*` modular 3D hair presets) **first at the very top** of `#obs-hair-card-grid` with a gold `NEW` badge and a dedicated `✨ 新增32款` filter pill, at the top of `#hair-style-quick-chips` (`61` quick chips), and in a top `✨ 新增32款东亚高定发型 (NEW)` `<optgroup>` in `#sel-hair-style` and `#vcd-hair-style` (and un-hid the hair/face sections in `#visual-customizer-drawer`).
+- **3. Eradicated Hair/Scalp Poke-Through During Multi-Head Blending (`public/models/daz_asian_head_base.glb`, `src/data/eastAsianHeadAndEyeTargets.js`, `src/three/collectibleHeadAssembler.js`, `src/three/hairScalpFit.js`)**:
+  - Applied a smooth cranial/hairline anchor mask `w_face` (`1.0` on face/eyes/brows/nose/cheeks/lips/jaw/chin/neck, `0.0` on hair-covered crown/temples/rear cranium while preserving ear morphs) directly to all 42 `int16` (`byteStride = 8`) morph targets in `public/models/daz_asian_head_base.glb` and all 86 sparse targets in `MPFB_SPARSE_HEAD_TARGETS` (`src/data/eastAsianHeadAndEyeTargets.js`, reduced to `553.1 KB`), eliminating the `-11.56 mm` to `+10.50 mm` scalp radial shift that caused hair/scalp poke-through when blending multiple head models.
+  - Confined `ScalpRootFeatherCap` (`buildScalpRootShadowCap`) strictly to the top-crown parting zone (`ym > 0.068 && zm < 0.036 && |xm| < 0.052`) so the dark hair root cap never pokes out on the forehead or temples, and increased `fitArtistHairOutsideScalp` radial safety clearance to `2.2 mm`.
+  - Rebuilt `/home/user/点击开始游戏_CERVIX3D.html` (`31.05 MB`, hardlinked with `docs/index.html`).
+
+

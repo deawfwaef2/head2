@@ -8,7 +8,7 @@ import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering, injectForensicCrossSectionShader } from './photorealLighting.js';
-import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG } from '../data/defaultCollectibles.js';
+import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import {
   MPFB_SPARSE_HEAD_TARGETS,
   BROW_TO_SKIN_INDEX,
@@ -943,7 +943,7 @@ export function getHeadBlendStateFromGroup(rootGroup) {
   const faceArchetype = m.faceArchetype || rootGroup?.userData?.faceArchetype || 'cn_oval_scholar';
   const archSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[faceArchetype] || ARCHETYPE_REAL_TARGET_WEIGHTS.cn_oval_scholar;
   const def = archSpec.headBlend || {};
-  return {
+  const state = {
     blend_asian_youth: Number(m.blend_asian_youth ?? def.blend_asian_youth ?? 0.0),
     blend_cn_scholar:  Number(m.blend_cn_scholar  ?? def.blend_cn_scholar  ?? 0.0),
     blend_cn_baby:     Number(m.blend_cn_baby     ?? def.blend_cn_baby     ?? 0.0),
@@ -952,6 +952,11 @@ export function getHeadBlendStateFromGroup(rootGroup) {
     blend_cn_royal:    Number(m.blend_cn_royal    ?? def.blend_cn_royal    ?? 0.0),
     blend_eurasian:    Number(m.blend_eurasian    ?? def.blend_eurasian    ?? 0.0),
   };
+  for (const ch of HEAD_BLEND_CHANNELS) {
+    const isOff = m['on_' + ch.id] === false;
+    state[ch.id] = isOff ? 0.0 : Number(m[ch.id] ?? def[ch.id] ?? 0.0);
+  }
+  return state;
 }
 
 export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
@@ -971,13 +976,80 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const browSpec = EYEBROW_STYLE_TO_MH_ASSET[eyebrowStyle] || EYEBROW_STYLE_TO_MH_ASSET.cn_scholar_natural;
 
   const clampBlend = (val) => Math.max(0.0, Math.min(1.4, Number(val) || 0.0));
-  const wAsianYouth = clampBlend(m.blend_asian_youth ?? defBlend.blend_asian_youth ?? 0.0);
-  const wCnScholar  = clampBlend(m.blend_cn_scholar  ?? defBlend.blend_cn_scholar  ?? 0.0);
-  const wCnBaby     = clampBlend(m.blend_cn_baby     ?? defBlend.blend_cn_baby     ?? 0.0);
-  const wKrVline    = clampBlend(m.blend_kr_vline    ?? defBlend.blend_kr_vline    ?? 0.0);
-  const wCnMelon    = clampBlend(m.blend_cn_melon    ?? defBlend.blend_cn_melon    ?? 0.0);
-  const wCnRoyal    = clampBlend(m.blend_cn_royal    ?? defBlend.blend_cn_royal    ?? 0.0);
-  const wEurasian   = clampBlend(m.blend_eurasian    ?? defBlend.blend_eurasian    ?? 0.0);
+  const LEGACY_7_IDS = new Set([
+    'blend_asian_youth', 'blend_cn_scholar', 'blend_cn_baby',
+    'blend_kr_vline', 'blend_cn_melon', 'blend_cn_royal', 'blend_eurasian'
+  ]);
+  let wAsianYouth = m.on_blend_asian_youth === false ? 0 : clampBlend(m.blend_asian_youth ?? defBlend.blend_asian_youth ?? 0.0);
+  let wCnScholar  = m.on_blend_cn_scholar === false  ? 0 : clampBlend(m.blend_cn_scholar  ?? defBlend.blend_cn_scholar  ?? 0.0);
+  let wCnBaby     = m.on_blend_cn_baby === false     ? 0 : clampBlend(m.blend_cn_baby     ?? defBlend.blend_cn_baby     ?? 0.0);
+  let wKrVline    = m.on_blend_kr_vline === false    ? 0 : clampBlend(m.blend_kr_vline    ?? defBlend.blend_kr_vline    ?? 0.0);
+  let wCnMelon    = m.on_blend_cn_melon === false    ? 0 : clampBlend(m.blend_cn_melon    ?? defBlend.blend_cn_melon    ?? 0.0);
+  let wCnRoyal    = m.on_blend_cn_royal === false    ? 0 : clampBlend(m.blend_cn_royal    ?? defBlend.blend_cn_royal    ?? 0.0);
+  let wEurasian   = m.on_blend_eurasian === false    ? 0 : clampBlend(m.blend_eurasian    ?? defBlend.blend_eurasian    ?? 0.0);
+
+  // Stage 65: Accumulate all 38 East Asian head models from HEAD_BLEND_CHANNELS
+  let extraJawV = 0, extraChin = 0, extraCheek = 0, extraNose = 0, extraNoseW = 0;
+  let extraEyeSize = 0, extraEyeAlmond = 0, extraEyeTilt = 0, extraEyeSpacing = 0;
+  let extraLip = 0, extraSmile = 0, extraForehead = 0;
+
+  let activeExtraSum = 0;
+  for (const ch of HEAD_BLEND_CHANNELS) {
+    if (m['on_' + ch.id] === false) continue;
+    const wCh = clampBlend(m[ch.id] ?? 0.0);
+    if (wCh <= 0.001) continue;
+    const chSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[ch.archId];
+    if (!chSpec) continue;
+    if (!LEGACY_7_IDS.has(ch.id)) {
+      const hb = chSpec.headBlend || {};
+      wAsianYouth += wCh * (hb.blend_asian_youth || (ch.morphKey === 'mh_head_asian_youth' ? 0.65 : 0));
+      wCnScholar  += wCh * (hb.blend_cn_scholar  || (ch.morphKey === 'mh_head_oval'        ? 0.65 : 0));
+      wCnBaby     += wCh * (hb.blend_cn_baby     || (ch.morphKey === 'mh_head_round'       ? 0.65 : 0));
+      wKrVline    += wCh * (hb.blend_kr_vline    || (ch.morphKey === 'mh_head_heart'       ? 0.65 : 0));
+      wCnMelon    += wCh * (hb.blend_cn_melon    || (ch.morphKey === 'mh_head_melon'       ? 0.65 : 0));
+      wCnRoyal    += wCh * (hb.blend_cn_royal    || (ch.morphKey === 'mh_head_diamond'     ? 0.65 : 0));
+      wEurasian   += wCh * (hb.blend_eurasian    || (ch.morphKey === 'mh_head_eurasian'    ? 0.65 : 0));
+    }
+    const mr = chSpec.morphRecipe || {};
+    extraJawV       += wCh * Number(mr.jawVLine ?? 0) * 0.45;
+    extraChin       += wCh * Number(mr.chinLength ?? 0) * 0.45;
+    extraCheek      += wCh * Number(mr.cheekSoftness ?? 0) * 0.45;
+    extraNose       += wCh * Number(mr.noseBridge ?? 0) * 0.45;
+    extraNoseW      += wCh * Number(mr.noseWidth ?? 0) * 0.45;
+    extraEyeSize    += wCh * Number(mr.eyeSize ?? 0) * 0.40;
+    extraEyeAlmond  += wCh * Number(mr.eyeAlmond ?? 0) * 0.40;
+    extraEyeTilt    += wCh * Number(mr.eyeTilt ?? 0) * 0.45;
+    extraEyeSpacing += wCh * Number(mr.eyeSpacing ?? 0) * 0.40;
+    extraLip        += wCh * Number(mr.lipFullness ?? 0) * 0.40;
+    extraSmile      += wCh * Number(mr.mouthSmile ?? 0) * 0.40;
+    extraForehead   += wCh * Number(mr.foreheadHeight ?? 0) * 0.35;
+    activeExtraSum  += wCh;
+  }
+
+  // Soft normalization so turning on 3, 10, or all 38 head model switches simultaneously never over-inflates facial geometry
+  const rawBaseSum = wAsianYouth + wCnScholar + wCnBaby + wKrVline + wCnMelon + wCnRoyal + wEurasian;
+  const baseNorm = rawBaseSum > 1.25 ? (1.25 / rawBaseSum) : 1.0;
+  wAsianYouth *= baseNorm;
+  wCnScholar  *= baseNorm;
+  wCnBaby     *= baseNorm;
+  wKrVline    *= baseNorm;
+  wCnMelon    *= baseNorm;
+  wCnRoyal    *= baseNorm;
+  wEurasian   *= baseNorm;
+
+  const extraNorm = activeExtraSum > 1.35 ? (1.35 / activeExtraSum) : 1.0;
+  extraJawV       *= extraNorm;
+  extraChin       *= extraNorm;
+  extraCheek      *= extraNorm;
+  extraNose       *= extraNorm;
+  extraNoseW      *= extraNorm;
+  extraEyeSize    *= extraNorm;
+  extraEyeAlmond  *= extraNorm;
+  extraEyeTilt    *= extraNorm;
+  extraEyeSpacing *= extraNorm;
+  extraLip        *= extraNorm;
+  extraSmile      *= extraNorm;
+  extraForehead   *= extraNorm;
 
   const skinVariant = resolveLegacySkinVariantId(
     m.skinVariant || rootGroup.userData.skinVariant || bias.skinVariant || archSpec.skinVariant || 'cn_porcelain_ivory'
@@ -994,26 +1066,26 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   });
   applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle, m);
 
-  // Stage 43: Full-range [-1.5, +1.5] facial, cranial & 14-parameter eye shape/optics fine-tuning
+  // Stage 43 + Stage 65: Full-range [-1.5, +1.5] facial, cranial & 14-parameter eye shape/optics fine-tuning
   const clampHarmony = (val, maxAbs = 1.35) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
 
-  const jawV = clampHarmony((m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine)) + 0.24);
-  const chin = clampHarmony((m.chinLength ?? bias.chinLength) - 0.08);
-  const cheek = clampHarmony(m.cheekSoftness ?? m.cheekboneFullness ?? bias.cheekSoftness);
-  const nose = clampHarmony(m.noseBridge ?? m.noseBridgeHeight ?? bias.noseBridge);
-  const noseW = clampHarmony((m.noseWidth ?? (-nose * 0.35)) - 0.24);
+  const jawV = clampHarmony((m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine)) + 0.24 + extraJawV);
+  const chin = clampHarmony((m.chinLength ?? bias.chinLength) - 0.08 + extraChin);
+  const cheek = clampHarmony((m.cheekSoftness ?? m.cheekboneFullness ?? bias.cheekSoftness) + extraCheek);
+  const nose = clampHarmony((m.noseBridge ?? m.noseBridgeHeight ?? bias.noseBridge) + extraNose);
+  const noseW = clampHarmony((m.noseWidth ?? (-nose * 0.35)) - 0.24 + extraNoseW);
   // Keep eyeSize and eyeAlmond independent so eyeSize is NEVER shadowed when eyeAlmond === 0!
-  const eyeSizeVal = clampHarmony(m.eyeSize ?? 0.0, 1.5);
+  const eyeSizeVal = clampHarmony((m.eyeSize ?? 0.0) + extraEyeSize, 1.5);
   const eyeApertureVal = clampHarmony(m.eyeAperture ?? 0.0, 1.5);
-  const eyeAlmondVal = clampHarmony(m.eyeAlmond ?? bias.eyeAlmond ?? 0.0, 1.5);
+  const eyeAlmondVal = clampHarmony((m.eyeAlmond ?? bias.eyeAlmond ?? 0.0) + extraEyeAlmond, 1.5);
   const eye = clampHarmony(eyeSizeVal * 1.15 + eyeAlmondVal * 0.65, 1.65);
-  const eyeTilt = clampHarmony(m.eyeTilt ?? bias.eyeTilt, 1.5);
-  const eyeSpacingVal = clampHarmony(m.eyeSpacing ?? 0.0, 1.2);
+  const eyeTilt = clampHarmony((m.eyeTilt ?? bias.eyeTilt) + extraEyeTilt, 1.5);
+  const eyeSpacingVal = clampHarmony((m.eyeSpacing ?? 0.0) + extraEyeSpacing, 1.2);
   const eyelidOpen = clampHarmony(m.eyelidOpen ?? 0, 1.5);
   const browH = clampHarmony(m.browHeight ?? 0);
-  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14, 0.95);
-  const mouthSmile = clampHarmony(m.mouthSmile ?? 0, 0.95);
-  const forehead = clampHarmony(m.foreheadHeight ?? 0, 0.95);
+  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14 + extraLip, 0.95);
+  const mouthSmile = clampHarmony((m.mouthSmile ?? 0) + extraSmile, 0.95);
+  const forehead = clampHarmony((m.foreheadHeight ?? 0) + extraForehead, 0.95);
   const ear = clampHarmony(m.earSize ?? 0, 0.95);
   const headWidthRatio = clampHarmony(m.headWidthScale ?? m.headWidth ?? 0, 0.28);
   const headLengthRatio = clampHarmony(m.headLengthScale ?? m.headLength ?? 0, 0.28);
@@ -1178,6 +1250,28 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   const addW = (k, v) => {
     if (Math.abs(v) > 1e-4) weights[k] = (weights[k] || 0) + v;
   };
+
+  // Stage 65: Blend MPFB2 3D `.target` recipes across all 38 East Asian head models when switched ON
+  let totalChWeight = 0;
+  for (const ch of HEAD_BLEND_CHANNELS) {
+    if (m['on_' + ch.id] === false) continue;
+    const wCh = Math.max(0, Math.min(1.4, Number(m[ch.id] ?? 0)));
+    if (wCh > 0.001) totalChWeight += wCh;
+  }
+  if (totalChWeight > 0.001) {
+    const chNorm = totalChWeight > 1.25 ? (1.25 / totalChWeight) : 1.0;
+    for (const ch of HEAD_BLEND_CHANNELS) {
+      if (m['on_' + ch.id] === false) continue;
+      const wCh = Math.max(0, Math.min(1.4, Number(m[ch.id] ?? 0))) * chNorm;
+      if (wCh <= 0.001) continue;
+      const chSpec = ARCHETYPE_REAL_TARGET_WEIGHTS[ch.archId];
+      const chMpfb = EAST_ASIAN_ARCHETYPE_MPFB_RECIPES[chSpec?.mpfbKey || ch.archId];
+      if (!chMpfb) continue;
+      for (const [tk, tv] of Object.entries(chMpfb)) {
+        addW(tk, tv * wCh * 0.72);
+      }
+    }
+  }
 
   // 1. Epicanthic Fold & Inner Canthus (内眦赘皮/蒙古褶 vs 开内眼角)
   // Note: in MPFB2, corner2 (|x|=0.21) is the medial (inner) canthus; corner1 (|x|=0.43) is the lateral (outer) canthus
@@ -1756,10 +1850,11 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
   const capIndices = [];
   for (let i = 0; i < idx.length; i += 3) {
     const a = idx[i], b = idx[i + 1], c = idx[i + 2];
+    const xm = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3.0;
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Cover top scalp & upper hairline (ym > 0.064) and rear/side cranium, never the lower forehead!
-    if (ym > 0.038 && (zm < 0.045 || ym > 0.062)) {
+    // Strictly confine scalp parting shadow cap to the top crown parting zone — never on forehead or temples!
+    if (ym > 0.068 && zm < 0.036 && Math.abs(xm) < 0.052) {
       capIndices.push(a, b, c);
     }
   }
@@ -1777,18 +1872,14 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const dx = x - hcX, dy = y - hcY, dz = z - hcZ;
     const len = Math.hypot(dx, dy, dz) || 1.0;
-    newPos[i * 3] = x + (dx / len) * 0.00035;
-    newPos[i * 3 + 1] = y + (dy / len) * 0.00035;
-    newPos[i * 3 + 2] = z + (dz / len) * 0.00035;
+    newPos[i * 3] = x + (dx / len) * 0.00018;
+    newPos[i * 3 + 1] = y + (dy / len) * 0.00018;
+    newPos[i * 3 + 2] = z + (dz / len) * 0.00018;
 
-    // Smoothly feather vertex alpha at the anatomical hairline (y=0.064..0.084 in front, y=0.038..0.058 at temples/back)
-    const frontMaxZ = y > 0.062 ? Math.min(0.086, 0.045 + (y - 0.062) * 1.45) : 0.045;
-    const fadeY = z > 0.040
-      ? Math.min(1.0, Math.max(0.0, (y - 0.063) / 0.018))
-      : Math.min(1.0, Math.max(0.0, (y - 0.038) / 0.022));
-    const fadeFront = Math.min(1.0, Math.max(0.0, (frontMaxZ - z) / 0.018));
-    const fadeTemple = Math.min(1.0, Math.max(0.0, (0.074 - Math.abs(x)) / 0.016));
-    const alpha = fadeY * fadeFront * (z > 0.015 ? fadeTemple : 1.0) * 0.90;
+    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.070) / 0.016));
+    const fadeFront = Math.min(1.0, Math.max(0.0, (0.034 - z) / 0.016));
+    const fadeSide = Math.min(1.0, Math.max(0.0, (0.050 - Math.abs(x)) / 0.016));
+    const alpha = fadeY * fadeFront * fadeSide * 0.55;
 
     colors[i * 4] = baseR;
     colors[i * 4 + 1] = baseG;
