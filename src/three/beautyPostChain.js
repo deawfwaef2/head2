@@ -866,7 +866,7 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
     uniforms: { tDiffuse: { value: null } },
     vertexShader: BeautyGradeShader.vertexShader,
     fragmentShader:
-      'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ gl_FragColor=vec4(texture2D(tDiffuse,vUv).a,0.0,0.0,1.0); }',
+      'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ float a=texture2D(tDiffuse,vUv).a; gl_FragColor=vec4(smoothstep(0.005,0.12,a),0.0,0.0,1.0); }',
     depthTest: false,
     depthWrite: false,
     toneMapped: false,

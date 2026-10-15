@@ -1416,3 +1416,15 @@
 - `src/three/collectibleHeadAssembler.js`：此款多层重叠照片发片跳过 Loop subdivision，避免额外的边界收缩/重复拓扑与编辑迟滞；其他艺术发型维持原细分路径。
 - `src/three/photorealLighting.js`：移除不依据真实发片覆盖而给整片裸额头强加 65%「毛根覆盖」的 shader 回退，降低假发根噪声，发型 `daz_hair_curtain_wave` 与 `daz_hair_side_long` 露额不再出现一条条竖向灰黑斑。
 - 已在单文件 `file://` 模式重建并截取照片款、八字刘海、侧分款的工坊特写；控制台无错误。仍存在旧发片资产的局部深色交叠/硬边，**不能宣称所有发型都完全真实/零瑕疵**；后续需针对真实素材逐款复核。
+
+---
+
+## [2026-10-15 Stage 69c] 修复预设发型刘海/鬓角锯齿裁切破洞、修复受损编发/照片款GLB贴图与发丝边缘Alpha（追加记录）
+- **1. 移除 `stripFrontBangs` / `stripSideLocks` 破坏性三角面剔除 (`src/three/collectibleHeadAssembler.js`, `src/three/desktopBoxSpaceEngine.js`, `src/main.js`)**：
+  - 排查发现 `HAIR_STYLE_PRESET_RECIPES` 中 22 款预设发型及模块化选项触发了 `filterGeometryByCentroid`（按包围盒 `y < 0.086` 与 `y < 0.042` 直接删除基础发模三角面），在额头中央与双耳上方留下规则锯齿状破洞 (`/\ /\ /\`)。现已移除对前额/鬓角基础网格的三角面删除，`forehead_bare` 与 `tucked_ear` 改为在 `applyArtistHairFineTuning` 中通过平滑连续顶点权重向两侧拨开/向耳后收拢，并在切换主发型时重置模块化残留状态、升级 `STORAGE_KEY`。
+- **2. 修复 `hairColorHex` 未定义报错与额头 `aHairCov` 覆盖范围 (`src/three/collectibleHeadAssembler.js`, `src/three/masterQuality/hairlineBlend.js`, `src/three/photorealLighting.js`)**：
+  - 修复 `attachRealHairModel` 第 2288 行 `hexToMasterStrandRgb(hairColorHex)`（原写为未定义的 `hairColor` 导致 `computeHairCoverage` 与 `BabyHairWisps` 静默中断），并将 `computeHairCoverage` 法线距离阈值收紧至 `6.8 mm`（排除悬空在额头前的刘海发梢）、彻底移除 `photorealLighting.js` 中 `acrossH * 420.0` 竖条纹。
+- **3. 修复受损发型 GLB 贴图与发片边缘灰白晕边 (`public/models/*.glb`, `src/three/collectibleHeadAssembler.js`, `src/three/beautyPostChain.js`, `src/three/hairScalpFit.js`, `src/three/hairCardSubdivision.js`)**：
+  - 修复 `hair_user_photo.glb`（保留 `0.1662m` 修复版头顶几何，补全原贴图 `u < 0.60` 透明缺失区与 `v = 0.50` 亮度断层）、`daz_hair_double_braid.glb`、`daz_hair_french_braid_bun.glb`、`daz_hair_unkempt_french_braid.glb` 的内嵌贴图，使三角面有效发丝覆盖率从 `9%~21%` 恢复至 `93%~98%`。
+  - 修复 `injectArtistHairColor` 中 `diffuseColor.a` 被重复平方的问题，对半透明发片边缘做预乘压暗消除灰白硬边；平滑化 `hairScalpFit.js` 前额过渡权重与 `hairCardSubdivision.js` 法线插值。
+

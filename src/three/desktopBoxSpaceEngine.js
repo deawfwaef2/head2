@@ -1050,6 +1050,24 @@ export class DesktopBoxSpaceEngine {
     const pet = this.pets.get(id);
     if (!pet || !pet.node) return;
     pet.collectible.hairStyle = hairStyle;
+    pet.collectible.frontBangs = 'default';
+    pet.collectible.sideLocks = 'default';
+    pet.collectible.topCrown = 'default';
+    pet.collectible.backAttachment = 'none';
+    if (pet.collectible.morphs) {
+      pet.collectible.morphs.frontBangs = 'default';
+      pet.collectible.morphs.frontBangsStyle = 'default';
+      pet.collectible.morphs.sideLocks = 'default';
+      pet.collectible.morphs.sideLocksStyle = 'default';
+      pet.collectible.morphs.topCrown = 'default';
+      pet.collectible.morphs.topCrownStyle = 'default';
+      pet.collectible.morphs.backAttachment = 'none';
+      pet.collectible.morphs.backAttachmentStyle = 'none';
+    }
+    pet.node.userData.frontBangsStyle = 'default';
+    pet.node.userData.sideLocksStyle = 'default';
+    pet.node.userData.topCrownStyle = 'default';
+    pet.node.userData.backAttachmentStyle = 'none';
     await attachRealHairModel(pet.node, { ...pet.collectible, groomLod: 'desktop', groomSoftware: this.softwareRenderer });
     soundEngine.playPickup(0);
     this.wakeRender(1.8, true);

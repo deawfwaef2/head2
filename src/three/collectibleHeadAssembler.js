@@ -742,15 +742,19 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     }
     if (!child.isMesh || !child.geometry?.attributes?.position) return;
     if (child.name === 'ScalpRootFeatherCap') return;
-    const isStrandMesh = child.name === 'MasterStrandHairMesh';
+    const isStrandMesh = child.name === 'MasterStrandHairMesh' || child.name === 'BabyHairWisps';
     const crownBoost = topCrownStyle === 'fluffy_high_crown' ? 0.28 : (topCrownStyle === 'photo_sleek_crown' ? -0.12 : 0.0);
     const effHairVol = hairVol + crownBoost;
+    const effBangsLen = frontBangsStyle === 'forehead_bare' ? Math.min(bangsLen, -0.42) : (frontBangsStyle === 'choppy_micro' ? Math.min(bangsLen, -0.25) : bangsLen);
+    const effBangsPart = frontBangsStyle === 'forehead_bare' ? Math.max(bangsPart, 0.68) : (frontBangsStyle === 'curtain_part' ? Math.max(bangsPart, 0.36) : bangsPart);
+    const effSideburn = sideLocksStyle === 'tucked_ear' ? Math.min(sideburn, -0.46) : sideburn;
     if (isStrandMesh) {
       const u = child.material?.userData?.strandUniforms;
+      if (child.name === 'BabyHairWisps') return;
       if (u?.uHairFineTune0 && u?.uHairFineTune1 && u?.uHairFineTune2) {
         const crownMode = topCrownStyle === 'photo_sleek_crown' ? 1.0 : (topCrownStyle === 'side_part_crown' ? 2.0 : 0.0);
-        u.uHairFineTune0.value.set(crownMode, effHairVol, bangsLen, bangsPart);
-        u.uHairFineTune1.value.set(sideburn, hairLen, hairFlare, hairCurlWave);
+        u.uHairFineTune0.value.set(crownMode, effHairVol, effBangsLen, effBangsPart);
+        u.uHairFineTune1.value.set(effSideburn, hairLen, hairFlare, hairCurlWave);
         u.uHairFineTune2.value.set(neckClear, 0, 0, 0);
       }
       return;
@@ -799,26 +803,26 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
         z += rz * (effHairVol * 0.12 * wCrown);
       }
 
-      if ((Math.abs(bangsLen) > 1e-4 || Math.abs(bangsPart) > 1e-4) && z > 0.042 && y > -0.035 && Math.abs(x) < 0.068) {
+      if ((Math.abs(effBangsLen) > 1e-4 || Math.abs(effBangsPart) > 1e-4) && z > 0.042 && y > -0.035 && Math.abs(x) < 0.068) {
         const wFront = Math.min(1.0, Math.max(0.0, (z - 0.042) / 0.045));
         const wCenter = Math.min(1.0, Math.max(0.0, 1.0 - Math.abs(x) / 0.068));
         const wLowerBangs = Math.min(1.0, Math.max(0.0, (0.065 - y) / 0.065));
         const wBangs = wFront * wCenter * wLowerBangs;
-        y -= bangsLen * 0.028 * wBangs;
-        z += Math.max(0.0, bangsLen) * 0.005 * wBangs;
-        if (Math.abs(bangsPart) > 1e-4) {
+        y -= effBangsLen * 0.028 * wBangs;
+        z += Math.max(0.0, effBangsLen) * 0.005 * wBangs;
+        if (Math.abs(effBangsPart) > 1e-4) {
           const signX = x >= 0 ? 1.0 : -1.0;
-          const partStrength = Math.exp(-Math.pow(Math.abs(x) / 0.032, 2.0));
-          x += signX * bangsPart * 0.022 * wFront * wLowerBangs * partStrength;
-          y += Math.max(0.0, bangsPart) * 0.010 * wFront * wLowerBangs * partStrength;
+          const partStrength = Math.exp(-Math.pow(Math.abs(x) / 0.036, 2.0));
+          x += signX * effBangsPart * 0.028 * wFront * wLowerBangs * partStrength;
+          y += Math.max(0.0, effBangsPart) * 0.014 * wFront * wLowerBangs * partStrength;
         }
       }
 
-      if (Math.abs(sideburn) > 1e-4 && z > -0.015 && y < 0.025 && Math.abs(x) > 0.032) {
-        const wSide = Math.min(1.0, Math.max(0.0, (0.025 - y) / 0.10));
+      if (Math.abs(effSideburn) > 1e-4 && z > -0.015 && y < 0.032 && Math.abs(x) > 0.032) {
+        const wSide = Math.min(1.0, Math.max(0.0, (0.032 - y) / 0.10));
         const signX = x >= 0 ? 1.0 : -1.0;
-        x -= signX * sideburn * 0.020 * wSide;
-        z += sideburn * 0.010 * wSide;
+        x -= signX * effSideburn * 0.016 * wSide;
+        z += effSideburn * 0.012 * wSide;
       }
 
       if ((Math.abs(hairLen) > 1e-4 || Math.abs(hairFlare) > 1e-4 || Math.abs(hairCurlWave) > 1e-4) && y < -0.005) {
@@ -1461,52 +1465,52 @@ const ALL_28_VALID_HAIRS = new Set([
 export const HAIR_STYLE_PRESET_RECIPES = {
   preset_hime_cut_long: {
     baseStyle: 'hair_long01',
-    frontBangs: 'hime_blunt',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairWispyFeather: 0.28,
   },
   preset_jk_twin_ponytail: {
     baseStyle: 'daz_hair_air_bangs_long',
-    frontBangs: 'wispy_air',
-    sideLocks: 'both_wisps',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'twin_braids',
-    hairWispyFeather: 0.56,
+    hairWispyFeather: 0.45,
   },
   preset_guofeng_twin_buns: {
     baseStyle: 'daz_hair_twin_buns',
-    frontBangs: 'hime_blunt',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairWispyFeather: 0.32,
   },
   preset_kpop_curtain_ponytail: {
     baseStyle: 'hair_ponytail01',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'curtain_part',
-    sideLocks: 'wavy_tendril',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.48,
+    hairWispyFeather: 0.42,
   },
   preset_french_lazy_chignon: {
     baseStyle: 'daz_hair_low_chignon',
-    frontBangs: 'french_light',
-    sideLocks: 'wavy_tendril',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.52,
+    hairWispyFeather: 0.42,
   },
   preset_chaebol_sleek_long: {
     baseStyle: 'daz_hair_o4saken_long',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'forehead_bare',
-    sideLocks: 'tucked_ear',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairWispyFeather: 0.35,
   },
   preset_sakura_pink_hime_bob: {
     baseStyle: 'daz_hair_blunt_bob_bangs',
-    frontBangs: 'hime_blunt',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#a85d74',
     hairOmbreMix: 0.68,
@@ -1514,71 +1518,71 @@ export const HAIR_STYLE_PRESET_RECIPES = {
   },
   preset_wolf_mullet_cool: {
     baseStyle: 'daz_hair_wolf_clavicle',
-    frontBangs: 'choppy_micro',
-    sideLocks: 'tucked_ear',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.58,
+    hairWispyFeather: 0.44,
   },
   preset_republic_student_braids: {
     baseStyle: 'daz_hair_double_braid',
-    frontBangs: 'side_swept',
-    sideLocks: 'both_wisps',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.45,
+    hairWispyFeather: 0.38,
   },
   preset_hk_retro_glam_wave: {
     baseStyle: 'daz_hair_ashley_wave',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'side_swept',
-    sideLocks: 'wavy_tendril',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairWispyFeather: 0.42,
   },
   preset_FirstLove_air_bob: {
     baseStyle: 'daz_hair_inverted_bob_bangs',
-    frontBangs: 'wispy_air',
-    sideLocks: 'tucked_ear',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.62,
+    hairWispyFeather: 0.45,
   },
   preset_song_aesthetic_updo: {
     baseStyle: 'daz_hair_bow_bun_braids',
-    frontBangs: 'curtain_part',
-    sideLocks: 'both_wisps',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.46,
+    hairWispyFeather: 0.40,
   },
   preset_ice_queen_silver_wave: {
     baseStyle: 'daz_hair_mermaid_curl',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'curtain_part',
+    frontBangs: 'default',
     sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#8c96a6',
     hairOmbreMix: 0.65,
-    hairWispyFeather: 0.44,
+    hairWispyFeather: 0.40,
   },
   preset_gentle_sister_clavicle: {
     baseStyle: 'hair_short04',
-    frontBangs: 'side_swept',
-    sideLocks: 'both_wisps',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#4a3528',
     hairOmbreMix: 0.62,
-    hairWispyFeather: 0.48,
+    hairWispyFeather: 0.42,
   },
   preset_ballet_core_ribbons: {
     baseStyle: 'daz_hair_ballerina_bun',
-    frontBangs: 'wispy_air',
-    sideLocks: 'wavy_tendril',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
-    hairWispyFeather: 0.56,
+    hairWispyFeather: 0.42,
   },
   preset_ocean_blue_hime_long: {
     baseStyle: 'daz_hair_hime',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'hime_blunt',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#29527a',
     hairOmbreMix: 0.70,
@@ -1587,34 +1591,34 @@ export const HAIR_STYLE_PRESET_RECIPES = {
   preset_burgundy_siren_wave: {
     baseStyle: 'daz_hair_curtain_wave',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'curtain_part',
-    sideLocks: 'wavy_tendril',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#6e1e32',
     hairOmbreMix: 0.68,
-    hairWispyFeather: 0.44,
+    hairWispyFeather: 0.42,
   },
   preset_mori_girl_unkempt_braid: {
     baseStyle: 'daz_hair_unkempt_french_braid',
-    frontBangs: 'wispy_air',
-    sideLocks: 'both_wisps',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#6e4730',
     hairOmbreMix: 0.64,
-    hairWispyFeather: 0.58,
+    hairWispyFeather: 0.42,
   },
   preset_clean_fit_sleek_bun: {
     baseStyle: 'daz_hair_low_chignon',
     topCrown: 'photo_sleek_crown',
-    frontBangs: 'forehead_bare',
-    sideLocks: 'tucked_ear',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairWispyFeather: 0.30,
   },
   preset_sweet_milk_tea_halfup: {
     baseStyle: 'daz_hair_halfup_princess',
-    frontBangs: 'hime_blunt',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#6e4730',
     hairOmbreMix: 0.68,
@@ -1622,20 +1626,20 @@ export const HAIR_STYLE_PRESET_RECIPES = {
   },
   preset_imperial_crown_braid_hime: {
     baseStyle: 'daz_hair_crown_braid',
-    frontBangs: 'curtain_part',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairWispyFeather: 0.36,
   },
   preset_cyber_hologram_twin: {
     baseStyle: 'daz_hair_twin_braids',
     topCrown: 'fluffy_high_crown',
-    frontBangs: 'choppy_micro',
-    sideLocks: 'hime_cheek',
+    frontBangs: 'default',
+    sideLocks: 'default',
     backAttachment: 'none',
     hairTipColor: '#8c96a6',
     hairOmbreMix: 0.66,
-    hairWispyFeather: 0.42,
+    hairWispyFeather: 0.40,
   },
 };
 
@@ -1802,16 +1806,18 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
                           * (1.0 - smoothstep(0.040, 0.054, vHairLocalPos.y))
                           * (1.0 - smoothstep(0.048, 0.064, abs(vHairLocalPos.x)));
         float coverage = hairTexel.a;
-        coverage *= 1.0 - 0.22 * uHairWispyFeather * (1.0 - coverage);
+        coverage *= 1.0 - 0.16 * uHairWispyFeather * (1.0 - coverage);
         float bangStrandComb = smoothstep(0.18, 0.56, atlasLuma * 0.72 + microStrand * 0.28);
-        coverage *= mix(1.0, mix(0.45, 1.0, bangStrandComb), bangTipMask * clamp(uHairWispyFeather * 0.65, 0.0, 0.65));
-        diffuseColor.a *= coverage;
+        coverage *= mix(1.0, mix(0.55, 1.0, bangStrandComb), bangTipMask * clamp(uHairWispyFeather * 0.55, 0.0, 0.55));
+        // Darken semi-transparent border texels so un-premultiplied grey PNG borders never create a crusty white/grey halo
+        diffuseColor.rgb *= mix(0.66, 1.0, smoothstep(0.16, 0.68, coverage));
+        diffuseColor.a = coverage;
       #endif
     `);
     shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
       #ifdef USE_ALPHATEST
         if (uHairUseCoverage > 0.5) {
-          if (diffuseColor.a < 0.05) discard;
+          if (diffuseColor.a < 0.15) discard;
         } else {
           if (diffuseColor.a < 0.26) discard;
           diffuseColor.a = 1.0;
@@ -2058,8 +2064,8 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     });
 
     // Stage 43 · 4-Zone Surgical Modular Hair Assembly (Crown / Front Bangs / Side Locks / Back Attachment)
-    const stripFrontBangs = frontBangsStyle !== 'default' && (frontBangsStyle === 'forehead_bare' || (MODULAR_BANGS_DONORS[frontBangsStyle] && MODULAR_BANGS_DONORS[frontBangsStyle].style !== resolvedStyle));
-    const stripSideLocks = sideLocksStyle !== 'default' && (sideLocksStyle === 'tucked_ear' || (MODULAR_SIDELOCKS_DONORS[sideLocksStyle] && MODULAR_SIDELOCKS_DONORS[sideLocksStyle].style !== resolvedStyle));
+    // NOTE: Never delete triangles from front forehead or side locks via filterGeometryByCentroid — triangle deletion creates sawtooth holes!
+    // Instead, 'forehead_bare' and 'tucked_ear' are smoothly parted/tucked by continuous vertex weights in applyArtistHairFineTuning.
     const stripBackDrape = backAttachmentStyle !== 'none' && (backAttachmentStyle === 'cropped_nape' || (MODULAR_BACK_DONORS[backAttachmentStyle] && MODULAR_BACK_DONORS[backAttachmentStyle].style !== resolvedStyle));
 
     const bangsDonor = (frontBangsStyle !== 'default' && frontBangsStyle !== 'forehead_bare' && MODULAR_BANGS_DONORS[frontBangsStyle]?.style !== resolvedStyle)
@@ -2078,26 +2084,10 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       loadModularDonorMeshes(backDonor),
     ]);
 
-    if (stripFrontBangs || stripSideLocks || stripBackDrape) {
+    if (stripBackDrape) {
       loadedScene.traverse((child) => {
         if (!child.isMesh || !child.geometry?.attributes?.position) return;
         let geo = child.geometry;
-        if (stripFrontBangs && (frontBangsStyle === 'forehead_bare' || bangsMeshes.length)) {
-          const trimmed = filterGeometryByCentroid(
-            geo,
-            (x, y, z) => z > 0.048 && y > 0.012 && y < 0.086 && Math.abs(x) < 0.056,
-            true
-          );
-          if (trimmed) geo = trimmed;
-        }
-        if (stripSideLocks && (sideLocksStyle === 'tucked_ear' || sideMeshes.length)) {
-          const trimmed = filterGeometryByCentroid(
-            geo,
-            (x, y, z) => Math.abs(x) > 0.046 && z > 0.002 && z < 0.068 && y > -0.058 && y < 0.042,
-            true
-          );
-          if (trimmed) geo = trimmed;
-        }
         if (stripBackDrape && (backAttachmentStyle === 'cropped_nape' || backMeshes.length)) {
           const trimmed = filterGeometryByCentroid(
             geo,
@@ -2307,7 +2297,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         }
       });
       if (skinMeshForHairline) {
-        const strandRgb = hexToMasterStrandRgb(hairColor);
+        const strandRgb = hexToMasterStrandRgb(hairColorHex);
         const uHairRoot = skinMeshForHairline.material?.userData?.skinGradingUniforms?.uHairRoot;
         if (uHairRoot?.value) {
           uHairRoot.value.set(strandRgb[0] * 1.15, strandRgb[1] * 1.15, strandRgb[2] * 1.15);

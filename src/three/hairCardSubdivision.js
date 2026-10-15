@@ -51,12 +51,23 @@ export function refineArtistHairCards(source) {
   result.setAttribute('position',new BufferAttribute(positions,3));
   result.setAttribute('uv',new BufferAttribute(texcoords,2));
   result.setAttribute('normal',new BufferAttribute(normals,3));
-  // Re-evaluate geometric normals after subdivision rather than carrying the
-  // historical "radial skull normal" field into a differently curved hair card.
-  result.setIndex(indices);result.computeVertexNormals();
-  // Keep the author's orientation. Some old two-sided cards use reversed faces.
-  const out=result.attributes.normal.array;
-  for(let i=0;i<out.length;i+=3)if(out[i]*normals[i]+out[i+1]*normals[i+1]+out[i+2]*normals[i+2]<0){out[i]*=-1;out[i+1]*=-1;out[i+2]*=-1;}
+  result.setIndex(indices);
+  if (normal) {
+    result.computeVertexNormals();
+    const out = result.attributes.normal.array;
+    for (let i = 0; i < out.length; i += 3) {
+      let gx = out[i], gy = out[i + 1], gz = out[i + 2];
+      const ox = normals[i], oy = normals[i + 1], oz = normals[i + 2];
+      if (gx * ox + gy * oy + gz * oz < 0) { gx = -gx; gy = -gy; gz = -gz; }
+      let bx = ox * 0.72 + gx * 0.28;
+      let by = oy * 0.72 + gy * 0.28;
+      let bz = oz * 0.72 + gz * 0.28;
+      const len = Math.hypot(bx, by, bz) || 1;
+      out[i] = bx / len; out[i + 1] = by / len; out[i + 2] = bz / len;
+    }
+  } else {
+    result.computeVertexNormals();
+  }
   result.userData={...source.userData,artistSubdivision:true,sourceTriangles:ids.length/3};
   // Do not carry deformation caches whose array lengths belong to the old mesh.
   delete result.userData.basePositions;delete result.userData.baseHairNormals;delete result.userData.hairShapeSignature;
