@@ -1994,9 +1994,8 @@ export class DesktopBoxSpaceEngine {
     }, true);
 
     window.addEventListener('pointermove', (e) => {
-      this.updateMouseCoords(e);
-
       if (this.pointerDownInfo) {
+        this.updateMouseCoords(e);
         const info = this.pointerDownInfo;
         const dx = e.clientX - info.lastX;
         const dy = e.clientY - info.lastY;
@@ -2128,10 +2127,9 @@ export class DesktopBoxSpaceEngine {
         return;
       }
 
-      if (this.settings.followIntensity > 0.01 && this.pets.size > 0) {
-        this.wakeRender(0.6);
-      }
-
+      // A cursor moving across the command bar, cards or essay drawer must
+      // never wake the full 3D pipeline or redirect the heads' gaze. The only
+      // exception is an active drag, handled above regardless of UI crossing.
       if (this.isBlockedByUI(e)) {
         if (this.hoveredPetId) {
           this.hoveredPetId = null;
@@ -2139,6 +2137,10 @@ export class DesktopBoxSpaceEngine {
           this.onHoverChange(null);
         }
         return;
+      }
+      this.updateMouseCoords(e);
+      if (this.settings.followIntensity > 0.01 && this.pets.size > 0) {
+        this.wakeRender(0.6);
       }
 
       const hitPet = this.pickPetAtCursor();

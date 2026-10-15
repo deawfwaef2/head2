@@ -212,6 +212,13 @@ const state = {
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
   placardsEnabled: true,
+  // A display-only preference. Dossier text/photo remain frozen when archived.
+  placardTheme: (() => {
+    try {
+      const saved = localStorage.getItem('cervix3d-placard-theme-v1');
+      return ['ink', 'midnight', 'rose', 'gallery'].includes(saved) ? saved : 'ink';
+    } catch (_) { return 'ink'; }
+  })(),
   desktopPetMode: false,
   placardOffsets: {},
   vcdTargetPetId: 'selected',
@@ -381,6 +388,9 @@ const state = {
       lowerLidFlatness: 0.0,
       eyeDepth: 0.0,
       outerCanthusLift: 0.0,
+      eyeMedialCanthusLift: 0.0,
+      eyeUpperFoldHeight: 0.0,
+      eyeOuterOpening: 0.0,
       chinWidth: 0.0,
       noseTipAngle: 0.0,
       noseTipWidth: 0.0,
@@ -390,6 +400,8 @@ const state = {
       cupidBow: 0.0,
       lowerLipCenter: 0.0,
       mouthSmile: 0.06,
+      mouthCornerLift: 0.0,
+      upperLipLift: 0.0,
       foreheadHeight: 0.04,
       eyelinerStyle: 0,
       eyelinerStrength: 0.0,
@@ -776,6 +788,7 @@ function renderSpecimenPlacards(placardsList = []) {
     return;
   }
   layer.classList.remove('hidden');
+  if (layer.dataset.placardTheme !== state.placardTheme) layer.dataset.placardTheme = state.placardTheme;
 
   const winW = window.innerWidth;
   const winH = window.innerHeight;
@@ -808,6 +821,7 @@ function renderSpecimenPlacards(placardsList = []) {
       // The skeleton contains no user text. All archive fields use textContent,
       // never interpolated HTML/attributes (including imported JSON archives).
       cardEl.innerHTML = `
+        <div class="placard-kicker"><span>THE PORTRAIT ARCHIVE</span><span class="placard-seal">✦ 典藏札记</span></div>
         <div class="placard-header-main">
           <div class="placard-photo-wrap" data-placard-dossier title="查看完整生平档案">
             <img data-placard-photo alt="人物照片" draggable="false" />
@@ -820,10 +834,11 @@ function renderSpecimenPlacards(placardsList = []) {
             <div class="placard-origin-line" data-placard-origin></div>
           </div>
         </div>
+        <div class="placard-divider" aria-hidden="true"></div>
         <div class="placard-brief-line" data-placard-brief></div>
-        <div class="placard-action-bar">
-          <button type="button" class="placard-mini-btn" data-placard-dossier>📖 完整生平档案</button>
-          <button type="button" class="placard-mini-btn" data-placard-open-slot>🔒 查看建档 / 外观</button>
+        <div class="placard-footer">
+          <span>档案已封存 · 标牌不可改写</span>
+          <button type="button" class="placard-read-more" data-placard-dossier>读完整故事 ↗</button>
         </div>`;
       cardEl.querySelectorAll('[data-placard-dossier]').forEach(btn => {
         btn.addEventListener('pointerdown', ev => ev.stopPropagation());
@@ -834,22 +849,6 @@ function renderSpecimenPlacards(placardsList = []) {
           window.__syncVcdSelectedPetUI?.(item.id);
           togglePinnedDossierForPet(item.id);
         });
-      });
-      const openSlot = cardEl.querySelector('[data-placard-open-slot]');
-      openSlot?.addEventListener('pointerdown', ev => ev.stopPropagation());
-      openSlot?.addEventListener('click', ev => {
-        if (cardEl.dataset.justDragged === '1') return;
-        ev.stopPropagation();
-        state.activeStripPetId = item.id;
-        window.__syncVcdSelectedPetUI?.(item.id);
-        const studio = document.getElementById('obsidian-char-hair-studio');
-        if (!studio) return;
-        studio.classList.remove('hidden');
-        document.getElementById('btn-open-obsidian-studio')?.classList.add('active-top');
-        studio.querySelector('.obs-tab-btn[data-obs-tab="character"]')?.click();
-        const current = state.collectibles.find(c => c.id === item.id);
-        if (current) window.__syncPlacardEditorFields?.(current);
-        window.__refreshObsCharSaveSlots?.();
       });
       cardEl.addEventListener('pointerdown', ev => {
         if (ev.button !== 0 || ev.target.closest('button, [data-placard-dossier]')) return;
@@ -892,7 +891,9 @@ function renderSpecimenPlacards(placardsList = []) {
       cardsEl.appendChild(cardEl);
     }
 
+    let cardContentChanged = !cardEl._placardSize;
     if (cardEl._photoSrc !== photoSrc) {
+      cardContentChanged = true;
       cardEl.querySelector('[data-placard-photo]').src = photoSrc;
       cardEl.querySelector('[data-placard-photo]').alt = `${displayName}照片`;
       cardEl._photoSrc = photoSrc;
@@ -902,13 +903,19 @@ function renderSpecimenPlacards(placardsList = []) {
       ['[data-placard-origin]', record.origin], ['[data-placard-brief]', record.story],
     ]) {
       const el = cardEl.querySelector(selector);
-      if (el && el.textContent !== textValue) el.textContent = textValue || '';
+      if (el && el.textContent !== textValue) {
+        el.textContent = textValue || '';
+        cardContentChanged = true;
+      }
     }
 
-    // Measure the real card after text wrapping, not the old fixed 114×30 estimate.
-    // Keep even a multi-paragraph archive entirely inside the usable viewport.
-    const halfW = cardEl.offsetWidth * 0.5 || 175;
-    const halfH = cardEl.offsetHeight * 0.5 || 95;
+    // Cache stable card dimensions during animation. offsetHeight after every
+    // moved card used to force a full layout on every 3D frame, even at rest.
+    if (cardContentChanged || cardEl._placardSize?.viewportH !== winH || cardEl._placardSize?.viewportW !== winW) {
+      cardEl._placardSize = { w: cardEl.offsetWidth, h: cardEl.offsetHeight, viewportH: winH, viewportW: winW };
+    }
+    const halfW = (cardEl._placardSize.w || 350) * .5;
+    const halfH = (cardEl._placardSize.h || 190) * .5;
     const off = state.placardOffsets[item.id] || { dx: 0, dy: 0 };
     const manuallyPlaced = Math.abs(off.dx) > 1 || Math.abs(off.dy) > 1;
     const leftBound = halfW + 10;
@@ -977,9 +984,11 @@ function renderSpecimenPlacards(placardsList = []) {
       }
     }
     occupied.push({ x: cx, y: cy, halfW, halfH });
-    cardEl.classList.toggle('is-hovered', Boolean(item.isHovered || state.activeStripPetId === item.id));
-    cardEl.style.left = `${cx.toFixed(1)}px`;
-    cardEl.style.top = `${cy.toFixed(1)}px`;
+    const shouldHighlight = Boolean(item.isHovered || state.activeStripPetId === item.id);
+    if (cardEl.classList.contains('is-hovered') !== shouldHighlight) cardEl.classList.toggle('is-hovered', shouldHighlight);
+    const left = `${cx.toFixed(1)}px`, top = `${cy.toFixed(1)}px`;
+    if (cardEl.style.left !== left) cardEl.style.left = left;
+    if (cardEl.style.top !== top) cardEl.style.top = top;
 
     const dx = cx - item.anchorX, dy = cy - item.anchorY;
     let ax, ay, ex, ey, points;
@@ -1003,15 +1012,25 @@ function renderSpecimenPlacards(placardsList = []) {
       points = `${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`;
     }
     const selected = item.isHovered || state.activeStripPetId === item.id;
+    const wireLength = Math.hypot(ax - item.anchorX, ay - item.anchorY);
+    // Long tethers used to bisect other portraits. Beyond the local lane show
+    // only a short card-side leader, leaving the 3D scene unobstructed.
+    const leader = wireLength > 245
+      ? `${(ax + (item.anchorX - ax) * Math.min(70 / wireLength, .3)).toFixed(1)},${(ay + (item.anchorY - ay) * Math.min(70 / wireLength, .3)).toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`
+      : points;
     lines.push(`<g>
-      <polyline points="${points}" fill="none" stroke="${selected ? 'rgba(245,158,11,.44)' : 'rgba(15,12,10,.55)'}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="${points}" fill="none" stroke="${selected ? 'rgba(251,191,36,.96)' : 'rgba(217,179,130,.76)'}" stroke-width="1.4" stroke-dasharray="${selected ? 'none' : '4 2.5'}" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.5" fill="#fde68a" stroke="#451a03" stroke-width="1.2"/>
-      <circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.7" fill="#d9b382"/>
+      <polyline points="${leader}" fill="none" stroke="${selected ? 'rgba(139,103,50,.78)' : 'rgba(92,73,47,.58)'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="${leader}" fill="none" stroke="${selected ? 'rgba(251,191,36,.94)' : 'rgba(218,186,132,.76)'}" stroke-width="1.2" stroke-dasharray="${selected ? 'none' : '3 3'}" stroke-linecap="round" stroke-linejoin="round"/>
+      ${wireLength <= 245 ? `<circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="2.7" fill="#efcb8e" stroke="#451a03" stroke-width=".8"/>` : ''}
+      <circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.5" fill="#d9b382"/>
     </g>`);
   }
   for (const [id, el] of oldCards) if (!active.has(id)) el.remove();
-  svgEl.innerHTML = lines.join('');
+  const markup = lines.join('');
+  if (svgEl._lineMarkup !== markup) {
+    svgEl.innerHTML = markup;
+    svgEl._lineMarkup = markup;
+  }
 }
 
 function updateStructureFloatingHUD(info) {
@@ -2462,6 +2481,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     refreshPlacards() {
       if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
     },
+    setPlacardTheme(theme) {
+      if (!['ink', 'midnight', 'rose', 'gallery'].includes(theme)) return false;
+      state.placardTheme = theme;
+      try { localStorage.setItem('cervix3d-placard-theme-v1', theme); } catch (_) { /* file:// private mode */ }
+      for (const select of document.querySelectorAll('#obs-placard-theme-select, #top-placard-theme-select')) {
+        if (select.value !== theme) select.value = theme;
+      }
+      if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+      return true;
+    },
     getActiveCollectible() {
       const targetId = state.activeStripPetId || 'SPEC-2026-FYP';
       return state.collectibles.find(c => c.id === targetId) || state.collectibles[0] || null;
@@ -3285,6 +3314,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-lower-lid-flatness', 'val-morph-lower-lid-flatness', 'lowerLidFlatness', ''],
       ['morph-eye-depth', 'val-morph-eye-depth', 'eyeDepth', ''],
       ['morph-outer-canthus', 'val-morph-outer-canthus', 'outerCanthusLift', ''],
+      ['morph-eye-medial-canthus', 'val-morph-eye-medial-canthus', 'eyeMedialCanthusLift', ''],
+      ['morph-eye-upper-fold-height', 'val-morph-eye-upper-fold-height', 'eyeUpperFoldHeight', ''],
+      ['morph-eye-outer-opening', 'val-morph-eye-outer-opening', 'eyeOuterOpening', ''],
       ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
       ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
       ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
@@ -3301,6 +3333,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-cupid-bow', 'val-morph-cupid-bow', 'cupidBow', ''],
       ['morph-lower-lip', 'val-morph-lower-lip', 'lowerLipCenter', ''],
       ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
+      ['morph-mouth-corner-lift', 'val-morph-mouth-corner-lift', 'mouthCornerLift', ''],
+      ['morph-upper-lip-lift', 'val-morph-upper-lip-lift', 'upperLipLift', ''],
       ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
       ['morph-head-width', 'val-morph-head-width', 'headWidth', '%scale'],
       ['morph-head-length', 'val-morph-head-length', 'headLength', '%scale'],
@@ -3726,6 +3760,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-lower-lid-flatness', 'val-morph-lower-lid-flatness', 'lowerLidFlatness', ''],
     ['morph-eye-depth', 'val-morph-eye-depth', 'eyeDepth', ''],
     ['morph-outer-canthus', 'val-morph-outer-canthus', 'outerCanthusLift', ''],
+    ['morph-eye-medial-canthus', 'val-morph-eye-medial-canthus', 'eyeMedialCanthusLift', ''],
+    ['morph-eye-upper-fold-height', 'val-morph-eye-upper-fold-height', 'eyeUpperFoldHeight', ''],
+    ['morph-eye-outer-opening', 'val-morph-eye-outer-opening', 'eyeOuterOpening', ''],
     ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
     ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
     ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
@@ -3745,6 +3782,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-cupid-bow', 'val-morph-cupid-bow', 'cupidBow', ''],
     ['morph-lower-lip', 'val-morph-lower-lip', 'lowerLipCenter', ''],
     ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
+    ['morph-mouth-corner-lift', 'val-morph-mouth-corner-lift', 'mouthCornerLift', ''],
+    ['morph-upper-lip-lift', 'val-morph-upper-lip-lift', 'upperLipLift', ''],
     ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
     ['morph-ear', 'val-morph-ear', 'earSize', ''],
     ['morph-head-width', 'val-morph-head-width', 'headWidth', ''],
@@ -5350,14 +5389,21 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Initialize high-contrast sunlit hair-strand shadow visual config on startup
   applyVisualConfigAndSyncUI({}, false);
 
-  // Interactive Mouse Cursor Beauty Torch Tracking
+  // Interactive beauty torch belongs to the visible 3D surface, not buttons.
+  // UI-only pointer motion previously woke BOTH WebGL contexts on every event,
+  // even after the desktop drag/follow handler had blocked its own wake.
   window.addEventListener('pointermove', (e) => {
+    const onStudioCanvas = e.target instanceof Element && Boolean(e.target.closest('#studio-preview-canvas'));
+    if (!onStudioCanvas && !desktopEngine?.pointerDownInfo && desktopEngine?.isBlockedByUI?.(e)) return;
     const ndcX = (e.clientX / Math.max(1, window.innerWidth)) * 2 - 1;
     const ndcY = -((e.clientY / Math.max(1, window.innerHeight)) * 2 - 1);
     updateInteractiveCursorLight(ndcX, ndcY);
-    if (Number(state.visualCustomConfig.cursorTorch) > 0.01) {
+    // Studio pointer tracking and desktop drag/follow already schedule frames.
+    // Only the standalone torch with follow disabled needs its own wake.
+    if (Number(state.visualCustomConfig.cursorTorch) > 0.01
+      && !onStudioCanvas && !desktopEngine?.pointerDownInfo
+      && Number(desktopEngine?.settings?.followIntensity || 0) <= 0.01) {
       desktopEngine?.wakeRender?.(0.35, false);
-      studioEngine?.wakeRender?.(0.35, false);
     }
   }, { passive: true });
 
@@ -7240,6 +7286,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.__cervixQA.updateMaterialsLive = updateCollectibleMaterialsLive;
   }
   initObsidianProStudio();
+  // The top popover is created only now; restore the persisted display theme.
+  window.__cervixQA?.setPlacardTheme(state.placardTheme);
   // Obsidian's mode selector is created after the first desktop-pet sync.
   syncVcdSelectedPetUI();
   initMorbidStudyToolkit();

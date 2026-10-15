@@ -2288,8 +2288,10 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     }
   }
 
+  // Prevent bright overcast/butterfly light recipes from stacking on post-grade
+  // lift/fade and clipping skin to white. Preserve every darker recipe intact.
   engine.renderer.toneMappingExposure = studioLP
-    ? studioLP.exposure * 1.12
+    ? Math.min(1.08, studioLP.exposure * 1.12)
     : Number(m.exposure ?? basePreset.exposure ?? 1.06);
   const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.38);
   const effectiveEnv = studioLP

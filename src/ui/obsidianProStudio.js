@@ -7,6 +7,7 @@
 
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
+import { VISUAL_STYLE_PRESETS } from '../three/photorealLighting.js';
 import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
 
 const escapeMarkup = value => String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -559,6 +560,15 @@ export function initObsidianProStudio() {
               <span>显示桌面标牌</span>
             </label>
           </div>
+          <label class="obs-placard-theme-picker" style="display:flex;align-items:center;gap:10px;color:#fef08a;font-size:12.5px;margin:6px 0 10px;">
+            🖼️ 桌面标牌外观（仅改变展示，不修改锁定档案）
+            <select id="obs-placard-theme-select" class="obs-select" style="min-width:150px;padding:5px 8px;">
+              <option value="ink">宣纸 · 暖金</option>
+              <option value="midnight">夜航 · 青瓷</option>
+              <option value="rose">玫瑰 · 丝绒</option>
+              <option value="gallery">画廊 · 雾绿</option>
+            </select>
+          </label>
           <p id="obs-placard-editor-status" class="obs-placard-editor-status">🔒 当前角色档案已锁定。若要写新标牌，请先创建新档案草稿。</p>
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
             <button type="button" id="obs-btn-new-placard-draft" class="obs-footer-btn primary-cyan">➕ 创建新档案草稿</button>
@@ -780,15 +790,18 @@ export function initObsidianProStudio() {
         </div>
 
         <details class="obs-accordion" open>
-          <summary>眼部与虹膜精调 (16项)</summary>
+          <summary>眼部与虹膜真形变精调（可调内眼角 / 眼褶 / 外侧眼裂）</summary>
           <div class="obs-accordion-body">
-            ${makeShortSliderRow({ label: '眼睛大小', targetId: 'vcd-eye-size', fallbackId: 'morph-eye-size', min: -0.45, max: 0.55, step: 0.02, val: 0.12, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '杏眼圆长', targetId: 'vcd-eye-almond', fallbackId: 'morph-eye', min: -0.45, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '眼睑开合', targetId: 'vcd-eye-aperture', fallbackId: 'morph-eyelid-open', min: -0.40, max: 0.50, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '眼尾弧度', targetId: 'vcd-eye-tilt', fallbackId: 'morph-eye-tilt', min: -0.45, max: 0.55, step: 0.02, val: -0.04, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '眼距宽窄', targetId: 'vcd-eye-spacing', fallbackId: 'morph-eye-spacing', min: -0.40, max: 0.40, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '内眦开合', targetId: 'vcd-eye-epicanthus', fallbackId: 'morph-eye-epicanthus', min: -0.40, max: 0.50, step: 0.02, val: 0.15, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '双眼皮深', targetId: 'vcd-eye-crease', fallbackId: 'morph-eye-crease', min: 0, max: 0.65, step: 0.02, val: 0.25, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼睛大小', targetId: 'vcd-eye-size', fallbackId: 'morph-eye-size', min: -1.40, max: 1.40, step: 0.02, val: 0.12, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '杏眼圆长', targetId: 'vcd-eye-almond', fallbackId: 'morph-eye', min: -1.40, max: 1.40, step: 0.02, val: 0.08, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼睑开合', targetId: 'vcd-eye-aperture', fallbackId: 'morph-eyelid-open', min: -1.20, max: 1.20, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼尾弧度', targetId: 'vcd-eye-tilt', fallbackId: 'morph-eye-tilt', min: -1.20, max: 1.20, step: 0.02, val: -0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼距宽窄', targetId: 'vcd-eye-spacing', fallbackId: 'morph-eye-spacing', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '内眦开合', targetId: 'vcd-eye-epicanthus', fallbackId: 'morph-eye-epicanthus', min: -1.20, max: 1.20, step: 0.02, val: 0.15, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '内眼角局部高', targetId: 'morph-eye-medial-canthus', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '上眼褶线高度', targetId: 'morph-eye-upper-fold-height', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '外侧眼裂开合', targetId: 'morph-eye-outer-opening', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '双眼皮深', targetId: 'vcd-eye-crease', fallbackId: 'morph-eye-crease', min: -1.20, max: 1.20, step: 0.02, val: 0.25, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '卧蚕饱满', targetId: 'vcd-eye-bag', fallbackId: 'morph-eye-bag', min: 0, max: 0.65, step: 0.02, val: 0.20, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '下眼缘平直', targetId: 'morph-lower-lid-flatness', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '眼窝深浅', targetId: 'morph-eye-depth', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
@@ -802,7 +815,7 @@ export function initObsidianProStudio() {
         </details>
 
         <details class="obs-accordion">
-          <summary>面部骨相精雕 (15项)</summary>
+          <summary>面部骨相与口唇精雕（含嘴角 / 上唇）</summary>
           <div class="obs-accordion-body">
             ${makeShortSliderRow({ label: '下颌V线', targetId: 'morph-jaw', min: -0.50, max: 0.60, step: 0.02, val: -0.08, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '下巴长度', targetId: 'morph-chin', min: -0.45, max: 0.50, step: 0.02, val: -0.04, fmt: 'signed' })}
@@ -813,10 +826,12 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '鼻头宽度', targetId: 'morph-nose-tip-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '鼻尖翘垂', targetId: 'morph-nose-tip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴唇丰满', targetId: 'morph-lip', min: -0.40, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '嘴部宽度', targetId: 'morph-mouth-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '口唇纵向比例', targetId: 'morph-mouth-height', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '唇峰弧度', targetId: 'morph-cupid-bow', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '下唇中央', targetId: 'morph-lower-lip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴部宽度', targetId: 'morph-mouth-width', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴角局部高低', targetId: 'morph-mouth-corner-lift', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '上唇中央提拉', targetId: 'morph-upper-lip-lift', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '口唇纵向比例', targetId: 'morph-mouth-height', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '唇峰弧度', targetId: 'morph-cupid-bow', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下唇中央', targetId: 'morph-lower-lip', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴角笑意', targetId: 'morph-mouth-smile', min: -0.45, max: 0.45, step: 0.02, val: 0.06, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '额头高度', targetId: 'morph-forehead', min: -0.35, max: 0.45, step: 0.02, val: 0.04, fmt: 'signed' })}
           </div>
@@ -1380,6 +1395,23 @@ function transformTopOverlayBar() {
     }
   });
 
+  // The dock is constructed before the studio HTML exists: build a real
+  // independent select here, then forward changes to the studio select.
+  const themeRow = document.createElement('label');
+  themeRow.className = 'obs-placard-theme-row';
+  const caption = document.createElement('span');
+  caption.textContent = '🏷️ 标牌展示风格';
+  const topThemeSelect = document.createElement('select');
+  topThemeSelect.id = 'top-placard-theme-select';
+  topThemeSelect.className = 'obs-top-select';
+  topThemeSelect.setAttribute('aria-label', '桌面标牌样式');
+  topThemeSelect.innerHTML = '<option value="ink">宣纸 · 暖金</option><option value="midnight">夜航 · 青瓷</option><option value="rose">玫瑰 · 丝绒</option><option value="gallery">画廊 · 雾绿</option>';
+  topThemeSelect.addEventListener('change', () => {
+    setFormValueAndTrigger('obs-placard-theme-select', topThemeSelect.value, 'change');
+  });
+  themeRow.append(caption, topThemeSelect);
+  popover.prepend(themeRow);
+
   moreWrap.appendChild(moreBtn);
   moreWrap.appendChild(popover);
   actions.appendChild(moreWrap);
@@ -1860,6 +1892,18 @@ function wireObsidianStudioEvents(studio) {
   });
 
   // 1. Character Placard 4-Field Editor (照片 · 名字 · 年龄 · 简要故事)
+  const themePicker = document.getElementById('obs-placard-theme-select');
+  themePicker?.addEventListener('change', e => {
+    const qa = window.__cervixQA;
+    if (qa?.setPlacardTheme?.(e.target.value)) qa.showToast?.('🏷️ 已切换标牌外观；建档后锁定的照片与文字保持不变');
+  });
+  if (window.__cervixQA?.state?.placardTheme) {
+    const savedTheme = window.__cervixQA.state.placardTheme;
+    if (themePicker) themePicker.value = savedTheme;
+    const topTheme = document.getElementById('top-placard-theme-select');
+    if (topTheme) topTheme.value = savedTheme;
+  }
+
   const placardChk = document.getElementById('obs-chk-placards-visible');
   placardChk?.addEventListener('change', () => {
     const qa = window.__cervixQA;
@@ -2089,17 +2133,30 @@ function wireObsidianStudioEvents(studio) {
   ];
   const originalPhysicalLight = Object.fromEntries(physicalLightKeys.map(k =>
     [k, window.__cervixQA?.state?.visualCustomConfig?.[k]]));
+  // Presets must be order-independent. Absent keys previously retained a prior
+  // filter's shadow-crush, fade, tint or custom lamps and could bleach portraits.
+  const filterGradeKeys = new Set(DESKTOP_PET_FILTER_PRESETS.flatMap(fp => Object.keys(fp.grade || {})));
+  const cleanGrade = DESKTOP_PET_FILTER_PRESETS.find(fp => fp.id === 'natural_clean')?.grade || {};
   const applyPetFilterPreset = (presetId) => {
     const qa = window.__cervixQA;
     const fp = DESKTOP_PET_FILTER_PRESETS.find((p) => p.id === presetId) || DESKTOP_PET_FILTER_PRESETS[0];
     if (!fp) return;
     const g = fp.grade || fp;
     if (qa?.state?.visualCustomConfig) {
-      // A new physical-light recipe must not leak into the next preset.
+      const config = qa.state.visualCustomConfig;
+      const visualBase = VISUAL_STYLE_PRESETS[fp.visualPreset] || VISUAL_STYLE_PRESETS.dlss5_neural_photoreal;
+      // The engines merge configs and retain previous keys, so deleting from
+      // state alone is NOT enough: explicitly restore every preset-owned key.
       for (const k of physicalLightKeys) {
-        if (originalPhysicalLight[k] !== undefined) qa.state.visualCustomConfig[k] = originalPhysicalLight[k];
+        const next = originalPhysicalLight[k] ?? visualBase[k];
+        if (next !== undefined) config[k] = next;
       }
-      Object.assign(qa.state.visualCustomConfig, {
+      for (const k of filterGradeKeys) {
+        if (physicalLightKeys.includes(k)) continue;
+        const next = g[k] ?? cleanGrade[k] ?? visualBase[k];
+        if (next !== undefined) config[k] = next;
+      }
+      Object.assign(config, {
         ...g,
         filterPreset: fp.id,
         presetId: fp.visualPreset || 'dlss5_neural_photoreal',

@@ -321,7 +321,7 @@
   <!-- =========================================================================
        STAGE 58: NON-BLOCKING COMFORT & LIVING SUPERIORITY HANDBOOK DRAWER (z-index: 9700)
        ========================================================================= -->
-  <div id="comfort-reader-drawer" class="hidden" style="display:none;position:fixed;top:118px;right:16px;z-index:9700;width:min(485px,92vw);max-height:calc(100vh - 182px);flex-direction:column;background:linear-gradient(160deg,rgba(16,13,24,0.96),rgba(26,15,28,0.97));border:1.5px solid rgba(244,114,182,0.68);border-radius:15px;box-shadow:0 20px 55px rgba(0,0,0,0.85),0 0 28px rgba(236,72,153,0.28);color:#fdf2f8;backdrop-filter:blur(14px);overflow:hidden;pointer-events:auto;">
+  <div id="comfort-reader-drawer" class="hidden" style="display:flex;position:fixed;top:118px;right:16px;z-index:9700;width:min(485px,92vw);max-height:calc(100vh - 182px);flex-direction:column;background:linear-gradient(160deg,rgba(16,13,24,0.96),rgba(26,15,28,0.97));border:1.5px solid rgba(244,114,182,0.68);border-radius:15px;box-shadow:0 20px 55px rgba(0,0,0,0.85),0 0 28px rgba(236,72,153,0.28);color:#fdf2f8;backdrop-filter:blur(14px);overflow:hidden;pointer-events:auto;">
     <!-- Header -->
     <div id="comfort-reader-drag-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(90deg,rgba(131,24,67,0.65),rgba(49,46,129,0.65));border-bottom:1px solid rgba(244,114,182,0.35);cursor:move;">
       <div>
@@ -2010,18 +2010,33 @@
                 </div>
                 <div class="slider-row">
                   <span>👁️ 下眼缘平直度 · 圆润弧线(-) ↔ 更平、减轻眼下隆起(+)</span>
-                  <input type="range" id="morph-lower-lid-flatness" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-lower-lid-flatness" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-lower-lid-flatness">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 眼窝深浅 · 浅眼窝(-) ↔ 深眼窝(+)</span>
-                  <input type="range" id="morph-eye-depth" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-depth" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-eye-depth">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 外眼角局部高度 · 下垂(-) ↔ 上扬(+)</span>
-                  <input type="range" id="morph-outer-canthus" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-outer-canthus" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-outer-canthus">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 内眼角局部高度 · 下倾(-) ↔ 上提(+)</span>
+                  <input type="range" id="morph-eye-medial-canthus" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-eye-medial-canthus">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 上眼睑褶线高度 · 压低(-) ↔ 上抬(+)</span>
+                  <input type="range" id="morph-eye-upper-fold-height" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-eye-upper-fold-height">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👁️ 外侧眼裂开合 · 窄眯(-) ↔ 放大(+)</span>
+                  <input type="range" id="morph-eye-outer-opening" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-eye-outer-opening">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>🔮 虹膜/美瞳直径大小缩放 (Iris Diameter · 68%–138%)</span>
@@ -2045,7 +2060,7 @@
                 </div>
                 <div class="slider-row">
                   <span>📐 下巴横向宽窄 · 窄翘(-) ↔ 饱满宽(+)</span>
-                  <input type="range" id="morph-chin-width" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-chin-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-chin-width">+0.00</span>
                 </div>
                 <div class="slider-row">
@@ -2065,12 +2080,12 @@
                 </div>
                 <div class="slider-row">
                   <span>👃 鼻尖方向 · 微垂(-) ↔ 微翘(+)</span>
-                  <input type="range" id="morph-nose-tip" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-nose-tip" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-nose-tip">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👃 鼻头横向宽度 · 收窄(-) ↔ 饱满(+)</span>
-                  <input type="range" id="morph-nose-tip-width" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-nose-tip-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-nose-tip-width">+0.00</span>
                 </div>
                 <div class="slider-row">
@@ -2095,28 +2110,38 @@
                 </div>
                 <div class="slider-row">
                   <span>👄 真正调整嘴部几何宽度 · 窄(-) ↔ 宽(+)</span>
-                  <input type="range" id="morph-mouth-width" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-mouth-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-width">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 唇部纵向比例 · 扁薄(-) ↔ 饱满加高(+)</span>
-                  <input type="range" id="morph-mouth-height" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-mouth-height" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-height">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 唇峰弧度 · 圆润(-) ↔ 明显丘比特弓(+)</span>
-                  <input type="range" id="morph-cupid-bow" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-cupid-bow" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-cupid-bow">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 下唇中央弧度 · 内收(-) ↔ 外展(+)</span>
-                  <input type="range" id="morph-lower-lip" min="-0.70" max="0.70" step="0.02" value="0.00" />
+                  <input type="range" id="morph-lower-lip" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-lower-lip">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 嘴角弧度 · 清冷微抿(-) ↔ 甜美浅笑(+)</span>
                   <input type="range" id="morph-mouth-smile" min="-1.00" max="1.00" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-smile">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👄 嘴角局部真形变 · 下垂(-) ↔ 提拉(+)</span>
+                  <input type="range" id="morph-mouth-corner-lift" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-mouth-corner-lift">+0.00</span>
+                </div>
+                <div class="slider-row">
+                  <span>👄 上唇中央高度 · 压低(-) ↔ 提起(+)</span>
+                  <input type="range" id="morph-upper-lip-lift" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <span id="val-morph-upper-lip-lift">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>🧠 额头饱满度与发际高度</span>

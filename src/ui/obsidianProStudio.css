@@ -864,158 +864,156 @@ input[type="range"]::-webkit-slider-thumb {
   color: var(--obs-gold-bright) !important;
 }
 
-/* 5. Complete Un-Truncated Specimen Placards (Photo, Full Name, Age, Origin & Full Story) */
+/* Stage72 · Four legible display-only archive themes. Solid backgrounds remove
+   three fullscreen backdrop-blur compositing passes over the live 3D scene. */
+#specimen-placards-layer {
+  --pc-bg: linear-gradient(145deg, #f9f2df, #e9ddc0);
+  --pc-text: #292b31;
+  --pc-muted: #53524d;
+  --pc-accent: #73532d;
+  --pc-border: #997b50;
+  --pc-divider: rgba(113, 83, 47, .32);
+  --pc-chip: rgba(115, 83, 45, .11);
+  --pc-shadow: rgba(28, 21, 13, .44);
+}
+#specimen-placards-layer[data-placard-theme="midnight"] {
+  --pc-bg: linear-gradient(155deg, #14262f, #101820);
+  --pc-text: #f3f7f3;
+  --pc-muted: #c4d6d5;
+  --pc-accent: #a0e1cc;
+  --pc-border: #5caa9c;
+  --pc-divider: rgba(160, 225, 204, .36);
+  --pc-chip: rgba(145, 226, 202, .12);
+  --pc-shadow: rgba(3, 12, 17, .70);
+}
+#specimen-placards-layer[data-placard-theme="rose"] {
+  --pc-bg: linear-gradient(150deg, #3f2837, #241c2c);
+  --pc-text: #fff3ed;
+  --pc-muted: #e6c4c8;
+  --pc-accent: #f4c0ab;
+  --pc-border: #ce9da4;
+  --pc-divider: rgba(247, 196, 178, .36);
+  --pc-chip: rgba(255, 200, 176, .13);
+  --pc-shadow: rgba(18, 7, 17, .76);
+}
+#specimen-placards-layer[data-placard-theme="gallery"] {
+  --pc-bg: linear-gradient(175deg, #fbfcf8, #e9efec);
+  --pc-text: #213732;
+  --pc-muted: #455e58;
+  --pc-accent: #206b61;
+  --pc-border: #689a8c;
+  --pc-divider: rgba(32, 107, 97, .35);
+  --pc-chip: rgba(32, 107, 97, .10);
+  --pc-shadow: rgba(15, 34, 30, .45);
+}
 .specimen-placard-card {
-  background: rgba(11, 16, 28, 0.95) !important;
-  backdrop-filter: blur(22px) saturate(150%) !important;
-  -webkit-backdrop-filter: blur(22px) saturate(150%) !important;
-  border: 1.5px solid rgba(251, 191, 36, 0.58) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85) !important;
-  padding: 10px 12px !important;
+  background: var(--pc-bg) !important;
+  color: var(--pc-text) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1.5px solid var(--pc-border) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 13px 28px var(--pc-shadow), inset 0 0 0 3px var(--pc-chip) !important;
+  padding: 12px 14px 10px !important;
   box-sizing: border-box !important;
-  width: min(352px, calc(100vw - 20px)) !important;
+  width: min(336px, calc(100vw - 20px)) !important;
   min-width: 0 !important;
-  max-width: 352px !important;
   max-height: calc(100dvh - 112px) !important;
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: stretch !important;
-  gap: 7px !important;
-  transition: border-color 0.16s ease, background 0.16s ease !important;
+  gap: 10px !important;
+  transition: border-color .16s ease, box-shadow .16s ease !important;
 }
-
 .specimen-placard-card:hover,
 .specimen-placard-card.is-hovered {
-  background: rgba(15, 23, 42, 0.99) !important;
-  border-color: #fbbf24 !important;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.92), 0 0 14px rgba(251, 191, 36, 0.32) !important;
+  border-color: var(--pc-accent) !important;
+  box-shadow: 0 16px 35px var(--pc-shadow), 0 0 0 2px var(--pc-divider) !important;
 }
-
+.specimen-placard-card .placard-kicker {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  color: var(--pc-accent); font: 650 10.5px/1.2 ui-serif, Georgia, serif;
+  letter-spacing: .15em;
+}
+.specimen-placard-card .placard-seal { white-space: nowrap; letter-spacing: .12em; }
 .specimen-placard-card .placard-header-main {
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 10px !important;
+  display: flex !important; align-items: flex-start !important; gap: 12px !important;
 }
-
 .specimen-placard-card .placard-photo-wrap {
-  width: 56px !important;
-  height: 56px !important;
-  border-radius: 9px !important;
-  overflow: hidden !important;
-  border: 1.5px solid rgba(251, 191, 36, 0.72) !important;
-  flex-shrink: 0 !important;
-  cursor: pointer !important;
+  width: 63px !important; height: 72px !important;
+  border-radius: 3px !important; overflow: hidden !important;
+  border: 2px solid var(--pc-border) !important;
+  flex-shrink: 0 !important; cursor: pointer !important;
+  box-shadow: 0 3px 9px var(--pc-shadow);
 }
-
 .specimen-placard-card .placard-photo-wrap img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
+  width: 100% !important; height: 100% !important; object-fit: cover !important;
 }
-
 .specimen-placard-card .placard-info-col {
-  flex: 1 !important;
-  min-width: 0 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 4px !important;
+  flex: 1 !important; min-width: 0 !important; display: flex !important;
+  flex-direction: column !important; gap: 5px !important;
 }
-
 .specimen-placard-card .placard-top-row {
-  display: flex !important;
-  align-items: flex-start !important;
-  justify-content: space-between !important;
-  gap: 6px !important;
+  display: flex !important; align-items: flex-start !important;
+  justify-content: space-between !important; gap: 7px !important;
 }
-
 .specimen-placard-card .placard-name {
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  color: #ffffff !important;
-  line-height: 1.3 !important;
-  white-space: normal !important;
-  word-break: break-word !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
+  font: 700 18px/1.32 ui-serif, "Noto Serif CJK SC", "Songti SC", Georgia, serif !important;
+  color: var(--pc-text) !important;
+  white-space: normal !important; word-break: break-word !important;
+  overflow: visible !important; text-overflow: unset !important;
 }
-
 .specimen-placard-card .placard-age-badge {
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  color: #fef08a !important;
-  background: rgba(245, 158, 11, 0.24) !important;
-  border: 1px solid rgba(251, 191, 36, 0.65) !important;
-  padding: 1px 7px !important;
-  border-radius: 999px !important;
-  flex-shrink: 0 !important;
+  font-size: 12px !important; font-weight: 700 !important;
+  color: var(--pc-accent) !important; background: var(--pc-chip) !important;
+  border: 1px solid var(--pc-divider) !important;
+  padding: 2px 5px !important; border-radius: 3px !important;
+  flex-shrink: 0 !important; max-width: 92px; word-break: break-word;
 }
-
 .specimen-placard-card .placard-origin-line {
-  font-size: 10.5px !important;
-  color: #93c5fd !important;
-  line-height: 1.35 !important;
-  white-space: normal !important;
+  font-size: 13px !important; color: var(--pc-muted) !important;
+  line-height: 1.48 !important; white-space: normal !important;
   word-break: break-word !important;
 }
-
+.specimen-placard-card .placard-divider {
+  width: 100%; height: 1px; flex-shrink: 0; background: var(--pc-divider);
+}
 .specimen-placard-card .placard-brief-line {
-  display: block !important;
-  white-space: normal !important;
-  text-overflow: unset !important;
-  -webkit-line-clamp: unset !important;
-  max-height: min(44dvh, 400px) !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  white-space: pre-wrap !important;
-  word-break: break-word !important;
-  user-select: text !important;
-  touch-action: pan-y !important;
-  color: #f1f5f9 !important;
-  font-size: 11.2px !important;
-  line-height: 1.48 !important;
-  font-weight: 500 !important;
-  padding: 6px 8px !important;
-  border-radius: 7px !important;
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  display: block !important; max-height: min(30dvh, 300px) !important;
+  overflow-y: auto !important; overflow-x: hidden !important;
+  white-space: pre-wrap !important; word-break: break-word !important;
+  text-overflow: unset !important; -webkit-line-clamp: unset !important;
+  user-select: text !important; touch-action: pan-y !important;
+  color: var(--pc-text) !important; font-size: 14px !important;
+  line-height: 1.6 !important; font-weight: 500 !important;
+  padding: 1px 0 !important; border: none !important;
+  border-radius: 0 !important; background: transparent !important;
 }
-
-.specimen-placard-card .placard-brief-line::-webkit-scrollbar {
-  width: 4px;
-}
+.specimen-placard-card .placard-brief-line::-webkit-scrollbar { width: 4px; }
 .specimen-placard-card .placard-brief-line::-webkit-scrollbar-thumb {
-  background: rgba(251, 191, 36, 0.48);
-  border-radius: 4px;
+  background: var(--pc-border); border-radius: 3px;
 }
-
-.specimen-placard-card .placard-action-bar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  gap: 6px !important;
+.specimen-placard-card .placard-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 7px; border-top: 1px solid var(--pc-divider); padding-top: 8px;
+  color: var(--pc-muted); font-size: 10.5px; letter-spacing: .01em;
 }
-
-.specimen-placard-card .placard-mini-btn {
-  flex: 1 !important;
-  padding: 3px 7px !important;
-  border-radius: 6px !important;
-  font-size: 10.5px !important;
-  font-weight: 600 !important;
-  color: #e2e8f0 !important;
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
-  cursor: pointer !important;
-  text-align: center !important;
-  transition: all 0.14s ease !important;
+.specimen-placard-card .placard-read-more {
+  border: 0; padding: 2px 0 2px 4px; background: none;
+  color: var(--pc-accent); font-size: 12px; font-weight: 800;
+  cursor: pointer; white-space: nowrap;
 }
-
-.specimen-placard-card .placard-mini-btn:hover {
-  background: rgba(251, 191, 36, 0.24) !important;
-  border-color: #fbbf24 !important;
-  color: #fef08a !important;
+.specimen-placard-card .placard-read-more:hover,
+.specimen-placard-card .placard-read-more:focus-visible {
+  text-decoration: underline; outline-color: var(--pc-accent);
 }
+#obs-more-popover .obs-placard-theme-row {
+  grid-column: 1 / -1; color: var(--obs-gold-bright); font-size: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 8px; border: 1px solid var(--obs-border-subtle); border-radius: 7px;
+}
+#obs-more-popover #top-placard-theme-select { min-width: 160px; }
 
 /* 6. Studio Sticky Save/Load Footer & Save Slot Cards (Character + Visual FX) */
 .obs-studio-footer {
@@ -1160,6 +1158,18 @@ input[type="range"]::-webkit-slider-thumb {
   border: 1.5px solid var(--obs-border-subtle) !important;
   box-shadow: var(--obs-shadow) !important;
   color: #ffffff !important;
+}
+
+/* Boot removes inline display:flex when hiding drawers. Restore the reader's
+   flex column when opened; an ordinary block clipped its article/body region. */
+#comfort-reader-drawer:not(.hidden) {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* The deep opaque panel already hides 3D content; avoid a 28px GPU blur pass. */
+  background: #10121e !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .obs-placard-editor-status { margin:2px 0 10px; padding:9px 10px; border-radius:8px; border:1px solid rgba(251,191,36,.34); background:rgba(98,66,22,.18); color:#fef3c7; font-size:11.5px; line-height:1.6; }

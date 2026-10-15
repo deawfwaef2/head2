@@ -1271,7 +1271,7 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   const eyeEpicanthusVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeEpicanthus ?? 0)));
   const eyeCreaseVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeCrease ?? 0)));
   const eyeBagVal = Math.max(0.0, Math.min(1.5, Number(m.eyeBag ?? m.aegyoSalStrength ?? 0)));
-  const fineValue = (key) => Math.max(-0.7, Math.min(0.7, Number(m[key]) || 0));
+  const fineValue = (key) => Math.max(-1.0, Math.min(1.0, Number(m[key]) || 0));
 
   const weights = { ...archRecipe };
   const addW = (k, v) => {
@@ -1368,21 +1368,32 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
     addW('eye_bag_incr', -lowerLid * 0.22);
   }
   const eyeDepth = fineValue('eyeDepth');
-  addW(eyeDepth >= 0 ? 'eye_depth_deep' : 'eye_depth_shallow', Math.abs(eyeDepth) * 0.55);
-  // MPFB2 corner1 is the *lateral* canthus. The older sparse table calls it
-  // "eye_inner_corner"; keep the established key but give this fine slider its
-  // anatomically correct label. Unlike overall eye tilt, only the corner sculpt moves.
+  addW(eyeDepth >= 0 ? 'eye_depth_deep' : 'eye_depth_shallow', Math.abs(eyeDepth) * 0.80);
+  // MPFB2 corner1 is lateral and corner2 medial: independent local sculpts,
+  // rather than a proxy that only changes a UI number or the entire head scale.
   const outerCanthus = fineValue('outerCanthusLift');
-  addW(outerCanthus >= 0 ? 'eye_inner_corner_up' : 'eye_inner_corner_down', Math.abs(outerCanthus) * 0.82);
+  addW(outerCanthus >= 0 ? 'eye_inner_corner_up' : 'eye_inner_corner_down', Math.abs(outerCanthus) * 0.95);
+  const medialCanthus = fineValue('eyeMedialCanthusLift');
+  addW(medialCanthus >= 0 ? 'eye_outer_corner_up' : 'eye_outer_corner_down', Math.abs(medialCanthus) * 0.80);
+  const upperFold = fineValue('eyeUpperFoldHeight');
+  addW(upperFold >= 0 ? 'eye_eyefold_up' : 'eye_eyefold_down', Math.abs(upperFold) * 0.78);
+  const outerOpening = fineValue('eyeOuterOpening');
+  addW(outerOpening >= 0 ? 'eye_height_outer_incr' : 'eye_height_outer_decr', Math.abs(outerOpening) * 0.84);
 
   const mouthWidth = fineValue('mouthWidth');
-  addW(mouthWidth >= 0 ? 'mouth_scale_horiz_incr' : 'mouth_scale_horiz_decr', Math.abs(mouthWidth) * 0.68);
+  addW(mouthWidth >= 0 ? 'mouth_scale_horiz_incr' : 'mouth_scale_horiz_decr', Math.abs(mouthWidth) * 0.90);
   const mouthHeight = fineValue('mouthHeight');
-  addW(mouthHeight >= 0 ? 'mouth_scale_vert_incr' : 'mouth_scale_vert_decr', Math.abs(mouthHeight) * 0.60);
+  addW(mouthHeight >= 0 ? 'mouth_scale_vert_incr' : 'mouth_scale_vert_decr', Math.abs(mouthHeight) * 0.80);
   const cupidBow = fineValue('cupidBow');
-  addW(cupidBow >= 0 ? 'mouth_cupidsbow_incr' : 'mouth_cupidsbow_decr', Math.abs(cupidBow) * 0.70);
+  addW(cupidBow >= 0 ? 'mouth_cupidsbow_incr' : 'mouth_cupidsbow_decr', Math.abs(cupidBow) * 0.82);
   const lowerLip = fineValue('lowerLipCenter');
-  addW(lowerLip >= 0 ? 'mouth_lowerlip_middle_down' : 'mouth_lowerlip_middle_up', Math.abs(lowerLip) * 0.66);
+  addW(lowerLip >= 0 ? 'mouth_lowerlip_middle_down' : 'mouth_lowerlip_middle_up', Math.abs(lowerLip) * 0.76);
+  const mouthCorner = fineValue('mouthCornerLift');
+  addW(mouthCorner >= 0 ? 'mouth_angles_up' : 'mouth_angles_down', Math.abs(mouthCorner) * 0.88);
+  const upperLip = fineValue('upperLipLift');
+  // MPFB only supplies an upward sculpt. A signed weight displaces the *same*
+  // upper-lip vertices down for negative values, without moving the lower lip.
+  addW('mouth_upperlip_middle_up', upperLip * 0.78);
   const chinWidth = fineValue('chinWidth');
   addW(chinWidth >= 0 ? 'chin_width_incr' : 'chin_width_decr', Math.abs(chinWidth) * 0.70);
   const noseTip = fineValue('noseTipAngle');
