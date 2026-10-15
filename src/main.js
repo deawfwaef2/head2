@@ -318,7 +318,14 @@ const state = {
       eyeAlmond: 0.08,
       eyeTilt: -0.04,
       eyeSpacing: 0.0,
+      lowerLidFlatness: 0.0,
+      eyeDepth: 0.0,
+      chinWidth: 0.0,
+      noseTipAngle: 0.0,
       lipFullness: 0.08,
+      mouthWidth: 0.0,
+      cupidBow: 0.0,
+      lowerLipCenter: 0.0,
       mouthSmile: 0.06,
       foreheadHeight: 0.04,
       eyelinerStyle: 0,
@@ -2806,14 +2813,21 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-eye-epicanthus', 'val-morph-eye-epicanthus', 'eyeEpicanthus', ''],
       ['morph-eye-crease', 'val-morph-eye-crease', 'eyeCrease', ''],
       ['morph-eye-bag', 'val-morph-eye-bag', 'eyeBag', ''],
+      ['morph-lower-lid-flatness', 'val-morph-lower-lid-flatness', 'lowerLidFlatness', ''],
+      ['morph-eye-depth', 'val-morph-eye-depth', 'eyeDepth', ''],
       ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
       ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
       ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
       ['morph-chin', 'val-morph-chin', 'chinLength', ''],
+      ['morph-chin-width', 'val-morph-chin-width', 'chinWidth', ''],
       ['morph-cheek', 'val-morph-cheek', 'cheekSoftness', ''],
       ['morph-nose', 'val-morph-nose', 'noseBridge', ''],
       ['morph-nose-width', 'val-morph-nose-width', 'noseWidth', ''],
+      ['morph-nose-tip', 'val-morph-nose-tip', 'noseTipAngle', ''],
       ['morph-lip', 'val-morph-lip', 'lipFullness', ''],
+      ['morph-mouth-width', 'val-morph-mouth-width', 'mouthWidth', ''],
+      ['morph-cupid-bow', 'val-morph-cupid-bow', 'cupidBow', ''],
+      ['morph-lower-lip', 'val-morph-lower-lip', 'lowerLipCenter', ''],
       ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
       ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
       ['morph-head-width', 'val-morph-head-width', 'headWidth', '%scale'],
@@ -3211,7 +3225,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindMorphSlider('morph-hair-off-z', 'val-morph-hair-off-z', 'hairOffsetZ');
   bindMorphSlider('morph-hair-scale', 'val-morph-hair-scale', 'hairScale', '%');
 
-  // Stage 43: Full-Range 23-Axis Facial, Eye Size/Shape & Cranial Sliders
+  // Facial, eye, nose, lips and cranial sliders; new MPFB sculpts share this live/save/reset path.
   const SHAPE_MORPH_SLIDERS = [
     ['morph-eye-size', 'val-morph-eye-size', 'eyeSize', ''],
     ['morph-eye', 'val-morph-eye', 'eyeAlmond', ''],
@@ -3221,17 +3235,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-eye-epicanthus', 'val-morph-eye-epicanthus', 'eyeEpicanthus', ''],
     ['morph-eye-crease', 'val-morph-eye-crease', 'eyeCrease', ''],
     ['morph-eye-bag', 'val-morph-eye-bag', 'eyeBag', ''],
+    ['morph-lower-lid-flatness', 'val-morph-lower-lid-flatness', 'lowerLidFlatness', ''],
+    ['morph-eye-depth', 'val-morph-eye-depth', 'eyeDepth', ''],
     ['morph-iris-scale', 'val-morph-iris-scale', 'irisScale', '%'],
     ['morph-pupil-size', 'val-morph-pupil-size', 'pupilSize', '%'],
     ['morph-jaw', 'val-morph-jaw', 'jawVLine', ''],
     ['morph-chin', 'val-morph-chin', 'chinLength', ''],
+    ['morph-chin-width', 'val-morph-chin-width', 'chinWidth', ''],
     ['morph-cheek', 'val-morph-cheek', 'cheekSoftness', ''],
     ['morph-nose', 'val-morph-nose', 'noseBridge', ''],
     ['morph-nose-width', 'val-morph-nose-width', 'noseWidth', ''],
+    ['morph-nose-tip', 'val-morph-nose-tip', 'noseTipAngle', ''],
     ['morph-brow-height', 'val-morph-brow-height', 'browHeight', ''],
     ['morph-brow-tilt', 'val-morph-brow-tilt', 'browTilt', ''],
     ['morph-brow-thick', 'val-morph-brow-thick', 'browThickness', '%'],
     ['morph-lip', 'val-morph-lip', 'lipFullness', ''],
+    ['morph-mouth-width', 'val-morph-mouth-width', 'mouthWidth', ''],
+    ['morph-cupid-bow', 'val-morph-cupid-bow', 'cupidBow', ''],
+    ['morph-lower-lip', 'val-morph-lower-lip', 'lowerLipCenter', ''],
     ['morph-mouth-smile', 'val-morph-mouth-smile', 'mouthSmile', ''],
     ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
     ['morph-ear', 'val-morph-ear', 'earSize', ''],
@@ -3295,7 +3316,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (headGroup) applyHeadMorphsToGroup(headGroup, state.studioDraft.morphs);
     }
     if (desktopEngine) desktopEngine.wakeRender(1.5, true);
-    showToast('↺ 已将全部 23 项眼睛大小/眼型与面部骨相滑杆归零');
+    showToast(`↺ 已将全部 ${SHAPE_MORPH_SLIDERS.length} 项眼睛与面部骨相滑杆归零`);
   });
 
   bindMorphSlider('morph-cut-height', 'val-cut-height', 'cutHeightOffset', 'cm');

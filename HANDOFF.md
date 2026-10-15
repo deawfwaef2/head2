@@ -1416,3 +1416,9 @@
 - `src/three/collectibleHeadAssembler.js`：此款多层重叠照片发片跳过 Loop subdivision，避免额外的边界收缩/重复拓扑与编辑迟滞；其他艺术发型维持原细分路径。
 - `src/three/photorealLighting.js`：移除不依据真实发片覆盖而给整片裸额头强加 65%「毛根覆盖」的 shader 回退，降低假发根噪声，发型 `daz_hair_curtain_wave` 与 `daz_hair_side_long` 露额不再出现一条条竖向灰黑斑。
 - 已在单文件 `file://` 模式重建并截取照片款、八字刘海、侧分款的工坊特写；控制台无错误。仍存在旧发片资产的局部深色交叠/硬边，**不能宣称所有发型都完全真实/零瑕疵**；后续需针对真实素材逐款复核。
+
+## [2026-10-15 Stage 69c] 可调眼下/嘴宽与真实人脸雕刻目标（追加记录）
+- 新增 `scripts/build_face_fine_targets.py` 与生成数据 `src/data/faceFineTargets.js`：从 MPFB2 指定提交 `3af0cd5a2ffba072e93a34e5f6f494fdc4813ddf` 中的 CC0 MakeHuman `base.obj`、官方 `.target.gz`，依据 GLB/OBJ 的 UV 对应关系投影稀疏几何位移；4,064/4,494 个头皮顶点 UV 精确对应；原始资产下载到内存而非提交。已用现有 `mouth_angles_up` 位移核对单位换算（0.115 m/MakeHuman unit）。上游授权说明：`https://github.com/makehumancommunity/mpfb2/blob/master/LICENSE.ASSETS.md`。
+- 工坊与 Obsidian 代理新增 7 项滑杆：下眼缘平直、眼窝深浅、下巴宽窄、鼻尖翘垂、**真实嘴部宽度**、唇峰与下唇中央。正反向均接真实艺术网格雕刻（眼下平直使用 MPFB2 眼睑中央/外侧/卧蚕组合，轻微影响上睑而非声称完全独立），实时预览并保存到 `morphs`，重置与现有头模共用；移除旧 GLB 中嘴宽权重恒为 0 的虚假通路。嘴宽权重已降低至 `0.68` 控制极值折痕。
+- **已先重建离线单文件**（约 31.15 MB，`docs/index.html` 为硬链接）：`file://` 打开 → 点击「开始游戏→打开工坊」→ 拖动嘴宽、下眼平直滑杆成功；Chromium SwiftShader 页面错误 0。用真实 HeadSkin 属性测量：嘴宽 -0.70/+0.70 分别移动 669/779 个顶点、最大约 3.01/2.74 mm；下睑 -0.70/+0.70 分别移动 712/1,045 顶点、最大约 1.24/1.37 mm。已人工观看正反截图：变化可见但克制，未出现新的严重穿模；默认发型仍有既存的局部深色发片交叠与偏硬刘海边缘，不能承诺照片级无瑕。
+- **下一步**：制作真实可调整的眼镜与帽子资产（带头模对位、多个样式、移动/尺寸/角度及保存/桌宠同步），保持离线 HTML 可运行；每种饰品实拍截图检验后再推送。请勿覆盖本文件任何既有内容。

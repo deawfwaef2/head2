@@ -16,6 +16,7 @@ import {
   EYE_SHAPE_PRESET_CATALOG,
   EAST_ASIAN_ARCHETYPE_MPFB_RECIPES,
 } from '../data/eastAsianHeadAndEyeTargets.js';
+import { FACE_FINE_TARGETS } from '../data/faceFineTargets.js';
 import {
   buildSpecimenContainerGroup,
   buildSpecimenDecorGroup,
@@ -1098,8 +1099,8 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
     face_eye_tilt_incr: eyeTilt < 0 ? -eyeTilt * 0.75 : 0,
     face_lips_incr: lip > 0 ? lip * 0.72 : 0,
     face_lips_decr: lip < 0 ? -lip * 0.72 : 0,
-    face_mouth_width_decr: 0,
-    face_mouth_width_incr: 0,
+    // The old GLB does not actually carry mouth-width shapes; Stage 69c uses
+    // the matched CC0 MPFB2 skin-vertex sculpt below instead of a dead slider.
     face_forehead_incr: forehead > 0 ? forehead * 0.82 : 0,
     face_forehead_decr: forehead < 0 ? -forehead * 0.82 : 0,
     face_ear_size_incr: ear > 0 ? ear * 0.85 : 0,
@@ -1210,6 +1211,8 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   const eyeEpicanthusVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeEpicanthus ?? 0)));
   const eyeCreaseVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeCrease ?? 0)));
   const eyeBagVal = Math.max(0.0, Math.min(1.5, Number(m.eyeBag ?? m.aegyoSalStrength ?? 0)));
+  // Keep the finer MPFB artist sculpts in a restrained range: no extreme pinches.
+  const fineValue = (key) => Math.max(-0.7, Math.min(0.7, Number(m[key]) || 0));
 
   const weights = { ...archRecipe };
   const addW = (k, v) => {
@@ -1293,6 +1296,35 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
     addW('eye_bag_height_incr', (eyeBagVal - 0.20) * 0.55);
   }
 
+  // Stage 69c: real artist-sculpted facial detail. Flat lower lid lifts the
+  // central lid arc and softens the under-eye bulge; the reverse rounds it.
+  // Existing eye-height sculpts also move a little of the upper lid: unlike a
+  // paint-only effect, this is a genuine (subtle) change in the eye opening.
+  const lowerLid = fineValue('lowerLidFlatness');
+  if (lowerLid > 0) {
+    addW('eye_height_mid_decr', lowerLid * 0.68);
+    addW('eye_height_outer_incr', lowerLid * 0.22);
+    addW('eye_bag_decr', lowerLid * 0.42);
+    addW('eye_bag_height_decr', lowerLid * 0.18);
+  } else if (lowerLid < 0) {
+    addW('eye_height_mid_incr', -lowerLid * 0.55);
+    addW('eye_height_outer_decr', -lowerLid * 0.18);
+    addW('eye_bag_incr', -lowerLid * 0.22);
+  }
+  const eyeDepth = fineValue('eyeDepth');
+  addW(eyeDepth >= 0 ? 'eye_depth_deep' : 'eye_depth_shallow', Math.abs(eyeDepth) * 0.55);
+
+  const mouthWidth = fineValue('mouthWidth');
+  addW(mouthWidth >= 0 ? 'mouth_scale_horiz_incr' : 'mouth_scale_horiz_decr', Math.abs(mouthWidth) * 0.68);
+  const cupidBow = fineValue('cupidBow');
+  addW(cupidBow >= 0 ? 'mouth_cupidsbow_incr' : 'mouth_cupidsbow_decr', Math.abs(cupidBow) * 0.70);
+  const lowerLip = fineValue('lowerLipCenter');
+  addW(lowerLip >= 0 ? 'mouth_lowerlip_middle_down' : 'mouth_lowerlip_middle_up', Math.abs(lowerLip) * 0.66);
+  const chinWidth = fineValue('chinWidth');
+  addW(chinWidth >= 0 ? 'chin_width_incr' : 'chin_width_decr', Math.abs(chinWidth) * 0.70);
+  const noseTip = fineValue('noseTipAngle');
+  addW(noseTip >= 0 ? 'nose_point_up' : 'nose_point_down', Math.abs(noseTip) * 0.68);
+
   // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)
   if (!skinMesh.userData.hasMpfbClone) {
     skinMesh.geometry = createLightweightGeometryInstance(skinMesh.geometry);
@@ -1307,7 +1339,7 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   let anyActive = false;
   for (const [tKey, w] of Object.entries(weights)) {
     if (Math.abs(w) < 1e-3) continue;
-    const flat = MPFB_SPARSE_HEAD_TARGETS[tKey];
+    const flat = MPFB_SPARSE_HEAD_TARGETS[tKey] || FACE_FINE_TARGETS[tKey];
     if (!flat) continue;
     anyActive = true;
     const scale = w * 1e-5;

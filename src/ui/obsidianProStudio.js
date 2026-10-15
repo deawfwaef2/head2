@@ -712,7 +712,7 @@ export function initObsidianProStudio() {
         </div>
 
         <details class="obs-accordion" open>
-          <summary>眼部与虹膜精调 (13项)</summary>
+          <summary>眼部与虹膜精调 (15项)</summary>
           <div class="obs-accordion-body">
             ${makeShortSliderRow({ label: '眼睛大小', targetId: 'vcd-eye-size', fallbackId: 'morph-eye-size', min: -0.45, max: 0.55, step: 0.02, val: 0.12, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '杏眼圆长', targetId: 'vcd-eye-almond', fallbackId: 'morph-eye', min: -0.45, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
@@ -722,6 +722,8 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '内眦开合', targetId: 'vcd-eye-epicanthus', fallbackId: 'morph-eye-epicanthus', min: -0.40, max: 0.50, step: 0.02, val: 0.15, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '双眼皮深', targetId: 'vcd-eye-crease', fallbackId: 'morph-eye-crease', min: 0, max: 0.65, step: 0.02, val: 0.25, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '卧蚕饱满', targetId: 'vcd-eye-bag', fallbackId: 'morph-eye-bag', min: 0, max: 0.65, step: 0.02, val: 0.20, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下眼缘平直', targetId: 'morph-lower-lid-flatness', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼窝深浅', targetId: 'morph-eye-depth', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '虹膜大小', targetId: 'vcd-iris-scale', fallbackId: 'morph-iris-scale', min: 0.78, max: 1.25, step: 0.01, val: 1.02, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '瞳孔缩放', targetId: 'vcd-pupil-size', fallbackId: 'morph-pupil-size', min: 0.55, max: 1.45, step: 0.02, val: 1.00, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '虹膜通透', targetId: 'vcd-iris-brightness', fallbackId: 'slider-iris-brightness', min: 0.60, max: 1.80, step: 0.02, val: 1.15, fmt: 'pct' })}
@@ -731,14 +733,19 @@ export function initObsidianProStudio() {
         </details>
 
         <details class="obs-accordion">
-          <summary>面部骨相精雕 (8项)</summary>
+          <summary>面部骨相精雕 (13项)</summary>
           <div class="obs-accordion-body">
             ${makeShortSliderRow({ label: '下颌V线', targetId: 'morph-jaw', min: -0.50, max: 0.60, step: 0.02, val: -0.08, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '下巴长度', targetId: 'morph-chin', min: -0.45, max: 0.50, step: 0.02, val: -0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下巴宽窄', targetId: 'morph-chin-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '面颊胶原', targetId: 'morph-cheek', min: -0.45, max: 0.55, step: 0.02, val: 0.16, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '鼻梁高度', targetId: 'morph-nose', min: -0.45, max: 0.55, step: 0.02, val: 0.04, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '鼻翼宽窄', targetId: 'morph-nose-width', min: -0.45, max: 0.45, step: 0.02, val: 0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻尖翘垂', targetId: 'morph-nose-tip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴唇丰满', targetId: 'morph-lip', min: -0.40, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴部宽度', targetId: 'morph-mouth-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '唇峰弧度', targetId: 'morph-cupid-bow', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下唇中央', targetId: 'morph-lower-lip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '嘴角笑意', targetId: 'morph-mouth-smile', min: -0.45, max: 0.45, step: 0.02, val: 0.06, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '额头高度', targetId: 'morph-forehead', min: -0.35, max: 0.45, step: 0.02, val: 0.04, fmt: 'signed' })}
           </div>
