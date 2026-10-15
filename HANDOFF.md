@@ -1371,5 +1371,21 @@
   - Simplified `.specimen-placard-card` (`renderSpecimenPlacards`) to display ONLY **Photo (`照片`)**, **Name (`名字`)**, **Age (`年龄`)**, and **Brief Story (`简要故事`)**, with a live 4-field editor (`#obs-placard-photo-upload`, `#obs-placard-name-input`, `#obs-placard-age-input`, `#obs-placard-story-input`) in the `人物与标牌` tab.
   - Rebuilt standalone playable HTML `/home/user/点击开始游戏_CERVIX3D.html` (`31.09 MB`, hardlinked with `docs/index.html`).
 
+---
+
+## [2026-10-15] Stage 67 — Synchronized 3D Studio Lighting + Film Emulsion Filter Pipeline & Full Master-Quality Skin/Hairline/Eyebrow/Eye/Hair Shader Upgrade (`12款光影胶片滤镜与6款景深虚化实时强生效修复 + 真皮去烘焙光/高通毛孔/发际线碎发/25点高斯羽化眉睫/球面法线丝绸发质全量实装`)
+- **1. Fixed Filter & Optical Blur Switching so Every Preset Produces Immediate, Unmistakable 3D Lighting + Film Emulsion Changes (`src/three/beautyPostChain.js`, `src/three/photorealLighting.js`, `src/ui/obsidianProStudio.js`)**:
+  - Fixed the bug where `DESKTOP_PET_FILTER_PRESETS` nested its parameters inside `fp.grade` while `setGradeParams` read top-level `fp.*` properties and then overwrote `uFade` / `uSplitAmount` with `0.0` defaults at the end of `setGradeParams`.
+  - Added `uTintShift`, `uLift`, `uToe`, `uShoulder`, `uDiffusion`, and `uBW` uniforms to `BeautyGradeShader`, implementing full film toe/shoulder curves, `softLight` split-toning, Pro-Mist highlight diffusion, silver-halide halation, and true Tri-X 400 monochrome (`uBW`).
+  - Coupled all 12 `DESKTOP_PET_FILTER_PRESETS` with their corresponding 3D studio light rigs (`LIGHT_PRESETS`: `softbox`, `butterfly`, `overcast`, `cinematicTeal`, `goldenBack`, `windowGobo`, `leafDapple`, `rembrandt`, `indoorDay`) and PMREM virtual studio environments inside `applyCustomVisualConfigToEngine` and `updateDynamicLightingOnEngine`, so switching filters updates both 3D key/fill/rim/bounce lighting and post-processing film grade without being reset on subsequent frames.
+  - Scaled the 6 optical blur modes (`none`, `portrait_dof`, `pro_mist`, `tilt_shift`, `radial_zoom`, `dream_haze`) with viewport resolution (`resScale = max(0.75, uResolution.y / 900.0)`) and multi-ring golden-angle sampling so every blur mode is immediately visible.
+- **2. Full Master-Quality Skin, Hairline, Eyebrow, Eyelash, Cornea & Hair Shader Upgrade (`src/three/photorealLighting.js`, `src/three/collectibleHeadAssembler.js`, `src/three/artistHairLighting.js`, `src/three/masterQuality/*`)**:
+  - **Skin Shader (`injectAestheticSubsurfaceScattering`)**: Added mipmap ratio texture de-lighting (`uDelight = 0.72` via LOD 5/10 division), high-pass normal map filtering (`uNormHP = 0.90` subtracting LOD 2 low-frequency lumps), 3D object-space sub-millimeter pore tangent perturbation (`sk_pore` + `sk_n` roughness breakup), smooth silhouette-normal thin-tissue translucency (eliminating screen-derivative `fwidth` triangle facets), and uncrushed dual-lobe specular + clearcoat reflections with full virtual softbox PMREM (`envMapIntensity = 0.72`).
+  - **3D Hairline Softening & Baby-Hair Wisps (`computeHairCoverage`, `buildBabyHairGeometry`)**: Computed per-vertex hairline coverage (`aHairCov`) and growth direction (`aHairDir`) in local meter space when attaching hairstyles, blending scalp contact AO (`uScalpAO = 0.70`), root pigment (`uHairRoot`), and 3D `BabyHairWisps` along the forehead and temples.
+  - **Eyebrows, Eyelashes & Cornea Catchlights (`buildCollectibleHeadNode`)**: Removed the 256×256 Canvas 2D eyebrow downsampling and sine-wave stroke overlay; upgraded eyebrows to a 25-tap (`5×5`) GPU Gaussian alpha feather with skin-blended roots (`photoreal-brow-v67`), eyelashes to lower-lid alpha softening (`photoreal-lash-v67`), and eyes to `envMapIntensity = 0.85`, `roughness = 0.02`, `clearcoat = 1.0` with uncrushed rectangular studio softbox catchlights.
+  - **Spherical Head-Volume Hair Card Normals & Crown-to-Tip Flow (`injectArtistHairLighting`)**: Blended hair-card polygon normals (`58%`) toward the spherical head-volume normal (`radN = normalize(vHairModelPos - headCenter)`) with continuous 3D crown-to-tip tangent flow (`vHairCrownFlow`), scalp depth AO (`gHairDepthAO`), and dual-lobe Marschner / Kajiya-Kay specular bands, eliminating flat polygon ribbon glare on hair cards.
+  - Rebuilt `/home/user/点击开始游戏_CERVIX3D.html` (`31.11 MB`, hardlinked with `/home/user/docs/index.html`).
+
+
 
 

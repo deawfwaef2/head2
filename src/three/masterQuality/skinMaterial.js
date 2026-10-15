@@ -9,6 +9,7 @@
 //     皮肤 IOR 1.4（F0≈0.028）。再加少量 sheen 模拟面部绒毛在逆光边缘的柔亮。
 //  4) 反照率只做全局色彩校准（对比/饱和/伽马），不涂任何妆容。
 import * as THREE from 'three';
+import { HAIRLINE_SKIN_GLSL } from './hairlineBlend.js';
 
 export const SKIN_DEFAULTS = {
   roughness: 0.56,
@@ -114,12 +115,14 @@ export function upgradeSkinMaterial(src, opts = {}) {
     uMicro: { value: o.micro }, uBreakup: { value: o.breakup }, uMottle: { value: o.mottle },
     uRegional: { value: o.regional }, uTrans: { value: o.translucency },
     uFaceEyeL: { value: new THREE.Vector3(-0.032, 0.03, 0.08) }, uFaceEyeR: { value: new THREE.Vector3(0.032, 0.03, 0.08) }, uFaceNose: { value: new THREE.Vector3(0, 0.0, 0.11) },
+    uDelight: { value: o.delight ?? 0.75 }, uNormHP: { value: o.normalHP ?? 1.0 }, uDelightBias: { value: 5.0 },
+    uHairline: { value: o.hairline ?? 1.0 }, uScalpAO: { value: o.scalpAO ?? 0.7 }, uHairRoot: { value: new THREE.Vector3(0.03, 0.022, 0.018) },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, mat.userData.skinUniforms);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vSkinObj;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSkinObj = transformed;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vSkinObj; varying vec3 vSkinObjN; varying float vHairCov; varying vec3 vHairDir; attribute float aHairCov; attribute vec3 aHairDir;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSkinObj = transformed; vSkinObjN = objectNormal; vHairCov = aHairCov; vHairDir = aHairDir;');
     let lights = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
       'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
       `vec3 skinIrr = skinPreintegratedDiffuse( geometryNormal, directLight.direction ) * directLight.color;
@@ -127,16 +130,28 @@ export function upgradeSkinMaterial(src, opts = {}) {
        {
          // 逆光透射（Barré-Brisebois 近似）：薄处（高曲率）透出红光
          vec3 Ht = normalize(directLight.direction + geometryNormal * 0.35);
-         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 3.0) * (0.25 + 1.5 * gSkinCurv);
-         reflectedLight.directDiffuse += directLight.color * It * uTrans * vec3(1.0, 0.28, 0.16) * material.diffuseColor * 0.9;
+         // 厚度近似：只有轮廓边缘（耳廓、鼻翼、下颌边）这类薄处透光；不用屏幕导数曲率（会出现三角面块）
+         float thin = pow(1.0 - clamp(abs(dot(gSkinSmoothN, geometryViewDir)), 0.0, 1.0), 2.5);
+         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 4.0) * (0.04 + 0.96 * thin);
+         reflectedLight.directDiffuse += directLight.color * It * uTrans * vec3(1.0, 0.3, 0.18) * material.diffuseColor * 0.55;
        }`,
     );
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <lights_physical_pars_fragment>', SKIN_DIRECT_GLSL + lights)
-      .replace('#include <common>', '#include <common>\nuniform float uCurvScale;\nuniform vec3 uAlbedoGrade;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nuniform float uCurvScale;\nuniform vec3 uAlbedoGrade;\nvarying vec3 vSkinObjN; varying float vHairCov; varying vec3 vHairDir; uniform float uHairline, uScalpAO, uDelight, uDelightBias, uNormHP; uniform vec3 uHairRoot; float gHairDens = 0.0;\n' + NOISE_GLSL)
       .replace(
         '#include <map_fragment>',
         `#include <map_fragment>
+        #ifdef USE_MAP
+        if (uDelight > 0.001) {
+          // 去烘焙光影：贴图来自照片投影，自带明暗/脏斑。用模糊 mip 估计低频明暗，除掉后乘回全图平均肤色，
+          // 只保留高频细节（雀斑、毛孔、唇纹），让真实灯光来决定明暗。
+          vec3 lo = texture2D(map, vMapUv, uDelightBias).rgb;
+          vec3 avg = texture2D(map, vMapUv, 12.0).rgb;
+          vec3 flatC = diffuseColor.rgb / max(lo, vec3(0.02)) * avg;
+          diffuseColor.rgb = mix(diffuseColor.rgb, flatC, uDelight);
+        }
+        #endif
         {
           vec3 c = diffuseColor.rgb;
           float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
@@ -151,7 +166,8 @@ export function upgradeSkinMaterial(src, opts = {}) {
           c *= mix(vec3(1.0), vec3(1.07, 0.93, 0.92), rg.x);   // 鼻头、脸颊微红
           c *= mix(vec3(1.0), vec3(0.9, 0.86, 0.9), rg.y);     // 眼下微暗偏紫
           diffuseColor.rgb = c;
-        }`,
+        }
+        ${HAIRLINE_SKIN_GLSL}`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
@@ -159,7 +175,8 @@ export function upgradeSkinMaterial(src, opts = {}) {
         { float rn = sk_n(vSkinObj * 260.0) * 0.6 + sk_n(vSkinObj * 61.0) * 0.4;
           roughnessFactor = clamp(roughnessFactor + (rn - 0.5) * 0.22 * uBreakup, 0.2, 1.0);
           vec4 rgr = sk_regions(vSkinObj) * uRegional;
-          roughnessFactor = clamp(roughnessFactor - rgr.z * 0.1 - rgr.w * 0.18 + rgr.x * 0.02, 0.18, 1.0); }`,
+          roughnessFactor = clamp(roughnessFactor - rgr.z * 0.1 - rgr.w * 0.18 + rgr.x * 0.02, 0.18, 1.0);
+          roughnessFactor = mix(roughnessFactor, 0.78, gHairDens * 0.7); }`,
       )
       .replace(
         '#include <normal_fragment_maps>',
@@ -193,7 +210,17 @@ export function upgradeSkinMaterial(src, opts = {}) {
         #include <lights_fragment_begin>`,
       );
   };
-  mat.customProgramCacheKey = () => 'photoreal-skin-v3';
+  const prevCompile = mat.onBeforeCompile;
+  mat.onBeforeCompile = (shader) => {
+    prevCompile(shader);
+    // 贴图法线去低频：原法线贴图来自照片烘焙，含大块错误起伏（脸颊上的“脏斑”）。
+    // 减去模糊 mip 的法线，只保留毛孔/细纹等高频细节。
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps.replace(
+      'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
+      'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;\n\t{ vec3 lowN = texture2D( normalMap, vNormalMapUv, 2.0 ).xyz * 2.0 - 1.0; mapN = mix(mapN, vec3(mapN.xy - lowN.xy, 1.0), uNormHP); }',
+    ));
+  };
+  mat.customProgramCacheKey = () => 'photoreal-skin-v7';
   return mat;
 }
 
@@ -212,4 +239,9 @@ export function setSkinParams(mat, p) {
   if (p.mottle != null) u.uMottle.value = p.mottle;
   if (p.regional != null) u.uRegional.value = p.regional;
   if (p.translucency != null) u.uTrans.value = p.translucency;
+  if (p.delight != null) u.uDelight.value = p.delight;
+  if (p.normalHP != null) u.uNormHP.value = p.normalHP;
+  if (p.hairline != null) u.uHairline.value = p.hairline;
+  if (p.scalpAO != null) u.uScalpAO.value = p.scalpAO;
+  if (p.hairRoot) u.uHairRoot.value.set(...p.hairRoot);
 }

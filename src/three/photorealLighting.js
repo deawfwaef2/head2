@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildStudioEnvironment, LIGHT_PRESETS } from './masterQuality/studioLighting.js';
+import { DESKTOP_PET_FILTER_PRESETS } from './beautyPostChain.js';
 
 /**
  * Stage 23 · 大师级实时光影·画风色调·材质微距定制管线
@@ -819,7 +820,7 @@ export function requestShadowUpdate(renderer) {
   }
 }
 
-export function ensureSceneEnvironment(renderer, scene, intensity = 0.48, hdrMode = 'softbox_portrait') {
+export function ensureSceneEnvironment(renderer, scene, intensity = 0.56, hdrMode = 'softbox_portrait') {
   let envMapByMode = pmremEnvCache.get(renderer);
   if (!envMapByMode) {
     envMapByMode = new Map();
@@ -830,15 +831,21 @@ export function ensureSceneEnvironment(renderer, scene, intensity = 0.48, hdrMod
   if (!envTex && typeof renderer.compile === 'function' && !isSoftwareRenderer(renderer)) {
     const modeToStudioPreset = {
       softbox_portrait: LIGHT_PRESETS.softbox,
-      golden_hour: LIGHT_PRESETS.window,
+      golden_hour: LIGHT_PRESETS.goldenBack || LIGHT_PRESETS.window,
       rainy_window: LIGHT_PRESETS.overcast,
       museum_velvet: LIGHT_PRESETS.rembrandt,
       softbox: LIGHT_PRESETS.softbox,
       window: LIGHT_PRESETS.window,
       rembrandt: LIGHT_PRESETS.rembrandt,
       overcast: LIGHT_PRESETS.overcast,
+      goldenBack: LIGHT_PRESETS.goldenBack,
+      windowGobo: LIGHT_PRESETS.windowGobo,
+      leafDapple: LIGHT_PRESETS.leafDapple,
+      indoorDay: LIGHT_PRESETS.indoorDay,
+      butterfly: LIGHT_PRESETS.butterfly,
+      cinematicTeal: LIGHT_PRESETS.cinematicTeal,
     };
-    const studioPreset = modeToStudioPreset[modeKey] || LIGHT_PRESETS.softbox;
+    const studioPreset = modeToStudioPreset[modeKey] || LIGHT_PRESETS[modeKey] || LIGHT_PRESETS.softbox;
     envTex = buildStudioEnvironment(renderer, studioPreset);
     envMapByMode.set(modeKey, envTex);
   }
@@ -871,14 +878,19 @@ export function createSkinGradingUniforms(initial = {}) {
     uPoreScale: { value: Number(initial.poreScale ?? 1.0) },
     uPoreRelief: { value: Number(initial.poreRelief ?? 0.26) },
     uTZoneOiliness: { value: Number(initial.tZoneOiliness ?? 0.32) },
-    uSpecularLobe: { value: Number(initial.specularLobe ?? 0.45) },
-    uCharSssDepth: { value: Number(initial.charSssDepth ?? 0.80) },
+    uSpecularLobe: { value: Number(initial.specularLobe ?? 0.55) },
+    uCharSssDepth: { value: Number(initial.charSssDepth ?? 0.85) },
     uCharSssColor: { value: new THREE.Color(initial.charSssColor || '#e85a4f') },
     uVascularity: { value: Number(initial.vascularity ?? 0.24) },
-    uSkinMicroMottle: { value: Number(initial.skinMicroMottle ?? 0.18) },
+    uSkinMicroMottle: { value: Number(initial.skinMicroMottle ?? 0.28) },
     uVellusFuzz: { value: Number(initial.vellusFuzz ?? 0.36) },
     uLipCreaseDepth: { value: Number(initial.lipCreaseDepth ?? 0.36) },
     uEarTipFlush: { value: Number(initial.earTipFlush ?? 0.32) },
+    uDelight: { value: Number(initial.delight ?? 0.72) },
+    uNormHP: { value: Number(initial.normalHP ?? 0.90) },
+    uHairline: { value: Number(initial.hairline ?? 1.0) },
+    uScalpAO: { value: Number(initial.scalpAO ?? 0.70) },
+    uHairRoot: { value: new THREE.Vector3(0.03, 0.022, 0.018) },
     uBlushColor: { value: new THREE.Color(initial.blushColor || '#f07682') },
     uBlushStrength: { value: Number(initial.blushStrength ?? 0.22) },
     uEyeshadowColor: { value: new THREE.Color(initial.eyeshadowColor || '#c88278') },
@@ -945,13 +957,21 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
     shader.vertexShader = shader.vertexShader.replace(
       '#include <common>',
       `#include <common>
+      attribute float aHairCov;
+      attribute vec3 aHairDir;
+      varying float vHairCov;
+      varying vec3 vHairDir;
+      varying vec3 vSkinObjN;
       varying vec3 vCervixWorldPos;
       varying vec3 vCervixLocalPos;`
     );
     shader.vertexShader = shader.vertexShader.replace(
       '#include <worldpos_vertex>',
       `#include <worldpos_vertex>
-      vCervixLocalPos = position;
+      vCervixLocalPos = transformed;
+      vSkinObjN = objectNormal;
+      vHairCov = aHairCov;
+      vHairDir = aHairDir;
       vCervixWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
     );
 
@@ -960,10 +980,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       `vec3 skinIrr = skinPreintegratedDiffuse( geometryNormal, directLight.direction ) * directLight.color;
        reflectedLight.directDiffuse += skinIrr * BRDF_Lambert( material.diffuseColor );
        {
-         // Barré-Brisebois thin-tissue backlight translucency (画质提升/src/skinMaterial.js)
+         // Barré-Brisebois thin-tissue silhouette backlight translucency without screen-derivative triangle facets (matching masterQuality/skinMaterial.js)
          vec3 Ht = normalize(directLight.direction + geometryNormal * 0.35);
-         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 3.0) * (0.25 + 1.5 * gSkinCurv);
-         reflectedLight.directDiffuse += directLight.color * It * clamp(uSssIntensity * 0.72, 0.0, 1.1) * vec3(1.0, 0.28, 0.16) * material.diffuseColor * 0.55;
+         float thin = pow(1.0 - clamp(abs(dot(normalize(vNormal), geometryViewDir)), 0.0, 1.0), 2.5);
+         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 4.0) * (0.04 + 0.96 * thin);
+         reflectedLight.directDiffuse += directLight.color * It * clamp(uSssIntensity * 0.85, 0.0, 1.2) * vec3(1.0, 0.30, 0.18) * material.diffuseColor * 0.55;
        }`
     );
 
@@ -993,6 +1014,11 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       uniform float uVellusFuzz;
       uniform float uLipCreaseDepth;
       uniform float uEarTipFlush;
+      uniform float uDelight;
+      uniform float uNormHP;
+      uniform float uHairline;
+      uniform float uScalpAO;
+      uniform vec3 uHairRoot;
       uniform vec3 uBlushColor;
       uniform float uBlushStrength;
       uniform vec3 uEyeshadowColor;
@@ -1020,6 +1046,9 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       uniform float uPhotoProjStrength;
       uniform float uPhotoProjScale;
       uniform vec2 uPhotoProjOffset;
+      varying float vHairCov;
+      varying vec3 vHairDir;
+      varying vec3 vSkinObjN;
       varying vec3 vCervixWorldPos;
       varying vec3 vCervixLocalPos;
       float vDermisPoreCavity;
@@ -1028,6 +1057,24 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       float vBloodSpecMask;
       float vFluidHeight;
       float gSkinCurv = 0.35;
+      float gHairDens = 0.0;
+
+      // 3D Object-Space Value Noise & Sub-Millimeter Pore Field (matching masterQuality/skinMaterial.js)
+      float sk_h(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+      float sk_n(vec3 x){
+        vec3 i = floor(x); vec3 f = fract(x); f = f * f * (3.0 - 2.0 * f);
+        return mix(
+          mix(mix(sk_h(i), sk_h(i + vec3(1,0,0)), f.x), mix(sk_h(i + vec3(0,1,0)), sk_h(i + vec3(1,1,0)), f.x), f.y),
+          mix(mix(sk_h(i + vec3(0,0,1)), sk_h(i + vec3(1,0,1)), f.x), mix(sk_h(i + vec3(0,1,1)), sk_h(i + vec3(1,1,1)), f.x), f.y),
+          f.z
+        );
+      }
+      float sk_pore(vec3 p){
+        float a = sk_n(p) * 0.6 + sk_n(p * 1.97 + 11.3) * 0.4;
+        float pits = smoothstep(0.62, 0.86, a);
+        float fine = sk_n(p * 3.7 + 5.0) * 0.25;
+        return -pits + fine;
+      }
 
       // Stage 56 · Master Pre-Integrated Curvature-Adaptive Subsurface Scattering & Penner Split-Channel Normal (画质提升/src/skinMaterial.js)
       vec3 skinPreintegratedDiffuse(vec3 Nd, vec3 L) {
@@ -1160,6 +1207,17 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <map_fragment>',
       `#include <map_fragment>
+      #ifdef USE_MAP
+        {
+          // Texture De-Lighting via Mipmap Ratio (removes baked scan shadows while preserving pores & moles — masterQuality/skinMaterial.js)
+          vec3 lowDL = texture2D( map, vMapUv, 5.0 ).rgb;
+          vec3 vlowDL = texture2D( map, vMapUv, 10.0 ).rgb;
+          float lumLowDL = max( dot( lowDL, vec3(0.299, 0.587, 0.114) ), 0.08 );
+          float lumMeanDL = max( dot( vlowDL, vec3(0.299, 0.587, 0.114) ), 0.08 );
+          float ratioDL = clamp( lumMeanDL / lumLowDL, 0.65, 1.55 );
+          diffuseColor.rgb *= mix( 1.0, ratioDL, clamp(uDelight, 0.0, 1.0) );
+        }
+      #endif
       {
         vec3 p = vCervixLocalPos;
         float lipCreaseVal = 0.5;
@@ -1720,13 +1778,59 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         }
 
         diffuseColor.rgb = skinCol;
+        {
+          // 3D Sub-Millimeter Pore Cavity Albedo Darkening & Hairline Follicle Transition (masterQuality/skinMaterial.js + hairlineBlend.js)
+          float poreDark3D = clamp(-sk_pore(p * (260.0 * clamp(uPoreScale, 0.4, 2.0))), 0.0, 1.0);
+          diffuseColor.rgb *= 1.0 - poreDark3D * 0.032 * smoothstep(-0.07, -0.02, p.y);
+          if (uHairline > 0.001) {
+            vec3 spH = p;
+            float covH = clamp(vHairCov, 0.0, 1.0);
+            float scalpZone = smoothstep(0.012, 0.058, spH.y) * (1.0 - smoothstep(0.055, 0.090, spH.z) * smoothstep(0.058, 0.015, spH.y));
+            covH = max(covH, scalpZone * 0.65);
+            vec3 dirH = length(vHairDir) > 0.01 ? normalize(vHairDir) : normalize(vec3(spH.x * 0.5, -1.0, 0.15));
+            vec3 orthoH = normalize(cross(dirH, vec3(0.0, 0.0, 1.0)) + vec3(1.0, 0.0, 0.0) * 0.01);
+            float alongH = dot(spH, dirH) * 65.0;
+            float acrossH = dot(spH, orthoH) * 420.0;
+            float n1H = sk_n(vec3(acrossH * 0.25, alongH * 0.08, spH.z * 30.0));
+            float n2H = sk_n(vec3(acrossH * 0.85 + n1H * 2.5, alongH * 0.18, spH.z * 70.0));
+            float wispsH = smoothstep(0.42, 0.78, n2H * 0.65 + n1H * 0.35);
+            float edgeBandH = smoothstep(0.02, 0.38, covH) * (1.0 - smoothstep(0.55, 0.92, covH));
+            float microH = sk_n(spH * 620.0);
+            float follH = smoothstep(0.68, 0.92, microH) * smoothstep(0.0, 0.5, covH);
+            float rootShadowH = clamp(covH * 0.78 + wispsH * edgeBandH * 0.52 + follH * 0.28, 0.0, 1.0) * uHairline;
+            gHairDens = rootShadowH;
+            vec3 rootTintH = mix(
+              diffuseColor.rgb * vec3(0.72, 0.64, 0.62),
+              uHairRoot * 1.35 + diffuseColor.rgb * 0.18,
+              clamp(covH * 0.75 + wispsH * edgeBandH * 0.45, 0.0, 0.88)
+            );
+            diffuseColor.rgb = mix(diffuseColor.rgb, rootTintH, rootShadowH * 0.82);
+            float contactAOH = smoothstep(0.05, 0.75, covH) * uScalpAO * uHairline;
+            diffuseColor.rgb *= 1.0 - contactAOH * 0.38;
+          }
+        }
       }`
     );
 
-    // 3D Sub-Millimeter Dermis Micro-Groove + Vertical Lip Sulci + 3D Liquid Meniscus Normal Perturbation
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <roughnessmap_fragment>',
+      `#include <roughnessmap_fragment>
+      {
+        float rBreak = (sk_n(vCervixLocalPos * 140.0) - 0.5) * 0.08 + clamp(-sk_pore(vCervixLocalPos * 260.0), 0.0, 1.0) * 0.10;
+        roughnessFactor = clamp(roughnessFactor + rBreak, 0.14, 0.92);
+        roughnessFactor = mix(roughnessFactor, max(roughnessFactor, 0.72), gHairDens * 0.75);
+      }`
+    );
+
+    // High-Pass Normal Map Filtering + 3D Sub-Millimeter Dermis Micro-Groove + Vertical Lip Sulci + 3D Liquid Meniscus Normal Perturbation
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <normal_fragment_maps>',
-      `#include <normal_fragment_maps>
+      THREE.ShaderChunk.normal_fragment_maps.replace(
+        'vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;',
+        `vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;
+         vec3 mapNLow = texture2D( normalMap, vNormalMapUv, 2.0 ).xyz * 2.0 - 1.0;
+         mapN.xy -= mapNLow.xy * uNormHP;`
+      ) + `
       {
         vec3 snCurv = normalize(vNormal);
         gSkinCurv = clamp(length(fwidth(snCurv)) / max(length(fwidth(vViewPosition)), 1e-6) * 0.011, 0.0, 1.0);
@@ -1736,6 +1840,23 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         float lipMaskN = computeLipVermilionMask(vCervixLocalPos, lipCreaseLocal);
         float combinedMicroHeight = mix(poreVal, lipCreaseLocal * 1.15, lipMaskN);
         vDermisPoreCavity = poreVal;
+
+        // 3D Object-Space Pore Tangent Perturbation (masterQuality/skinMaterial.js)
+        float freqP = 260.0 * clamp(uPoreScale, 0.4, 2.0);
+        vec3 spP = vCervixLocalPos * freqP;
+        vec3 onP = normalize(vSkinObjN);
+        vec3 upP = abs(onP.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 t1P = normalize(cross(upP, onP));
+        vec3 t2P = cross(onP, t1P);
+        float epsP = 0.07;
+        float h0P = sk_pore(spP);
+        float d1P = (sk_pore(spP + t1P * epsP) - h0P) / epsP;
+        float d2P = (sk_pore(spP + t2P * epsP) - h0P) / epsP;
+        vec3 vt1P = normalize((viewMatrix * modelMatrix * vec4(t1P, 0.0)).xyz);
+        vec3 vt2P = normalize((viewMatrix * modelMatrix * vec4(t2P, 0.0)).xyz);
+        float tZoneP = exp(-pow(vCervixLocalPos.x * 28.0, 2.0)) * smoothstep(-0.04, 0.03, vCervixLocalPos.y);
+        float poreStr3D = clamp(uPoreRelief * 0.24, 0.0, 0.25) * faceRegion * (0.7 + 0.5 * tZoneP) * (1.0 - lipMaskN * 0.85);
+        normal = normalize(normal - (vt1P * d1P + vt2P * d2P) * poreStr3D);
 
         #ifdef USE_ROUGHNESSMAP
           combinedMicroHeight = mix(combinedMicroHeight, roughnessFactor, 0.24);
@@ -1784,21 +1905,21 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       reflectedLight.directDiffuse *= directScale * shadowChromaBalance;
       reflectedLight.indirectDiffuse *= indirectScale * shadowChromaBalance;
 
-      // Dual-Lobe Skin Specular + Sebum Clearcoat Preservation (matching 画质提升/src/skinMaterial.js)
+      // Dual-Lobe Skin Specular + Sebum Clearcoat Preservation (matching masterQuality/skinMaterial.js)
       float ndotv = clamp(dot(normal, viewDir), 0.0, 1.0);
       float fresnelSheen = pow(1.0 - ndotv, 3.6);
-      float poreSpecMask = clamp(0.55 + 0.50 * pow(vDermisPoreCavity, 1.25), 0.48, 1.05);
+      float poreSpecMask = clamp(0.68 + 0.36 * pow(vDermisPoreCavity, 1.25), 0.62, 1.06);
       float bonyHighlightZone = max(
         exp(-pow(vCervixLocalPos.x / 0.011, 2.0)) * smoothstep(0.082, 0.112, vCervixLocalPos.z),
         exp(-pow((abs(vCervixLocalPos.x) - 0.032) / 0.015, 2.0)) * exp(-pow((vCervixLocalPos.y - 0.004) / 0.012, 2.0)) * smoothstep(0.072, 0.092, vCervixLocalPos.z) * 0.65
       );
-      float specLobeScale = clamp(uSpecularLobe * 1.35, 0.35, 1.45);
+      float specLobeScale = clamp(uSpecularLobe * 1.35, 0.55, 1.55);
       float oilBoost = bonyHighlightZone * clamp(uTZoneOiliness * 0.85, 0.0, 1.1);
       float lowerLipWet = vLipVermilionMask * smoothstep(-0.0365, -0.0410, vCervixLocalPos.y);
       float lipSpecBoost = (vLipVermilionMask * 0.45 + lowerLipWet * 0.65) * clamp(uLipGloss, 0.0, 1.2);
       float fluidSpecTotal = clamp(max(vWetFluidSpecMask * 1.65, vBloodSpecMask * 1.85), 0.0, 2.2);
-      reflectedLight.directSpecular *= (0.58 + (0.28 + 0.26 * oilBoost) * sunMask * specLobeScale + lipSpecBoost + fluidSpecTotal) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
-      reflectedLight.indirectSpecular *= (0.54 + (0.24 + 0.22 * oilBoost) * sunMask * specLobeScale + 0.10 * fresnelSheen * sunMask + lipSpecBoost * 0.65 + fluidSpecTotal * 0.85) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0));
+      reflectedLight.directSpecular *= (0.86 + (0.28 + 0.30 * oilBoost) * sunMask * specLobeScale + lipSpecBoost + fluidSpecTotal) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0)) * (1.0 - gHairDens * 0.65);
+      reflectedLight.indirectSpecular *= (0.84 + (0.24 + 0.24 * oilBoost) * sunMask * specLobeScale + 0.12 * fresnelSheen * sunMask + lipSpecBoost * 0.65 + fluidSpecTotal * 0.85) * mix(poreSpecMask, 1.0, clamp(fluidSpecTotal, 0.0, 1.0)) * (1.0 - gHairDens * 0.65);
 
       // Razor-Sharp Liquid Clearcoat Glint on Wet Tears & Fresh Blood (ior=1.49 mirror catchlights!)
       if (fluidSpecTotal > 0.02) {
@@ -2082,7 +2203,10 @@ const HDR_MODE_LIGHT_SIGNATURES = {
  */
 export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   if (!engine || !engine.renderer || !engine.scene) return;
-  const basePreset = VISUAL_STYLE_PRESETS[cfg.presetId] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait;
+  const activeFilter = cfg.filterPreset ? DESKTOP_PET_FILTER_PRESETS.find(p => p.id === cfg.filterPreset) : null;
+  const effectivePresetId = cfg.presetId || activeFilter?.visualPreset || 'cinema_85mm_portrait';
+  const basePreset = VISUAL_STYLE_PRESETS[effectivePresetId] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait;
+  const studioLP = activeFilter?.lightPreset ? LIGHT_PRESETS[activeFilter.lightPreset] : null;
   const m = { ...basePreset, ...cfg };
 
   const isStudio = Boolean(engine.controls);
@@ -2095,9 +2219,12 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   };
 
   const chiaroscuro = Number(m.chiaroscuro ?? basePreset.chiaroscuro ?? 0.58);
-  const goboItem = WINDOW_GOBO_CATALOG.find(g => g.id === (m.windowGobo || basePreset.windowGobo || 'none')) || WINDOW_GOBO_CATALOG[0];
-  const goboStrength = Number(m.windowGoboStrength ?? basePreset.windowGoboStrength ?? 0.18);
-  const hdrMode = m.hdrMode || basePreset.hdrMode || 'softbox_portrait';
+  const effectiveGoboId = activeFilter?.gobo || m.windowGobo || basePreset.windowGobo || 'none';
+  const goboItem = WINDOW_GOBO_CATALOG.find(g => g.id === effectiveGoboId) || WINDOW_GOBO_CATALOG[0];
+  const goboStrength = activeFilter?.gobo
+    ? (activeFilter.gobo === 'none' ? 0.0 : 0.62)
+    : Number(m.windowGoboStrength ?? basePreset.windowGoboStrength ?? 0.18);
+  const hdrMode = activeFilter?.lightPreset || m.hdrMode || basePreset.hdrMode || 'softbox_portrait';
   const hdrSig = HDR_MODE_LIGHT_SIGNATURES[hdrMode] || HDR_MODE_LIGHT_SIGNATURES.softbox_portrait;
 
   GLOBAL_CHIAROSCURO_UNIFORMS.uChiaroscuro.value = chiaroscuro;
@@ -2105,33 +2232,58 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboStrength.value = goboStrength;
 
   if (rig.key) {
-    const baseKeyCol = new THREE.Color(m.keyColor || basePreset.keyColor);
-    baseKeyCol.lerp(new THREE.Color(hdrSig.keyTint), 0.52);
-    rig.key.color.copy(baseKeyCol);
-    rig.key.intensity = Number(m.keyIntensity ?? basePreset.keyIntensity) * hdrSig.keyScale;
-    const radius = isStudio ? 64 : 116;
-    const az = THREE.MathUtils.degToRad(Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg));
-    const el = THREE.MathUtils.degToRad(Number(m.keyElevationDeg ?? basePreset.keyElevationDeg));
-    const cosEl = Math.cos(el);
-    rig.key.position.set(
-      radius * cosEl * Math.sin(az),
-      radius * Math.sin(el),
-      radius * cosEl * Math.cos(az)
-    );
+    if (studioLP?.key && cfg.keyColor === undefined) {
+      rig.key.color.setHex(studioLP.key.color);
+      rig.key.intensity = studioLP.key.intensity * 0.68;
+      const scalePos = isStudio ? 64 : 116;
+      const kd = studioLP.key.dir || [-0.55, 0.42, 0.72];
+      rig.key.position.set(kd[0] * scalePos, kd[1] * scalePos, kd[2] * scalePos);
+    } else {
+      const baseKeyCol = new THREE.Color(m.keyColor || basePreset.keyColor);
+      baseKeyCol.lerp(new THREE.Color(hdrSig.keyTint), 0.52);
+      rig.key.color.copy(baseKeyCol);
+      rig.key.intensity = Number(m.keyIntensity ?? basePreset.keyIntensity) * hdrSig.keyScale;
+      const radius = isStudio ? 64 : 116;
+      const az = THREE.MathUtils.degToRad(Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg));
+      const el = THREE.MathUtils.degToRad(Number(m.keyElevationDeg ?? basePreset.keyElevationDeg));
+      const cosEl = Math.cos(el);
+      rig.key.position.set(
+        radius * cosEl * Math.sin(az),
+        radius * Math.sin(el),
+        radius * cosEl * Math.cos(az)
+      );
+    }
     GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir.value.copy(rig.key.position).normalize();
   }
   if (rig.fill) {
-    const baseFillCol = new THREE.Color(m.fillColor || basePreset.fillColor);
-    baseFillCol.lerp(new THREE.Color(hdrSig.fillTint), 0.55);
-    rig.fill.color.copy(baseFillCol);
-    const baseFill = Number(m.fillIntensity ?? basePreset.fillIntensity) * hdrSig.fillScale;
-    rig.fill.intensity = baseFill * Math.max(0.08, 1.05 - chiaroscuro * 0.85);
+    if (studioLP?.fill && cfg.fillColor === undefined) {
+      rig.fill.color.setHex(studioLP.fill.color);
+      rig.fill.intensity = studioLP.fill.intensity * 0.85;
+      const scalePos = isStudio ? 64 : 116;
+      const fd = studioLP.fill.dir || [0.85, 0.05, 0.55];
+      rig.fill.position.set(fd[0] * scalePos, fd[1] * scalePos, fd[2] * scalePos);
+    } else {
+      const baseFillCol = new THREE.Color(m.fillColor || basePreset.fillColor);
+      baseFillCol.lerp(new THREE.Color(hdrSig.fillTint), 0.55);
+      rig.fill.color.copy(baseFillCol);
+      const baseFill = Number(m.fillIntensity ?? basePreset.fillIntensity) * hdrSig.fillScale;
+      rig.fill.intensity = baseFill * Math.max(0.08, 1.05 - chiaroscuro * 0.85);
+    }
   }
   if (rig.rim) {
-    const baseRimCol = new THREE.Color(m.rimColor || basePreset.rimColor);
-    baseRimCol.lerp(new THREE.Color(hdrSig.rimTint), 0.62);
-    rig.rim.color.copy(baseRimCol);
-    rig.rim.intensity = Number(m.rimIntensity ?? basePreset.rimIntensity) * hdrSig.rimScale;
+    const rim0 = Array.isArray(studioLP?.rim) ? studioLP.rim[0] : studioLP?.rim;
+    if (rim0 && cfg.rimColor === undefined) {
+      rig.rim.color.setHex(rim0.color);
+      rig.rim.intensity = rim0.intensity * 0.72;
+      const scalePos = isStudio ? 64 : 116;
+      const rd = rim0.dir || [0.7, 0.35, -0.65];
+      rig.rim.position.set(rd[0] * scalePos, rd[1] * scalePos, rd[2] * scalePos);
+    } else {
+      const baseRimCol = new THREE.Color(m.rimColor || basePreset.rimColor);
+      baseRimCol.lerp(new THREE.Color(hdrSig.rimTint), 0.62);
+      rig.rim.color.copy(baseRimCol);
+      rig.rim.intensity = Number(m.rimIntensity ?? basePreset.rimIntensity) * hdrSig.rimScale;
+    }
   }
   if (rig.hemi) {
     const baseSkyCol = new THREE.Color(m.hemiSky || basePreset.hemiSky);
@@ -2142,12 +2294,21 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     rig.hemi.intensity = baseHemi * Math.max(0.10, 1.05 - chiaroscuro * 0.80);
   }
   if (rig.up) {
-    rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity) * Math.max(0.10, 1.0 - chiaroscuro * 0.78);
+    if (studioLP?.floor) {
+      rig.up.color.setRGB(studioLP.floor[0], studioLP.floor[1], studioLP.floor[2]);
+      rig.up.intensity = Math.max(0.12, (studioLP.top ?? 0.25) * 0.85);
+    } else {
+      rig.up.intensity = Number(m.upIntensity ?? basePreset.upIntensity) * Math.max(0.10, 1.0 - chiaroscuro * 0.78);
+    }
   }
 
-  engine.renderer.toneMappingExposure = Number(m.exposure ?? basePreset.exposure ?? 1.08);
-  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.36);
-  const effectiveEnv = baseEnv * Math.max(0.24, 1.04 - chiaroscuro * 0.56);
+  engine.renderer.toneMappingExposure = studioLP
+    ? studioLP.exposure
+    : Number(m.exposure ?? basePreset.exposure ?? 1.08);
+  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.56);
+  const effectiveEnv = studioLP
+    ? studioLP.envIntensity
+    : Math.max(0.58, baseEnv * 1.48);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
   // Stage 41 Dynamic Supersampling DSR (capped at native 1.0x–1.25x on multi-head desktop to prevent 4K+ MSAA GPU fan roar)
@@ -2187,10 +2348,10 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       const matteAmount = Math.max(0, Math.min(1, Number(m.repairSkinMatteAmount) || 0));
       obj.material.userData.visualMatteAmount = matteAmount;
       obj.material.roughness = THREE.MathUtils.lerp(baseRoughness, Math.max(baseRoughness, 0.54), matteAmount);
-      obj.material.clearcoat = Math.max(0.0, (skinGloss - 0.55) * 0.18);
-      obj.material.clearcoatRoughness = 0.45;
-      obj.material.specularIntensity = 0.24 + skinGloss * 0.26;
-      obj.material.envMapIntensity = 0.34 + skinGloss * 0.28;
+      obj.material.clearcoat = 0.10 + skinGloss * 0.14;
+      obj.material.clearcoatRoughness = 0.36;
+      obj.material.specularIntensity = 0.54 + skinGloss * 0.30;
+      obj.material.envMapIntensity = 0.68 + skinGloss * 0.28;
       const poreUniform = obj.material.userData?.skinGradingUniforms?.uPoreRelief;
       if (poreUniform) {
         // An optional visual override must not stick after its config is removed,
@@ -2310,15 +2471,27 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
   };
   if (!rig.key) return false;
 
-  const basePreset = VISUAL_STYLE_PRESETS[m.presetId] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait;
-  const hdrMode = m.hdrMode || basePreset.hdrMode || 'golden_hour';
+  const activeFilter = m.filterPreset ? DESKTOP_PET_FILTER_PRESETS.find(p => p.id === m.filterPreset) : null;
+  const studioLP = activeFilter?.lightPreset ? LIGHT_PRESETS[activeFilter.lightPreset] : null;
+  const basePreset = VISUAL_STYLE_PRESETS[m.presetId || activeFilter?.visualPreset] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait;
+  const hdrMode = activeFilter?.lightPreset || m.hdrMode || basePreset.hdrMode || 'golden_hour';
   const hdrSig = HDR_MODE_LIGHT_SIGNATURES[hdrMode] || HDR_MODE_LIGHT_SIGNATURES.golden_hour;
 
-  const baseAz = Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg ?? 38);
-  const baseEl = Number(m.keyElevationDeg ?? basePreset.keyElevationDeg ?? 28);
-  const baseKeyInt = Number(m.keyIntensity ?? basePreset.keyIntensity ?? 1.36) * hdrSig.keyScale;
-  const baseRimInt = Number(m.rimIntensity ?? basePreset.rimIntensity ?? 0.78) * hdrSig.rimScale;
-  const baseTyndall = Number(m.tyndall ?? basePreset.tyndall ?? 0.58);
+  let studioAz = null;
+  let studioEl = null;
+  if (studioLP?.key?.dir) {
+    const [kx, ky, kz] = studioLP.key.dir;
+    const len = Math.hypot(kx, ky, kz) || 1.0;
+    studioAz = THREE.MathUtils.radToDeg(Math.atan2(kx, kz));
+    studioEl = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, ky / len))));
+  }
+
+  const rim0 = Array.isArray(studioLP?.rim) ? studioLP.rim[0] : studioLP?.rim;
+  const baseAz = studioAz !== null ? studioAz : Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg ?? 38);
+  const baseEl = studioEl !== null ? studioEl : Number(m.keyElevationDeg ?? basePreset.keyElevationDeg ?? 28);
+  const baseKeyInt = studioLP?.key ? studioLP.key.intensity * 0.68 : Number(m.keyIntensity ?? basePreset.keyIntensity ?? 1.36) * hdrSig.keyScale;
+  const baseRimInt = rim0 ? rim0.intensity * 0.72 : Number(m.rimIntensity ?? basePreset.rimIntensity ?? 0.78) * hdrSig.rimScale;
+  const baseTyndall = activeFilter?.tyndall !== undefined ? Number(activeFilter.tyndall) : Number(m.tyndall ?? basePreset.tyndall ?? 0.58);
 
   let azOffset = 0;
   let elOffset = 0;
@@ -2379,12 +2552,13 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
   rig.key.intensity = Math.max(0.35, baseKeyInt * intFactor);
 
   // Subtle color temperature breathing on key & rim lights
-  const baseKeyCol = new THREE.Color(m.keyColor || basePreset.keyColor || '#ffeed6');
-  baseKeyCol.lerp(new THREE.Color(hdrSig.keyTint), 0.52);
+  const baseKeyCol = studioLP?.key
+    ? new THREE.Color(studioLP.key.color)
+    : new THREE.Color(m.keyColor || basePreset.keyColor || '#ffeed6').lerp(new THREE.Color(hdrSig.keyTint), 0.52);
   if (warmthShift >= 0) {
-    baseKeyCol.lerp(new THREE.Color('#ffbe6b'), Math.min(0.45, warmthShift));
+    baseKeyCol.lerp(new THREE.Color('#ffbe6b'), Math.min(0.28, warmthShift));
   } else {
-    baseKeyCol.lerp(new THREE.Color('#b6d4ff'), Math.min(0.45, -warmthShift));
+    baseKeyCol.lerp(new THREE.Color('#b6d4ff'), Math.min(0.28, -warmthShift));
   }
   rig.key.color.copy(baseKeyCol);
 

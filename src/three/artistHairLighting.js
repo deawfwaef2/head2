@@ -38,17 +38,36 @@ export function updateArtistHairFlow(geometry, horizontal = false) {
 }
 
 export function injectArtistHairLighting(shader) {
-  shader.vertexShader = 'attribute vec3 artistHairFlow;\nvarying vec3 vArtistHairFlow;\n' + shader.vertexShader;
+  shader.vertexShader = 'attribute vec3 artistHairFlow;\nvarying vec3 vArtistHairFlow;\nvarying vec3 vHairRadial;\nvarying vec3 vHairCrownFlow;\nvarying float vHairDepth;\n' + shader.vertexShader;
   shader.vertexShader = shader.vertexShader.replace(
     '#include <begin_vertex>',
-    '#include <begin_vertex>\nvArtistHairFlow = mat3(modelViewMatrix) * artistHairFlow;'
+    `#include <begin_vertex>
+    vArtistHairFlow = mat3(modelViewMatrix) * artistHairFlow;
+    {
+      vec3 hc = vec3(0.0, 0.012, -0.005);
+      vec3 crown = vec3(0.0, 0.135, -0.02);
+      vHairRadial = normalize(normalMatrix * normalize(transformed - hc + vec3(0.0, 1e-5, 0.0)));
+      vHairCrownFlow = normalize(mat3(modelViewMatrix) * normalize(transformed - crown + vec3(0.0, 1e-5, 0.0)));
+      vHairDepth = length(transformed - hc);
+    }`
   );
-  shader.fragmentShader = 'varying vec3 vArtistHairFlow;\n' + shader.fragmentShader;
+  shader.fragmentShader = 'varying vec3 vArtistHairFlow;\nvarying vec3 vHairRadial;\nvarying vec3 vHairCrownFlow;\nvarying float vHairDepth;\n' + shader.fragmentShader;
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <normal_fragment_maps>',
+    `#include <normal_fragment_maps>
+    {
+      // Blend polygon hair-card normal toward spherical head-volume normal to eliminate flat card glare
+      vec3 radN = normalize(vHairRadial);
+      if (dot(normal, radN) < 0.0) radN = -radN;
+      normal = normalize(mix(normal, radN, 0.58));
+    }`
+  );
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_pars_fragment>', `
     #include <lights_physical_pars_fragment>
     vec3 hairFlowT;
     float hairFlowValid;
     float hairAtlasValue;
+    float gHairDepthAO;
     float hairLobe(float th, float exponent) {
       return pow(max(1.0 - th * th, 0.0), exponent * 0.5);
     }
@@ -63,51 +82,54 @@ export function injectArtistHairLighting(shader) {
       ordinary.indirectSpecular = vec3(0.0);
       RE_Direct_Physical(incident, geometryPosition, N, V, clearcoatNormal, material, ordinary);
 
-      // Wrap diffuse slightly around cylindrical hair fibers so dark hair cards don't crush to flat black
+      // Wrap diffuse around cylindrical hair fibers (matching masterQuality/featureMaterials.js hWrap)
       float ndl = dot(N, incident.direction);
-      float wrapDiffuse = max((ndl + 0.32) / 1.32, 0.0);
-      vec3 strandDiffuse = incident.color * material.diffuseColor * (wrapDiffuse * 0.42);
-      reflectedLight.directDiffuse += mix(ordinary.directDiffuse, max(ordinary.directDiffuse, strandDiffuse), hairFlowValid);
+      float wrapDiffuse = clamp((ndl + 0.45) / 1.45, 0.0, 1.0);
+      vec3 strandDiffuse = incident.color * material.diffuseColor * (wrapDiffuse * 0.46) * gHairDepthAO;
+      reflectedLight.directDiffuse += mix(ordinary.directDiffuse * gHairDepthAO, max(ordinary.directDiffuse * gHairDepthAO, strandDiffuse), hairFlowValid);
 
       vec3 H = normalize(incident.direction + V + vec3(1e-7));
-      // Dual-lobe Marschner / Kajiya-Kay cuticle shift: R lobe (-3.5 deg), TRT lobe (+7.5 deg)
-      vec3 T1 = normalize(hairFlowT + N * 0.08);
+      // Dual-lobe Marschner / Kajiya-Kay cuticle shift: R lobe (primary fine white sheen) + TRT lobe (secondary warm color-tinted band)
+      vec3 T1 = normalize(hairFlowT + N * 0.06);
       vec3 T2 = normalize(hairFlowT - N * 0.18);
       float gloss = clamp(1.0 - material.roughness, 0.0, 1.0);
-      float exponent1 = mix(36.0, 128.0, gloss);
-      float exponent2 = mix(14.0, 46.0, gloss);
+      float exponent1 = mix(72.0, 210.0, gloss);
+      float exponent2 = mix(22.0, 48.0, gloss);
       float primary = hairLobe(clamp(dot(T1, H), -1.0, 1.0), exponent1);
       float secondary = hairLobe(clamp(dot(T2, H), -1.0, 1.0), exponent2);
 
       // Keratin fiber Fresnel + strand ridge modulation
       float cosVH = max(dot(V, H), 0.0);
-      float keratinF = 0.055 + 0.22 * pow(1.0 - cosVH, 4.0);
-      float strandWeight = mix(0.28, 1.28, hairAtlasValue);
+      float keratinF = 0.065 + 0.24 * pow(1.0 - cosVH, 4.0);
+      float strandWeight = mix(0.35, 1.32, hairAtlasValue);
       vec3 azimuthH = H - hairFlowT * dot(H, hairFlowT);
       float azimuthLength = max(length(azimuthH), 1e-5);
-      float azimuth = 0.28 + 0.72 * pow(max(dot(N, azimuthH / azimuthLength), 0.0), 1.6);
-      float visibility = smoothstep(-0.18, 0.35, ndl);
+      float azimuth = 0.35 + 0.65 * pow(max(dot(N, azimuthH / azimuthLength), 0.0), 1.4);
+      float visibility = smoothstep(-0.22, 0.35, ndl);
 
       // Primary R lobe has subtle hair-tone warmth; Secondary TRT lobe carries warm melanin internal tint
-      vec3 rColor = mix(vec3(0.76, 0.75, 0.78), clamp(material.diffuseColor * 3.2 + vec3(0.28), vec3(0.25), vec3(0.85)), 0.45);
-      vec3 trtColor = clamp(material.diffuseColor * 3.6 + vec3(0.16, 0.11, 0.08), vec3(0.10), vec3(0.78));
-      vec3 fiber = incident.color * visibility * keratinF * strandWeight * azimuth
-                 * (rColor * primary * 0.92 + trtColor * secondary * 0.68);
+      vec3 rColor = mix(vec3(0.84, 0.83, 0.86), clamp(material.diffuseColor * 3.2 + vec3(0.28), vec3(0.28), vec3(0.90)), 0.38);
+      vec3 trtColor = clamp(material.diffuseColor * 3.8 + vec3(0.18, 0.12, 0.08), vec3(0.12), vec3(0.85));
+      vec3 fiber = incident.color * visibility * keratinF * strandWeight * azimuth * gHairDepthAO
+                 * (rColor * primary * 1.08 + trtColor * secondary * 0.82);
       reflectedLight.directSpecular += mix(ordinary.directSpecular, fiber, hairFlowValid);
     }
     #undef RE_Direct
     #define RE_Direct RE_Direct_ArtistHair
   `);
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_fragment>', `
-    hairFlowValid = 0.0;
+    hairFlowValid = 1.0;
     hairAtlasValue = 0.5;
-    hairFlowT = normalize(cross(normal, abs(normal.y) < 0.99 ? vec3(0, 1, 0) : vec3(1, 0, 0)));
+    gHairDepthAO = mix(0.42, 1.0, smoothstep(0.088, 0.112, vHairDepth));
+    vec3 crownF = vHairCrownFlow - normal * dot(normal, vHairCrownFlow);
+    hairFlowT = normalize(crownF + vec3(1e-6));
     #ifdef USE_MAP
-      vec3 flow = vArtistHairFlow - normal * dot(normal, vArtistHairFlow);
-      float flowLength2 = dot(flow, flow);
-      if (flowLength2 > 1e-12) {
-        hairFlowT = flow * inversesqrt(flowLength2);
-        hairFlowValid = 1.0;
+      vec3 uvFlow = vArtistHairFlow - normal * dot(normal, vArtistHairFlow);
+      float uvFlowLen2 = dot(uvFlow, uvFlow);
+      if (uvFlowLen2 > 1e-12) {
+        vec3 uvT = uvFlow * inversesqrt(uvFlowLen2);
+        if (dot(uvT, hairFlowT) < 0.0) uvT = -uvT;
+        hairFlowT = normalize(mix(uvT, hairFlowT, 0.45));
       }
       hairAtlasValue = sqrt(clamp(dot(texture2D(map, vMapUv).rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
     #endif

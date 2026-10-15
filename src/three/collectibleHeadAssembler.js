@@ -32,6 +32,10 @@ import {
   upgradeEyeMaterial,
   buildHairMaterials,
 } from './masterQuality/featureMaterials.js';
+import {
+  computeHairCoverage,
+  buildBabyHairGeometry,
+} from './masterQuality/hairlineBlend.js';
 
 const gltfLoader = new GLTFLoader();
 const objLoader = new OBJLoader();
@@ -486,51 +490,7 @@ async function ensureRealWebAssetsLoaded(glbBuffer) {
         const img = new Image();
         img.onload = () => {
           URL.revokeObjectURL(url);
-          let texSource = img;
-          if (!isOpaque && typeof document !== 'undefined') {
-            try {
-              const c = document.createElement('canvas');
-              c.width = Math.min(256, img.width || 256);
-              c.height = Math.min(256, img.height || 256);
-              const ctx = c.getContext('2d');
-              const w = c.width;
-              const h = c.height;
-              ctx.drawImage(img, 0, 0, w, h);
-              const imgData = ctx.getImageData(0, 0, w, h);
-              const d = imgData.data;
-              for (let py = 0; py < h; py++) {
-                // In MakeHuman eyebrow textures, top half (py < h*0.52) is right brow (inner at u~0.14 -> outer at u~0.90)
-                // and bottom half (py >= h*0.52) is left brow (inner at u~0.90 -> outer at u~0.04).
-                // Each brow spans full width u in [0, 1] — NEVER wrap at w/2!
-                const isBottomBrow = py >= (h * 0.52);
-                for (let px = 0; px < w; px++) {
-                  const i = (py * w + px) * 4;
-                  const aNorm = d[i + 3] / 255.0;
-                  if (aNorm < 0.01) {
-                    d[i + 3] = 0;
-                    continue;
-                  }
-                  const uFull = px / Math.max(1, w - 1);
-                  const uFromInner = isBottomBrow ? (1.0 - uFull) : uFull;
-                  const endFeather = Math.sin(Math.min(1.0, Math.max(0.0, uFull)) * Math.PI);
-                  const angle = (isBottomBrow ? -1.0 : 1.0) * (0.42 + 0.45 * (1.0 - uFromInner));
-                  const sCoord = px * Math.sin(angle) + py * Math.cos(angle);
-                  const strand1 = 0.5 + 0.5 * Math.sin(sCoord * 1.55 + Math.sin(px * 0.20) * 1.4);
-                  const strand2 = 0.5 + 0.5 * Math.cos(sCoord * 2.75 - py * 0.24);
-                  const hairFiber = 0.58 + 0.42 * (0.65 * strand1 + 0.35 * strand2);
-                  const shade = 0.72 + 0.38 * strand1;
-                  d[i]     = Math.min(255, Math.round((26 + d[i] * 0.14) * shade));
-                  d[i + 1] = Math.min(255, Math.round((20 + d[i + 1] * 0.12) * shade));
-                  d[i + 2] = Math.min(255, Math.round((18 + d[i + 2] * 0.11) * shade));
-                  const finalAlpha = Math.pow(aNorm, 0.78) * hairFiber * (0.55 + 0.45 * Math.pow(endFeather, 0.45));
-                  d[i + 3] = Math.min(248, Math.round(finalAlpha * 245));
-                }
-              }
-              ctx.putImageData(imgData, 0, 0);
-              texSource = c;
-            } catch (_) {}
-          }
-          const tex = new THREE.Texture(texSource);
+          const tex = new THREE.Texture(img);
           tex.flipY = false;
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = 16;
@@ -2309,6 +2269,54 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       strandDensity,
     };
     applyHeadMorphsToGroup(rootGroup, mergedMorphs);
+
+    // Update 3D Hairline Coverage (`aHairCov`, `aHairDir`), Root Pigment (`uHairRoot`), and Baby-Hair Wisps (`masterQuality/hairlineBlend.js`)
+    try {
+      let skinMeshForHairline = null;
+      modelContainer.traverse((ch) => {
+        if (!skinMeshForHairline && ch.isMesh && (ch.name === 'HeadSkinMesh' || ch.material?.name === 'Skin')) {
+          skinMeshForHairline = ch;
+        }
+      });
+      if (skinMeshForHairline) {
+        const strandRgb = hexToMasterStrandRgb(hairColor);
+        const uHairRoot = skinMeshForHairline.material?.userData?.skinGradingUniforms?.uHairRoot;
+        if (uHairRoot?.value) {
+          uHairRoot.value.set(strandRgb[0] * 1.15, strandRgb[1] * 1.15, strandRgb[2] * 1.15);
+        }
+        const hairLocalEntries = [];
+        hairGroup.traverse((ch) => {
+          if (ch.isMesh && ch.visible && ch.name !== 'ScalpRootFeatherCap' && ch.name !== 'BabyHairWisps') {
+            hairLocalEntries.push({ mesh: ch, useLocalSpace: true });
+          }
+        });
+        if (hairLocalEntries.length > 0) {
+          const hairlineAnchors = { eyeY: 0.0184, headCenter: [0.0, 0.02, -0.01] };
+          const covInfo = computeHairCoverage(skinMeshForHairline, hairLocalEntries, hairlineAnchors, { useLocalSpace: true });
+          const babyRes = covInfo ? buildBabyHairGeometry(covInfo, hairlineAnchors) : null;
+          if (babyRes?.geometry && babyRes.strands > 0) {
+            const babyMat = createStrandMaterial({
+              color: strandRgb,
+              gainR: MASTER_HAIR_CONFIG.gainR,
+              gainTT: MASTER_HAIR_CONFIG.gainTT,
+              gainTRT: MASTER_HAIR_CONFIG.gainTRT,
+              gainDiffuse: MASTER_HAIR_CONFIG.gainDiffuse,
+              hairOmbreMix,
+              hairTipColor,
+            });
+            const babyMesh = new THREE.Mesh(babyRes.geometry, babyMat);
+            babyMesh.name = 'BabyHairWisps';
+            babyMesh.castShadow = false;
+            babyMesh.receiveShadow = false;
+            babyMesh.frustumCulled = false;
+            babyMesh.renderOrder = 2;
+            hairGroup.add(babyMesh);
+            globalStrandMeshVersion++;
+          }
+        }
+      }
+    } catch (_) {}
+
     return hairGroup;
   } catch (err) {
     if (rootGroup.userData.hairRequestSerial === request) rootGroup.userData.hairLoadError = String(err.message || err).slice(0, 180);
@@ -2622,14 +2630,14 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       float causticZone = clamp(-relXY.y * 0.85 - relXY.x * 0.30, 0.0, 1.0) * exp(-pow((rIris - 0.56) / 0.22, 2.0));
       reflectedLight.directDiffuse += (uIrisColor * clamp(uIrisBrightness, 0.5, 1.6) * 0.62 + vec3(0.18, 0.11, 0.07)) * causticZone * inIris * 0.72 * eyeGoboAtten;
 
-      // Studio Softbox Window Catchlight + Subtle Caruncle Moisture Pinpoint
+      // Studio Softbox Window Catchlight + Subtle Caruncle Moisture Pinpoint + Uncrushed PMREM Cornea Reflection (masterQuality/featureMaterials.js)
       float wetFactor = clamp(uCorneaWetness, 0.2, 1.5);
       vec2 sb1 = (relXY - vec2(-0.26, 0.24)) / vec2(0.11, 0.085);
       float softbox1 = exp(-pow(max(abs(sb1.x), abs(sb1.y)), 2.6)) * smoothstep(0.0228, 0.0192, vEyeLocalPos.y);
       float softbox2 = exp(-(pow((relXY.x - 0.28) / 0.045, 2.0) + pow((relXY.y + 0.24) / 0.042, 2.0))) * 0.42;
-      vec3 wetCatchlight = (vec3(1.85, 1.84, 1.82) * softbox1 + vec3(0.95, 0.98, 1.04) * softbox2)
-                         * inIris * clamp(uCatchlightStrength, 0.0, 1.6) * wetFactor * (0.45 + 0.55 * eyeGoboAtten);
-      float specKeep = mix(0.06, 0.20, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
+      vec3 wetCatchlight = (vec3(2.25, 2.22, 2.18) * softbox1 + vec3(1.15, 1.18, 1.24) * softbox2)
+                         * inIris * clamp(uCatchlightStrength, 0.0, 1.6) * wetFactor * (0.55 + 0.45 * eyeGoboAtten);
+      float specKeep = mix(0.65, 0.95, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
       reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight;
       reflectedLight.indirectSpecular *= specKeep;
       `
@@ -3076,25 +3084,47 @@ export async function buildCollectibleHeadNode(config = {}) {
       child.geometry.userData = child.geometry.userData || {};
       child.geometry.userData.parentHeadGroup = rootGroup;
       child.userData.basePositions = true;
+      const vCount = child.geometry.attributes.position.count;
+      if (!child.geometry.getAttribute('aHairCov')) {
+        child.geometry.setAttribute('aHairCov', new THREE.BufferAttribute(new Float32Array(vCount), 1));
+      }
+      if (!child.geometry.getAttribute('aHairDir')) {
+        const initDir = new Float32Array(vCount * 3);
+        for (let vi = 0; vi < vCount; vi++) initDir[vi * 3 + 1] = -1.0;
+        child.geometry.setAttribute('aHairDir', new THREE.BufferAttribute(initDir, 3));
+      }
 
       const rawSkinMap = child.material?.map || null;
       const skinNorm = child.material?.normalMap || null;
       if (rawSkinMap) {
         rawSkinMap.colorSpace = THREE.SRGBColorSpace;
         rawSkinMap.anisotropy = 16;
+        rawSkinMap.generateMipmaps = true;
+        rawSkinMap.minFilter = THREE.LinearMipmapLinearFilter;
+        rawSkinMap.magFilter = THREE.LinearFilter;
+        rawSkinMap.needsUpdate = true;
       }
       if (skinNorm) {
         skinNorm.anisotropy = 16;
+        skinNorm.generateMipmaps = true;
+        skinNorm.minFilter = THREE.LinearMipmapLinearFilter;
+        skinNorm.magFilter = THREE.LinearFilter;
+        skinNorm.needsUpdate = true;
       }
       const skinVariantId = rootGroup.userData.skinVariant || presetBias.skinVariant || 'cn_porcelain_ivory';
       rootGroup.userData.skinVariant = skinVariantId;
       const realSkinMap = realWebAssetsCache?.skins?.[skinVariantId] || rawSkinMap;
+      if (realSkinMap) {
+        realSkinMap.generateMipmaps = true;
+        realSkinMap.minFilter = THREE.LinearMipmapLinearFilter;
+        realSkinMap.magFilter = THREE.LinearFilter;
+      }
       const skinMicro = createSkinMicroMaps();
       for (const texture of Object.values(skinMicro)) {
         if (texture?.isTexture) texture.userData.sharedSkinMicro = true;
       }
       const initRough = Math.max(0.28, Math.min(0.88, Number(config.skinRoughness ?? materials.skinRoughness ?? morphs.skinRoughness ?? 0.56)));
-      const initNormScale = Math.max(0.0, Math.min(1.6, Number(config.normalMapStrength ?? materials.normalMapStrength ?? morphs.normalMapStrength ?? 0.80)));
+      const initNormScale = Math.max(0.0, Math.min(1.6, Number(config.normalMapStrength ?? materials.normalMapStrength ?? morphs.normalMapStrength ?? 0.34)));
       const skinMaterial = new THREE.MeshPhysicalMaterial({
         map: realSkinMap,
         normalMap: skinNorm,
@@ -3103,15 +3133,15 @@ export async function buildCollectibleHeadNode(config = {}) {
         color: new THREE.Color('#ffffff'),
         roughness: initRough,
         metalness: 0.0,
-        sheen: 0.10,
-        sheenRoughness: 0.55,
+        sheen: 0.25,
+        sheenRoughness: 0.65,
         sheenColor: new THREE.Color(1.0, 0.86, 0.80),
-        clearcoat: 0.07,
-        clearcoatRoughness: 0.32,
-        specularIntensity: 0.75,
+        clearcoat: 0.12,
+        clearcoatRoughness: 0.36,
+        specularIntensity: 0.65,
         specularColor: new THREE.Color(1.0, 0.98, 0.96),
         ior: 1.40,
-        envMapIntensity: 0.42,
+        envMapIntensity: 0.72,
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0.0,
       });
@@ -3198,13 +3228,13 @@ export async function buildCollectibleHeadNode(config = {}) {
       }
       const eyeMat = new THREE.MeshPhysicalMaterial({
         map: eyeMap,
-        roughness: 0.08,
+        roughness: 0.02,
         metalness: 0.0,
-        clearcoat: 0.72,
-        clearcoatRoughness: 0.04,
-        specularIntensity: 0.65,
-        ior: 1.38,
-        envMapIntensity: 0.24,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.01,
+        specularIntensity: 0.92,
+        ior: 1.376,
+        envMapIntensity: 0.85,
       });
       eyeMat.userData.baseEyeMap = eyeMap;
       injectLifelikeEyeShader(eyeMat, {
@@ -3246,8 +3276,9 @@ export async function buildCollectibleHeadNode(config = {}) {
         name: 'PhotorealBrow',
         map: browMap,
         color: new THREE.Color(browColHex),
-        roughness: 0.78,
+        roughness: 0.85,
         metalness: 0.0,
+        envMapIntensity: 0.25,
         transparent: true,
         opacity: Math.min(0.95, browOp * 0.92),
         alphaTest: 0.0,
@@ -3258,7 +3289,7 @@ export async function buildCollectibleHeadNode(config = {}) {
         polygonOffsetUnits: -2,
         side: THREE.DoubleSide,
       });
-      // Stage 56 · Master 5x5 Neighborhood Alpha Box-Filter Feathering + 3D Inner/Outer Feather (画质提升/src/featureMaterials.js)
+      // Stage 67 · Master 25-Tap (5x5) Gaussian Feathering + Skin-Blend Roots (masterQuality/featureMaterials.js)
       browMat.onBeforeCompile = (shader) => {
         shader.vertexShader = 'varying vec3 vBrowLocalPos;\n' + shader.vertexShader.replace(
           '#include <begin_vertex>',
@@ -3269,24 +3300,27 @@ export async function buildCollectibleHeadNode(config = {}) {
           `#include <map_fragment>
           #ifdef USE_MAP
           {
-            vec2 texel = vec2(1.15 / 512.0);
-            float a = sampledDiffuseColor.a * 0.28
-              + (texture2D(map, vMapUv + vec2( texel.x,  texel.y)).a
-               + texture2D(map, vMapUv + vec2(-texel.x,  texel.y)).a
-               + texture2D(map, vMapUv + vec2( texel.x, -texel.y)).a
-               + texture2D(map, vMapUv + vec2(-texel.x, -texel.y)).a) * 0.18;
-            float colL = dot(sampledDiffuseColor.rgb, vec3(0.333));
-            diffuseColor.rgb = mix(vec3(0.11, 0.085, 0.07), vec3(0.28, 0.22, 0.18), colL) * diffuse;
+            vec2 texel = vec2(2.4 / 512.0);
+            float sumA = 0.0;
+            float wSum = 0.0;
+            for (int x = -2; x <= 2; x++) {
+              for (int y = -2; y <= 2; y++) {
+                float w = exp(-0.35 * float(x * x + y * y));
+                sumA += texture2D(map, vMapUv + vec2(float(x), float(y)) * texel).a * w;
+                wSum += w;
+              }
+            }
+            float a = sumA / wSum;
             float axB = abs(vBrowLocalPos.x);
-            float innerFeather = smoothstep(0.0092, 0.0178, axB);
-            float outerFeather = 1.0 - smoothstep(0.0465, 0.0548, axB);
-            diffuseColor.a = smoothstep(0.15, 0.95, a) * 0.82 * innerFeather * outerFeather * opacity;
+            float innerFeather = smoothstep(0.0088, 0.0175, axB);
+            float outerFeather = 1.0 - smoothstep(0.0468, 0.0552, axB);
+            diffuseColor.rgb = mix(vec3(0.42, 0.31, 0.27), vec3(0.11, 0.085, 0.072) * diffuse, smoothstep(0.0, 0.48, a));
+            diffuseColor.a = smoothstep(0.06, 0.55, a) * 0.68 * innerFeather * outerFeather * opacity;
           }
           #endif`
         );
       };
-      browMat.customProgramCacheKey = () => 'photoreal-brow-v56';
-      browMat.customProgramCacheKey = () => 'cervix3d_eyebrow_feather_v46';
+      browMat.customProgramCacheKey = () => 'photoreal-brow-v67';
       child.material = browMat;
     } else if (matName === 'Eyelash') {
       child.castShadow = false;
@@ -3298,24 +3332,43 @@ export async function buildCollectibleHeadNode(config = {}) {
         lashMap.anisotropy = 8;
       }
       const initLashDensity = Number(config.eyelashDensity ?? materials.eyelashDensity ?? morphs.eyelashDensity ?? 0.68);
-      // Stage 44 Fix: alphaToCoverage: false & alphaTest: 0.0 prevent Three.js r170 from
-      // turning the feathered lash alpha strip into a 100% solid black eyeliner ribbon!
-      child.material = new THREE.MeshStandardMaterial({
+      const lashMat = new THREE.MeshStandardMaterial({
         name: 'Eyelash',
         map: lashMap,
-        color: new THREE.Color(config.lashColor || materials.lashColor || '#44322e'),
+        color: new THREE.Color(config.lashColor || materials.lashColor || '#261d1a'),
         transparent: true,
-        opacity: Math.max(0.0, Math.min(0.92, initLashDensity * 0.72)),
+        opacity: Math.max(0.0, Math.min(0.95, initLashDensity * 0.90)),
         alphaTest: 0.0,
         alphaToCoverage: false,
         depthWrite: false,
         polygonOffset: true,
         polygonOffsetFactor: -1,
         polygonOffsetUnits: -2,
-        roughness: 0.52,
-        envMapIntensity: 0.20,
+        roughness: 0.55,
+        envMapIntensity: 0.30,
         side: THREE.DoubleSide,
       });
+      // Stage 67 · Master Lower-Lid Lash Alpha Softening (masterQuality/featureMaterials.js)
+      lashMat.onBeforeCompile = (shader) => {
+        shader.vertexShader = 'varying float vLashLocalY;\n' + shader.vertexShader.replace(
+          '#include <begin_vertex>',
+          '#include <begin_vertex>\nvLashLocalY = position.y;'
+        );
+        shader.fragmentShader = 'varying float vLashLocalY;\n' + shader.fragmentShader.replace(
+          '#include <map_fragment>',
+          `#include <map_fragment>
+          #ifdef USE_MAP
+          {
+            float rawA = sampledDiffuseColor.a;
+            float upperKeep = smoothstep(0.014, 0.019, vLashLocalY);
+            diffuseColor.rgb = vec3(0.08, 0.06, 0.055) * diffuse;
+            diffuseColor.a = smoothstep(0.14, 0.68, rawA) * mix(0.28, 0.92, upperKeep) * opacity;
+          }
+          #endif`
+        );
+      };
+      lashMat.customProgramCacheKey = () => 'photoreal-lash-v67';
+      child.material = lashMat;
     } else if (matName === 'Teeth' || child.name === 'Teeth') {
       const teethMap = child.material?.map || null;
       if (teethMap) teethMap.colorSpace = THREE.SRGBColorSpace;

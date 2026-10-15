@@ -7,6 +7,7 @@
 
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
+import { applyCustomVisualConfigToEngine } from '../three/photorealLighting.js';
 import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
 
 const NEW_32_HAIR_IDS = new Set([
@@ -1741,18 +1742,24 @@ function wireObsidianStudioEvents(studio) {
   const applyPetBlurState = (blurMode, blurPower, focusCenterY) => {
     const qa = window.__cervixQA;
     const bm = blurMode ?? document.getElementById('top-pet-blur-select')?.value ?? 'none';
-    const bp = Number(blurPower ?? document.getElementById('obs-pet-blur-power')?.value ?? 0.55);
+    const bp = Number(blurPower ?? document.getElementById('obs-pet-blur-power')?.value ?? 0.65);
     const fy = Number(focusCenterY ?? document.getElementById('obs-pet-blur-focus-y')?.value ?? 0.52);
-    const effectivePower = bm === 'none' ? 0.0 : bp;
+    const effectivePower = bm === 'none' ? 0.0 : Math.max(0.25, bp);
 
     if (qa?.state?.visualCustomConfig) {
       qa.state.visualCustomConfig.blurMode = bm;
       qa.state.visualCustomConfig.blurPower = effectivePower;
       qa.state.visualCustomConfig.focusCenterY = fy;
     }
+    if (qa?.desktop?._activeVisualState) {
+      qa.desktop._activeVisualState.blurMode = bm;
+      qa.desktop._activeVisualState.blurPower = effectivePower;
+      qa.desktop._activeVisualState.focusCenterY = fy;
+    }
     qa?.desktop?.beautyPost?.setGradeParams?.({ blurMode: bm, blurPower: effectivePower, focusCenterY: fy });
     qa?.studio?.beautyPost?.setGradeParams?.({ blurMode: bm, blurPower: effectivePower, focusCenterY: fy });
-    qa?.desktop?.wakeRender?.(1.8, true);
+    qa?.desktop?.wakeRender?.(2.2, true);
+    qa?.studio?.wakeRender?.(2.2, true);
 
     const topSel = document.getElementById('top-pet-blur-select');
     if (topSel && topSel.value !== bm) topSel.value = bm;
@@ -1799,15 +1806,26 @@ function wireObsidianStudioEvents(studio) {
     const qa = window.__cervixQA;
     const fp = DESKTOP_PET_FILTER_PRESETS.find((p) => p.id === presetId) || DESKTOP_PET_FILTER_PRESETS[0];
     if (!fp) return;
+    const g = fp.grade || fp;
     if (qa?.state?.visualCustomConfig) {
-      qa.state.visualCustomConfig.filterPreset = fp.id;
+      Object.assign(qa.state.visualCustomConfig, {
+        ...g,
+        filterPreset: fp.id,
+        presetId: fp.visualPreset || 'dlss5_neural_photoreal',
+        windowGobo: fp.gobo || 'none',
+        hdrMode: fp.lightPreset || 'softbox',
+      });
+      if (qa.desktop) {
+        applyCustomVisualConfigToEngine(qa.desktop, qa.state.visualCustomConfig);
+      }
+      if (qa.studio) {
+        applyCustomVisualConfigToEngine(qa.studio, qa.state.visualCustomConfig);
+      }
     }
-    qa?.desktop?.beautyPost?.setGradeParams?.({ filterPreset: fp.id });
-    qa?.studio?.beautyPost?.setGradeParams?.({ filterPreset: fp.id });
-    if (fp.gobo && qa?.desktop) {
-      setFormValueAndTrigger('vcd-window-gobo', fp.gobo, 'change');
-    }
-    qa?.desktop?.wakeRender?.(1.8, true);
+    qa?.desktop?.beautyPost?.setGradeParams?.({ ...g, filterPreset: fp.id });
+    qa?.studio?.beautyPost?.setGradeParams?.({ ...g, filterPreset: fp.id });
+    qa?.desktop?.wakeRender?.(2.5, true);
+    qa?.studio?.wakeRender?.(2.5, true);
 
     const topSel = document.getElementById('top-pet-filter-select');
     if (topSel && topSel.value !== fp.id) topSel.value = fp.id;

@@ -276,6 +276,8 @@ export function createStudioRig(scene, renderer, presetId = 'softbox', opts = {}
       }
     }
     if (p.gobo) key.shadow.radius = Math.min(key.shadow.radius, 2 + 3 * (ov.goboSoft ?? 0.5));
+    key.shadow.radius *= ov.shadowSoft ?? 1;                // 阴影柔和度（效果总线可调）
+    if ('intensity' in key.shadow) key.shadow.intensity = ov.shadowStrength ?? 1; // 阴影浓度（真实室内有大量反弹光，阴影不会死黑）
     // 环境贴图只在相关参数变化时重烘焙（避免拖动滑杆时卡顿）
     const envKey = JSON.stringify([id, p.key.dir.map((v) => v.toFixed(2)), p.key.color, p.key.intensity.toFixed(2), p.key.size.toFixed(2), p.rim.map((r) => r.intensity.toFixed(2)), p.fill.intensity.toFixed(2)]);
     if (envKey !== lastEnvKey && (!o2.skipEnv || !envTex)) {

@@ -91,11 +91,7 @@ export const BACKGROUNDS = {
   cityNight: { label: '城市夜景光斑' },
 };
 
-export const BACKGROUNDS_LIST = Object.entries(BACKGROUNDS).map(([id, v]) => ({
-  id,
-  name: v.label,
-  label: v.label,
-}));
+export const BACKGROUNDS_LIST = Object.entries(BACKGROUNDS).map(([id, v]) => ({ id, label: v.label }));
 
 const cache = {};
 export function backgroundTexture(id) {
@@ -113,3 +109,4 @@ export function backgroundTexture(id) {
 }
 
 export const makeBackdropTexture = backgroundTexture;
+
