@@ -1669,3 +1669,10 @@
 
 ## [2026-10-15 Stage 72a] GitHub 普通快进推送核验（仅追加）
 - 完成全部离线复测后，先 `git fetch origin main` 确认远端 `d44d559` 为本地 `bc67bea` 的祖先、分叉计数 `0 behind / 1 ahead`，再以普通 `git push origin HEAD:refs/heads/main` 快进至 `bc67bea3113c1ccc3c09e03470d67d8a8d5d982d`，并用 `git ls-remote origin refs/heads/main` 独立核对同一 SHA；推送后工作树干净，无强推或覆盖其他 Agent。此段确认本身仅作追加提交，远端最终 SHA 以其提交后的再核验为准。授权只在单次进程环境中供 Git askpass 使用，没有写入项目文件、交接记录、仓库配置或输出。
+
+---
+
+## [2026-10-15 Stage 73] Windows 系统桌宠 BAT 启动失败修复（仅追加）
+- 用户 Windows 实机截图显示旧 BAT 的 UTF-8/LF 中文命令行乱码，且调用 `start "" "node_modules\.bin\electron.cmd"` 弹出「Windows 找不到文件 node_modules\.bin\electron.cmd」；这是启动脚本阶段的问题，不能以网页版 HTML 代替真正的系统桌宠。用户截图留在上传区，**未纳入仓库**。
+- 只改 `双击启动真实桌面桌宠_Windows.bat`：改成 ASCII + CRLF 的 CMD 安全脚本，使用 `pushd "%~dp0"` 定位完整解压目录，检查完整项目/Node/npm/Electron 可执行文件；缺 Electron 时明确联网运行一次 `npm.cmd install --no-save --no-audit --no-fund --package-lock=false electron@35.1.5`；启动使用绝对路径 `call "%ROOT%\node_modules\.bin\electron.cmd" "%ROOT%\electron\main.cjs" --overlay`，不再用失败的相对路径 `start`，安装/运行失败保留屏幕和错误号，且不再退回 Python/Edge 假装是跨应用桌宠。新增 `.gitattributes` 的 `*.bat -text whitespace=cr-at-eol` 保证 GitHub ZIP 中保留 CRLF 而 diff 检查不把 CR 当空白。
+- 已静态核查脚本全 ASCII、55 行 CRLF、各错误分支、绝对路径 CALL、无浏览器退路；`npm install --dry-run` 与 Linux 下相同版本 Electron 安装成功，`git diff --check` 通过；HTML 原封不动，SHA-256 仍为 `af362434fdbb2a65e2eebee2a9c86fe2bc049b9783a1b892a4e51118ed945bd9`。本沙箱 Linux Electron GUI 因缺 `libgtk-3.so.0` 无法运行，不可声称在用户 Windows / 2070S 真机验证过透明、穿透、托盘；请用户下载修复 BAT 替换后测试，有新报错需反馈具体错误号/日志。推送状态以之后的远端核验为准。
