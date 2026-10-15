@@ -1,10 +1,4 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>写实收藏胸像 · 桌宠工作室（安全版）</title>
-<style>
+/* 安全版 · 全局样式（与主项目 src/style.css 对应） */
   :root{--gold:#c9a56a;--bg:rgba(16,16,18,.78);--line:rgba(255,255,255,.08)}
   html,body{margin:0;height:100%;overflow:hidden;background:#0d0d0f;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:#eee}
   #c{position:fixed;inset:0;width:100%;height:100%;display:block}
@@ -73,39 +67,3 @@
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:rgba(20,20,22,.92);border:1px solid var(--line);color:#f3e7d3;padding:10px 18px;border-radius:24px;font-size:13px;display:none}
   #busy{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:rgba(15,15,17,.9);padding:14px 22px;border-radius:14px;display:none;font-size:13px;color:#ddd}
   #abLabel{position:fixed;left:12px;bottom:12px;z-index:9;font-size:12px;color:#ddd;background:var(--bg);padding:6px 10px;border-radius:10px;display:none}
-</style>
-</head>
-<body>
-<canvas id="c"></canvas>
-<div id="petDesk"><div class="icons"><div>此电脑</div><div>文档</div><div>回收站</div></div><div class="taskbar"></div></div>
-<div id="petWin"><div id="petBar"><button data-pet="spin">⟳ 转身</button><button data-pet="smaller">－</button><button data-pet="bigger">＋</button><button data-pet="exit">✕ 返回</button></div><div id="petBubble"></div><div id="petName"></div></div>
-
-<div id="start">
-  <h1>写实<b>收藏胸像</b></h1>
-  <p>生成 · 管理 · 设置 · 桌宠 —— 摄影级布光与胶片调色</p>
-  <button id="btnStart">▶ 点击开始</button>
-  <div class="bar"><i id="startBar"></i></div>
-  <div id="startStatus">正在准备渲染管线…</div>
-</div>
-
-<div id="tools">
-  <button id="btnUI" title="隐藏/显示面板">☰</button>
-  <button id="btnAB" class="opt" title="对比原始渲染">A/B 对比</button>
-  <button id="btnShot" class="opt">📷 截图</button>
-</div>
-<div id="top">
-  <button data-tab="studio" class="on">🎨 工坊</button>
-  <button data-tab="gallery">🗂 收藏</button>
-  <button data-tab="pet">🖥 桌宠</button>
-  <button data-tab="settings">⚙️ 设置</button>
-</div>
-
-<div class="panel on" id="p-studio"></div>
-<div class="panel" id="p-gallery"></div>
-<div class="panel" id="p-settings"></div>
-<div id="abLabel"></div>
-<div id="busy"></div>
-<div id="toast"></div>
-<script>/*__BUNDLE__*/</script>
-</body>
-</html>

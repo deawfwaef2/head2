@@ -1,12 +1,13 @@
 // 安全版资产清洗：从原 GLB 中移除颈部截面网格(NeckCrossSection)，并把其几何数据清零；重写元数据；复制中性发型。
 // 只改 JSON（保持 bufferView 索引不变，因为 extras.realWebAssets 里的肤质/眉毛贴图按 bufferView 索引引用）。
-// 用法：node 安全/tools/sanitize_assets.mjs
+// 用法：node 安全/scripts/sanitize_assets.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { HAIR_CATALOG } from '../src/data/hairCatalog.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const src = path.join(here, '..', '..', 'public', 'models');
-const out = path.join(here, '..', 'assets', 'models');
+const out = path.join(here, '..', 'public', 'models');
 fs.mkdirSync(out, { recursive: true });
 
 const glb = fs.readFileSync(path.join(src, 'daz_asian_head_base.glb'));
@@ -48,6 +49,6 @@ const bh = Buffer.alloc(8); bh.writeUInt32LE(bin.length, 0); bh.writeUInt32LE(0x
 fs.writeFileSync(path.join(out, 'bust_head_base.glb'), Buffer.concat([head, jh, js, bh, bin]));
 
 // 中性发型（不含任何由真人照片生成的发型）
-const HAIRS = ['daz_hair_air_bangs_long', 'hair_long01', 'daz_hair_ballerina_bun', 'hair_bob01', 'daz_hair_side_long', 'daz_hair_curtain_wave', 'hair_ponytail01', 'daz_hair_low_chignon', 'daz_hair_pixie_chic', 'daz_hair_wavy_bob'];
+const HAIRS = HAIR_CATALOG.map((h) => h.id); // hair_user_photo 等由真人照片生成的资产永不复制
 for (const h of HAIRS) fs.copyFileSync(path.join(src, h + '.glb'), path.join(out, h + '.glb'));
 console.log(fs.readdirSync(out).map((f) => f + ' ' + (fs.statSync(path.join(out, f)).size / 1048576).toFixed(2) + 'MB').join('\n'));

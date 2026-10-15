@@ -3,14 +3,17 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { createStudioRig, createBackdrop, LIGHT_PRESETS } from './studioLighting.js';
-import { upgradeSkinMaterial, setSkinParams } from './skinMaterial.js';
-import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHairMaterials, applyHairColor } from './featureMaterials.js';
-import { createPostChain, createAccumulator, FILM_PRESETS, POST_DEFAULTS } from './postChain.js';
-import { createDisplayStand, STAND_STYLES } from './displayStand.js';
-import { BACKGROUNDS, backgroundTexture } from './backgrounds.js';
-import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture, scalpDistanceAttribute } from './strandHair.js';
-import { HEAD_GLB, HAIRS } from './assets.gen.js';
+import { createStudioRig, createBackdrop, LIGHT_PRESETS } from './three/studioLighting.js';
+import { upgradeSkinMaterial, setSkinParams } from './three/skinMaterial.js';
+import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHairMaterials, applyHairColor } from './three/featureMaterials.js';
+import { createPostChain, createAccumulator, FILM_PRESETS, POST_DEFAULTS } from './three/postChain.js';
+import { createDisplayStand, STAND_STYLES } from './three/displayStand.js';
+import { BACKGROUNDS, backgroundTexture } from './three/backgrounds.js';
+import { generateStrands, createStrandMaterial, setStrandParams, morphedHeadSoup, alphaSamplerFromTexture, scalpDistanceAttribute } from './three/strandHair.js';
+import { HAIR_CATALOG, HAIR_GROUPS, HEAD_MODEL_ID } from './data/hairCatalog.js';
+import { loadModelBytes } from './data/assetLoader.js';
+import './style.css';
+const HAIRS = HAIR_CATALOG;
 
 const qs = new URLSearchParams(location.search);
 const QA = qs.has('qa');
@@ -176,7 +179,7 @@ async function applyBrow(id) {
 }
 
 async function loadHead() {
-  gltfHead = await parseGlb(HEAD_GLB);
+  gltfHead = await parseGlb(await loadModelBytes(HEAD_MODEL_ID));
   const root = gltfHead.scene;
   root.traverse((o) => {
     if (!o.isMesh) return;
@@ -242,7 +245,7 @@ async function loadHair(id) {
   hairMeshes = [];
   if (strandMesh) { strandMesh.parent?.remove(strandMesh); strandMesh = null; }
   const h = HAIRS.find((x) => x.id === id) || HAIRS[0];
-  if (!hairGlbCache.has(h.id)) hairGlbCache.set(h.id, await parseGlb(h.data));
+  if (!hairGlbCache.has(h.id)) hairGlbCache.set(h.id, await parseGlb(await loadModelBytes(h.id)));
   const g = hairGlbCache.get(h.id);
   let srcMesh = null; g.scene.traverse((o) => { if (o.isMesh && !srcMesh) srcMesh = o; });
   if (!srcMesh) return;
@@ -482,7 +485,7 @@ function buildStudio() {
   select(C, '眉形', Object.keys(gltfHead.parser.json.extras?.realWebAssets?.eyebrows || {}).map((b) => [b, BROW_LABELS[b] || b]), () => ch.brow, async (v) => { ch.brow = v; await applyBrow(v); });
 
   const Hh = section(P, '💇 发型发色');
-  select(Hh, '发型', HAIRS.map((x) => [x.id, x.label]), () => ch.hair, async (v) => { ch.hair = v; await loadHair(v); applyMaterials(); });
+  select(Hh, '发型（' + HAIRS.length + ' 款）', HAIRS.map((x) => [x.id, '[' + (HAIR_GROUPS[x.group] || '').slice(0, 2) + '] ' + x.label]), () => ch.hair, async (v) => { ch.hair = v; await loadHair(v); applyMaterials(); });
   select(Hh, '发色', [...Object.entries(HAIR_COLORS).map(([k, v]) => [k, v.label]), ['custom', '自定义…']], () => ch.hairColor, (v) => { ch.hairColor = v; applyHairLook(); buildStudio(); });
   if (ch.hairColor === 'custom') { const ci = h('input', { type: 'color', value: ch.hairCustom || '#3a2618' }); ci.oninput = () => { ch.hairCustom = ci.value; applyHairLook(); }; Hh.append(ci); }
   slider(Hh, '发丝光泽（R/TRT 高光）', 0, 2.5, 0.01, () => ch.hairShine, (v) => { ch.hairShine = v; applyHairLook(); });
