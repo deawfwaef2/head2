@@ -56,3 +56,13 @@ node 安全/tools/qa_shots.mjs /tmp/qa
 - 新建 `安全/`；复制 `画质提升/src` 的中性渲染模块；清洗头模（移除 NeckCrossSection），复制 10 款中性发型。
 - 先用画质提升演示打包出一个可玩预览 HTML，保证远端随时可玩。
 - 下一步：完整 app（开始页 + 工坊/收藏/桌宠/设置 + 大量画质开关 + 胶片预设 + 新布光）。
+
+### 2026-10-15 · 安全版 阶段 2（完整应用）
+- `src/app.js` + `src/template.html` + `build.mjs`：开始页（加载中点击也会在就绪后自动进入）、工坊/收藏/桌宠/设置四个页签。
+- `studioLighting.js`：新增 7 种布光；`apply(id, overrides)` 支持方位/仰角/强度/柔和/色温/轮廓/补光/环境/曝光叠加；
+  Gobo（窗格/树叶）放在 layer 5，只被主光阴影相机看到 → 不出现在画面、也不进 GTAO。环境贴图只在参数变化时重烘焙。
+- `postChain.js`：重写胶片层（白平衡、趾/肩曲线、褪色、色调分离、晕光、柔焦、颗粒大小、黑白）+ BokehPass 景深 + `FILM_PRESETS`。
+- `displayStand.js`：5 种底座材质 `STAND_STYLES`。
+- 面板打开时用 `camera.setViewOffset` 让胸像居中于左侧空白区域。
+- 自检（SwiftShader）：daylight 发片、window 真发丝、golden 3/4 均正常出图，无控制台错误。
+- 待办：导入自有授权 GLB 头模；多个桌宠同时摆放；Electron 透明系统桌宠；眼睛虹膜颜色；更真实的发际线。

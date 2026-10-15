@@ -37,7 +37,7 @@ const FACE_SLIDERS = [['nose_width', '鼻翼宽窄'], ['nose_height', '鼻梁高
 const SKIN_LABELS = { cn_scholar_natural: '自然素颜', cn_porcelain_ivory: '瓷白', kr_dewy_peach: '水光蜜桃', kr_firstlove_camellia: '初恋山茶', cn_jiangnan_jade: '温玉', kr_chaebol_cool: '冷调白皙', cn_intellectual_olive: '橄榄暖调', eurasian_velvet_rose: '玫瑰丝绒', young_asian: '青年原版', natural_makeup: '淡妆原版' };
 const BROW_LABELS = { eyebrow010: '自然毛流眉', eyebrow003: '柳叶眉', eyebrow001: '平直眉', eyebrow002: '细弯眉', eyebrow004: '标准眉', eyebrow005: '细眉', eyebrow008: '浓眉', eyebrow012: '野生眉' };
 const VIEWS = {
-  portrait: { label: '胸像全景', pos: [0.32, 0.03, 1.25], target: [0, -0.03, 0], fov: 18 },
+  portrait: { label: '胸像全景', pos: [0.36, 0.06, 1.55], target: [0, -0.045, 0], fov: 18 },
   front: { label: '正面肖像', pos: [0, 0.012, 1.05], target: [0, 0.005, 0], fov: 15 },
   threequarter: { label: '3/4 侧', pos: [-0.62, 0.05, 0.85], target: [0, 0.008, 0.01], fov: 15 },
   profile: { label: '侧面', pos: [-1.05, 0.02, 0.06], target: [0, 0.005, 0], fov: 15 },
@@ -456,7 +456,8 @@ function snapshotThumb() {
   const W = 240, H = 320; const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const g = cv.getContext('2d'); const sw = canvas.width, sh = canvas.height;
   const k = Math.min(sw / W, sh / H) * 0.82; const cw = W * k, chh = H * k;
-  const sx = (sw - cw) / 2 - (document.querySelector('.panel.on') ? sw * 0.08 : 0);
+  const off = camera.view && camera.view.enabled ? (330 / (window.innerWidth + 330)) * sw * 0.5 : 0;
+  const sx = (sw - cw) / 2 - off;
   g.drawImage(canvas, Math.max(0, sx), (sh - chh) / 2, cw, chh, 0, 0, W, H);
   return cv.toDataURL('image/jpeg', 0.82);
 }
@@ -543,7 +544,7 @@ function layoutPet() {
   pet.x = Math.min(Math.max(0, pet.x), window.innerWidth - w); pet.y = Math.min(Math.max(0, pet.y), window.innerHeight - hgt - 42);
   win.style.left = pet.x + 'px'; win.style.top = pet.y + 'px';
   renderer.setPixelRatio(pixelRatio()); renderer.setSize(w, hgt, false);
-  camera.aspect = w / hgt; camera.updateProjectionMatrix(); post?.setSize(w, hgt);
+  camera.clearViewOffset(); camera.aspect = w / hgt; camera.updateProjectionMatrix(); post?.setSize(w, hgt);
 }
 function enterPet() {
   document.body.classList.add('pet', 'hideui');
@@ -581,7 +582,7 @@ function bindPet() {
 }
 
 // ---------------- 导航 / 工具栏 ----------------
-function setTab(t) { document.querySelectorAll('#top button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('on', p.id === 'p-' + t)); }
+function setTab(t) { document.querySelectorAll('#top button').forEach((b) => b.classList.toggle('on', b.dataset.tab === t)); document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('on', p.id === 'p-' + t)); applyViewOffset(); }
 function switchTab(t) {
   if (t === 'pet') { enterPet(); return; }
   if (document.body.classList.contains('pet')) { exitPet(); }
@@ -591,7 +592,7 @@ function switchTab(t) {
 }
 function bindChrome() {
   document.querySelectorAll('#top button').forEach((b) => { b.onclick = () => switchTab(b.dataset.tab); });
-  $('btnUI').onclick = () => { if (document.body.classList.contains('pet')) return; document.body.classList.toggle('hideui'); };
+  $('btnUI').onclick = () => { if (document.body.classList.contains('pet')) return; document.body.classList.toggle('hideui'); applyViewOffset(); };
   $('btnAB').onclick = async () => {
     compare = !compare; $('btnAB').classList.toggle('on', compare);
     $('abLabel').style.display = compare ? 'block' : 'none'; $('abLabel').textContent = '⬜ 原始渲染（未启用写实管线）';
@@ -600,11 +601,18 @@ function bindChrome() {
   $('btnShot').onclick = () => { renderFrame(); canvas.toBlob((b) => download(`${ch.name}_${Date.now()}.png`, b), 'image/png'); };
   window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.body.classList.contains('pet')) exitPet(); });
 }
+function applyViewOffset() {
+  const W = window.innerWidth, H = window.innerHeight;
+  const panelOpen = !document.body.classList.contains('hideui') && !document.body.classList.contains('pet') && document.querySelector('.panel.on') && W > 820;
+  if (panelOpen) camera.setViewOffset(W + 330, H, 330, 0, W, H); else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
 function onResize() {
   if (document.body.classList.contains('pet')) { layoutPet(); return; }
   renderer.setPixelRatio(pixelRatio());
   camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight); post?.setSize(window.innerWidth, window.innerHeight);
+  applyViewOffset();
 }
 window.addEventListener('resize', onResize);
 
@@ -656,6 +664,7 @@ async function boot() {
     progress(0.75, '布置摄影棚灯光…'); await new Promise((r) => setTimeout(r, 20));
     stand = createDisplayStand(parts.skin, ch.stand); head.add(stand);
     setView(qs.get('view') || 'portrait');
+    applyViewOffset();
     await applyAll();
     buildStudio(); buildGallery(); buildSettings(); bindChrome(); bindPet();
     progress(1, isSoftware ? '已就绪（检测到软件渲染，已自动降低发丝密度）' : '已就绪');
