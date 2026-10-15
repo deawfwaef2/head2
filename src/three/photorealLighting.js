@@ -957,7 +957,14 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
 
     const preintegratedLightsPars = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
       'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
-      'reflectedLight.directDiffuse += directLight.color * BRDF_Lambert( material.diffuseColor ) * skinPreintegratedDiffuse( geometryNormal, directLight.direction );'
+      `vec3 skinIrr = skinPreintegratedDiffuse( geometryNormal, directLight.direction ) * directLight.color;
+       reflectedLight.directDiffuse += skinIrr * BRDF_Lambert( material.diffuseColor );
+       {
+         // Barré-Brisebois thin-tissue backlight translucency (画质提升/src/skinMaterial.js)
+         vec3 Ht = normalize(directLight.direction + geometryNormal * 0.35);
+         float It = pow(clamp(dot(geometryViewDir, -Ht), 0.0, 1.0), 3.0) * (0.25 + 1.5 * gSkinCurv);
+         reflectedLight.directDiffuse += directLight.color * It * clamp(uSssIntensity * 0.72, 0.0, 1.1) * vec3(1.0, 0.28, 0.16) * material.diffuseColor * 0.55;
+       }`
     );
 
     shader.fragmentShader = shader.fragmentShader.replace(
@@ -2253,6 +2260,14 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       lensDistortion: Number(m.lensDistortion ?? basePreset.lensDistortion ?? 0.04),
       filmLutMode: m.filmLutMode ?? basePreset.filmLutMode ?? 'portra_160_sun',
       filmLutStrength: Number(m.filmLutStrength ?? basePreset.filmLutStrength ?? 0.48),
+      blurMode: m.blurMode ?? basePreset.blurMode ?? 'none',
+      blurPower: Number(m.blurPower ?? basePreset.blurPower ?? 0.0),
+      focusCenterY: Number(m.focusCenterY ?? basePreset.focusCenterY ?? 0.50),
+      filterPreset: m.filterPreset,
+      fade: Number(m.fade ?? basePreset.fade ?? 0.0),
+      splitAmount: Number(m.splitAmount ?? basePreset.splitAmount ?? 0.0),
+      splitShadow: m.splitShadow || basePreset.splitShadow,
+      splitHighlight: m.splitHighlight || basePreset.splitHighlight,
       tyndallAngle: tyndallAngleRad,
       tyndallColor: keyHex,
       tint: m.tint || basePreset.tint,

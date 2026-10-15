@@ -1352,11 +1352,24 @@
   - Confined `ScalpRootFeatherCap` (`buildScalpRootShadowCap`) strictly to the top-crown parting zone (`ym > 0.068 && zm < 0.036 && |xm| < 0.052`) so the dark hair root cap never pokes out on the forehead or temples, and increased `fitArtistHairOutsideScalp` radial safety clearance to `2.2 mm`.
   - Rebuilt `/home/user/点击开始游戏_CERVIX3D.html` (`31.05 MB`, hardlinked with `docs/index.html`).
 
-
-
 ---
 
-## [2026-10-15] 安全版阶段 7 —— `安全/` 已与主项目同构（Vite + src/three|data|ui|textures + public/models + scripts）
-- 同步了主项目 37 款纯发型 GLB 与 MPFB2 骨相数据（已排除 hair_user_photo.glb、*_ref.jpg 与 user_photo_clone 配方、人名标签）。
-- 新增效果总线 `安全/src/data/effectRegistry.js + effectBus.js`：所有画面效果可开关/可调/可连线（`window.SafeBust.fx`）。
-- 详见 `安全/HANDOFF_安全.md` 阶段 7。
+## [2026-10-15] Stage 66 — Desktop Pet Mode & Floor Fix, Subsurface/Eye Occlusion Shader Upgrade, High-Contrast UI & 46-Essay Reader Restoration, Zero Unintended Drift, 6 Blur + 12 Lighting Filters, and Clean 4-Field Specimen Placards
+- **1. Desktop Pet Mode & Eliminated 3D Floor Blocking Monitor Screen (`src/three/specimenStageAndContainers.js`, `src/three/desktopBoxSpaceEngine.js`)**:
+  - Clamped visual floor slab depth in `buildScreenSpaceStageGroup` from `162 cm` (`z = -120..+42`) to a compact `34 cm` (`z = -26..+8`, `slabThickness = 1.4 cm`) so perspective projection never covers the monitor screen, while keeping the physics landing plane across the full depth.
+  - Added 1-click Desktop Pet Mode (`setDesktopPetMode(enabled)`, `#btn-desktop-pet-mode-toggle` on top bar & `#obs-btn-toggle-pet-mode` in Studio) that hides the 3D floor/shelves/grid for a 100% transparent desktop pet overlay.
+- **2. Upgraded Eye Eyelid/Canthus Occlusion, Pre-Integrated SSS & Barré-Brisebois Backlight Translucency (`src/three/collectibleHeadAssembler.js`, `src/three/photorealLighting.js`, `src/three/masterQuality/*`)**:
+  - Added upper/lower eyelid shadow occlusion (`occUpper`, `occLower`) and moist pink medial/lateral canthus occlusion (`occCorner`) to `injectLifelikeEyeShader`.
+  - Added Barré-Brisebois thin-tissue backlight translucency (`Ht = normalize(L + N * 0.35)`) alongside curvature-adaptive pre-integrated SSS in `injectDualLobeSkinShader`.
+- **3. Stopped Unintended Camera/Head Movement Without Mouse Wheel (`src/three/desktopBoxSpaceEngine.js`)**:
+  - Required a direct raycast hit (`directPet` / `directStruct`) and `Math.abs(e.deltaY) >= 4` in `wheel` (removed `selectedStructureId` / `hoveredPetId` fallback when scrolling over empty screen space).
+  - Prevented stationary grounded pets from pushing each other or receiving velocity in `enablePetCollision` or `clampPetToBounds`, and changed simple click (`pointerup`) to select without auto-toggling `isRotationMode` (rotation mode toggles via `dblclick` or button).
+- **4. Added 6 Desktop Pet Blur Modes & 12 Lighting/Film Filter Presets (`src/three/beautyPostChain.js`, `src/ui/obsidianProStudio.js`)**:
+  - Implemented `DESKTOP_PET_BLUR_MODES` (`none`, `portrait_dof`, `pro_mist`, `tilt_shift`, `radial_zoom`, `dream_haze`) and `DESKTOP_PET_FILTER_PRESETS` (12 lighting/color presets + split-toning & film fade) in `BeautyGradeShader`, accessible from both the top bar (`#top-pet-blur-select`, `#top-pet-filter-select`) and Studio Tab 5 (`建筑与滤镜`).
+- **5. High-Contrast UI Readability, Architectural Controls & 46-Essay Reader Restoration, and Clean 4-Field Specimen Placards (`src/ui/obsidianProStudio.css`, `src/ui/obsidianProStudio.js`, `src/main.js`)**:
+  - Restored `#btn-open-comfort-reader` (`📖 宽心作文手札 (46篇)`), `#btn-quick-place-container` (`🏛️ 建筑与展柜`), `#btn-quick-placards` (`🏷️ 标牌显隐`), and architectural/shelf/container controls, and upgraded `obsidianProStudio.css` to high-contrast typography (`#ffffff` / `#f1f5f9` / `#fef08a`) without truncating slider labels.
+  - Simplified `.specimen-placard-card` (`renderSpecimenPlacards`) to display ONLY **Photo (`照片`)**, **Name (`名字`)**, **Age (`年龄`)**, and **Brief Story (`简要故事`)**, with a live 4-field editor (`#obs-placard-photo-upload`, `#obs-placard-name-input`, `#obs-placard-age-input`, `#obs-placard-story-input`) in the `人物与标牌` tab.
+  - Rebuilt standalone playable HTML `/home/user/点击开始游戏_CERVIX3D.html` (`31.09 MB`, hardlinked with `docs/index.html`).
+
+
+

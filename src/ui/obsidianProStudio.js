@@ -6,6 +6,8 @@
 // ============================================================================
 
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
+import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
+import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
 
 const NEW_32_HAIR_IDS = new Set([
   'daz_hair_o4saken_long',
@@ -320,15 +322,15 @@ export function initObsidianProStudio() {
     }
   }
 
-  // Ensure #software-window and #specimen-placards-layer start hidden for a 100% clean 3D desktop
+  // Ensure #software-window starts hidden, while #specimen-placards-layer starts visible with clean 4-field placards
   const swWin = document.getElementById('software-window');
   if (swWin) swWin.classList.add('window-hidden');
   const placardsLayer = document.getElementById('specimen-placards-layer');
-  if (placardsLayer) placardsLayer.classList.add('hidden');
+  if (placardsLayer) placardsLayer.classList.remove('hidden');
   const btnPlacards = document.getElementById('btn-quick-placards');
-  if (btnPlacards) btnPlacards.classList.remove('active-top');
+  if (btnPlacards) btnPlacards.classList.add('active-top');
 
-  // 2. Transform #desktop-overlay-bar into a sleek Minimalist Capsule Dock
+  // 2. Transform #desktop-overlay-bar into a sleek High-Contrast Command Dock
   transformTopOverlayBar();
   syncCatalogSelectOptions();
 
@@ -343,9 +345,10 @@ export function initObsidianProStudio() {
     <div class="obs-studio-header">
       <div class="obs-studio-title-group">
         <span class="obs-studio-eyebrow">OBSIDIAN PRO · STUDIO</span>
-        <span class="obs-studio-title">人物与发型高定总控台</span>
+        <span class="obs-studio-title">人物 · 发型 · 建筑 · 光影滤镜总控台</span>
       </div>
       <div style="display:flex;gap:6px;align-items:center;">
+        <button id="btn-obs-open-comfort-reader" class="obs-icon-btn" title="打开46篇伴学宽心手札作文阅读器" style="border-color:rgba(244,114,182,0.75);color:#fce7f3;">📖 作文手札</button>
         <button id="btn-obs-open-3d-workbench" class="obs-icon-btn" title="打开独立3D工坊与典藏库">3D工坊</button>
         <button id="btn-obs-close-studio" class="obs-icon-btn" title="收起面板 (Esc)">✕</button>
       </div>
@@ -361,9 +364,10 @@ export function initObsidianProStudio() {
 
     <div class="obs-main-tabs" role="tablist">
       <button class="obs-tab-btn active" data-obs-tab="hair">发型高定</button>
-      <button class="obs-tab-btn" data-obs-tab="character">人物基底</button>
+      <button class="obs-tab-btn" data-obs-tab="character">人物与标牌</button>
       <button class="obs-tab-btn" data-obs-tab="face">眉眼五官</button>
-      <button class="obs-tab-btn" data-obs-tab="material">肤质与断面</button>
+      <button class="obs-tab-btn" data-obs-tab="material">肤质断面</button>
+      <button class="obs-tab-btn" data-obs-tab="arch_filter">建筑与滤镜</button>
     </div>
 
     <div class="obs-studio-body">
@@ -506,8 +510,46 @@ export function initObsidianProStudio() {
         </details>
       </div>
 
-      <!-- ==================== TAB 2: 人物基底 (CHARACTER) ==================== -->
+      <!-- ==================== TAB 2: 人物与标牌 (CHARACTER & PLACARD) ==================== -->
       <div class="obs-pane" data-obs-pane="character">
+        <div class="obs-section" style="border-color:rgba(251,191,36,0.55);">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title" style="color:#fef08a;">🏷️ 标牌信息设置 (照片 · 名字 · 年龄 · 简要故事)</span>
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#f8fafc;cursor:pointer;">
+              <input type="checkbox" id="obs-chk-placards-visible" checked style="accent-color:#fbbf24;cursor:pointer;" />
+              <span>显示桌面标牌</span>
+            </label>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
+              <div style="width:68px;height:68px;border-radius:10px;overflow:hidden;border:2px solid rgba(251,191,36,0.75);background:#0f172a;">
+                <img id="obs-placard-photo-preview" src="" alt="人物照片" style="width:100%;height:100%;object-fit:cover;" />
+              </div>
+              <label class="obs-icon-btn" style="padding:3px 8px;font-size:11px;text-align:center;cursor:pointer;">
+                📷 换照片
+                <input type="file" id="obs-placard-photo-upload" accept="image/*" style="display:none;" />
+              </label>
+              <button type="button" id="obs-placard-photo-reset" class="obs-icon-btn" style="padding:2px 6px;font-size:10.5px;">↺ 默认照</button>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;">
+              <div style="display:grid;grid-template-columns:1fr 90px;gap:7px;">
+                <div>
+                  <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物名字</div>
+                  <input type="text" id="obs-placard-name-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="输入名字 (如：方尧平)" />
+                </div>
+                <div>
+                  <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物年龄</div>
+                  <input type="text" id="obs-placard-age-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="如：19岁" />
+                </div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">一段简要故事 (实时显示在标牌上)</div>
+                <textarea id="obs-placard-story-input" class="obs-select" rows="2" style="width:100%;padding:6px 8px;resize:vertical;line-height:1.4;" placeholder="输入人物生前身份或简要故事..."></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="obs-section">
           <div class="obs-sec-head">
             <span class="obs-sec-title">38款东亚全覆盖真实3D骨相脸型</span>
@@ -769,6 +811,104 @@ export function initObsidianProStudio() {
           </div>
         </details>
       </div>
+
+      <!-- ==================== TAB 5: 建筑与滤镜 (ARCHITECTURE & DESKTOP PET FILTERS) ==================== -->
+      <div class="obs-pane" data-obs-pane="arch_filter">
+        <div class="obs-section" style="border-color:rgba(56,189,248,0.55);">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title" style="color:#bae6fd;">🐾 桌面宠物模式与3D地板防遮挡开关</span>
+            <button type="button" id="obs-btn-toggle-pet-mode" class="obs-icon-btn" style="border-color:#38bdf8;color:#e0f2fe;">切换纯净桌宠无地板</button>
+          </div>
+          <div style="font-size:11.5px;color:#cbd5e1;margin-bottom:8px;">
+            已修复3D地板向屏幕上方透视遮挡显示器画面的问题；开启「纯净桌宠无地板」即可隐藏全部3D案台与书架，让头颅悬浮/安放在透明桌面上。
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:5px;">3D案台/地板材质切换</div>
+          <div class="obs-pill-grid" id="obs-floor-style-pills" style="margin-bottom:8px;">
+            <button class="obs-choice-pill active" data-floor-style="walnut_desk">🪵 核桃木案台</button>
+            <button class="obs-choice-pill" data-floor-style="dark_obsidian">🖤 黑曜石展台</button>
+            <button class="obs-choice-pill" data-floor-style="marble_museum">🏛️ 卢浮宫白玉</button>
+            <button class="obs-choice-pill" data-floor-style="surgical_steel">🔬 法医不锈钢</button>
+            <button class="obs-choice-pill" data-floor-style="none">🐾 无地板纯透明</button>
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:5px;">3D多格陈列架建筑布局</div>
+          <div class="obs-pill-grid" id="obs-shelf-layout-pills" style="margin-bottom:8px;">
+            <button class="obs-choice-pill active" data-shelf-layout="study_side_rack">📚 双侧伴学博古架</button>
+            <button class="obs-choice-pill" data-shelf-layout="museum_tiered">🏛️ 博物馆三层阶梯台</button>
+            <button class="obs-choice-pill" data-shelf-layout="pillar_colonnade">🏺 凯旋科林斯柱阵</button>
+            <button class="obs-choice-pill" data-shelf-layout="none">✨ 无展架开阔桌面</button>
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:5px;">一键桌面阵型排布</div>
+          <div class="obs-pill-grid" id="obs-formation-pills">
+            <button class="obs-choice-pill" data-formation="study_sides">📐 伴学分列两侧</button>
+            <button class="obs-choice-pill" data-formation="bottom_row">📏 底部一字排开</button>
+            <button class="obs-choice-pill" data-formation="altar_pyramid">👑 祭坛金字塔阵</button>
+            <button class="obs-choice-pill" data-formation="macro_focus">🔍 居中微距特写</button>
+          </div>
+        </div>
+
+        <div class="obs-section">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title">🏛️ 放置独立3D头颅收纳容器与伴学道具</span>
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:5px;">点击即可在桌面新增或为当前选中标本装配3D容器</div>
+          <div class="obs-pill-grid" id="obs-place-container-pills" style="margin-bottom:8px;">
+            <button class="obs-choice-pill" data-place-container="glass_bell_jar">🔔 博物馆玻璃钟罩</button>
+            <button class="obs-choice-pill" data-place-container="velvet_chalice">🍷 丝绒高脚圣杯底座</button>
+            <button class="obs-choice-pill" data-place-container="formalin_cylinder">🧪 福尔马林玻璃标本罐</button>
+            <button class="obs-choice-pill" data-place-container="acrylic_cube">🧊 亚克力防尘展盒</button>
+            <button class="obs-choice-pill" data-place-container="surgical_tray">🩺 法医不锈钢解剖盘</button>
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:5px;">当前标本伴学装饰物切换</div>
+          <div class="obs-pill-grid" id="obs-decor-prop-pills">
+            <button class="obs-choice-pill active" data-decor-style="study_tomes">📖 伴学古籍与金笔</button>
+            <button class="obs-choice-pill" data-decor-style="trophy_candles">🕯️ 哥特祭坛烛台</button>
+            <button class="obs-choice-pill" data-decor-style="soul_siphon">⚡ 脑波汲取导管</button>
+            <button class="obs-choice-pill" data-decor-style="forensic_evidence">🏷️ 法医物证号牌</button>
+            <button class="obs-choice-pill" data-decor-style="none">✨ 无装饰物</button>
+          </div>
+        </div>
+
+        <div class="obs-section" style="border-color:rgba(167,139,250,0.55);">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title" style="color:#ddd6fe;">🌫️ 桌面宠物后期模糊滤镜 (6种光学模糊)</span>
+            <span id="obs-blur-current-label" class="obs-sec-sub">无模糊 (4K超清锐利)</span>
+          </div>
+          <div class="obs-pill-grid" id="obs-pet-blur-pills" style="margin-bottom:10px;">
+            ${DESKTOP_PET_BLUR_MODES.map((bm, idx) => `
+              <button class="obs-choice-pill ${idx === 0 ? 'active' : ''}" data-pet-blur="${bm.id}">${bm.label}</button>
+            `).join('')}
+          </div>
+          <div class="obs-slider-row">
+            <span>模糊强度</span>
+            <input type="range" id="obs-pet-blur-power" min="0" max="1.2" step="0.02" value="0.55" />
+            <span id="obs-pet-blur-power-val">55%</span>
+          </div>
+          <div class="obs-slider-row">
+            <span>清晰焦点高度</span>
+            <input type="range" id="obs-pet-blur-focus-y" min="0.15" max="0.85" step="0.02" value="0.52" />
+            <span id="obs-pet-blur-focus-y-val">52%</span>
+          </div>
+        </div>
+
+        <div class="obs-section" style="border-color:rgba(244,114,182,0.55);">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title" style="color:#fbcfe8;">🎞️ 桌面宠物光影与胶片滤镜 (12款光影色调)</span>
+            <span id="obs-filter-current-label" class="obs-sec-sub">原片直出</span>
+          </div>
+          <div class="obs-pill-grid" id="obs-pet-filter-pills" style="margin-bottom:10px;">
+            ${DESKTOP_PET_FILTER_PRESETS.map((fp, idx) => `
+              <button class="obs-choice-pill ${idx === 0 ? 'active' : ''}" data-pet-filter="${fp.id}">${fp.label}</button>
+            `).join('')}
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:5px;">影棚散景背景切换 (或保持透明桌宠底)</div>
+          <div class="obs-pill-grid" id="obs-backdrop-preset-pills">
+            <button class="obs-choice-pill active" data-backdrop-id="transparent">🪟 透明桌宠底 (默认)</button>
+            ${BACKGROUNDS_LIST.map((bg) => `
+              <button class="obs-choice-pill" data-backdrop-id="${bg.id}">🎨 ${bg.name}</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -819,7 +959,36 @@ function syncObsidianCardsFromDOM(studio) {
       c.classList.toggle('active', c.dataset.browId === brow);
     });
   }
+
+  // Sync Character Placard Settings (Photo, Name, Age, Brief Story)
+  const qa = window.__cervixQA;
+  if (qa && typeof qa.getActiveCollectible === 'function') {
+    const col = qa.getActiveCollectible();
+    if (col) {
+      syncPlacardEditorFromCollectible(col);
+    }
+  }
 }
+
+function syncPlacardEditorFromCollectible(col) {
+  if (!col) return;
+  const qa = window.__cervixQA;
+  const baseShortName = (col.name || '').split('·')[0].trim();
+  const displayName = col.customDisplayName || baseShortName;
+  const displayAge = col.customAge || col.fateRecord?.ageAtCollection || '19岁';
+  const briefStory = col.customBriefStory || col.customContrastText || col.fateRecord?.cause || col.subtitle || '静默案头藏品 · 任由主人端详摆布';
+  const photoSrc = qa?.resolveCollectibleLifePhotoSrc ? qa.resolveCollectibleLifePhotoSrc(col) : (col.customLifePhotoUrl || '');
+
+  const nameInp = document.getElementById('obs-placard-name-input');
+  if (nameInp && document.activeElement !== nameInp) nameInp.value = displayName;
+  const ageInp = document.getElementById('obs-placard-age-input');
+  if (ageInp && document.activeElement !== ageInp) ageInp.value = displayAge;
+  const storyInp = document.getElementById('obs-placard-story-input');
+  if (storyInp && document.activeElement !== storyInp) storyInp.value = briefStory;
+  const photoImg = document.getElementById('obs-placard-photo-preview');
+  if (photoImg && photoSrc) photoImg.src = photoSrc;
+}
+window.__syncPlacardEditorFields = syncPlacardEditorFromCollectible;
 
 function transformTopOverlayBar() {
   const bar = document.getElementById('desktop-overlay-bar');
@@ -841,8 +1010,11 @@ function transformTopOverlayBar() {
     actions.insertBefore(btnStudio, actions.firstChild);
   }
 
-  // Clean core button labels
+  // Keep primary buttons (including 46-essay Comfort Reader, Architecture, Placard Toggle, Desktop Pet Mode) directly on top bar!
   const coreLabels = {
+    'btn-open-comfort-reader': '📖 宽心作文手札 (46篇)',
+    'btn-quick-place-container': '🏛️ 建筑与展柜',
+    'btn-quick-placards': '🏷️ 标牌显隐',
     'btn-visual-repair': '画风调制',
     'btn-toggle-window': '颅相工坊',
     'btn-quick-customizer': '光影镜头',
@@ -853,8 +1025,46 @@ function transformTopOverlayBar() {
     if (el) {
       el.textContent = text;
       el.removeAttribute('style');
+      el.classList.remove('hidden');
+      actions.appendChild(el);
     }
   });
+
+  // Add 1-click Desktop Pet Mode (no floor blocking monitor screen) button directly on top bar
+  let btnPetMode = document.getElementById('btn-desktop-pet-mode-toggle');
+  if (!btnPetMode) {
+    btnPetMode = document.createElement('button');
+    btnPetMode.id = 'btn-desktop-pet-mode-toggle';
+    btnPetMode.className = 'overlay-btn';
+    btnPetMode.title = '一键切换纯净桌面宠物模式（隐藏3D地板/展架，绝不遮挡显示器画面）';
+    btnPetMode.textContent = '🐾 桌宠无地板';
+    actions.appendChild(btnPetMode);
+  }
+
+  // Add inline Desktop Pet Blur Mode selector & Lighting/Film Filter selector directly on top bar
+  let blurSelect = document.getElementById('top-pet-blur-select');
+  if (!blurSelect) {
+    blurSelect = document.createElement('select');
+    blurSelect.id = 'top-pet-blur-select';
+    blurSelect.className = 'obs-top-select';
+    blurSelect.title = '桌面宠物后期模糊模式切换';
+    blurSelect.innerHTML = DESKTOP_PET_BLUR_MODES.map(
+      (bm) => `<option value="${bm.id}">🌫️ ${bm.label.split(' ')[0]}</option>`
+    ).join('');
+    actions.appendChild(blurSelect);
+  }
+
+  let filterSelect = document.getElementById('top-pet-filter-select');
+  if (!filterSelect) {
+    filterSelect = document.createElement('select');
+    filterSelect.id = 'top-pet-filter-select';
+    filterSelect.className = 'obs-top-select';
+    filterSelect.title = '桌面宠物光影与色调滤镜切换';
+    filterSelect.innerHTML = DESKTOP_PET_FILTER_PRESETS.map(
+      (fp) => `<option value="${fp.id}">${fp.label}</option>`
+    ).join('');
+    actions.appendChild(filterSelect);
+  }
 
   // Shorten tactile mode button labels using [data-tactile-mode]
   const tactileModes = {
@@ -873,25 +1083,22 @@ function transformTopOverlayBar() {
     }
   });
 
-  // Move secondary buttons into a clean popover (#obs-more-popover) so the dock is a single sleek pill
+  // Move secondary utility buttons into #obs-more-popover
   const secondaryIds = [
-    ['btn-quick-placards', '连接标牌'],
-    ['btn-open-puzzle-hub', '积分与整备台'],
-    ['btn-open-comfort-reader', '伴学手札'],
-    ['btn-desktop-superiority-pulse', '一键泄压'],
-    ['btn-desktop-lookdown-view', '俯视视角'],
-    ['btn-quick-place-container', '放置容器'],
-    ['btn-quick-ultra-crisp', '4K超清'],
-    ['btn-quick-chiaroscuro', '强光影'],
-    ['btn-quick-postfx', '胶片调色'],
-    ['btn-quick-dyn-light', '慢速流光'],
-    ['btn-quick-rain-study', '雨声伴学'],
-    ['btn-quick-gravity', '物理重力'],
-    ['btn-quick-dock-window', '右侧停靠'],
-    ['btn-quick-pets-top', '桌宠置顶'],
-    ['btn-quick-box-grid', '透视网格'],
-    ['btn-quick-bg-mode', '背景切换'],
-    ['btn-quick-mute', '音效开关'],
+    ['btn-open-puzzle-hub', '🏆 积分与整备台'],
+    ['btn-desktop-superiority-pulse', '👑 一键泄压'],
+    ['btn-desktop-lookdown-view', '📐 俯视视角'],
+    ['btn-quick-ultra-crisp', '🔪 4K超清'],
+    ['btn-quick-chiaroscuro', '🌓 强光影'],
+    ['btn-quick-postfx', '🎞️ 胶片调色'],
+    ['btn-quick-dyn-light', '🌅 慢速流光'],
+    ['btn-quick-rain-study', '🌧️ 雨声伴学'],
+    ['btn-quick-gravity', '🍎 物理重力'],
+    ['btn-quick-dock-window', '◧ 右侧停靠'],
+    ['btn-quick-pets-top', '📌 桌宠置顶'],
+    ['btn-quick-box-grid', '🕸️ 透视网格'],
+    ['btn-quick-bg-mode', '🖼️ 背景切换'],
+    ['btn-quick-mute', '🔊 音效开关'],
   ];
 
   const moreWrap = document.createElement('div');
@@ -910,6 +1117,7 @@ function transformTopOverlayBar() {
     if (btn) {
       btn.textContent = cleanLabel;
       btn.removeAttribute('style');
+      btn.classList.remove('hidden');
       popover.appendChild(btn);
     }
   });
@@ -948,7 +1156,7 @@ function cleanExistingVerboseLabels() {
   const navTabTitles = {
     vault: '标本典藏库',
     studio: '3D 颅相工坊',
-     blueprint: '照片特征对位',
+    blueprint: '照片特征对位',
     archive: '本地典藏包',
   };
   document.querySelectorAll('#software-tabs .nav-tab').forEach((tab) => {
@@ -983,17 +1191,15 @@ function cleanExistingVerboseLabels() {
   const btnWithStudio = document.getElementById('btn-start-with-studio');
   if (btnWithStudio) btnWithStudio.textContent = '打开 3D 颅相工坊';
 
-  // 5. Strip parenthetical English & verbose descriptions from all .slider-row > span:first-child
+  // 5. Strip only parenthetical English notes from .slider-row > span:first-child WITHOUT truncating Chinese labels!
   document.querySelectorAll('.slider-row > span:first-child').forEach((span) => {
     const raw = (span.textContent || '').trim();
     if (!raw) return;
     const cleaned = raw
       .replace(/[\(（][^\)）]*[\)）]/g, '')
-      .replace(/^[0-9\.\s·•✦❖🎭👁️💇‍♀️🩸🕯️☀️🎬📷🔬🧬💄👑✂️🎀🍡🎨]+/u, '')
+      .replace(/^[0-9\.\s·•✦❖]+/u, '')
       .trim();
-    if (cleaned.length > 7) {
-      span.textContent = cleaned.slice(0, 6);
-    } else if (cleaned) {
+    if (cleaned) {
       span.textContent = cleaned;
     }
   });
@@ -1355,6 +1561,282 @@ function wireObsidianStudioEvents(studio) {
       if (valSpan) valSpan.textContent = formatSliderDisplay(v, fmt);
       if (targetId) setFormValueAndTrigger(targetId, v, 'input');
       if (fallbackId) setFormValueAndTrigger(fallbackId, v, 'input');
+    });
+  });
+
+  // =========================================================================
+  // Stage 66 · Comfort Reader Essay Button, 4-Field Placard Editor,
+  //            Desktop Pet Mode / Architecture & Blur / Lighting Filters
+  // =========================================================================
+  document.getElementById('btn-obs-open-comfort-reader')?.addEventListener('click', () => {
+    if (typeof window.__openComfortReaderDrawer === 'function') {
+      window.__openComfortReaderDrawer();
+    } else {
+      document.getElementById('btn-open-comfort-reader')?.click();
+    }
+  });
+
+  // 1. Character Placard 4-Field Editor (照片 · 名字 · 年龄 · 简要故事)
+  const placardChk = document.getElementById('obs-chk-placards-visible');
+  placardChk?.addEventListener('change', () => {
+    const qa = window.__cervixQA;
+    if (qa?.state) {
+      qa.state.placardsEnabled = placardChk.checked;
+      document.getElementById('btn-quick-placards')?.classList.toggle('active-top', placardChk.checked);
+      qa.refreshPlacards?.();
+    }
+  });
+
+  const nameInput = document.getElementById('obs-placard-name-input');
+  nameInput?.addEventListener('input', () => {
+    const qa = window.__cervixQA;
+    const col = qa?.getActiveCollectible?.();
+    if (!col) return;
+    col.customDisplayName = nameInput.value.trim();
+    qa.persistCollectibles?.();
+    qa.refreshPlacards?.();
+  });
+
+  const ageInput = document.getElementById('obs-placard-age-input');
+  ageInput?.addEventListener('input', () => {
+    const qa = window.__cervixQA;
+    const col = qa?.getActiveCollectible?.();
+    if (!col) return;
+    const rawAge = ageInput.value.trim();
+    col.customAge = rawAge;
+    if (col.fateRecord && rawAge) col.fateRecord.ageAtCollection = rawAge;
+    qa.persistCollectibles?.();
+    qa.refreshPlacards?.();
+  });
+
+  const storyInput = document.getElementById('obs-placard-story-input');
+  storyInput?.addEventListener('input', () => {
+    const qa = window.__cervixQA;
+    const col = qa?.getActiveCollectible?.();
+    if (!col) return;
+    const text = storyInput.value.trim();
+    col.customBriefStory = text;
+    col.customContrastText = text;
+    qa.persistCollectibles?.();
+    qa.refreshPlacards?.();
+  });
+
+  const photoUpload = document.getElementById('obs-placard-photo-upload');
+  photoUpload?.addEventListener('change', (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      const qa = window.__cervixQA;
+      const col = qa?.getActiveCollectible?.();
+      if (!col || !dataUrl) return;
+      col.customLifePhotoUrl = dataUrl;
+      const preview = document.getElementById('obs-placard-photo-preview');
+      if (preview) preview.src = dataUrl;
+      qa.persistCollectibles?.();
+      qa.refreshPlacards?.();
+      qa.showToast?.('📷 已更新人物标牌照片！');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('obs-placard-photo-reset')?.addEventListener('click', () => {
+    const qa = window.__cervixQA;
+    const col = qa?.getActiveCollectible?.();
+    if (!col) return;
+    delete col.customLifePhotoUrl;
+    const src = qa.resolveCollectibleLifePhotoSrc?.(col) || '';
+    const preview = document.getElementById('obs-placard-photo-preview');
+    if (preview && src) preview.src = src;
+    qa.persistCollectibles?.();
+    qa.refreshPlacards?.();
+    qa.showToast?.('↺ 已恢复人物默认生前照片');
+  });
+
+  // 2. Desktop Pet Mode Toggle (Hides 3D Floor/Shelves so monitor screen is never blocked)
+  const toggleDesktopPetModeAll = (forceVal) => {
+    const qa = window.__cervixQA;
+    const eng = qa?.desktop;
+    if (!eng) return;
+    const next = typeof forceVal === 'boolean' ? forceVal : !eng.desktopPetMode;
+    eng.setDesktopPetMode(next);
+    if (qa?.state) qa.state.desktopPetMode = next;
+    const topBtn = document.getElementById('btn-desktop-pet-mode-toggle');
+    if (topBtn) {
+      topBtn.classList.toggle('active-top', next);
+      topBtn.textContent = next ? '🐾 桌宠模式:开' : '🐾 桌宠无地板';
+    }
+    const studioBtn = document.getElementById('obs-btn-toggle-pet-mode');
+    if (studioBtn) {
+      studioBtn.textContent = next ? '✅ 已开启纯净桌宠无地板' : '切换纯净桌宠无地板';
+    }
+    qa?.showToast?.(next ? '🐾 已开启纯净桌面宠物模式：已隐藏3D地板与展架，绝不遮挡显示器画面！' : '🪵 已恢复3D案台与书架陈列室模式');
+  };
+
+  document.getElementById('btn-desktop-pet-mode-toggle')?.addEventListener('click', () => toggleDesktopPetModeAll());
+  document.getElementById('obs-btn-toggle-pet-mode')?.addEventListener('click', () => toggleDesktopPetModeAll());
+
+  // 3. Architecture: Floor Style, Shelf Layout, Formations, Containers & Props
+  studio.querySelectorAll('#obs-floor-style-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const fs = pill.dataset.floorStyle;
+      studio.querySelectorAll('#obs-floor-style-pills .obs-choice-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      const qa = window.__cervixQA;
+      if (fs === 'none') {
+        toggleDesktopPetModeAll(true);
+      } else {
+        toggleDesktopPetModeAll(false);
+        qa?.desktop?.updateSettings?.({ floorStyle: fs });
+        setFormValueAndTrigger('sel-floor-style', fs, 'change');
+      }
+    });
+  });
+
+  studio.querySelectorAll('#obs-shelf-layout-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const sl = pill.dataset.shelfLayout;
+      studio.querySelectorAll('#obs-shelf-layout-pills .obs-choice-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      const qa = window.__cervixQA;
+      toggleDesktopPetModeAll(false);
+      qa?.desktop?.updateSettings?.({ shelfLayout: sl });
+      setFormValueAndTrigger('sel-shelf-layout', sl, 'change');
+    });
+  });
+
+  studio.querySelectorAll('#obs-formation-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const fm = pill.dataset.formation;
+      studio.querySelectorAll('#obs-formation-pills .obs-choice-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      const origBtn = document.querySelector(`[data-stage-formation="${fm}"]`);
+      if (origBtn) {
+        origBtn.click();
+      } else {
+        window.__cervixQA?.desktop?.applyStageFormation?.(fm);
+      }
+    });
+  });
+
+  studio.querySelectorAll('#obs-place-container-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const cs = pill.dataset.placeContainer;
+      const qa = window.__cervixQA;
+      if (qa?.desktop) {
+        qa.desktop.placeContainerStructure(cs, { playSound: true });
+        qa.showToast?.(`🏛️ 已在桌面放置 3D 容器建筑（可直接将头颅拖入容器内）`);
+      }
+    });
+  });
+
+  studio.querySelectorAll('#obs-decor-prop-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const ds = pill.dataset.decorStyle;
+      studio.querySelectorAll('#obs-decor-prop-pills .obs-choice-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      setFormValueAndTrigger('sel-decor-style', ds, 'change');
+      setFormValueAndTrigger('vcd-decor-style', ds, 'change');
+    });
+  });
+
+  // 4. Desktop Pet Blur Modes (6 modes + blurPower + focusCenterY)
+  const applyPetBlurState = (blurMode, blurPower, focusCenterY) => {
+    const qa = window.__cervixQA;
+    const bm = blurMode ?? document.getElementById('top-pet-blur-select')?.value ?? 'none';
+    const bp = Number(blurPower ?? document.getElementById('obs-pet-blur-power')?.value ?? 0.55);
+    const fy = Number(focusCenterY ?? document.getElementById('obs-pet-blur-focus-y')?.value ?? 0.52);
+    const effectivePower = bm === 'none' ? 0.0 : bp;
+
+    if (qa?.state?.visualCustomConfig) {
+      qa.state.visualCustomConfig.blurMode = bm;
+      qa.state.visualCustomConfig.blurPower = effectivePower;
+      qa.state.visualCustomConfig.focusCenterY = fy;
+    }
+    qa?.desktop?.beautyPost?.setGradeParams?.({ blurMode: bm, blurPower: effectivePower, focusCenterY: fy });
+    qa?.studio?.beautyPost?.setGradeParams?.({ blurMode: bm, blurPower: effectivePower, focusCenterY: fy });
+    qa?.desktop?.wakeRender?.(1.8, true);
+
+    const topSel = document.getElementById('top-pet-blur-select');
+    if (topSel && topSel.value !== bm) topSel.value = bm;
+    studio.querySelectorAll('#obs-pet-blur-pills .obs-choice-pill').forEach((p) => {
+      const match = p.dataset.petBlur === bm;
+      p.classList.toggle('active', match);
+      if (match) {
+        const lbl = document.getElementById('obs-blur-current-label');
+        if (lbl) lbl.textContent = p.textContent;
+      }
+    });
+  };
+
+  document.getElementById('top-pet-blur-select')?.addEventListener('change', (e) => {
+    applyPetBlurState(e.target.value);
+  });
+
+  studio.querySelectorAll('#obs-pet-blur-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      applyPetBlurState(pill.dataset.petBlur);
+    });
+  });
+
+  const blurPowerSlider = document.getElementById('obs-pet-blur-power');
+  blurPowerSlider?.addEventListener('input', () => {
+    const v = Number(blurPowerSlider.value);
+    const txt = document.getElementById('obs-pet-blur-power-val');
+    if (txt) txt.textContent = `${Math.round(v * 100)}%`;
+    const curMode = document.getElementById('top-pet-blur-select')?.value || 'portrait_dof';
+    const activeMode = curMode === 'none' && v > 0.02 ? 'portrait_dof' : curMode;
+    applyPetBlurState(activeMode, v);
+  });
+
+  const blurFocusSlider = document.getElementById('obs-pet-blur-focus-y');
+  blurFocusSlider?.addEventListener('input', () => {
+    const v = Number(blurFocusSlider.value);
+    const txt = document.getElementById('obs-pet-blur-focus-y-val');
+    if (txt) txt.textContent = `${Math.round(v * 100)}%`;
+    applyPetBlurState(undefined, undefined, v);
+  });
+
+  // 5. Desktop Pet Lighting & Film Filter Presets (12 presets) + 9 Bokeh Backdrops
+  const applyPetFilterPreset = (presetId) => {
+    const qa = window.__cervixQA;
+    const fp = DESKTOP_PET_FILTER_PRESETS.find((p) => p.id === presetId) || DESKTOP_PET_FILTER_PRESETS[0];
+    if (!fp) return;
+    if (qa?.state?.visualCustomConfig) {
+      qa.state.visualCustomConfig.filterPreset = fp.id;
+    }
+    qa?.desktop?.beautyPost?.setGradeParams?.({ filterPreset: fp.id });
+    qa?.studio?.beautyPost?.setGradeParams?.({ filterPreset: fp.id });
+    if (fp.gobo && qa?.desktop) {
+      setFormValueAndTrigger('vcd-window-gobo', fp.gobo, 'change');
+    }
+    qa?.desktop?.wakeRender?.(1.8, true);
+
+    const topSel = document.getElementById('top-pet-filter-select');
+    if (topSel && topSel.value !== fp.id) topSel.value = fp.id;
+    studio.querySelectorAll('#obs-pet-filter-pills .obs-choice-pill').forEach((p) => {
+      const match = p.dataset.petFilter === fp.id;
+      p.classList.toggle('active', match);
+      if (match) {
+        const lbl = document.getElementById('obs-filter-current-label');
+        if (lbl) lbl.textContent = fp.label;
+      }
+    });
+    qa?.showToast?.(`🎞️ 已切换桌宠光影滤镜：${fp.label}`);
+  };
+
+  document.getElementById('top-pet-filter-select')?.addEventListener('change', (e) => {
+    applyPetFilterPreset(e.target.value);
+  });
+
+  studio.querySelectorAll('#obs-pet-filter-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      applyPetFilterPreset(pill.dataset.petFilter);
+    });
+  });
+
+  studio.querySelectorAll('#obs-backdrop-preset-pills .obs-choice-pill').forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const bgId = pill.dataset.backdropId;
+      studio.querySelectorAll('#obs-backdrop-preset-pills .obs-choice-pill').forEach((p) => p.classList.toggle('active', p === pill));
+      window.__cervixQA?.desktop?.setBackdropPreset?.(bgId);
     });
   });
 

@@ -2558,7 +2558,15 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
           float veinMask = veinBranch * smoothstep(1.08, 1.65, rIris) * clamp(uScleraVeinIntensity, 0.0, 1.2);
           naturalSclera = mix(naturalSclera, vec3(0.68, 0.30, 0.32), clamp(veinMask * 0.42, 0.0, 0.40));
         }
-        diffuseColor.rgb = mix(diffuseColor.rgb, naturalSclera * clamp(uScleraBrightness, 0.62, 1.24), scleraMask);
+        // Eye Occlusion (Upper/Lower eyelid shadow + moist pink canthus corner tint)
+        vec2 qOcc = (vEyeLocalPos.xy - eyeCenter) / 0.0115;
+        float occUpper = smoothstep(0.05, 0.62, qOcc.y);
+        float occLower = smoothstep(-0.22, -0.68, qOcc.y) * 0.45;
+        float occCorner = smoothstep(0.35, 0.88, abs(qOcc.x)) * 0.58;
+        float occTotal = clamp(occUpper + occLower + occCorner, 0.0, 1.0) * 0.72;
+        naturalSclera *= mix(vec3(1.0), vec3(0.46, 0.39, 0.38), occTotal);
+        naturalSclera = mix(naturalSclera, naturalSclera * vec3(1.06, 0.86, 0.84), occCorner * 0.45);
+        diffuseColor.rgb = mix(diffuseColor.rgb * mix(vec3(1.0), vec3(0.55, 0.48, 0.46), occUpper * 0.55), naturalSclera * clamp(uScleraBrightness, 0.62, 1.24), scleraMask);
       }
       `
     );

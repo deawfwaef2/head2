@@ -41,6 +41,102 @@ export const FILM_LUT_CATALOG = [
   { id: 'natural_linear', modeInt: 7, label: '📷 纯净物理零染调色 (仅保留光学镜头后处理特效)' },
 ];
 
+export const DESKTOP_PET_BLUR_MODES = [
+  { id: 'none', modeInt: 0, shortLabel: '🚫 无模糊 (超清锐利)', label: '🚫 无模糊 · 4K全画幅锐利原画', defaultPower: 0.0 },
+  { id: 'portrait_dof', modeInt: 1, shortLabel: '📷 单反大光圈景深虚化', label: '📷 85mm f/1.2 单反大光圈人像景深虚化 (主体清晰·边缘柔美散景)', defaultPower: 0.65 },
+  { id: 'pro_mist', modeInt: 2, shortLabel: '🌸 奶油黑柔镜柔焦', label: '🌸 Black Pro-Mist 奶油柔焦梦境滤镜 (高光柔晕·柔滑肤质)', defaultPower: 0.62 },
+  { id: 'tilt_shift', modeInt: 3, shortLabel: '🎞️ 微距移轴镜头模糊', label: '🎞️ Tilt-Shift 微距移轴桌面剧场模糊 (眼部对焦带清晰·上下渐进虚化)', defaultPower: 0.72 },
+  { id: 'radial_zoom', modeInt: 4, shortLabel: '🌀 电影径向聚焦模糊', label: '🌀 Petzval 电影径向旋焦散景模糊 (中心聚焦·四周旋焦包围)', defaultPower: 0.65 },
+  { id: 'dream_haze', modeInt: 5, shortLabel: '🌫️ 全画幅柔雾高斯模糊', label: '🌫️ 全画幅柔雾氛围高斯模糊 (微醺朦胧梦境感)', defaultPower: 0.55 },
+];
+
+export const DESKTOP_PET_FILTER_PRESETS = [
+  {
+    id: 'natural_clean',
+    shortLabel: '✨ 原生超清光影',
+    label: '✨ 原生超清写实光影 · 零偏色纯净还原',
+    visualPreset: 'dlss5_neural_photoreal',
+    grade: { contrast: 1.04, saturation: 0.96, warmth: 0.0, vignette: 0.16, softFocus: 0.04, halation: 0.06, shadowLift: 0.35, fade: 0.0, splitAmount: 0.0, filmLutMode: 7, filmLutStrength: 0.0 }
+  },
+  {
+    id: 'korean_cream',
+    shortLabel: '🍦 韩系奶油水光',
+    label: '🍦 韩系奶油水光柔肤 · 清透蜜桃柔光滤镜',
+    visualPreset: 'soft_butterfly_glamour',
+    grade: { contrast: 0.94, saturation: 0.92, warmth: 0.22, vignette: 0.14, softFocus: 0.42, halation: 0.08, shadowLift: 0.48, fade: 0.05, splitShadow: [0.52, 0.48, 0.50], splitHighlight: [0.62, 0.53, 0.48], splitAmount: 0.18, filmLutMode: 1, filmLutStrength: 0.32 }
+  },
+  {
+    id: 'japan_airy',
+    shortLabel: '🍃 日系清透空气',
+    label: '🍃 日系清透空气感胶片 · 富士青绿森系柔光',
+    visualPreset: 'dappled_forest_breeze',
+    grade: { contrast: 0.90, saturation: 0.86, warmth: -0.10, vignette: 0.12, softFocus: 0.28, halation: 0.05, shadowLift: 0.56, fade: 0.10, splitShadow: [0.44, 0.55, 0.58], splitHighlight: [0.56, 0.54, 0.50], splitAmount: 0.22, filmLutMode: 2, filmLutStrength: 0.45 }
+  },
+  {
+    id: 'hk_retro_neon',
+    shortLabel: '🏮 90港风复古胶片',
+    label: '🏮 90年代王家卫港风复古 · 浓郁暖金与暗青明暗',
+    visualPreset: 'wong_kar_wai_blinds',
+    grade: { contrast: 1.14, saturation: 1.06, warmth: 0.24, vignette: 0.44, softFocus: 0.24, halation: 0.42, shadowLift: 0.20, fade: 0.06, splitShadow: [0.36, 0.56, 0.50], splitHighlight: [0.66, 0.50, 0.38], splitAmount: 0.36, filmLutMode: 0, filmLutStrength: 0.58 }
+  },
+  {
+    id: 'golden_backlit',
+    shortLabel: '🌅 暖阳逆光金丝',
+    label: '🌅 暖阳逆光金色轮廓 · 夕阳丁达尔发丝透光',
+    visualPreset: 'reference_sunlit_chiaroscuro',
+    grade: { contrast: 1.08, saturation: 1.04, warmth: 0.46, vignette: 0.32, softFocus: 0.30, halation: 0.25, tyndall: 0.72, sunFlareVeil: 0.28, shadowLift: 0.32, fade: 0.04, splitShadow: [0.46, 0.44, 0.48], splitHighlight: [0.68, 0.55, 0.36], splitAmount: 0.26, filmLutMode: 6, filmLutStrength: 0.52 }
+  },
+  {
+    id: 'window_shadow',
+    shortLabel: '🪟 窗格斜射光斑',
+    label: '🪟 窗格斜射光影情绪 · 百叶窗切割光斑与暗调胶片',
+    visualPreset: 'wong_kar_wai_blinds',
+    grade: { contrast: 1.12, saturation: 0.88, warmth: 0.18, vignette: 0.46, softFocus: 0.16, halation: 0.18, shadowLift: 0.24, fade: 0.07, splitShadow: [0.40, 0.48, 0.54], splitHighlight: [0.64, 0.52, 0.40], splitAmount: 0.28, filmLutMode: 0, filmLutStrength: 0.48 }
+  },
+  {
+    id: 'leaf_dapple',
+    shortLabel: '🌿 树影午后光斑',
+    label: '🌿 午后梧桐树影斑驳 · 树隙光斑与富士Pro400H',
+    visualPreset: 'dappled_forest_breeze',
+    grade: { contrast: 0.98, saturation: 0.94, warmth: -0.06, vignette: 0.24, softFocus: 0.22, dappledBokeh: 0.55, tyndall: 0.48, shadowLift: 0.38, fade: 0.05, splitShadow: [0.40, 0.55, 0.54], splitHighlight: [0.58, 0.54, 0.48], splitAmount: 0.22, filmLutMode: 2, filmLutStrength: 0.50 }
+  },
+  {
+    id: 'teal_orange',
+    shortLabel: '🎬 好莱坞青橙电影',
+    label: '🎬 好莱坞青橙大片滤镜 · 冷青暗部与暖金肤色对比',
+    visualPreset: 'cinema_85mm_portrait',
+    grade: { contrast: 1.14, saturation: 1.02, warmth: 0.10, vignette: 0.38, softFocus: 0.12, halation: 0.15, anamorphicFlare: 0.35, shadowLift: 0.22, fade: 0.02, splitShadow: [0.32, 0.52, 0.62], splitHighlight: [0.68, 0.52, 0.36], splitAmount: 0.42, filmLutMode: 0, filmLutStrength: 0.65 }
+  },
+  {
+    id: 'rembrandt_oil',
+    shortLabel: '🖼️ 古典油画伦勃朗',
+    label: '🖼️ 伦勃朗古典油画光影 · 戏剧性三角侧光与深邃暗部',
+    visualPreset: 'rembrandt_atelier_oil',
+    grade: { contrast: 1.18, saturation: 0.84, warmth: 0.38, vignette: 0.56, softFocus: 0.18, halation: 0.12, shadowCrush: 0.28, shadowLift: 0.18, fade: 0.05, splitShadow: [0.42, 0.40, 0.38], splitHighlight: [0.66, 0.54, 0.36], splitAmount: 0.35, filmLutMode: 1, filmLutStrength: 0.45 }
+  },
+  {
+    id: 'polaroid_instant',
+    shortLabel: '📸 宝丽来复古相纸',
+    label: '📸 复古宝丽来拍立得 · 怀旧暖调褪色与柔光暗角',
+    visualPreset: 'vintage_silver_plate',
+    grade: { contrast: 0.92, saturation: 0.86, warmth: 0.28, vignette: 0.42, softFocus: 0.26, halation: 0.16, vintagePhoto: 0.32, lightLeak: 0.24, shadowLift: 0.46, fade: 0.14, splitShadow: [0.45, 0.50, 0.58], splitHighlight: [0.62, 0.55, 0.42], splitAmount: 0.30, filmLutMode: 6, filmLutStrength: 0.42 }
+  },
+  {
+    id: 'cinestill_night',
+    shortLabel: '🌃 午夜霓虹800T',
+    label: '🌃 CineStill 800T 午夜钨丝灯胶卷 · 冷蓝暗调与朱红光晕',
+    visualPreset: 'cyber_neon_blade',
+    grade: { contrast: 1.10, saturation: 0.98, warmth: -0.28, vignette: 0.38, softFocus: 0.20, halation: 0.62, anamorphicFlare: 0.42, shadowLift: 0.26, fade: 0.03, splitShadow: [0.34, 0.50, 0.64], splitHighlight: [0.66, 0.48, 0.38], splitAmount: 0.30, filmLutMode: 3, filmLutStrength: 0.72 }
+  },
+  {
+    id: 'mono_trix',
+    shortLabel: '🖤 银盐黑白经典',
+    label: '🖤 Kodak Tri-X 400 银盐黑白 · 极致骨相光影雕塑感',
+    visualPreset: 'ilford_mono_noir',
+    grade: { contrast: 1.18, saturation: 0.0, warmth: 0.0, vignette: 0.42, softFocus: 0.08, filmGrain: 0.09, shadowLift: 0.24, fade: 0.03, splitAmount: 0.0, filmLutMode: 4, filmLutStrength: 0.95 }
+  },
+];
+
 export const BeautyGradeShader = {
   uniforms: {
     tDiffuse: { value: null },
@@ -54,6 +150,13 @@ export const BeautyGradeShader = {
     uSharpen: { value: 0.06 },
     uSoftFocus: { value: 0.58 },
     uDepthBlur: { value: 0.48 },
+    uBlurMode: { value: 0.0 },
+    uBlurPower: { value: 0.0 },
+    uFocusCenterY: { value: 0.52 },
+    uFade: { value: 0.0 },
+    uSplitShadow: { value: new THREE.Vector3(0.5, 0.5, 0.5) },
+    uSplitHighlight: { value: new THREE.Vector3(0.5, 0.5, 0.5) },
+    uSplitAmount: { value: 0.0 },
     uChromatic: { value: 0.16 },
     uFilmGrain: { value: 0.07 },
     uTyndall: { value: 0.74 },
@@ -102,6 +205,13 @@ export const BeautyGradeShader = {
     uniform float uSharpen;
     uniform float uSoftFocus;
     uniform float uDepthBlur;
+    uniform float uBlurMode;
+    uniform float uBlurPower;
+    uniform float uFocusCenterY;
+    uniform float uFade;
+    uniform vec3 uSplitShadow;
+    uniform vec3 uSplitHighlight;
+    uniform float uSplitAmount;
     uniform float uChromatic;
     uniform float uFilmGrain;
     uniform float uTyndall;
@@ -345,6 +455,63 @@ export const BeautyGradeShader = {
         }
       }
 
+      // 6B. Multi-Mode Desktop Pet Optical Blur Suite (uBlurMode 1..5 + uBlurPower)
+      if (uBlurMode > 0.5 && uBlurPower > 0.005 && srcAlpha > 0.005) {
+        float bp = clamp(uBlurPower, 0.0, 1.5);
+        if (uBlurMode < 1.5) {
+          // Mode 1: 85mm f/1.2 Portrait Bokeh DOF (keeps central face sharp, blurs periphery/background with 12-tap golden-angle disc)
+          float distFromFocus = length((uv - vec2(0.50, uFocusCenterY)) * vec2(0.95, 1.15));
+          float coc = smoothstep(0.18, 0.68, distFromFocus) * (1.0 - subjectKeepSharpMask * 0.72) * bp;
+          if (coc > 0.01) {
+            vec3 bokehAcc = vec3(0.0);
+            float wSum = 0.0;
+            for (int i = 0; i < 12; i++) {
+              float ang = float(i) * 2.399963;
+              float rad = (1.6 + float(i) * 1.15) * coc;
+              vec2 offUv = clamp(uv + vec2(cos(ang), sin(ang)) * texel * rad, 0.002, 0.998);
+              vec3 tap = texture2D(tDiffuse, offUv).rgb * clamp(uExposure, 0.40, 2.20);
+              float tapLum = dot(tap, vec3(0.2126, 0.7152, 0.0722));
+              float w = 1.0 + smoothstep(0.55, 0.95, tapLum) * 1.35;
+              bokehAcc += tap * w;
+              wSum += w;
+            }
+            col = mix(col, bokehAcc / max(wSum, 0.001), clamp(coc * 0.92, 0.0, 0.92));
+          }
+        } else if (uBlurMode < 2.5) {
+          // Mode 2: Black Pro-Mist Creamy Glamour Diffusion (12-tap highlight bloom + micro-contrast softening)
+          vec3 wideAcc = vec3(0.0);
+          for (int i = 0; i < 12; i++) {
+            float ang = float(i) * 2.399963;
+            float rad = (2.5 + float(i) * 1.5) * bp;
+            vec2 offUv = clamp(uv + vec2(cos(ang), sin(ang)) * texel * rad, 0.002, 0.998);
+            wideAcc += texture2D(tDiffuse, offUv).rgb * clamp(uExposure, 0.40, 2.20);
+          }
+          wideAcc /= 12.0;
+          col = mix(col, max(col * 0.92, wideAcc), clamp(bp * 0.58, 0.0, 0.75));
+          col += max(wideAcc - vec3(0.52), vec3(0.0)) * bp * 0.42 * vec3(1.06, 0.96, 0.90);
+        } else if (uBlurMode < 3.5) {
+          // Mode 3: Tilt-Shift Miniature Lens Blur (sharp horizontal focal band at uFocusCenterY, progressive top/bottom blur)
+          float bandDist = abs(uv.y - uFocusCenterY);
+          float tiltMask = smoothstep(0.08, 0.38, bandDist) * bp;
+          if (tiltMask > 0.01) {
+            vec3 tiltBlur = sampleRingBlur(uv, texel * (3.5 + tiltMask * 9.5)) * clamp(uExposure, 0.40, 2.20);
+            col = mix(col, tiltBlur, clamp(tiltMask * 0.90, 0.0, 0.92));
+          }
+        } else if (uBlurMode < 4.5) {
+          // Mode 4: Petzval / Radial Focus Blur (sharp center, directional + tangential swirl toward edges)
+          vec2 fVec = uv - vec2(0.50, uFocusCenterY);
+          float rMask = smoothstep(0.16, 0.65, length(fVec)) * bp;
+          if (rMask > 0.01) {
+            vec3 radSwirl = sampleSwirlyBokeh(uv, fVec, texel, rMask * 1.35) * clamp(uExposure, 0.40, 2.20);
+            col = mix(col, radSwirl, clamp(rMask * 0.85, 0.0, 0.88));
+          }
+        } else {
+          // Mode 5: Full-Frame Creamy Dream Haze Blur
+          vec3 hazeBlur = sampleRingBlur(uv, texel * (2.8 + bp * 7.5)) * clamp(uExposure, 0.40, 2.20);
+          col = mix(col, hazeBlur, clamp(bp * 0.78, 0.0, 0.86));
+        }
+      }
+
       // 7. Cinema Anamorphic Horizontal Lens Streak Flare (uAnamorphicFlare)
       if (uAnamorphicFlare > 0.005 && srcAlpha > 0.005) {
         vec3 anamSum = vec3(0.0);
@@ -460,6 +627,18 @@ export const BeautyGradeShader = {
       float lumaPostC = dot(col, vec3(0.2126, 0.7152, 0.0722));
       float shadowMask = clamp(1.0 - smoothstep(0.06, 0.42, lumaPostC), 0.0, 1.0) * smoothstep(0.018, 0.070, lumaPostC);
       col += uShadowTint * shadowMask * 0.30;
+
+      // 16B. Film Fade & Cinema Split-Toning (Shadow/Highlight Color Grade)
+      if (uSplitAmount > 0.001 && srcAlpha > 0.005) {
+        float lumST = dot(col, vec3(0.2126, 0.7152, 0.0722));
+        float shMask = (1.0 - smoothstep(0.0, 0.56, lumST)) * uSplitAmount;
+        float hiMask = smoothstep(0.38, 0.96, lumST) * uSplitAmount;
+        col = mix(col, col * (vec3(0.72) + uSplitShadow * 0.55) + uSplitShadow * 0.06, clamp(shMask, 0.0, 0.85));
+        col = mix(col, col * (vec3(0.72) + uSplitHighlight * 0.50), clamp(hiMask, 0.0, 0.85));
+      }
+      if (uFade > 0.001 && srcAlpha > 0.005) {
+        col = mix(col, vec3(0.14, 0.13, 0.15) + col * 0.84, clamp(uFade, 0.0, 0.65));
+      }
 
       // 17. Saturation
       float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
@@ -638,6 +817,40 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       if (params.swirlyBokeh !== undefined) u.uSwirlyBokeh.value = Number(params.swirlyBokeh);
       if (params.wetLensDrop !== undefined) u.uWetLensDrop.value = Number(params.wetLensDrop);
       if (params.lensDistortion !== undefined) u.uLensDistortion.value = Number(params.lensDistortion);
+      if (params.filterPreset !== undefined) {
+        const fp = DESKTOP_PET_FILTER_PRESETS.find(p => p.id === params.filterPreset);
+        if (fp) {
+          if (fp.warmth !== undefined) u.uWarmth.value = Number(fp.warmth);
+          if (fp.contrast !== undefined) u.uContrast.value = Number(fp.contrast);
+          if (fp.saturation !== undefined) u.uSaturation.value = Number(fp.saturation);
+          if (fp.vignette !== undefined) u.uVignette.value = Number(fp.vignette);
+          if (fp.fade !== undefined && u.uFade) u.uFade.value = Number(fp.fade);
+          if (fp.filmGrain !== undefined) u.uFilmGrain.value = Number(fp.filmGrain);
+          if (fp.tyndall !== undefined) u.uTyndall.value = Number(fp.tyndall);
+          if (fp.dappledBokeh !== undefined) u.uDappledBokeh.value = Number(fp.dappledBokeh);
+          if (fp.splitAmount !== undefined && u.uSplitAmount) u.uSplitAmount.value = Number(fp.splitAmount);
+          if (Array.isArray(fp.splitShadow) && u.uSplitShadow) {
+            u.uSplitShadow.value.set(fp.splitShadow[0], fp.splitShadow[1], fp.splitShadow[2]);
+          }
+          if (Array.isArray(fp.splitHighlight) && u.uSplitHighlight) {
+            u.uSplitHighlight.value.set(fp.splitHighlight[0], fp.splitHighlight[1], fp.splitHighlight[2]);
+          }
+        }
+      }
+      if (params.blurMode !== undefined && u.uBlurMode) {
+        const bm = DESKTOP_PET_BLUR_MODES.find(m => m.id === params.blurMode);
+        u.uBlurMode.value = bm ? bm.modeInt : Number(params.blurMode) || 0.0;
+      }
+      if (params.blurPower !== undefined && u.uBlurPower) u.uBlurPower.value = Number(params.blurPower);
+      if (params.focusCenterY !== undefined && u.uFocusCenterY) u.uFocusCenterY.value = Number(params.focusCenterY);
+      if (params.fade !== undefined && u.uFade) u.uFade.value = Number(params.fade);
+      if (params.splitAmount !== undefined && u.uSplitAmount) u.uSplitAmount.value = Number(params.splitAmount);
+      if (Array.isArray(params.splitShadow) && u.uSplitShadow) {
+        u.uSplitShadow.value.set(params.splitShadow[0], params.splitShadow[1], params.splitShadow[2]);
+      }
+      if (Array.isArray(params.splitHighlight) && u.uSplitHighlight) {
+        u.uSplitHighlight.value.set(params.splitHighlight[0], params.splitHighlight[1], params.splitHighlight[2]);
+      }
       if (params.filmLutMode !== undefined) {
         const lutItem = FILM_LUT_CATALOG.find(l => l.id === params.filmLutMode);
         u.uFilmLutMode.value = lutItem ? lutItem.modeInt : Number(params.filmLutMode) || 1.0;

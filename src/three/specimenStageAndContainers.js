@@ -248,11 +248,12 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
 
   const boxW = bounds.maxX - bounds.minX;
   const boxH = bounds.maxY - bounds.minY;
-  const floorMinZ = bounds.minZ;
-  const floorMaxZ = 42;
-  const floorDepth = floorMaxZ - floorMinZ;
+  // Compact visual floor slab depth (-26..+8 cm) so perspective projection never covers the monitor screen
+  const floorMinZ = Math.max(bounds.minZ, -26);
+  const floorMaxZ = Math.min(bounds.maxZ, 8);
+  const floorDepth = Math.max(18, floorMaxZ - floorMinZ);
   const floorCenterZ = (floorMinZ + floorMaxZ) * 0.5;
-  const floorSurfaceY = bounds.minY + 1.8;
+  const floorSurfaceY = bounds.minY + 1.4;
 
   platforms.push({
     id: 'main_floor',
@@ -271,7 +272,7 @@ export function buildScreenSpaceStageGroup(bounds, options = {}) {
 
   const floorTex = getFloorTexture(floorStyle);
   const isLightMarble = floorStyle === 'marble_museum';
-  const slabThickness = 2.2;
+  const slabThickness = 1.4;
 
   const floorMat = new THREE.MeshPhysicalMaterial({
     map: floorTex,

@@ -39,14 +39,30 @@ export function upgradeEyeMaterial(src) {
   });
   if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
   // 巩膜不能是纯白：真人眼白在阴影和边缘偏灰、略暖
+  // 眼部遮蔽（Eye Occlusion，数字人常用技巧）：上眼睑在眼球上投下柔和阴影、眼角变暗、边缘带一点湿润的粉红
+  m.userData.eyeUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uEyeRad: { value: 0.012 }, uEyeOcc: { value: 0.75 } };
   m.onBeforeCompile = (s) => {
-    s.fragmentShader = s.fragmentShader.replace(
-      '#include <map_fragment>',
-      `#include <map_fragment>
-       diffuseColor.rgb *= vec3(0.93, 0.9, 0.87);`,
+    Object.assign(s.uniforms, m.userData.eyeUniforms);
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vEyeObj;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvEyeObj = transformed;');
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vEyeObj; uniform vec3 uEyeL, uEyeR; uniform float uEyeRad, uEyeOcc;')
+      .replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
+       diffuseColor.rgb *= vec3(0.93, 0.9, 0.87);
+       {
+         vec3 c = vEyeObj.x < 0.0 ? uEyeL : uEyeR;
+         vec3 q = (vEyeObj - c) / uEyeRad;
+         float upper = smoothstep(0.05, 0.62, q.y);            // 上眼睑阴影
+         float lower = smoothstep(-0.25, -0.7, q.y) * 0.45;    // 下眼睑轻微阴影
+         float corner = smoothstep(0.35, 0.85, abs(q.x)) * 0.6; // 内外眼角
+         float occ = clamp(upper + lower + corner, 0.0, 1.0) * uEyeOcc;
+         diffuseColor.rgb *= mix(vec3(1.0), vec3(0.42, 0.36, 0.35), occ);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.05, 0.86, 0.84), corner * 0.6 * uEyeOcc); // 眼角湿润粉红
+       }`,
     );
   };
-  m.customProgramCacheKey = () => 'photoreal-eye-v1';
+  m.customProgramCacheKey = () => 'photoreal-eye-v2';
   return m;
 }
 
@@ -54,10 +70,11 @@ export function upgradeLashMaterial(src) {
   const m = new THREE.MeshStandardMaterial({
     name: 'PhotorealLash',
     map: src.map || null,
-    color: new THREE.Color(0.06, 0.05, 0.05),
+    color: new THREE.Color(0.11, 0.09, 0.085),
     roughness: 0.55,
     transparent: true,
-    alphaTest: 0.06,
+    opacity: 0.9,
+    alphaTest: 0.14,
     depthWrite: false,
     side: THREE.DoubleSide,
   });

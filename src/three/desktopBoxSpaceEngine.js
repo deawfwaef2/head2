@@ -23,6 +23,7 @@ import {
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
 import { createBokehDust } from './atmosphere.js';
+import { BACKGROUNDS, makeBackdropTexture } from './masterQuality/backgrounds.js';
 import {
   buildScreenSpaceStageGroup,
   buildPlaceableContainerStructure,
@@ -270,13 +271,44 @@ export class DesktopBoxSpaceEngine {
           const restOnShelfY = plat.surfaceY - baseOff * scale;
           if (restOnShelfY <= bz.maxY + 1.5) {
             pet.pos.y = Math.min(bz.maxY, restOnShelfY);
-          } else {
-            // Push horizontally clear of the shelf edge toward center of desk
+          } else if (!pet.isGrounded) {
+            // Only push horizontally clear of the shelf edge while falling/dragged, never when grounded & idle
             pet.pos.x = pet.pos.x < 0 ? Math.min(bz.maxX, plat.maxX + 7.0) : Math.max(bz.minX, plat.minX - 7.0);
           }
         }
       }
     }
+  }
+
+  setDesktopPetMode(enabled) {
+    this.desktopPetMode = Boolean(enabled);
+    if (this.stageGroup) {
+      this.stageGroup.visible = !this.desktopPetMode && this.settings.floorStyle !== 'none';
+    }
+    for (const s of this.structures.values()) {
+      if (s.isStageGenerated && s.node) {
+        s.node.visible = !this.desktopPetMode && this.settings.floorStyle !== 'none';
+      }
+    }
+    if (this.desktopPetMode) {
+      this.scene.background = null;
+      this.settings.showBoxGrid = 'hidden';
+      if (this.boxGroup) this.boxGroup.visible = false;
+    }
+    this.needsShadowRefresh = true;
+    this.wakeRender(1.8, true);
+    return this.desktopPetMode;
+  }
+
+  setBackdropPreset(id = 'transparent') {
+    this.activeBackdropPreset = id;
+    if (!id || id === 'transparent' || id === 'none') {
+      this.scene.background = null;
+    } else {
+      const tex = makeBackdropTexture(id);
+      this.scene.background = tex || null;
+    }
+    this.wakeRender(1.8, true);
   }
 
   clampStructureToBounds(struct) {
@@ -412,6 +444,7 @@ export class DesktopBoxSpaceEngine {
       decorStyle: this.settings.defaultDecorStyle || 'study_tomes',
     });
     this.stageGroup = stageGroup;
+    this.stageGroup.visible = !this.desktopPetMode && this.settings.floorStyle !== 'none';
     this.stagePlatforms = platforms.filter((p) => !this.deletedStagePropIds.has(`SHELF-${p.id}`));
     this.scene.add(this.stageGroup);
 
@@ -2120,9 +2153,8 @@ export class DesktopBoxSpaceEngine {
       if (info.structure) {
         const struct = info.structure;
         const bz = this.getBoxBoundsAtZ(struct.pos.z, struct.scale);
-        // If clicked without dragging on an occupied structure's head, toggle rotation mode on that head & trigger head click callback
+        // If clicked without dragging on an occupied structure's head, select that head (rotation mode requires double-click or button)
         if (info.movedDist <= 4 && info.pet) {
-          this.toggleRotationMode(info.pet.id);
           this.onHeadClick(info.pet.id);
         } else if (!struct.occupiedByPetId && !struct.isShelfStructure && !struct.isDecorProp) {
           // If this empty container structure was dropped onto a free severed head, snap that head into it!
@@ -2144,7 +2176,6 @@ export class DesktopBoxSpaceEngine {
       if (!pet) return;
 
       if (info.movedDist <= 5) {
-        this.toggleRotationMode(pet.id);
         this.onHeadClick(pet.id);
       } else if (info.pickupSoundPlayed) {
         const targetStruct = this.findNearestAvailableStructure(pet.pos, 14.8);
@@ -2158,16 +2189,27 @@ export class DesktopBoxSpaceEngine {
       }
     });
 
+    window.addEventListener('dblclick', (e) => {
+      if (this.isBlockedByUI(e)) return;
+      this.updateMouseCoords(e);
+      const hitPet = this.pickPetAtCursor();
+      if (hitPet) {
+        this.toggleRotationMode(hitPet.id);
+        this.wakeRender(1.5, true);
+      }
+    });
+
     window.addEventListener('wheel', (e) => {
       this.updateMouseCoords(e);
       if (this.isBlockedByUI(e)) return;
+      if (Math.abs(e.deltaY) < 4) return;
 
       const directStructInfo = this.pickStructureAtCursor();
       const directStruct = directStructInfo ? directStructInfo.struct : null;
       const directPet = this.pickPetAtCursor();
-      const fallbackStruct = !directPet && this.selectedStructureId ? this.structures.get(this.selectedStructureId) : null;
-      const hitStruct = directStruct || fallbackStruct;
-      const hitPet = directPet || (!hitStruct && this.hoveredPetId ? this.pets.get(this.hoveredPetId) : null);
+      // Require an actual raycast hit under the cursor so nothing moves when scrolling over empty space!
+      const hitStruct = directStruct;
+      const hitPet = directPet;
 
       if (!hitPet && !hitStruct) return;
 
@@ -2377,16 +2419,26 @@ export class DesktopBoxSpaceEngine {
     }
 
     if (this.settings.enablePetCollision && petArray.length > 1) {
+      const draggedPet = this.pointerDownInfo?.pet || null;
       for (let i = 0; i < petArray.length; i++) {
         for (let j = i + 1; j < petArray.length; j++) {
           const p1 = petArray[i];
           const p2 = petArray[j];
+          const bothIdleGrounded =
+            p1.isGrounded &&
+            p2.isGrounded &&
+            p1 !== draggedPet &&
+            p2 !== draggedPet &&
+            p1.vel.lengthSq() < 0.02 &&
+            p2.vel.lengthSq() < 0.02;
+          if (bothIdleGrounded) continue;
+
           const diff = new THREE.Vector3().subVectors(p1.pos, p2.pos);
           if (this.settings.enableGravity && p1.isGrounded && p2.isGrounded) {
             diff.y = 0; // Grounded pets push horizontally along the desk surface, never lifting each other into the air
           }
           const dist = diff.length();
-          const minDist = (p1.radius * p1.currentScale + p2.radius * p2.currentScale) * 1.10;
+          const minDist = (p1.radius * p1.currentScale + p2.radius * p2.currentScale) * 1.04;
           if (dist < minDist && dist > 0.001) {
             const overlap = (minDist - dist) * 0.5;
             diff.normalize();
@@ -2394,8 +2446,10 @@ export class DesktopBoxSpaceEngine {
             p2.pos.addScaledVector(diff, -overlap);
 
             const relSpeed = p1.vel.distanceTo(p2.vel);
-            p1.vel.addScaledVector(diff, 0.35);
-            p2.vel.addScaledVector(diff, -0.35);
+            if (!p1.isGrounded || !p2.isGrounded) {
+              p1.vel.addScaledVector(diff, 0.25);
+              p2.vel.addScaledVector(diff, -0.25);
+            }
             this.needsShadowRefresh = true;
             if (relSpeed > 1.35 && now - (this.lastPetCollideSoundAt || 0) > 450) {
               this.lastPetCollideSoundAt = now;

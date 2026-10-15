@@ -152,7 +152,8 @@ const state = {
   pomodoroRunning: false,
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
-  placardsEnabled: false,
+  placardsEnabled: true,
+  desktopPetMode: false,
   placardOffsets: {},
   vcdTargetPetId: 'selected',
   pinnedDossierPetId: null,
@@ -775,61 +776,36 @@ function renderSpecimenPlacards(placardsList = []) {
     let cardEl = existingCards.get(item.id);
     const photoSrc = resolveCollectibleLifePhotoSrc(col);
     const baseShortName = col.name.split('·')[0].trim();
-    const displayTitle = col.customDisplayName || `${baseShortName} · ${col.customAuraTitle || (col.name.includes('·') ? col.name.split('·')[1].trim().slice(0, 9) : (col.grade || '私人标本').slice(0, 8))}`;
-    const sealBadgeText = col.customSealBadge || '🔖 活人支配藏品 · 静默伴读中';
-    const briefIdentity = col.customContrastText || col.fateRecord?.vitalityStatus || col.subtitle || '静默案头伴读标本 · 任由活人主宰摆布';
-    const cutShort = (col.anatomyOptions?.cutLevel || 'C4齐根断面').split('(')[0].trim();
-    const stateLabel = item.containerLabel ? `🏛️${item.containerLabel}` : `🩸${cutShort.slice(0, 8)}`;
-    const skillBtnLabel = getPlacardPuzzleButtonLabel(item.id);
+    const displayName = col.customDisplayName || baseShortName;
+    const displayAge = col.customAge || col.fateRecord?.ageAtCollection || '19岁';
+    const briefStory = col.customBriefStory || col.customContrastText || col.fateRecord?.cause || col.subtitle || '静默案头藏品 · 任由主人端详摆布';
 
     if (!cardEl) {
       cardEl = document.createElement('div');
       cardEl.className = 'specimen-placard-card';
       cardEl.dataset.placardPetId = item.id;
-      cardEl.title = '✥ 按住鼠标左键可自由拖拽移动此连接标牌 · 双击标牌自动归位';
+      cardEl.title = '按住鼠标左键可自由拖拽此标牌 · 双击标牌归位 · 点击文字可直接修改名字/年龄/简要故事';
       cardEl.innerHTML = `
-        <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/收起生前对照留影与完整档案">
-          <img src="${photoSrc}" alt="${baseShortName}生前照片" draggable="false" />
-          <span class="placard-photo-badge">生前照</span>
+        <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/编辑人物照片与设置">
+          <img data-placard-photo src="${photoSrc}" alt="${displayName}照片" draggable="false" />
         </div>
         <div class="placard-info-col">
           <div class="placard-top-row">
-            <span class="placard-name" data-placard-title contenteditable="true" spellcheck="false" title="✍️ 可直接点击改名（或点下方【🏷️换人设】一键切换通用投射人设，不绑定固定角色）">✥ ${displayTitle}</span>
-            <span class="placard-depth-tag" data-placard-z>Z:${item.zMm}mm</span>
+            <span class="placard-name" data-placard-title contenteditable="true" spellcheck="false" title="点击直接修改人物名字">${displayName}</span>
+            <span class="placard-age-badge" data-placard-age contenteditable="true" spellcheck="false" title="点击直接修改人物年龄">${displayAge}</span>
           </div>
-          <div style="display:flex;align-items:center;gap:4px;margin:1px 0 2px;">
-            <span data-placard-seal style="font-size:10px;padding:1px 6px;border-radius:4px;background:rgba(190,24,93,0.28);border:1px solid rgba(244,114,182,0.55);color:#fbcfe8;font-weight:700;line-height:1.25;">${sealBadgeText}</span>
-          </div>
-          <div class="placard-brief-line" data-placard-brief contenteditable="true" spellcheck="false" title="✍️ 可直接点击修改这颗头的反差描述（预设人设仅供参考，你可以改成任何让你有优越感的人设）">${briefIdentity}</div>
-          <div class="placard-sub-line">
-            <span class="placard-cut-tag" data-placard-cut>${stateLabel}</span>
-            <div class="placard-actions">
-              <button type="button" class="placard-mini-btn" data-placard-studio="${item.id}" title="打开黑曜石人物与发型高定总控台" style="border-color:rgba(212,180,131,0.55);color:#ebd2a8;">✦造型</button>
-              <button type="button" class="placard-mini-btn" data-placard-skill="${item.id}" title="触发此头装配的通用拼图技能与月度总分触发器">${skillBtnLabel}</button>
-              <button type="button" class="placard-mini-btn" data-placard-pinch="${item.id}" title="切换至【🤏直接上手捏脸/扒眼皮/掰嘴模式】，用鼠标直接在3D头颅上推拉眼皮、掰嘴、捏脸颊！" style="border-color:rgba(244,114,182,0.65);color:#fbcfe8;">🤏捏脸</button>
-              <button type="button" class="placard-mini-btn" data-placard-eyeball="${item.id}" title="直接在桌面拨弄这颗3D头颅的眼球与瞳孔（上翻白眼/瞳孔涣散放大/针尖缩瞳/垂眸失焦）！" style="border-color:rgba(56,189,248,0.65);color:#bae6fd;">👁️拨眼</button>
-              <button type="button" class="placard-mini-btn" data-placard-hairlift="${item.id}" title="直接揪住这颗3D头颅的发顶将其拎到半空掂量重量，再松手让4.5kg头颅重重落回桌面！" style="border-color:rgba(192,132,252,0.65);color:#e9d5ff;">🪮拎发</button>
-              <button type="button" class="placard-mini-btn" data-placard-chin="${item.id}" title="上位者单向触碰特权：勾起这颗3D头颅冰冷的下巴使其仰面18°接受你的检阅！" style="border-color:rgba(244,114,182,0.65);color:#fbcfe8;">👆挑颏</button>
-              <button type="button" class="placard-mini-btn" data-placard-bow="${item.id}" title="直接在桌面按压这颗3D头颅使其【低眉俯首听训】、【歪头贴桌当镇纸】或【抬颏仰视伴读】！" style="border-color:rgba(251,191,36,0.65);color:#fde68a;">🙇‍♀️俯首</button>
-              <button type="button" class="placard-mini-btn" data-placard-aura="${item.id}" title="一键切换通用【生前光环 vs 案头静默标本】投射人设与封条（不绑定预设名字，也可直接点击标牌标题/描述手改）" style="border-color:rgba(167,139,250,0.65);color:#ddd6fe;">🏷️换人设</button>
-              <button type="button" class="placard-mini-btn" data-placard-fluid="${item.id}" title="在3D面容上直接点染/切换凄美清泪、猩红血泪、鼻血与断口鲜血" style="border-color:rgba(251,113,133,0.65);color:#fda4af;">🩸血泪</button>
-              <button type="button" class="placard-mini-btn" data-placard-expr="${item.id}" title="直接在桌面切换静默标本死相（微阖/死不瞑目/惊愕张口/安详闭目/诡异尸笑）">💀死相</button>
-              <button type="button" class="placard-mini-btn" data-placard-comfort="${item.id}" title="难受不舒服时点开看：打开【📖活人优越宽心手札】并让这颗头颅同步配合动作！" style="border-color:rgba(244,114,182,0.65);color:#fce7f3;">📖宽心</button>
-              <button type="button" class="placard-mini-btn" data-placard-reset="${item.id}" title="将标牌恢复至默认连接位置" style="display:none;">↺</button>
-              <button type="button" class="placard-mini-btn" data-placard-rot="${item.id}" title="切换360°旋转把玩">360°</button>
-              <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开/收起完整档案卡">详档</button>
-            </div>
-          </div>
+          <div class="placard-brief-line" data-placard-brief contenteditable="true" spellcheck="false" title="点击直接修改人物简要故事（也可在人物设置中编辑）">${briefStory}</div>
         </div>
       `;
       const titleEditEl = cardEl.querySelector('[data-placard-title]');
       titleEditEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
       titleEditEl?.addEventListener('blur', () => {
-        const raw = titleEditEl.textContent?.replace(/^✥\s*/, '').trim();
+        const raw = titleEditEl.textContent?.trim();
         if (raw) {
           col.customDisplayName = raw;
           persistCollectibles();
-          showToast(`✍️ 已将这颗头颅的标牌称呼自定义为「${raw}」！`);
+          if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+          showToast(`✍️ 已更新标牌名字为「${raw}」`);
         }
       });
       titleEditEl?.addEventListener('keydown', (ev) => {
@@ -839,14 +815,35 @@ function renderSpecimenPlacards(placardsList = []) {
         }
       });
 
+      const ageEditEl = cardEl.querySelector('[data-placard-age]');
+      ageEditEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+      ageEditEl?.addEventListener('blur', () => {
+        const rawAge = ageEditEl.textContent?.trim();
+        if (rawAge) {
+          col.customAge = rawAge;
+          if (col.fateRecord) col.fateRecord.ageAtCollection = rawAge;
+          persistCollectibles();
+          if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+          showToast(`✍️ 已更新标牌年龄为「${rawAge}」`);
+        }
+      });
+      ageEditEl?.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          ageEditEl.blur();
+        }
+      });
+
       const briefEl = cardEl.querySelector('[data-placard-brief]');
       briefEl?.addEventListener('pointerdown', (ev) => ev.stopPropagation());
       briefEl?.addEventListener('blur', () => {
         const text = briefEl.textContent?.trim();
         if (text) {
+          col.customBriefStory = text;
           col.customContrastText = text;
           persistCollectibles();
-          showToast('✍️ 已保存你自定义的标本优越感反差标签！');
+          if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+          showToast('✍️ 已保存人物简要故事！');
         }
       });
       briefEl?.addEventListener('keydown', (ev) => {
@@ -855,101 +852,23 @@ function renderSpecimenPlacards(placardsList = []) {
           briefEl.blur();
         }
       });
-      cardEl.querySelector('[data-placard-studio]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        state.activeStripPetId = item.id;
-        if (typeof window.__syncVcdSelectedPetUI === 'function') {
-          window.__syncVcdSelectedPetUI(item.id);
-        }
-        const studioEl = document.getElementById('obsidian-char-hair-studio');
-        const btnOpen = document.getElementById('btn-open-obsidian-studio');
-        if (studioEl && studioEl.classList.contains('hidden')) {
-          btnOpen?.click();
-        }
-      });
-      cardEl.querySelector('[data-placard-skill]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        triggerHeadPuzzleSkill(item.id, 'placard');
-      });
-      cardEl.querySelector('[data-placard-pinch]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__setDesktopTactilePlayMode === 'function') {
-          const nextMode = desktopEngine?.tactilePlayMode === 'pinch_face' ? 'move' : 'pinch_face';
-          window.__setDesktopTactilePlayMode(nextMode, item.id);
-        }
-      });
-      cardEl.querySelector('[data-placard-eyeball]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__triggerPetDesktopEyeballCycle === 'function') {
-          window.__triggerPetDesktopEyeballCycle(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-hairlift]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__triggerPetDesktopHairLift === 'function') {
-          window.__triggerPetDesktopHairLift(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-chin]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__triggerPetDesktopChinLift === 'function') {
-          window.__triggerPetDesktopChinLift(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-bow]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__togglePetDesktopBowPosture === 'function') {
-          window.__togglePetDesktopBowPosture(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-aura]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__cyclePetSuperiorityAura === 'function') {
-          window.__cyclePetSuperiorityAura(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-fluid]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__cyclePetDesktopFluidPreset === 'function') {
-          window.__cyclePetDesktopFluidPreset(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-expr]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__cyclePetDesktopDeadExpression === 'function') {
-          window.__cyclePetDesktopDeadExpression(item.id, ev.clientX, ev.clientY);
-        }
-      });
-      cardEl.querySelector('[data-placard-comfort]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (typeof window.__openComfortReaderDrawer === 'function') {
-          window.__openComfortReaderDrawer(null, item.id);
-        }
-      });
+
       cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
         btn.addEventListener('click', (ev) => {
           if (cardEl.dataset.justDragged === '1') return;
           ev.stopPropagation();
+          state.activeStripPetId = item.id;
+          if (typeof window.__syncVcdSelectedPetUI === 'function') {
+            window.__syncVcdSelectedPetUI(item.id);
+          }
           togglePinnedDossierForPet(item.id);
         });
-      });
-      cardEl.querySelector('[data-placard-rot]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        if (desktopEngine) {
-          desktopEngine.toggleRotationMode(item.id);
-          renderVaultGrid();
-        }
-      });
-      cardEl.querySelector('[data-placard-reset]')?.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        delete state.placardOffsets[item.id];
-        if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
       });
 
       // Stage 43 · Free Pointer Dragging & Double-Click Reset for Connected Specimen Placards
       cardEl.addEventListener('pointerdown', (ev) => {
         if (ev.button !== 0) return;
-        if (ev.target.closest('button')) return;
+        if (ev.target.closest('[contenteditable="true"]')) return;
         ev.stopPropagation();
         state.activeStripPetId = item.id;
         if (typeof window.__syncVcdSelectedPetUI === 'function') {
@@ -990,39 +909,33 @@ function renderSpecimenPlacards(placardsList = []) {
       });
 
       cardEl.addEventListener('dblclick', (ev) => {
-        if (ev.target.closest('button')) return;
+        if (ev.target.closest('[contenteditable="true"]')) return;
         ev.stopPropagation();
         delete state.placardOffsets[item.id];
         if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
-        showToast(`🏷️ 已将「${baseShortName}」连接标牌归位至默认锚点`);
+        showToast(`🏷️ 已将「${displayName}」连接标牌归位至默认锚点`);
       });
 
       cardsEl.appendChild(cardEl);
     } else {
+      const photoImg = cardEl.querySelector('[data-placard-photo]');
+      if (photoImg && photoImg.getAttribute('src') !== photoSrc) {
+        photoImg.setAttribute('src', photoSrc);
+      }
       const titleEl = cardEl.querySelector('[data-placard-title]');
       if (titleEl && document.activeElement !== titleEl) {
-        titleEl.textContent = `✥ ${displayTitle}`;
+        titleEl.textContent = displayName;
       }
-      const sealEl = cardEl.querySelector('[data-placard-seal]');
-      if (sealEl) {
-        sealEl.textContent = sealBadgeText;
+      const ageEl = cardEl.querySelector('[data-placard-age]');
+      if (ageEl && document.activeElement !== ageEl) {
+        ageEl.textContent = displayAge;
       }
       const briefEl = cardEl.querySelector('[data-placard-brief]');
       if (briefEl && document.activeElement !== briefEl) {
-        briefEl.textContent = briefIdentity;
+        briefEl.textContent = briefStory;
       }
-      const zEl = cardEl.querySelector('[data-placard-z]');
-      if (zEl) zEl.textContent = `Z:${item.zMm}mm`;
-      const cutEl = cardEl.querySelector('[data-placard-cut]');
-      if (cutEl) cutEl.textContent = stateLabel;
-      const rotBtn = cardEl.querySelector('[data-placard-rot]');
-      if (rotBtn) rotBtn.textContent = item.isRotationMode ? '🔄转中' : '360°';
-      const skillBtn = cardEl.querySelector('[data-placard-skill]');
-      if (skillBtn) skillBtn.textContent = skillBtnLabel;
     }
 
-    const resetBtn = cardEl.querySelector('[data-placard-reset]');
-    if (resetBtn) resetBtn.style.display = hasCustomOffset ? 'inline-block' : 'none';
     cardEl.classList.toggle('is-hovered', Boolean(item.isHovered || isSelectedPet));
     cardEl.style.left = `${cx.toFixed(1)}px`;
     cardEl.style.top = `${cy.toFixed(1)}px`;
@@ -2436,6 +2349,16 @@ window.addEventListener('DOMContentLoaded', async () => {
     get desktop() { return desktopEngine; },
     get studio() { return studioEngine; },
     state,
+    persistCollectibles,
+    resolveCollectibleLifePhotoSrc,
+    showToast,
+    refreshPlacards() {
+      if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+    },
+    getActiveCollectible() {
+      const targetId = state.activeStripPetId || 'SPEC-2026-FYP';
+      return state.collectibles.find(c => c.id === targetId) || state.collectibles[0] || null;
+    },
   };
 
   // Summon initial default collectibles onto the computer screen (defer canvas render until all initial pets are in scene!)
