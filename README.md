@@ -49,19 +49,13 @@
 - 档案 ZIP **不包含私人模型本体**。请另存原始 GLB / BLEND / DUF，清理浏览器数据或换电脑后重新导入。
 - 仅开发服务器模式可能把档案写入仓库 `collectibles/`；离线 HTML 使用本地存储与下载，不会假装已写入磁盘目录。
 
-## 真正系统桌宠（Electron 源码）
+## 真正系统桌宠（Windows 10/11 · Electron 悬浮窗口）
 
-```bash
-npm ci
-npm install --no-save electron
-npm run electron
-```
+**下载完整仓库 ZIP 并先解压**，不要只下载 HTML/BAT，也不要在 ZIP 内直接双击。双击根目录 `双击启动真实桌面桌宠_Windows.bat`，无需安装 Node.js/npm：首次会从公开镜像（失败则官方 GitHub）下载约 120 MB Electron 35.1.5 运行时，核验官方 SHA-256 后解压至当前 Windows 用户的 `%LOCALAPPDATA%\CERVIX3D\Electron35\`；以后可离线启动。此模式是跨应用的透明悬浮桌宠，**浏览器内的 HTML 试玩版不能代替它**。BAT 不会在失败时退回浏览器，并会留住 `[ERROR 编号]` 便于截图排障。不要在旧版失败的 `node_modules` 上反复 `npm install`；有些网络会导致 Electron 下载 `ECONNRESET` 或 npm 清理 `EPERM`。
 
-无需另开 Vite：Electron 默认读取已打包的根目录 HTML。管理器默认不置顶；切换桌宠模式后才成为透明置顶层，空白区域鼠标穿透。
+`Ctrl+Alt+M` 切换桌宠/工坊，`Ctrl+Alt+X` 退出。技术用户也可自行安装 Electron，通过 `npm run electron -- --overlay` 启动；Windows 双击 BAT 则不需要开发工具。
 
-恢复管理器：托盘菜单、**Ctrl/Cmd+Alt+M** 或 **Ctrl/Cmd+Alt+X**。
-
-**本轮未提供 Windows/macOS 安装包，也未在真实系统桌面验证穿透、托盘和多屏行为。** 下载 HTML 可立即试玩，但完整系统桌宠目前仍需上述环境。
+**本仓库仍没有提供免下载的离线独立 EXE 安装包；Windows 桌面透明/鼠标穿透、托盘、多显示器尚待用户实机验收。** 请将新错误窗口最后几行发送给维护者，不要把用户私人照片或授权信息传到公开仓库。
 
 ## 开发与协作
 
