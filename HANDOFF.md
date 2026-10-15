@@ -1386,10 +1386,19 @@
   - **Spherical Head-Volume Hair Card Normals & Crown-to-Tip Flow (`injectArtistHairLighting`)**: Blended hair-card polygon normals (`58%`) toward the spherical head-volume normal (`radN = normalize(vHairModelPos - headCenter)`) with continuous 3D crown-to-tip tangent flow (`vHairCrownFlow`), scalp depth AO (`gHairDepthAO`), and dual-lobe Marschner / Kajiya-Kay specular bands, eliminating flat polygon ribbon glare on hair cards.
   - Rebuilt `/home/user/点击开始游戏_CERVIX3D.html` (`31.11 MB`, hardlinked with `/home/user/docs/index.html`).
 
-
-
-
-
 ---
-### [安全版] 阶段 8（2026-10-15）
-眼睛修复：睫毛此前完全不渲染（mipmap/alphaTest），现为程序化睫毛 + 睫毛根线 + 程序化眉毛，详见 `安全/HANDOFF_安全.md` 阶段 8。仅改动 `安全/` 目录。
+
+## [2026-10-15] Stage 68 — Hotfix for `HeadSkinMesh` WebGL2 Fragment Shader Compilation (`modelMatrix` Removal) + Deep Melanin Hair Contrast & `BabyHairWisps` Fix (`修复HeadSkinMesh片元着色器modelMatrix未声明导致脸部皮肤网格消失的严重Bug + 修复发片灰褐泛白与发际线碎发参数`)
+- **1. Fixed `HeadSkinMesh` Invisible Bug in WebGL2 (`src/three/photorealLighting.js`)**:
+  - Identified via Khronos `glslangValidator` (`OpenGL ES GLSL 3.00`) that `injectAestheticSubsurfaceScattering` referenced `modelMatrix` inside `#include <normal_fragment_maps>` in the fragment shader (`ERROR: 'modelMatrix' : undeclared identifier`), because Three.js `MeshPhysicalMaterial` only declares `modelMatrix` in the vertex shader. When `HeadSkinMesh` failed compilation, the face/head skin did not render at all, leaving only eyes, eyebrows, teeth, and the inner back wall of the hair cap visible.
+  - Replaced the fragment-shader `modelMatrix` tangent projection with distance-anti-aliased 3D object-space `sk_pore` height perturbation fed into screen-space derivative normal perturbation (`dFdx`/`dFdy` on `vViewPosition`), and verified with `glslangValidator` that `HeadSkinMesh` (`vert` + `frag`) and all 9 project shaders compile with zero errors.
+- **2. Fixed Washed-Out Grey-Brown Hair & Restored Deep Melanin Contrast (`src/three/collectibleHeadAssembler.js`, `src/three/artistHairLighting.js`, `src/three/photorealLighting.js`, `src/three/masterQuality/strandHair.js`)**:
+  - Removed the grey-beige `sheenColor` (`#bba89c`, `sheen = 0.28`) coat from `configureHairSheen` (`sheen = 0`, `envMapIntensity = 0.22`), reduced `injectArtistHairColor` diffuse multiplier from `2.35x` to `1.38x`, restricted `vHairRadial` normal blending in `injectArtistHairLighting` to front-facing cards (`dot(normal, radN) > 0.0`), and tuned default PMREM `effectiveEnv` (`0.24..0.45`) so dark East Asian hair retains rich, deep melanin contrast with crisp anisotropic Kajiya-Kay silk highlights instead of chalky grey wash.
+  - Fixed `createStrandMaterial(headCenter, opts)` signature handling and `hairLocalEntries` container-relative matrix + alpha-sampler transforms in `apply3DArtistHairModel` so 3D `BabyHairWisps` generate cleanly along the forehead and temples.
+  - Added 3D curved individual eyelash strands + upper lashline (`LashStrands` via `buildLashGeometry`), 3D individual eyebrow hairs (`BrowStrands` via `buildBrowGeometry`), and negative-LOD (`-1.5`) 3-tap max eyelash mipmap preservation (`photoreal-lash-v68`) so 1–2px eyelash fibers and lower lashes are never lost to mipmap averaging.
+  - Rebuilt `/home/user/点击开始游戏_CERVIX3D.html` (`31.12 MB`, hardlinked with `/home/user/docs/index.html`).
+
+
+
+
+

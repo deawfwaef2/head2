@@ -704,7 +704,12 @@ export const STRAND_SHADING_DEFAULTS = {
   tipLighten: 0.14,
 };
 
-export function createStrandMaterial(headCenter, opts = {}) {
+export function createStrandMaterial(headCenter = [0.0, 0.02, -0.01], opts = {}) {
+  if (headCenter && !Array.isArray(headCenter) && typeof headCenter === 'object') {
+    opts = headCenter;
+    headCenter = opts.headCenter || [0.0, 0.02, -0.01];
+  }
+  if (!Array.isArray(headCenter)) headCenter = [0.0, 0.02, -0.01];
   const o = { ...STRAND_SHADING_DEFAULTS, ...opts };
   const mat = new THREE.MeshStandardMaterial({
     name: 'PhotorealStrandHair', color: new THREE.Color(...o.color), roughness: 0.65, metalness: 0,

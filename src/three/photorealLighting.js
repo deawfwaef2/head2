@@ -1841,22 +1841,13 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         float combinedMicroHeight = mix(poreVal, lipCreaseLocal * 1.15, lipMaskN);
         vDermisPoreCavity = poreVal;
 
-        // 3D Object-Space Pore Tangent Perturbation (masterQuality/skinMaterial.js)
-        float freqP = 260.0 * clamp(uPoreScale, 0.4, 2.0);
-        vec3 spP = vCervixLocalPos * freqP;
-        vec3 onP = normalize(vSkinObjN);
-        vec3 upP = abs(onP.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 t1P = normalize(cross(upP, onP));
-        vec3 t2P = cross(onP, t1P);
-        float epsP = 0.07;
-        float h0P = sk_pore(spP);
-        float d1P = (sk_pore(spP + t1P * epsP) - h0P) / epsP;
-        float d2P = (sk_pore(spP + t2P * epsP) - h0P) / epsP;
-        vec3 vt1P = normalize((viewMatrix * modelMatrix * vec4(t1P, 0.0)).xyz);
-        vec3 vt2P = normalize((viewMatrix * modelMatrix * vec4(t2P, 0.0)).xyz);
+        // 3D Object-Space Pore Micro-Normal Perturbation (matching masterQuality/skinMaterial.js without fragment modelMatrix)
+        vec3 porePos3D = vCervixLocalPos * (2100.0 * clamp(uPoreScale, 0.4, 2.0));
+        float fwPore = length(fwidth(vCervixLocalPos)) * 2100.0;
+        float poreFade = 1.0 - smoothstep(0.25, 1.25, fwPore);
         float tZoneP = exp(-pow(vCervixLocalPos.x * 28.0, 2.0)) * smoothstep(-0.04, 0.03, vCervixLocalPos.y);
-        float poreStr3D = clamp(uPoreRelief * 0.24, 0.0, 0.25) * faceRegion * (0.7 + 0.5 * tZoneP) * (1.0 - lipMaskN * 0.85);
-        normal = normalize(normal - (vt1P * d1P + vt2P * d2P) * poreStr3D);
+        float skPoreVal = (sk_pore(porePos3D) - 0.35) * poreFade * (0.75 + 0.45 * tZoneP);
+        combinedMicroHeight = mix(poreVal + skPoreVal * 0.48, lipCreaseLocal * 1.15, lipMaskN);
 
         #ifdef USE_ROUGHNESSMAP
           combinedMicroHeight = mix(combinedMicroHeight, roughnessFactor, 0.24);
@@ -2303,12 +2294,12 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   }
 
   engine.renderer.toneMappingExposure = studioLP
-    ? studioLP.exposure
-    : Number(m.exposure ?? basePreset.exposure ?? 1.08);
-  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.56);
+    ? studioLP.exposure * 1.12
+    : Number(m.exposure ?? basePreset.exposure ?? 1.06);
+  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.38);
   const effectiveEnv = studioLP
     ? studioLP.envIntensity
-    : Math.max(0.58, baseEnv * 1.48);
+    : Math.max(0.24, Math.min(0.45, baseEnv * (1.02 - chiaroscuro * 0.45)));
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
   // Stage 41 Dynamic Supersampling DSR (capped at native 1.0x–1.25x on multi-head desktop to prevent 4K+ MSAA GPU fan roar)
