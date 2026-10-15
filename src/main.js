@@ -76,7 +76,7 @@ import {
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage69d-save-load-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage69f-hdcard-v1';
 const ACCESSORY_DEFAULTS = Object.freeze({
   glassesStyle: 'none', glassesColor: '#a07857', glassesSize: 1,
   glassesOffsetY: 0, glassesOffsetZ: 0, glassesTilt: 0, glassesLensTint: 0,

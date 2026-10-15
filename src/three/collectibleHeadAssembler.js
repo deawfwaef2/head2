@@ -62,7 +62,7 @@ export const MASTER_HAIR_DENSITIES = {
 };
 
 export const MASTER_HAIR_CONFIG = {
-  mode: 'strand', // 'strand' (Card-to-Strand v2 复合真发丝) | 'card' (原版精雕多层羽毛发片)
+  mode: 'card', // Fast 60FPS HD multi-strand wispy card pipeline (eliminates 930k-vertex lag & strand cutoff bugs)
   density: 'mid',
   gainR: 0.48,
   gainTT: 0.42,
@@ -1785,14 +1785,15 @@ export function updateHairSheen(node, value) {
 
 function computeTrueHairDisplayColor(hairColorHex = '#121216') {
   const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
-  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216', '#111216', '#1b181d', '#1b1b1e']);
+  const legacyDarkSet = new Set(['#191518', '#1a151c', '#181418', '#22171b', '#261a16', '#171417', '#121216', '#111216', '#1b181d', '#1b1b1e', '#141318', '#0f1015', '#121118']);
   if (legacyDarkSet.has(normalizedHex)) {
-    return new THREE.Color('#271f1d');
+    return new THREE.Color('#28272b');
   }
   const baseColor = new THREE.Color(normalizedHex);
   const lum = 0.299 * baseColor.r + 0.587 * baseColor.g + 0.114 * baseColor.b;
-  if (lum < 0.035) {
-    return new THREE.Color('#271f1d');
+  if (lum < 0.032) {
+    const scale = 0.032 / Math.max(lum, 0.004);
+    baseColor.multiplyScalar(Math.min(scale, 2.4));
   }
   return baseColor;
 }
@@ -1820,9 +1821,10 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
     uHairTipColor: { value: new THREE.Color(hairShaderParams.hairTipColor || '#4a3528') },
     uHairHighlightColor: { value: new THREE.Color('#9e6b52') },
     uHairHighlightStrength: { value: 0 },
+    uHairFlowHoriz: { value: hairShaderParams.flowHorizontal ? 1.0 : 0.0 },
   };
   material.userData.hairShaderUniforms = uniforms;
-  material.customProgramCacheKey = () => 'artist-hair-azimuth-coverage-v48';
+  material.customProgramCacheKey = () => 'artist-hair-azimuth-coverage-v69f2';
   material.onBeforeRender = renderer => {
     const rt = renderer.getRenderTarget();
     uniforms.uHairUseCoverage.value = rt
@@ -1842,40 +1844,53 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
       uniform vec3 uHairTipColor;
       uniform vec3 uHairHighlightColor;
       uniform float uHairHighlightStrength;
+      uniform float uHairFlowHoriz;
     ` + shader.fragmentShader;
     shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
       #ifdef USE_MAP
         vec4 hairTexel = texture2D(map, vMapUv);
-        float atlasLuma = sqrt(clamp(dot(hairTexel.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
-        // Fine micro-strand fiber definition along the card cross-axis so hair never looks like flat plastic
-        float microStrand = 0.5 + 0.5 * sin(vMapUv.x * 520.0 + sin(vMapUv.y * 16.0) * 0.6) * cos(vMapUv.x * 230.0 - 0.5);
-        float lockValue = clamp(mix(atlasLuma, microStrand, 0.28), 0.0, 1.0);
+        float rawLuma = sqrt(clamp(dot(hairTexel.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
+        // Compress dark valleys so no texture region ever turns into a black blotch ("减少黑区")
+        float atlasLuma = clamp((rawLuma - 0.32) / 0.58, 0.0, 1.0);
+
+        // 3-octave sub-pixel individual hair fiber field ("消除片状感的精细发丝纹理")
+        float uCoord = uHairFlowHoriz > 0.5 ? vMapUv.y : vMapUv.x;
+        float vCoord = uHairFlowHoriz > 0.5 ? vMapUv.x : vMapUv.y;
+        float waveShift = 0.0020 * sin(vCoord * 20.0 + uCoord * 28.0);
+        float s0 = 0.5 + 0.5 * sin(vHairLocalPos.x * 380.0 + vHairLocalPos.z * 190.0);
+        float s1 = 0.5 + 0.5 * sin((uCoord + waveShift) * 180.0 * 6.2831853 + 0.3);
+        float s2 = 0.5 + 0.5 * sin((uCoord - waveShift * 0.6) * 420.0 * 6.2831853 + 1.1);
+        float s3 = 0.5 + 0.5 * sin((uCoord + waveShift * 0.3) * 780.0 * 6.2831853 + 2.4);
+        float microStrand = clamp(0.22 * s1 + 0.44 * pow(s2, 0.80) + 0.34 * pow(s3, 0.75), 0.0, 1.0);
+
+        float lockValue = clamp(mix(atlasLuma, microStrand, 0.52), 0.0, 1.0);
         float tips = smoothstep(0.12, 0.88, clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0));
         vec3 tint = mix(diffuse, uHairTipColor, tips * uHairOmbreMix);
         tint = mix(tint, uHairHighlightColor, smoothstep(0.55, 0.9, lockValue) * uHairHighlightStrength);
-        // Root-to-tip & crown ambient depth + crisp strand contrast (matching masterQuality/featureMaterials.js)
-        float crownLift = smoothstep(-0.04, 0.11, vHairLocalPos.y);
-        diffuseColor.rgb = tint * mix(0.54, 1.38, lockValue) * (0.82 + 0.22 * crownLift);
 
-        // Airy see-through feathering on lower forehead bang tips only (keep upper root 100% dense!)
-        float bangTipMask = smoothstep(0.052, 0.072, vHairLocalPos.z)
-                          * smoothstep(0.015, 0.026, vHairLocalPos.y)
-                          * (1.0 - smoothstep(0.040, 0.054, vHairLocalPos.y))
-                          * (1.0 - smoothstep(0.048, 0.064, abs(vHairLocalPos.x)));
-        float coverage = hairTexel.a;
-        coverage *= 1.0 - 0.16 * uHairWispyFeather * (1.0 - coverage);
-        float bangStrandComb = smoothstep(0.18, 0.56, atlasLuma * 0.72 + microStrand * 0.28);
-        coverage *= mix(1.0, mix(0.55, 1.0, bangStrandComb), bangTipMask * clamp(uHairWispyFeather * 0.55, 0.0, 0.55));
-        diffuseColor.rgb *= mix(0.66, 1.0, smoothstep(0.16, 0.68, coverage));
-        diffuseColor.a = coverage;
+        // High-contrast fiber-to-fiber separation with lifted shadow floor (zero black slabs!)
+        float crownLift = smoothstep(-0.04, 0.11, vHairLocalPos.y);
+        float fiberCrest = pow(lockValue, 2.1) * (0.45 + 0.55 * s0);
+        vec3 fiberSheen = (tint * 0.75 + vec3(0.020, 0.018, 0.022)) * fiberCrest;
+        diffuseColor.rgb = (tint * mix(0.52, 1.62, pow(lockValue, 1.15)) + fiberSheen) * (0.88 + 0.16 * crownLift);
+
+        // Clean macroscopic V-notch lock tips at the very bottom 6mm of forehead bangs ONLY (y = 0.025..0.032)
+        // Keeps each hair lock 100% opaque (never a grey translucent band!) while breaking up straight horizontal bottom edges
+        float bangBottomEdge = smoothstep(0.052, 0.068, vHairLocalPos.z)
+                             * clamp((0.032 - vHairLocalPos.y) / 0.008, 0.0, 1.0)
+                             * (1.0 - smoothstep(0.042, 0.056, abs(vHairLocalPos.x)));
+        float lockWave = 0.58 * (0.5 + 0.5 * sin(vHairLocalPos.x * 580.0 + sin(vHairLocalPos.y * 80.0) * 0.35))
+                       + 0.42 * (0.5 + 0.5 * sin(vHairLocalPos.x * 1320.0 + 1.2));
+        float tipKeep = step(bangBottomEdge * 0.72, lockWave);
+        diffuseColor.a = hairTexel.a * mix(1.0, tipKeep, step(0.01, bangBottomEdge));
       #endif
     `);
     shader.fragmentShader = shader.fragmentShader.replace('#include <alphatest_fragment>', `
       #ifdef USE_ALPHATEST
         if (uHairUseCoverage > 0.5) {
-          if (diffuseColor.a < 0.15) discard;
+          if (diffuseColor.a < 0.14) discard;
         } else {
-          if (diffuseColor.a < 0.26) discard;
+          if (diffuseColor.a < 0.24) discard;
           diffuseColor.a = 1.0;
         }
       #endif
@@ -1901,12 +1916,11 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const xm = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3.0;
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Full anatomical cranial hair base cap: covers crown, upper temples, and back of skull so partings/updos never expose bare pink skin,
-    // while strictly excluding the lower forehead/face, ears, and lower temples.
-    const isForeheadOrFace = zm > 0.035 && ym < 0.062;
-    const isEar = Math.abs(xm) > 0.054 && ym < 0.032 && zm > -0.028 && zm < 0.028;
-    const isLowerTemple = zm > 0.012 && ym < 0.048;
-    if (ym > 0.015 && !isForeheadOrFace && !isEar && !isLowerTemple) {
+    // Strictly upper/rear cranial dome only — NEVER extend onto the forehead (zm > 0.015 && ym < 0.082)!
+    const isForeheadOrFace = zm > 0.015 && ym < 0.082;
+    const isEar = Math.abs(xm) > 0.052 && ym < 0.036 && zm > -0.028 && zm < 0.028;
+    const isLowerTemple = zm > 0.005 && ym < 0.058;
+    if (ym > 0.022 && !isForeheadOrFace && !isEar && !isLowerTemple) {
       capIndices.push(a, b, c);
     }
   }
@@ -1916,9 +1930,9 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
   const newPos = new Float32Array(pos.array.length);
   const colors = new Float32Array(pos.count * 4);
   const hcX = 0.0, hcY = 0.02, hcZ = -0.01;
-  const baseR = Math.max(0.058, displayColor.r * 1.45);
-  const baseG = Math.max(0.048, displayColor.g * 1.38);
-  const baseB = Math.max(0.042, displayColor.b * 1.32);
+  const baseR = Math.max(0.068, displayColor.r * 1.48);
+  const baseG = Math.max(0.056, displayColor.g * 1.40);
+  const baseB = Math.max(0.050, displayColor.b * 1.35);
 
   const ss = (a, b, v) => {
     const t = Math.max(0.0, Math.min(1.0, (v - a) / (b - a)));
@@ -1933,13 +1947,12 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     newPos[i * 3 + 1] = y + (dy / len) * 0.0005;
     newPos[i * 3 + 2] = z + (dz / len) * 0.0005;
 
-    const fadeY = ss(0.015, 0.034, y);
-    const foreheadClear = z > 0.028 ? ss(0.062, 0.094, y) : 1.0;
-    const templeClear = z > 0.008 ? ss(0.044, 0.060, y) : 1.0;
-    const earClear = (Math.abs(x) > 0.050 && z > -0.028 && z < 0.028) ? ss(0.028, 0.044, y) : 1.0;
-    // Subtle micro-strand variation so the scalp underlayer blends seamlessly with overlying hair strands
-    const strandMod = 0.88 + 0.12 * Math.sin(x * 480.0 + z * 320.0);
-    const alpha = fadeY * foreheadClear * templeClear * earClear * 0.84;
+    const fadeY = ss(0.022, 0.042, y);
+    const foreheadClear = z > 0.010 ? ss(0.080, 0.106, y) : 1.0;
+    const templeClear = z > 0.002 ? ss(0.056, 0.074, y) : 1.0;
+    const earClear = (Math.abs(x) > 0.048 && z > -0.028 && z < 0.028) ? ss(0.032, 0.048, y) : 1.0;
+    const strandMod = 0.90 + 0.10 * Math.sin(x * 480.0 + z * 320.0);
+    const alpha = fadeY * foreheadClear * templeClear * earClear * 0.72;
 
     colors[i * 4] = baseR * strandMod;
     colors[i * 4 + 1] = baseG * strandMod;
@@ -2076,7 +2089,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     config.hairWispyFeather ?? config.morphs?.hairWispyFeather ?? presetRecipe?.hairWispyFeather ?? rootGroup.userData.hairWispyFeather ??
     (frontBangsStyle === 'wispy_air' ? 0.62 : 0.42)
   );
-  const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'strand';
+  const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'card';
   const strandDensity = config.strandDensity || config.morphs?.strandDensity || rootGroup.userData.strandDensity || MASTER_HAIR_CONFIG.density || 'mid';
 
   rootGroup.userData.topCrownStyle = topCrownStyle;
@@ -2111,7 +2124,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   rootGroup.userData.customHairType = config.customHairType || null;
   const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
   const isCustomObj = Boolean(config.customHairUrl && (config.customHairType === 'obj' || String(config.customHairUrl).toLowerCase().endsWith('.obj')));
-  const useStrandMode = !config.customHairUrl && hairRenderMode === 'strand';
+  const useStrandMode = Boolean(typeof window !== 'undefined' && window.__FORCE_STRAND_HAIR__ && !config.customHairUrl && hairRenderMode === 'strand');
 
   try {
     let loadedScene = null;

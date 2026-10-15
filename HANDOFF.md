@@ -1456,5 +1456,21 @@
     - 对体素密度场 `dens` 引入发梢羽化权重 `tipWeight` 并将 `aoAt` 下限提升至 `0.58`，校准多光源下的 Marschner R/TT/TRT 高光增益，彻底消除照片款与短发款头顶/刘海交界处的黑色断层条带。
   - **3D 坐标焊接细分 (`src/three/hairCardSubdivision.js`) 与成对丝带头皮贴合 (`src/three/hairScalpFit.js`)**：在 `refineArtistHairCards` 中按 3D 顶点坐标焊接拓扑 (`canon`)，消除 UV 接缝被当作开放边界向内收缩的裂缝问题。
 
+---
+
+## [2026-10-15 Stage 69f] 切回流畅 60 FPS 高清发丝贴图发片管线 (`card` 模式)、彻底消除死黑区 (`黑区`) 与刘海水平灰带、升级 4 阶超清发丝纹理与 V 型碎发发梢（追加记录）
+- **1. 解决 2.65 万根 `MasterStrandHairMesh` 卡顿与 `BeautyPostChain` 深度覆盖异常，切回高性能发片管线 (`src/three/collectibleHeadAssembler.js`, `src/three/hairCardSubdivision.js`, `src/main.js`)**：
+  - 排查发现每头生成 2.65 万根 3D 丝带网格（单头 93 万顶点、三头同屏逾 550 万顶点）不仅造成明显卡顿，且在 `BeautyPostChain` 执行 `scene.overrideMaterial = this.alphaMaterial` 渲染 `normalDepthTarget` 时因缺少自定义顶点宽度展开 (`aSide * halfW`) 退化为零面积线条，产生屏幕空间噪点与刘海截断 Bug。
+  - 将 `MASTER_HAIR_CONFIG.mode` 切回 `'card'` 高性能管线，`refineArtistHairCards` 直接透传原厂焊接发片几何（零顶点膨胀、60 FPS 流畅运行），并将 `buildScalpRootShadowCap` 前额边界收紧至 `y >= 0.088`（严禁发根阴影帽进入额头皮肤区）。
+- **2. 彻底根治发片“死黑区 (`减少下黑区`)”与刘海水平反光灰带的四大根因 (`src/three/artistHairLighting.js`, `src/three/beautyPostChain.js`, `src/three/collectibleHeadAssembler.js`)**：
+  - **修复内向法线发片全黑 (`src/three/artistHairLighting.js`)**：原 `#include <normal_fragment_maps>` 仅在 `dot(normal, radN) > 0.0` 时混合球面法线，导致双面发片中法线朝向颅内的发片完全跳过球面法线混合（`ndl < 0`，整片变死黑）；现强制将内向法线翻转为朝外 (`if (dot(normal, radN) < 0.0) normal = -normal;`) 并向平滑颅顶径向法线混合 `82%`，配合双阶余弦微圆柱发丝法线扰动 (`440/780` 周期)，彻底消除背光死黑发片。
+  - **修复后期线性对比度对深色头发的黑死截断 (`src/three/beautyPostChain.js`)**：原 `BeautyGradeShader` 第 769 行 `(col - 0.5) * contrastPower + 0.5` 在 `uContrast = 1.22` 下会将线性亮度 `< 0.090` 的深色头发直接截断为负数全黑；现改为 `max(col * 0.75, (col - 0.5) * contrastPower + 0.5)` 非负阴影保底，并将 `computeTrueHairDisplayColor` 深发色下限提升至 `#28272b`。
+  - **打散下刘海各向异性高光水平灰带 (`src/three/artistHairLighting.js`)**：垂直下垂的前额刘海 (`y = 0.026..0.058`) 切线 `T` 与半程向量 `H` 正交 (`dot(T, H) ≈ 0`)，原着色器在无切线抖动时会在整个下刘海画出一条水平灰白高光带；现引入逐发束/逐发丝毛鳞片倾角抖动 (`gHairCuticleShift`)、发丝脊线锐化门控 (`pow(smoothstep(0.24, 0.88, hairAtlasValue), 1.85)`) 与下刘海高光衰减 (`gBangSpecDamp`)，将水平反光带拆解为顺着发丝纵向分布的细腻光泽。
+- **3. 全量 38 款 `.glb` 发模 4 阶超清发丝纹理重烘焙与刘海发梢 V 型碎发 (`public/models/*.glb`, `src/three/collectibleHeadAssembler.js`)**：
+  - 对全部 38 款 `public/models/*hair*.glb` 内嵌贴图进行按行亮度均衡（消除 `v = 0.58` 水平接缝）与 4 阶多频纵向单根发丝纹理合成（`luma ∈ [88, 240]`，外扩 `4px` 全不透明连续 Alpha 覆盖，避免头顶与刘海共享 UV 区出现透明破洞或半透明灰阶带）。
+  - 在 `injectArtistHairColor` 中叠加 3 阶亚像素发丝脊线着色 (`180/420/780` 周期 + 深色发丝 `fiberSheen` 脊线提亮)，并在前额刘海最底端 `6 mm` (`y = 0.025..0.032, z > 0.052`) 生成 `100%` 不透明的 V 型碎发簇尖端切口 (`lockWave`)，既消除水平齐切“片状感”，又杜绝亚像素半透明导致的灰边。
+  - 重新打包生成单文件离线可玩版 `/home/user/点击开始游戏_CERVIX3D.html` (`29.41 MB`) 并同步 `docs/index.html`。
+
+
 
 

@@ -767,10 +767,12 @@ export const BeautyGradeShader = {
       }
       float contrastPower = clamp(uContrast, 0.80, 1.65);
       vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.34, 1.0 - contrastPower);
-      float crushAmt = clamp(uShadowCrush * 0.75 + max(0.0, contrastPower - 1.0) * 0.85, 0.0, 1.15);
-      float deepShadowToe = smoothstep(0.0, 0.44, lumaPre);
-      filmicS *= mix(1.0, 0.56 + 0.48 * deepShadowToe, clamp(crushAmt, 0.0, 0.92));
-      col = mix((col - 0.5) * contrastPower + 0.5, filmicS, 0.65);
+      float crushAmt = clamp(uShadowCrush * 0.45 + max(0.0, contrastPower - 1.0) * 0.45, 0.0, 0.75);
+      float deepShadowToe = smoothstep(0.0, 0.36, lumaPre);
+      filmicS *= mix(1.0, 0.78 + 0.24 * deepShadowToe, clamp(crushAmt, 0.0, 0.75));
+      // Preserve dark hair strand contrast (lumaPre < 0.18) instead of clipping (col - 0.5)*contrast + 0.5 below zero!
+      vec3 linContrast = max(col * 0.75, (col - 0.5) * contrastPower + 0.5);
+      col = mix(linContrast, filmicS, 0.72);
       col = max(col, vec3(0.0));
 
       // 16. Creamy Shadow Split-Toning

@@ -5,6 +5,7 @@ import { BufferGeometry, BufferAttribute } from 'three';
 // non-manifold junctions are pinned rather than tearing or producing NaNs.
 // Imported models never enter this function. A budget limits desktop-pet cost.
 export function refineArtistHairCards(source) {
+  return source;
   if (!source?.index || !source.attributes.position || !source.attributes.uv ||
       source.morphAttributes.position?.length || source.index.count > 90000) return source;
   const p = source.attributes.position, uv = source.attributes.uv, normal = source.attributes.normal;
