@@ -16,6 +16,8 @@ import {
   EYE_SHAPE_PRESET_CATALOG,
   EAST_ASIAN_ARCHETYPE_MPFB_RECIPES,
 } from '../data/eastAsianHeadAndEyeTargets.js';
+import { FACE_FINE_TARGETS } from '../data/faceFineTargets.js';
+import { syncFaceAccessories } from './faceAccessories.js';
 import {
   buildSpecimenContainerGroup,
   buildSpecimenDecorGroup,
@@ -1199,6 +1201,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
 
   applyMpfbEastAsianTargetsToGroup(rootGroup, m, faceArchetype);
   applyArtistHairFineTuning(rootGroup, m);
+  syncFaceAccessories(rootGroup, m);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
@@ -1207,10 +1210,12 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   }
 }
 
-function createLightweightGeometryInstance(srcGeo) {
+function createLightweightGeometryInstance(srcGeo, clonePos = true) {
   const g = new THREE.BufferGeometry();
   g.index = srcGeo.index;
-  g.attributes = { ...srcGeo.attributes };
+  g.attributes = clonePos && srcGeo.attributes?.position
+    ? { ...srcGeo.attributes, position: srcGeo.attributes.position.clone() }
+    : { ...srcGeo.attributes };
   g.morphAttributes = srcGeo.morphAttributes;
   g.morphTargetsRelative = srcGeo.morphTargetsRelative;
   g.groups = srcGeo.groups;
@@ -1239,6 +1244,7 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   const eyeEpicanthusVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeEpicanthus ?? 0)));
   const eyeCreaseVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeCrease ?? 0)));
   const eyeBagVal = Math.max(0.0, Math.min(1.5, Number(m.eyeBag ?? m.aegyoSalStrength ?? 0)));
+  const fineValue = (key) => Math.max(-0.7, Math.min(0.7, Number(m[key]) || 0));
 
   const weights = { ...archRecipe };
   const addW = (k, v) => {
@@ -1322,6 +1328,32 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
     addW('eye_bag_height_incr', (eyeBagVal - 0.20) * 0.55);
   }
 
+  // Stage 69c: real artist-sculpted facial detail.
+  const lowerLid = fineValue('lowerLidFlatness');
+  if (lowerLid > 0) {
+    addW('eye_height_mid_decr', lowerLid * 0.68);
+    addW('eye_height_outer_incr', lowerLid * 0.22);
+    addW('eye_bag_decr', lowerLid * 0.42);
+    addW('eye_bag_height_decr', lowerLid * 0.18);
+  } else if (lowerLid < 0) {
+    addW('eye_height_mid_incr', -lowerLid * 0.55);
+    addW('eye_height_outer_decr', -lowerLid * 0.18);
+    addW('eye_bag_incr', -lowerLid * 0.22);
+  }
+  const eyeDepth = fineValue('eyeDepth');
+  addW(eyeDepth >= 0 ? 'eye_depth_deep' : 'eye_depth_shallow', Math.abs(eyeDepth) * 0.55);
+
+  const mouthWidth = fineValue('mouthWidth');
+  addW(mouthWidth >= 0 ? 'mouth_scale_horiz_incr' : 'mouth_scale_horiz_decr', Math.abs(mouthWidth) * 0.68);
+  const cupidBow = fineValue('cupidBow');
+  addW(cupidBow >= 0 ? 'mouth_cupidsbow_incr' : 'mouth_cupidsbow_decr', Math.abs(cupidBow) * 0.70);
+  const lowerLip = fineValue('lowerLipCenter');
+  addW(lowerLip >= 0 ? 'mouth_lowerlip_middle_down' : 'mouth_lowerlip_middle_up', Math.abs(lowerLip) * 0.66);
+  const chinWidth = fineValue('chinWidth');
+  addW(chinWidth >= 0 ? 'chin_width_incr' : 'chin_width_decr', Math.abs(chinWidth) * 0.70);
+  const noseTip = fineValue('noseTipAngle');
+  addW(noseTip >= 0 ? 'nose_point_up' : 'nose_point_down', Math.abs(noseTip) * 0.68);
+
   // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)
   if (!skinMesh.userData.hasMpfbClone) {
     skinMesh.geometry = createLightweightGeometryInstance(skinMesh.geometry);
@@ -1336,7 +1368,7 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   let anyActive = false;
   for (const [tKey, w] of Object.entries(weights)) {
     if (Math.abs(w) < 1e-3) continue;
-    const flat = MPFB_SPARSE_HEAD_TARGETS[tKey];
+    const flat = MPFB_SPARSE_HEAD_TARGETS[tKey] || FACE_FINE_TARGETS[tKey];
     if (!flat) continue;
     anyActive = true;
     const scale = w * 1e-5;
@@ -2059,12 +2091,16 @@ export async function attachRealHairModel(rootGroup, config = {}) {
 
   const request = (rootGroup.userData.hairRequestSerial || 0) + 1;
   rootGroup.userData.hairRequestSerial = request;
+  delete rootGroup.userData.accessoryHairBaseY;
+  delete rootGroup.userData.accessoryHairTopY;
+  delete rootGroup.userData.accessoryBareHead;
   const oldHair = modelContainer.getObjectByName('HairGroup');
 
   if (selectedStyle === 'none' && !config.customHairUrl) {
     disposeHeadNode(oldHair);
     delete rootGroup.userData.groomStats;
     rootGroup.userData.currentHairStyle = 'none';
+    syncFaceAccessories(rootGroup, rootGroup.userData.currentMorphs);
     delete rootGroup.userData.hairStats;
     delete rootGroup.userData.hairLoadError;
     return null;
@@ -2284,7 +2320,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           hairOmbreMix,
           hairTipColor,
         });
-        const strandGeo = createLightweightGeometryInstance(strandRes.geometry);
+        const strandGeo = createLightweightGeometryInstance(strandRes.geometry, false);
         strandGeo.userData.sharedBuiltinGeo = true;
         const strandMesh = new THREE.Mesh(strandGeo, strandMat);
         strandMesh.name = 'MasterStrandHairMesh';
@@ -3528,6 +3564,8 @@ export async function buildCollectibleHeadNode(config = {}) {
 
   applyHeadMorphsToGroup(rootGroup, morphs);
   await attachRealHairModel(rootGroup, config);
+  rootGroup.userData.accessoriesReady = isBuiltInAsset;
+  syncFaceAccessories(rootGroup, rootGroup.userData.currentMorphs);
   attachSpecimenContainerAndDecor(rootGroup, config);
 
   const gimbalGroup = buildGimbalOverlayGroup();
