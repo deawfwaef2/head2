@@ -1440,3 +1440,25 @@
 - **3. 修复受损发型 GLB 贴图与发片边缘灰白晕边 (`public/models/*.glb`, `src/three/collectibleHeadAssembler.js`, `src/three/beautyPostChain.js`, `src/three/hairScalpFit.js`, `src/three/hairCardSubdivision.js`)**：
   - 修复 `hair_user_photo.glb`（保留 `0.1662m` 修复版头顶几何，补全原贴图 `u < 0.60` 透明缺失区与 `v = 0.50` 亮度断层）、`daz_hair_double_braid.glb`、`daz_hair_french_braid_bun.glb`、`daz_hair_unkempt_french_braid.glb` 的内嵌贴图，使三角面有效发丝覆盖率从 `9%~21%` 恢复至 `93%~98%`。
   - 修复 `injectArtistHairColor` 中 `diffuseColor.a` 被重复平方的问题，对半透明发片边缘做预乘压暗消除灰白硬边；平滑化 `hairScalpFit.js` 前额过渡权重与 `hairCardSubdivision.js` 法线插值。
+
+---
+
+## [2026-10-15 Stage 69d] 全部38款发型UV贴图补全与零露头皮修复、完整不截断标本标牌、角色设计槽位与画面效果存档读档中心（追加记录）
+- **1. 解决发片交叠黑边、UV裂缝、八字刘海中部破洞与头顶露头皮问题 (`public/models/*.glb`, `src/three/hairCardSubdivision.js`, `src/three/hairScalpFit.js`, `src/three/collectibleHeadAssembler.js`, `src/three/artistHairLighting.js`, `src/three/photorealLighting.js`)**：
+  - **停用未焊接 UV 接缝的 `refineArtistHairCards` 细分收缩 (`src/three/hairCardSubdivision.js`)**：由于 GLB 网格在 UV 接缝处拆分顶点索引，原 Loop 细分将发模中部的 UV 接缝误判为开放边界并向内收缩 (`0.75*v + 0.125*(b0+b1)`)，导致发片之间裂开缝隙并向凸面颅骨内缩穿模；现直接保留艺术家原厂拓扑与平滑法线。
+  - **全量 38 款 `.glb` 发模 UV 岛贴图修补 (`public/models/*.glb`)**：针对 `daz_hair_curtain_wave.glb`、`daz_hair_o4saken_long.glb`、`daz_hair_side_long.glb`、`hair_bob02.glb`、`daz_hair_bow_bun_braids.glb`、`daz_hair_rehman_bun.glb` 等内嵌贴图中 UV 三角面落入中部透明凹口或 `v=0.58` 亮度断层的问题，按各模型真实 UV 三角面掩码补全连续纵向发丝纹理与 Alpha 覆盖，消除刘海中部三角破洞与发片中部断层。
+  - **消除发片交叠黑边与前额假发套黄边 (`src/three/collectibleHeadAssembler.js`, `src/three/artistHairLighting.js`, `src/three/photorealLighting.js`)**：在 `injectArtistHairColor` 中对半透明边缘执行反预乘 (`hairTexel.rgb / max(hairTexel.a, 0.55)`) 并移除边缘压暗；将 `gHairDepthAO` 下限从 `0.35` 提升至 `0.84`；移除前额零散的 `BabyHairWisps` 细线并收紧 `foreheadClearMask`，消除额头假发套边线。
+  - **全颅顶 `ScalpRootFeatherCap` 基底发根帽与头模混合实时跟随 (`src/three/collectibleHeadAssembler.js`, `src/three/hairScalpFit.js`)**：将 `buildScalpRootShadowCap` 从小块发缝扩展为覆盖整个解剖颅顶/后脑/上鬓角（严格避开前额、眉眼与双耳）的高密发根底层，并在 `hairShapeSignature` 与 `fitArtistHairOutsideScalp`（`5×5` 球面膨胀 + `4.2mm` 净空）中纳入 `morphSignature`，确保任意切换 61 款发型或混合 38 款东亚头模时均不露粉色头皮。
+- **2. 标本连接标牌完整展示设计 (`src/main.js`, `src/ui/obsidianProStudio.css`)**：
+  - 将 `.specimen-placard-card` 拓宽至 `326px` 并移除名字 `ellipsis` 与简要故事 `-webkit-line-clamp: 2` 截断限制；自动解析并展示完整**照片**、**完整名字与头衔**、**年龄徽章**、**身份来源 (`dossier.origin` / `subtitle`)** 以及可上下滚动查阅全文的**完整故事 (`causeOfDeath` / `vitalityStatus` / `customBriefStory`)**，并在标牌底部提供「📖 完整生平档案」与「✍️ 编辑标牌/存档」快捷按钮。
+- **3. 角色设计存档读档槽位中心 & 画面效果存档读档中心 (`src/ui/obsidianProStudio.js`, `src/ui/obsidianProStudio.css`, `src/main.js`)**：
+  - 在 `#obsidian-char-hair-studio` 底部新增常驻操作栏 (`obs-studio-footer`：💾 保存当前角色、➕ 另存新角色槽、🎬 保存当前画面、📂 画面快速读档下拉框)。
+  - 在「人物与标牌」分页新增**🗂️ 角色设计存档与读档槽位中心 (`#obs-char-save-slots-grid`)**，支持一键选中/读档、套用外观、覆盖保存、召唤/撤回、重置/删除以及 `.json` 角色存档导入导出。
+  - 在「建筑与滤镜」分页新增**🎛️ 画面光影与色调精修滑杆**（曝光、对比、饱和、冷暖色温、柔光、暗角、颗粒、主光强度）与**🎬 画面效果存档与读档中心 (`#obs-visual-save-slots-grid`)**，提供 8 个持久化画面存档槽位 (`cervix3d-visual-effect-slots-v1`) 及新建/覆盖/读档/导入导出 `.json` 功能，一键保存与还原滤镜、模糊模式、影棚光效、背景、地板开关及镜头机位。
+
+## [2026-10-15 Stage 69e] 并行阶段合并、存档向前兼容与视觉读档崩溃修复（追加记录）
+- 已**非强推式合并**本地 Stage 69c 真实面部形变、69d 程序化眼镜/帽子，及远端 Stage 69c 发型破洞修补（`b12bb4b`）、Stage 69d 的 38 款 UV/头皮覆盖/角色及画面存读档中心（`f2139fc`）。保留远端所有发型 GLB、渲染和角色槽位实现，冲突只在存储键、HANDOFF 追加段与自动生成的两份 HTML；生成品由合并后源码重建，非任一旧分支的 HTML。仓库的 `安全/`、`画质提升/`、`docs/` 工作树仍为 sparse checkout，但原有远端路径和内容保留于 Git 树中。
+- 远端版本更新存储键至 `cervix3d-collectibles-stage69d-save-load-v1`；`src/main.js` 在该键无存档时新增**只迁移旧自建角色**的回退来源 `stage69-hair-fix-v1` 与 `stage57-universal-superiority-v1`，避免新版本让此前创建的角色从槽位中消失，不将旧版本预设批量覆盖修复后的默认角色。离线 `file://` 分别播种两种旧键刷新，均成功恢复原眼镜和下眼睑值，页面错误为 0。迁移后的新键在用户下一次保存时写入；不要擅自删除旧键。
+- 新增画面槽位读档 QA 实际发现 `applyVisualEffectSnapshot()` 调用未导入的 `applyCustomVisualConfigToEngine` 抛 `ReferenceError`，导致调色滑杆停留旧数值；现改为 `desktopEngine`/`studioEngine` 的正式 `applyVisualCustomConfig` 接口。实际点击操作验证角色新槽可继承飞行员眼镜及嘴宽且桌宠有网格；曝光 1.18 保存→调至 0.82→读档回 1.18、UI 同步→刷新后槽位仍存在，控制台错误 **0**。
+- 已先后重建单文件，**当前可双击的版本**为根目录 `点击开始游戏_CERVIX3D.html`（约 31.08 MB；`docs/index.html` 同 inode 硬链接）。离线 Chromium SwiftShader 测试：点击开始进入工坊，眼镜 3 款/帽子 3 款参数实际改动，桌宠和本地存档恢复，主滑杆与 Obsidian 代理值一致、舞台浮动条不会遮帽，页面错误 0；面部嘴宽 ±0.7 移动 669/779 顶点，下睑平直 ±0.7 移动 712/1045 顶点。人工查看了默认照片短发、八字露额发型、无发态、侧面帽镜等真实画面：远端修复后头皮露白/贴图断裂明显改善，但**照片短发的齐刘海仍显偏平整、侧鬓局部发片轮廓较硬**；帽子对极端盘发需手调，不宣称全发型照片级或零穿模。颈部红色标记属于既有解剖断面底座效果。
+- 当前排除 `node_modules` 的工作树约 126 MiB（少于 128 MiB，但余量很小）。大文件提交后立即 `git gc` 或保持 sparse checkout；不可把 QA 截图/缓存放进仓库。阶段成果应正常快进推送远端；如果另一 Agent 又推进 `main`，须先 fetch 并重新合并，**不可强推**。任何授权材料只用于授权，不落项目文件或 handoff。

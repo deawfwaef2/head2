@@ -544,11 +544,11 @@ export function initObsidianProStudio() {
         </div>
       </div>
 
-      <!-- ==================== TAB 2: 人物与标牌 (CHARACTER & PLACARD) ==================== -->
+      <!-- ==================== TAB 2: 人物与标牌 (CHARACTER, PLACARD & SAVE SLOTS) ==================== -->
       <div class="obs-pane" data-obs-pane="character">
-        <div class="obs-section" style="border-color:rgba(251,191,36,0.55);">
+        <div class="obs-section" style="border-color:rgba(251,191,36,0.65);">
           <div class="obs-sec-head">
-            <span class="obs-sec-title" style="color:#fef08a;">🏷️ 标牌信息设置 (照片 · 名字 · 年龄 · 简要故事)</span>
+            <span class="obs-sec-title" style="color:#fef08a;">🏷️ 标牌完整信息与故事设置 (照片 · 名字 · 年龄 · 身份 · 完整故事)</span>
             <label style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:#f8fafc;cursor:pointer;">
               <input type="checkbox" id="obs-chk-placards-visible" checked style="accent-color:#fbbf24;cursor:pointer;" />
               <span>显示桌面标牌</span>
@@ -556,7 +556,7 @@ export function initObsidianProStudio() {
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start;">
             <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
-              <div style="width:68px;height:68px;border-radius:10px;overflow:hidden;border:2px solid rgba(251,191,36,0.75);background:#0f172a;">
+              <div style="width:72px;height:72px;border-radius:10px;overflow:hidden;border:2px solid rgba(251,191,36,0.75);background:#0f172a;">
                 <img id="obs-placard-photo-preview" src="" alt="人物照片" style="width:100%;height:100%;object-fit:cover;" />
               </div>
               <label class="obs-icon-btn" style="padding:3px 8px;font-size:11px;text-align:center;cursor:pointer;">
@@ -566,22 +566,46 @@ export function initObsidianProStudio() {
               <button type="button" id="obs-placard-photo-reset" class="obs-icon-btn" style="padding:2px 6px;font-size:10.5px;">↺ 默认照</button>
             </div>
             <div style="flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;">
-              <div style="display:grid;grid-template-columns:1fr 90px;gap:7px;">
+              <div style="display:grid;grid-template-columns:1fr 86px;gap:7px;">
                 <div>
-                  <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物名字</div>
-                  <input type="text" id="obs-placard-name-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="输入名字 (如：方尧平)" />
+                  <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物名字与头衔</div>
+                  <input type="text" id="obs-placard-name-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="输入名字 (如：林汐 · 高三理科尖子)" />
                 </div>
                 <div>
                   <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">人物年龄</div>
-                  <input type="text" id="obs-placard-age-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="如：19岁" />
+                  <input type="text" id="obs-placard-age-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="如：18岁" />
                 </div>
               </div>
               <div>
-                <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">一段简要故事 (实时显示在标牌上)</div>
-                <textarea id="obs-placard-story-input" class="obs-select" rows="2" style="width:100%;padding:6px 8px;resize:vertical;line-height:1.4;" placeholder="输入人物生前身份或简要故事..."></textarea>
+                <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">身份来源 / 副标题 (显示在名字下方)</div>
+                <input type="text" id="obs-placard-origin-input" class="obs-select" style="width:100%;padding:5px 8px;" placeholder="如：重点高中高三（1）班 · 省物理竞赛一等奖" />
+              </div>
+              <div>
+                <div style="font-size:11px;color:#cbd5e1;margin-bottom:3px;font-weight:600;">完整故事与经过 (在桌面标牌完整显示，支持滚动查阅)</div>
+                <textarea id="obs-placard-story-input" class="obs-select" rows="3" style="width:100%;padding:6px 8px;resize:vertical;line-height:1.45;" placeholder="输入人物生前身份、收集经过或故事..."></textarea>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;padding-top:2px;">
+                <button type="button" id="obs-btn-save-char-now" class="obs-footer-btn primary-gold" style="flex:1;justify-content:center;">💾 保存当前角色修改</button>
+                <button type="button" id="obs-btn-clone-char-slot" class="obs-footer-btn primary-cyan" style="flex:1;justify-content:center;">➕ 另存为新角色槽位</button>
+                <button type="button" id="obs-btn-open-full-dossier" class="obs-footer-btn" style="justify-content:center;">📖 展开完整档案卡</button>
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="obs-section" style="border-color:rgba(56,189,248,0.55);">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title" style="color:#bae6fd;">🗂️ 角色设计存档与读档槽位中心</span>
+            <div style="display:flex;gap:5px;">
+              <button type="button" id="obs-btn-export-char-json" class="obs-icon-btn" style="padding:2px 7px;font-size:10.5px;">📤 导出角色.json</button>
+              <label class="obs-icon-btn" style="padding:2px 7px;font-size:10.5px;cursor:pointer;">
+                📥 导入角色.json
+                <input type="file" id="obs-inp-import-char-json" accept=".json,application/json" style="display:none;" />
+              </label>
+            </div>
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:7px;">一键读取任意已存角色的脸型、38头模混合、发型、彩妆与标牌，或将当前设计覆盖/另存到槽位</div>
+          <div id="obs-char-save-slots-grid" class="obs-save-slots-grid"></div>
         </div>
 
         <div class="obs-section">
@@ -942,13 +966,96 @@ export function initObsidianProStudio() {
             `).join('')}
           </div>
           <div class="obs-sec-sub" style="margin-bottom:5px;">影棚散景背景切换 (或保持透明桌宠底)</div>
-          <div class="obs-pill-grid" id="obs-backdrop-preset-pills">
+          <div class="obs-pill-grid" id="obs-backdrop-preset-pills" style="margin-bottom:10px;">
             <button class="obs-choice-pill active" data-backdrop-id="transparent">🪟 透明桌宠底 (默认)</button>
             ${BACKGROUNDS_LIST.map((bg) => `
               <button class="obs-choice-pill" data-backdrop-id="${bg.id}">🎨 ${bg.name}</button>
             `).join('')}
           </div>
+
+          <details class="obs-accordion" open>
+            <summary>🎛️ 画面光影与色调精修参数 (实时联动并随画面存档保存)</summary>
+            <div class="obs-accordion-body" id="obs-visual-fine-sliders">
+              <div class="obs-slider-row">
+                <span>曝光亮度</span>
+                <input type="range" data-vis-grade="exposure" min="0.65" max="1.45" step="0.01" value="1.00" />
+                <span data-vis-val="exposure">100%</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>画面对比</span>
+                <input type="range" data-vis-grade="contrast" min="0.80" max="1.35" step="0.01" value="1.05" />
+                <span data-vis-val="contrast">105%</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>色彩饱和</span>
+                <input type="range" data-vis-grade="saturation" min="0.50" max="1.40" step="0.01" value="1.02" />
+                <span data-vis-val="saturation">102%</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>冷暖色温</span>
+                <input type="range" data-vis-grade="warmth" min="-0.40" max="0.45" step="0.01" value="0.04" />
+                <span data-vis-val="warmth">+0.04</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>柔光奶油</span>
+                <input type="range" data-vis-grade="softFocus" min="0.0" max="0.85" step="0.02" value="0.32" />
+                <span data-vis-val="softFocus">32%</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>暗角深度</span>
+                <input type="range" data-vis-grade="vignette" min="0.0" max="0.75" step="0.02" value="0.22" />
+                <span data-vis-val="vignette">22%</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>胶片颗粒</span>
+                <input type="range" data-vis-grade="filmGrain" min="0.0" max="0.45" step="0.01" value="0.06" />
+                <span data-vis-val="filmGrain">6%</span>
+              </div>
+              <div class="obs-slider-row">
+                <span>主光强度</span>
+                <input type="range" data-vis-grade="keyIntensity" min="0.60" max="2.60" step="0.04" value="1.52" />
+                <span data-vis-val="keyIntensity">1.52</span>
+              </div>
+            </div>
+          </details>
         </div>
+
+        <div class="obs-section" id="obs-visual-save-load-section" style="border-color:rgba(52,211,153,0.65);">
+          <div class="obs-sec-head">
+            <span class="obs-sec-title" style="color:#6ee7b7;">🎬 画面效果存档与读档中心 (8槽位 + 自定义JSON存取)</span>
+            <div style="display:flex;gap:5px;">
+              <button type="button" id="obs-btn-export-visual-json" class="obs-icon-btn" style="padding:2px 7px;font-size:10.5px;">📤 导出画面.json</button>
+              <label class="obs-icon-btn" style="padding:2px 7px;font-size:10.5px;cursor:pointer;">
+                📥 导入画面.json
+                <input type="file" id="obs-inp-import-visual-json" accept=".json,application/json" style="display:none;" />
+              </label>
+            </div>
+          </div>
+          <div class="obs-sec-sub" style="margin-bottom:7px;">完整保存/读取：滤镜色调、6种景深模糊、影棚灯光、曝光/对比/色温/暗角、散景背景、地板开关与镜头机位</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+            <input type="text" id="obs-visual-slot-name-input" class="obs-select" style="flex:1;padding:5px 8px;" placeholder="输入画面存档名称 (如：深夜烛光微距特写)" />
+            <label style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#cbd5e1;white-space:nowrap;cursor:pointer;">
+              <input type="checkbox" id="obs-chk-visual-save-cam" checked style="accent-color:#34d399;" />
+              <span>含镜头机位</span>
+            </label>
+            <button type="button" id="obs-btn-new-visual-slot" class="obs-footer-btn primary-cyan" style="white-space:nowrap;">➕ 新建画面存档</button>
+          </div>
+          <div id="obs-visual-save-slots-grid" class="obs-save-slots-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PERSISTENT STICKY SAVE / LOAD FOOTER BAR ==================== -->
+    <div class="obs-studio-footer">
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="obs-footer-save-char" class="obs-footer-btn primary-gold" title="将当前头模的所有脸型、发型、彩妆与标牌修改保存到当前角色">💾 保存当前角色</button>
+        <button type="button" id="obs-footer-new-char" class="obs-footer-btn primary-cyan" title="将当前设计另存为一个全新的角色槽位并召唤上桌">➕ 另存新角色槽</button>
+        <button type="button" id="obs-footer-save-visual" class="obs-footer-btn" title="将当前屏幕的滤镜、模糊、灯光、色调与机位保存为画面效果存档">🎬 保存当前画面</button>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <select id="obs-footer-quick-visual-select" class="obs-select" style="padding:4px 7px;font-size:11px;max-width:155px;" title="从任意分页快速读取画面效果存档">
+          <option value="">📂 快速读档画面效果…</option>
+        </select>
       </div>
     </div>
   `;
@@ -1001,7 +1108,7 @@ function syncObsidianCardsFromDOM(studio) {
     });
   }
 
-  // Sync Character Placard Settings (Photo, Name, Age, Brief Story)
+  // Sync Character Placard Settings (Photo, Name, Age, Brief Story) & Save Slots
   const qa = window.__cervixQA;
   if (qa && typeof qa.getActiveCollectible === 'function') {
     const col = qa.getActiveCollectible();
@@ -1009,21 +1116,36 @@ function syncObsidianCardsFromDOM(studio) {
       syncPlacardEditorFromCollectible(col);
     }
   }
+  if (typeof window.__refreshObsCharSaveSlots === 'function') {
+    window.__refreshObsCharSaveSlots();
+  }
+  if (typeof window.__syncObsVisualFineSliders === 'function') {
+    window.__syncObsVisualFineSliders();
+  }
 }
 
 function syncPlacardEditorFromCollectible(col) {
   if (!col) return;
   const qa = window.__cervixQA;
-  const baseShortName = (col.name || '').split('·')[0].trim();
-  const displayName = col.customDisplayName || baseShortName;
-  const displayAge = col.customAge || col.fateRecord?.ageAtCollection || '19岁';
-  const briefStory = col.customBriefStory || col.customContrastText || col.fateRecord?.cause || col.subtitle || '静默案头藏品 · 任由主人端详摆布';
+  const displayName = col.customDisplayName || col.name || '未命名标本';
+  const parsedAge = (col.fateRecord?.vitalityStatus || col.subtitle || '').match(/\d+\s*岁/)?.[0] || '19岁';
+  const displayAge = col.customAge || col.fateRecord?.ageAtCollection || parsedAge;
+  const originText = col.dossier?.origin || col.subtitle || '';
+  const briefStory = col.customBriefStory
+    || col.customContrastText
+    || col.fateRecord?.causeOfDeath
+    || col.fateRecord?.cause
+    || col.fateRecord?.vitalityStatus
+    || col.subtitle
+    || '静默案头藏品 · 任由主人端详摆布';
   const photoSrc = qa?.resolveCollectibleLifePhotoSrc ? qa.resolveCollectibleLifePhotoSrc(col) : (col.customLifePhotoUrl || '');
 
   const nameInp = document.getElementById('obs-placard-name-input');
   if (nameInp && document.activeElement !== nameInp) nameInp.value = displayName;
   const ageInp = document.getElementById('obs-placard-age-input');
   if (ageInp && document.activeElement !== ageInp) ageInp.value = displayAge;
+  const originInp = document.getElementById('obs-placard-origin-input');
+  if (originInp && document.activeElement !== originInp) originInp.value = originText;
   const storyInp = document.getElementById('obs-placard-story-input');
   if (storyInp && document.activeElement !== storyInp) storyInp.value = briefStory;
   const photoImg = document.getElementById('obs-placard-photo-preview');
@@ -1670,6 +1792,18 @@ function wireObsidianStudioEvents(studio) {
     qa.refreshPlacards?.();
   });
 
+  const originInput = document.getElementById('obs-placard-origin-input');
+  originInput?.addEventListener('input', () => {
+    const qa = window.__cervixQA;
+    const col = qa?.getActiveCollectible?.();
+    if (!col) return;
+    const rawOrigin = originInput.value.trim();
+    col.subtitle = rawOrigin;
+    col.dossier = { ...(col.dossier || {}), origin: rawOrigin };
+    qa.persistCollectibles?.();
+    qa.refreshPlacards?.();
+  });
+
   const storyInput = document.getElementById('obs-placard-story-input');
   storyInput?.addEventListener('input', () => {
     const qa = window.__cervixQA;
@@ -1917,6 +2051,416 @@ function wireObsidianStudioEvents(studio) {
       window.__cervixQA?.desktop?.setBackdropPreset?.(bgId);
     });
   });
+
+  // =========================================================================
+  // Stage 69d · Fine Visual Grading Sliders + Visual Effect Save/Load Center
+  //             + Character Design Save/Load Slot Center + Sticky Footer Bar
+  // =========================================================================
+  const syncObsVisualFineSliders = () => {
+    const vc = window.__cervixQA?.state?.visualCustomConfig;
+    if (!vc) return;
+    studio.querySelectorAll('#obs-visual-fine-sliders [data-vis-grade]').forEach((inp) => {
+      const k = inp.dataset.visGrade;
+      const v = vc[k];
+      if (v === undefined) return;
+      inp.value = String(v);
+      const span = studio.querySelector(`#obs-visual-fine-sliders [data-vis-val="${k}"]`);
+      if (span) {
+        if (k === 'warmth') span.textContent = (v >= 0 ? '+' : '') + Number(v).toFixed(2);
+        else if (k === 'keyIntensity') span.textContent = Number(v).toFixed(2);
+        else span.textContent = `${Math.round(Number(v) * 100)}%`;
+      }
+    });
+  };
+  window.__syncObsVisualFineSliders = syncObsVisualFineSliders;
+
+  studio.querySelectorAll('#obs-visual-fine-sliders [data-vis-grade]').forEach((inp) => {
+    inp.addEventListener('input', () => {
+      const k = inp.dataset.visGrade;
+      const v = parseFloat(inp.value);
+      const span = studio.querySelector(`#obs-visual-fine-sliders [data-vis-val="${k}"]`);
+      if (span) {
+        if (k === 'warmth') span.textContent = (v >= 0 ? '+' : '') + v.toFixed(2);
+        else if (k === 'keyIntensity') span.textContent = v.toFixed(2);
+        else span.textContent = `${Math.round(v * 100)}%`;
+      }
+      const qa = window.__cervixQA;
+      if (qa?.state?.visualCustomConfig) {
+        qa.state.visualCustomConfig[k] = v;
+        if (qa.desktop) applyCustomVisualConfigToEngine(qa.desktop, qa.state.visualCustomConfig);
+        if (qa.studio) applyCustomVisualConfigToEngine(qa.studio, qa.state.visualCustomConfig);
+        qa.desktop?.beautyPost?.setGradeParams?.({ [k]: v });
+        qa.studio?.beautyPost?.setGradeParams?.({ [k]: v });
+        qa.desktop?.wakeRender?.(2.0, true);
+        qa.studio?.wakeRender?.(2.0, true);
+      }
+    });
+  });
+
+  // 6. Character Design Save/Load Slot Manager (#obs-char-save-slots-grid)
+  const renderObsCharSaveSlots = () => {
+    const grid = document.getElementById('obs-char-save-slots-grid');
+    const qa = window.__cervixQA;
+    if (!grid || !qa?.state?.collectibles) return;
+    const activeCol = qa.getActiveCollectible?.();
+    const activeId = activeCol?.id || '';
+    const summonedSet = new Set(qa.desktop?.pets ? Array.from(qa.desktop.pets.keys()) : []);
+
+    grid.innerHTML = qa.state.collectibles.map((col, idx) => {
+      const isSelected = col.id === activeId;
+      const isSummoned = summonedSet.has(col.id);
+      const title = col.customDisplayName || col.name || `角色槽位 #${idx + 1}`;
+      const parsedAge = (col.fateRecord?.vitalityStatus || col.subtitle || '').match(/\d+\s*岁/)?.[0] || '19岁';
+      const age = col.customAge || col.fateRecord?.ageAtCollection || parsedAge;
+      const photoSrc = qa.resolveCollectibleLifePhotoSrc ? qa.resolveCollectibleLifePhotoSrc(col) : (col.customLifePhotoUrl || '');
+      const hairObj = REAL_HAIR_CATALOG.find(h => h.id === col.hairStyle);
+      const hairName = (hairObj?.label || col.hairStyle || '默认发型').replace(/^[^\s]+\s/, '').slice(0, 10);
+      const statusBadge = isSummoned
+        ? '<span style="color:#4ade80;font-weight:700;">● 在屏</span>'
+        : '<span style="color:#94a3b8;">○ 库中</span>';
+      return `
+        <div class="obs-save-slot-card ${isSelected ? 'active-slot' : ''}" data-char-slot-id="${col.id}">
+          <div class="obs-slot-top">
+            <img class="obs-slot-thumb" src="${photoSrc}" alt="${title}" />
+            <div class="obs-slot-meta">
+              <div class="obs-slot-title">${title}</div>
+              <div class="obs-slot-sub">${statusBadge} · ${age} · ${hairName}</div>
+            </div>
+          </div>
+          <div class="obs-slot-actions">
+            <button type="button" class="obs-slot-btn" data-char-slot-act="select" data-id="${col.id}" title="选中或读取该角色的参数与标牌">📂 读档/选中</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="apply" data-id="${col.id}" title="将该角色的脸型/发型/彩妆套用到当前正在编辑的头模">🎨 套用外观</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="overwrite" data-id="${col.id}" title="将当前头模的设计覆盖保存到此角色槽位">💾 覆盖此槽</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="summon" data-id="${col.id}" title="召唤到桌面或从桌面撤回">${isSummoned ? '📦 撤回' : '✨ 召唤'}</button>
+            <button type="button" class="obs-slot-btn" data-char-slot-act="delete" data-id="${col.id}" title="${col.isCustomUserSlot ? '删除此自定义存档槽' : '恢复该角色为出厂默认'}">${col.isCustomUserSlot ? '🗑️ 删除' : '↺ 重置'}</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('[data-char-slot-act]').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const act = btn.dataset.charSlotAct;
+        const id = btn.dataset.id;
+        if (!qa) return;
+        if (act === 'select') qa.applySavedCharacterToActivePet?.(id, 'select_or_apply');
+        else if (act === 'apply') qa.applySavedCharacterToActivePet?.(id, 'force_apply');
+        else if (act === 'overwrite') qa.overwriteCharacterSlotWithCurrent?.(id);
+        else if (act === 'summon') qa.toggleSummonCollectibleById?.(id);
+        else if (act === 'delete') qa.deleteCharacterSlotById?.(id);
+      });
+    });
+  };
+  window.__refreshObsCharSaveSlots = renderObsCharSaveSlots;
+
+  document.getElementById('obs-btn-save-char-now')?.addEventListener('click', () => {
+    window.__cervixQA?.saveActiveCharacterDesign?.();
+  });
+  document.getElementById('obs-footer-save-char')?.addEventListener('click', () => {
+    window.__cervixQA?.saveActiveCharacterDesign?.();
+  });
+  document.getElementById('obs-btn-clone-char-slot')?.addEventListener('click', () => {
+    const customName = document.getElementById('obs-placard-name-input')?.value?.trim() || '';
+    window.__cervixQA?.saveAsNewCharacterSlot?.(customName);
+  });
+  document.getElementById('obs-footer-new-char')?.addEventListener('click', () => {
+    const customName = document.getElementById('obs-placard-name-input')?.value?.trim() || '';
+    window.__cervixQA?.saveAsNewCharacterSlot?.(customName);
+  });
+  document.getElementById('obs-btn-open-full-dossier')?.addEventListener('click', () => {
+    const qa = window.__cervixQA;
+    const col = qa?.getActiveCollectible?.();
+    if (!col) return;
+    const placardBtn = document.querySelector(`[data-placard-dossier="${col.id}"]`);
+    if (placardBtn) {
+      placardBtn.click();
+    } else {
+      document.getElementById('specimen-dossier-hud')?.classList.remove('hidden');
+    }
+  });
+  document.getElementById('obs-btn-export-char-json')?.addEventListener('click', () => {
+    window.__cervixQA?.exportCharacterJson?.();
+  });
+  document.getElementById('obs-inp-import-char-json')?.addEventListener('change', (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(String(reader.result || '{}'));
+        window.__cervixQA?.importCharacterJsonObject?.(obj);
+      } catch (_) {
+        window.__cervixQA?.showToast?.('⚠️ 角色 JSON 文件解析失败');
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // 7. Visual Effect Save/Load Slot Manager (#obs-visual-save-slots-grid, 8 persistent slots + custom slots)
+  const VISUAL_SLOTS_STORAGE_KEY = 'cervix3d-visual-effect-slots-v1';
+  const DEFAULT_VISUAL_SLOTS = [
+    {
+      id: 'vis-slot-1',
+      name: '🌸 晨光凝脂画报 · 浅景深柔光',
+      savedAt: '预设槽位 1',
+      filterPreset: 'cream_porcelain',
+      blurMode: 'portrait_dof',
+      blurPower: 0.48,
+      focusCenterY: 0.52,
+      backdropPreset: 'transparent',
+      desktopPetMode: false,
+      floorStyle: 'walnut_parquet',
+      shelfLayout: 'minimal_desk',
+      placardsEnabled: true,
+      visualCustomConfig: { exposure: 0.98, contrast: 1.04, saturation: 0.98, warmth: 0.05, softFocus: 0.42, vignette: 0.22, filmGrain: 0.04, keyIntensity: 1.72 },
+    },
+    {
+      id: 'vis-slot-2',
+      name: '🕯️ 黑曜伦勃朗 · 暗调侧逆光电影',
+      savedAt: '预设槽位 2',
+      filterPreset: 'rembrandt_obsidian',
+      blurMode: 'cinematic_anamorphic',
+      blurPower: 0.62,
+      focusCenterY: 0.50,
+      backdropPreset: 'obsidian_velvet',
+      desktopPetMode: false,
+      floorStyle: 'obsidian_marble',
+      shelfLayout: 'gothic_altar',
+      placardsEnabled: true,
+      visualCustomConfig: { exposure: 0.92, contrast: 1.14, saturation: 0.94, warmth: 0.08, softFocus: 0.36, vignette: 0.42, filmGrain: 0.14, keyIntensity: 1.85 },
+    },
+    {
+      id: 'vis-slot-3',
+      name: '🐾 纯净无地板桌宠 · 4K原片超清',
+      savedAt: '预设槽位 3',
+      filterPreset: 'natural_studio',
+      blurMode: 'none',
+      blurPower: 0.0,
+      focusCenterY: 0.52,
+      backdropPreset: 'transparent',
+      desktopPetMode: true,
+      floorStyle: 'walnut_parquet',
+      shelfLayout: 'minimal_desk',
+      placardsEnabled: true,
+      visualCustomConfig: { exposure: 0.98, contrast: 1.06, saturation: 1.02, warmth: 0.02, softFocus: 0.20, vignette: 0.14, filmGrain: 0.03, keyIntensity: 1.56 },
+    },
+    {
+      id: 'vis-slot-4',
+      name: '❄️ 冷月标本室 · 法医无影冷调微距',
+      savedAt: '预设槽位 4',
+      filterPreset: 'forensic_cold',
+      blurMode: 'tilt_shift_mini',
+      blurPower: 0.55,
+      focusCenterY: 0.52,
+      backdropPreset: 'moonlit_slate',
+      desktopPetMode: false,
+      floorStyle: 'forensic_tile',
+      shelfLayout: 'specimen_cabinet',
+      placardsEnabled: true,
+      visualCustomConfig: { exposure: 0.96, contrast: 1.10, saturation: 0.88, warmth: -0.14, softFocus: 0.24, vignette: 0.30, filmGrain: 0.08, keyIntensity: 1.68 },
+    },
+    { id: 'vis-slot-5', name: '自定义画面槽位 #5 (空 · 可覆盖)', savedAt: '待保存', isEmpty: true },
+    { id: 'vis-slot-6', name: '自定义画面槽位 #6 (空 · 可覆盖)', savedAt: '待保存', isEmpty: true },
+    { id: 'vis-slot-7', name: '自定义画面槽位 #7 (空 · 可覆盖)', savedAt: '待保存', isEmpty: true },
+    { id: 'vis-slot-8', name: '自定义画面槽位 #8 (空 · 可覆盖)', savedAt: '待保存', isEmpty: true },
+  ];
+
+  const loadVisualSaveSlots = () => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(VISUAL_SLOTS_STORAGE_KEY) || 'null');
+      if (Array.isArray(raw) && raw.length >= 4) return raw;
+    } catch (_) {}
+    return JSON.parse(JSON.stringify(DEFAULT_VISUAL_SLOTS));
+  };
+
+  let visualSaveSlots = loadVisualSaveSlots();
+  let activeVisualSlotId = '';
+
+  const persistVisualSaveSlots = () => {
+    try {
+      localStorage.setItem(VISUAL_SLOTS_STORAGE_KEY, JSON.stringify(visualSaveSlots));
+    } catch (_) {}
+  };
+
+  const renderObsVisualSaveSlots = () => {
+    const grid = document.getElementById('obs-visual-save-slots-grid');
+    const quickSel = document.getElementById('obs-footer-quick-visual-select');
+    if (quickSel) {
+      quickSel.innerHTML = `<option value="">📂 快速读档画面效果 (${visualSaveSlots.filter(s => !s.isEmpty).length}个存档)…</option>` +
+        visualSaveSlots.filter(s => !s.isEmpty).map(s => `<option value="${s.id}" ${s.id === activeVisualSlotId ? 'selected' : ''}>🎬 ${s.name}</option>`).join('');
+    }
+    if (!grid) return;
+
+    grid.innerHTML = visualSaveSlots.map((slot, idx) => {
+      const fpLabel = (DESKTOP_PET_FILTER_PRESETS.find(f => f.id === slot.filterPreset)?.label || '标准影棚').replace(/^[^\s]+\s/, '');
+      const bmLabel = (DESKTOP_PET_BLUR_MODES.find(b => b.id === slot.blurMode)?.label || '无模糊').split(' ')[0];
+      const modeTag = slot.desktopPetMode ? '🐾无地板' : '🪵含案台';
+      const camTag = slot.cameraState ? ' · 🎥含机位' : '';
+      const subText = slot.isEmpty
+        ? '点击「💾 覆盖保存」即可将当前画面效果存入此槽位'
+        : `${fpLabel} · ${bmLabel} · ${modeTag}${camTag} (${slot.savedAt || '已存'})`;
+      return `
+        <div class="obs-save-slot-card ${slot.id === activeVisualSlotId ? 'active-slot' : ''}" data-vis-slot-id="${slot.id}">
+          <div class="obs-slot-top">
+            <div style="width:34px;height:34px;border-radius:7px;background:linear-gradient(135deg,rgba(52,211,153,0.28),rgba(56,189,248,0.22));border:1px solid rgba(52,211,153,0.55);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#a7f3d0;flex-shrink:0;">
+              #${idx + 1}
+            </div>
+            <div class="obs-slot-meta">
+              <div class="obs-slot-title">${slot.name}</div>
+              <div class="obs-slot-sub">${subText}</div>
+            </div>
+          </div>
+          <div class="obs-slot-actions">
+            <button type="button" class="obs-slot-btn" data-vis-slot-act="load" data-id="${slot.id}" ${slot.isEmpty ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>▶ 读档应用</button>
+            <button type="button" class="obs-slot-btn" data-vis-slot-act="save" data-id="${slot.id}">💾 覆盖保存</button>
+            <button type="button" class="obs-slot-btn" data-vis-slot-act="export" data-id="${slot.id}" ${slot.isEmpty ? 'disabled style="opacity:0.45;cursor:not-allowed;"' : ''}>📤 导出</button>
+            ${idx >= 4 ? `<button type="button" class="obs-slot-btn" data-vis-slot-act="delete" data-id="${slot.id}">🗑️ 清空</button>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    grid.querySelectorAll('[data-vis-slot-act]').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const act = btn.dataset.visSlotAct;
+        const id = btn.dataset.id;
+        const slotIdx = visualSaveSlots.findIndex(s => s.id === id);
+        if (slotIdx < 0) return;
+        const slot = visualSaveSlots[slotIdx];
+        const qa = window.__cervixQA;
+
+        if (act === 'load') {
+          if (slot.isEmpty) return;
+          activeVisualSlotId = slot.id;
+          const incCam = document.getElementById('obs-chk-visual-save-cam')?.checked ?? true;
+          qa?.applyVisualEffectSnapshot?.(slot, incCam);
+          renderObsVisualSaveSlots();
+        } else if (act === 'save') {
+          const customTitle = document.getElementById('obs-visual-slot-name-input')?.value?.trim();
+          const incCam = document.getElementById('obs-chk-visual-save-cam')?.checked ?? true;
+          const snap = qa?.captureVisualEffectSnapshot?.(
+            customTitle || (slot.isEmpty ? `自定义画面存档 #${slotIdx + 1}` : slot.name),
+            incCam
+          );
+          if (snap) {
+            snap.id = slot.id;
+            snap.isEmpty = false;
+            visualSaveSlots[slotIdx] = snap;
+            activeVisualSlotId = snap.id;
+            persistVisualSaveSlots();
+            renderObsVisualSaveSlots();
+            qa?.showToast?.(`💾 已将当前画面效果保存至「${snap.name}」！`);
+          }
+        } else if (act === 'export') {
+          if (slot.isEmpty) return;
+          const blob = new Blob([JSON.stringify(slot, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const safe = (slot.name || 'visual_preset').replace(/[^\w\u4e00-\u9fa5\-]+/g, '_');
+          a.href = url;
+          a.download = `CERVIX3D_画面效果存档_${safe}.json`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+          qa?.showToast?.(`📤 已导出画面效果存档：CERVIX3D_画面效果存档_${safe}.json`);
+        } else if (act === 'delete') {
+          if (slotIdx >= 8) {
+            visualSaveSlots.splice(slotIdx, 1);
+          } else {
+            visualSaveSlots[slotIdx] = { id: slot.id, name: `自定义画面槽位 #${slotIdx + 1} (空 · 可覆盖)`, savedAt: '待保存', isEmpty: true };
+          }
+          persistVisualSaveSlots();
+          renderObsVisualSaveSlots();
+          qa?.showToast?.('🗑️ 已清空该画面效果槽位');
+        }
+      });
+    });
+  };
+
+  const quickSaveVisualToNextSlot = () => {
+    const qa = window.__cervixQA;
+    const customTitle = document.getElementById('obs-visual-slot-name-input')?.value?.trim();
+    const incCam = document.getElementById('obs-chk-visual-save-cam')?.checked ?? true;
+    let targetIdx = visualSaveSlots.findIndex(s => s.isEmpty);
+    if (targetIdx < 0) targetIdx = visualSaveSlots.length;
+    const slotId = visualSaveSlots[targetIdx]?.id || `vis-slot-${Date.now().toString().slice(-4)}`;
+    const snap = qa?.captureVisualEffectSnapshot?.(
+      customTitle || `自定义画面效果 #${targetIdx + 1}`,
+      incCam
+    );
+    if (!snap) return;
+    snap.id = slotId;
+    snap.isEmpty = false;
+    if (targetIdx < visualSaveSlots.length) {
+      visualSaveSlots[targetIdx] = snap;
+    } else {
+      visualSaveSlots.push(snap);
+    }
+    activeVisualSlotId = snap.id;
+    persistVisualSaveSlots();
+    renderObsVisualSaveSlots();
+    qa?.showToast?.(`🎬 已新建并保存画面效果存档：「${snap.name}」（含滤镜/模糊/光影/机位）`);
+  };
+
+  document.getElementById('obs-btn-new-visual-slot')?.addEventListener('click', quickSaveVisualToNextSlot);
+  document.getElementById('obs-footer-save-visual')?.addEventListener('click', quickSaveVisualToNextSlot);
+
+  document.getElementById('obs-footer-quick-visual-select')?.addEventListener('change', (ev) => {
+    const id = ev.target.value;
+    if (!id) return;
+    const slot = visualSaveSlots.find(s => s.id === id && !s.isEmpty);
+    if (slot) {
+      activeVisualSlotId = slot.id;
+      const incCam = document.getElementById('obs-chk-visual-save-cam')?.checked ?? true;
+      window.__cervixQA?.applyVisualEffectSnapshot?.(slot, incCam);
+      renderObsVisualSaveSlots();
+    }
+  });
+
+  document.getElementById('obs-btn-export-visual-json')?.addEventListener('click', () => {
+    const qa = window.__cervixQA;
+    const incCam = document.getElementById('obs-chk-visual-save-cam')?.checked ?? true;
+    const customTitle = document.getElementById('obs-visual-slot-name-input')?.value?.trim() || '当前屏幕画面效果';
+    const snap = qa?.captureVisualEffectSnapshot?.(customTitle, incCam);
+    if (!snap) return;
+    const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safe = customTitle.replace(/[^\w\u4e00-\u9fa5\-]+/g, '_');
+    a.href = url;
+    a.download = `CERVIX3D_画面效果存档_${safe}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    qa?.showToast?.(`📤 已导出当前画面效果 JSON 文件`);
+  });
+
+  document.getElementById('obs-inp-import-visual-json')?.addEventListener('change', (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const snap = JSON.parse(String(reader.result || '{}'));
+        if (!snap || typeof snap !== 'object') throw new Error('Invalid JSON');
+        snap.id = `vis-import-${Date.now().toString().slice(-4)}`;
+        snap.isEmpty = false;
+        snap.savedAt = '导入存档';
+        visualSaveSlots.unshift(snap);
+        activeVisualSlotId = snap.id;
+        persistVisualSaveSlots();
+        renderObsVisualSaveSlots();
+        window.__cervixQA?.applyVisualEffectSnapshot?.(snap, true);
+      } catch (_) {
+        window.__cervixQA?.showToast?.('⚠️ 画面效果 JSON 文件解析失败');
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  renderObsCharSaveSlots();
+  renderObsVisualSaveSlots();
+  syncObsVisualFineSliders();
 
   // Close on Escape
   window.addEventListener('keydown', (e) => {
