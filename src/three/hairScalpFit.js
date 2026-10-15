@@ -10,7 +10,8 @@ export function fitArtistHairOutsideScalp(geometry, head) {
   if (!head?.geometry?.attributes?.position || !geometry?.attributes?.position) return;
   const headGeo = head.geometry;
   const influences = head.morphTargetInfluences || [];
-  const signature = headGeo.uuid + ':' + influences.map((w) => Number(w || 0).toFixed(3)).join(',');
+  const morphSig = head.parent?.userData?.morphSignature || '';
+  const signature = headGeo.uuid + ':' + morphSig + ':' + influences.map((w) => Number(w || 0).toFixed(3)).join(',');
 
   let entry = cache.get(head);
   if (!entry || entry.signature !== signature) {
@@ -60,14 +61,14 @@ export function fitArtistHairOutsideScalp(geometry, head) {
       if (dist > rawGrid[idx]) rawGrid[idx] = dist;
     }
 
-    // 3x3 morphological dilation across spherical bins so triangle interiors are smoothly covered
+    // 5x5 morphological dilation across spherical bins so wide triangle chords never dip into the skull
     const grid = new Float32Array((NT + 1) * NP);
     for (let ti = 0; ti <= NT; ti++) {
       for (let pi = 0; pi < NP; pi++) {
         let maxR = 0;
-        for (let dt = -1; dt <= 1; dt++) {
+        for (let dt = -2; dt <= 2; dt++) {
           const t2 = Math.min(NT, Math.max(0, ti + dt));
-          for (let dp = -1; dp <= 1; dp++) {
+          for (let dp = -2; dp <= 2; dp++) {
             const p2 = (pi + dp + NP) % NP;
             const r = rawGrid[t2 * NP + p2];
             if (r > maxR) maxR = r;
@@ -88,7 +89,7 @@ export function fitArtistHairOutsideScalp(geometry, head) {
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
     // Smoothly weight upper scalp vs face-framing bangs so no hair card is kinked across a boolean boundary
-    const yWeight = ss(center.y + 0.006, center.y + 0.024, v.y);
+    const yWeight = ss(center.y - 0.025, center.y + 0.012, v.y);
     if (yWeight <= 1e-4) continue;
     const frontMask = ss(center.z + size.z * 0.16, center.z + size.z * 0.30, v.z)
                     * (1.0 - ss(center.y + size.y * 0.18, center.y + size.y * 0.30, v.y));
@@ -103,10 +104,10 @@ export function fitArtistHairOutsideScalp(geometry, head) {
     const ti = Math.min(NT, Math.max(0, Math.round((theta / Math.PI) * NT)));
     const pi = ((Math.round((phi / (Math.PI * 2)) * NP) % NP) + NP) % NP;
     const radius = grid[ti * NP + pi];
-    const clearance = 0.0020 - 0.0012 * frontMask;
+    const clearance = 0.0042 - 0.0022 * frontMask;
     const safe = radius + clearance;
     if (radius > 0 && distance < safe && safe - distance < size.x * 0.22) {
-      const push = (safe - distance) * yWeight * (1.0 - 0.65 * frontMask);
+      const push = (safe - distance) * yWeight * (1.0 - 0.55 * frontMask);
       const scale = (distance + push) / distance;
       p.setXYZ(i, center.x + dx * scale, center.y + dy * scale, center.z + dz * scale);
       adjusted++;

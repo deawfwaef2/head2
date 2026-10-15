@@ -121,7 +121,7 @@ export function injectArtistHairLighting(shader) {
   shader.fragmentShader = shader.fragmentShader.replace('#include <lights_physical_fragment>', `
     hairFlowValid = 1.0;
     hairAtlasValue = 0.5;
-    gHairDepthAO = mix(0.35, 1.0, smoothstep(0.088, 0.112, vHairDepth));
+    gHairDepthAO = mix(0.84, 1.0, smoothstep(0.072, 0.104, vHairDepth));
     vec3 crownF = vHairCrownFlow - normal * dot(normal, vHairCrownFlow);
     hairFlowT = normalize(crownF + vec3(1e-6));
     #ifdef USE_MAP

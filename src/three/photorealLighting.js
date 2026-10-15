@@ -1784,25 +1784,24 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           diffuseColor.rgb *= 1.0 - poreDark3D * 0.032 * smoothstep(-0.07, -0.02, p.y);
           if (uHairline > 0.001) {
             vec3 spH = p;
-            // Strictly restrict scalp shadow/follicle transition to the true anatomical scalp/crown/temples
-            // NEVER stain the bare front forehead (spH.y < 0.062 && spH.z > 0.035 && abs(spH.x) < 0.052)
-            float foreheadClearMask = smoothstep(0.060, 0.072, spH.y)
-                                    + (1.0 - smoothstep(0.018, 0.042, spH.z))
-                                    + smoothstep(0.048, 0.060, abs(spH.x)) * smoothstep(0.018, 0.038, spH.y);
+            // Strictly restrict scalp shadow/follicle transition to the upper crown/back scalp (spH.y > 0.076 or spH.z < 0.015)
+            // NEVER draw a tan wig-cap border on the forehead or temples under parted bangs!
+            float foreheadClearMask = smoothstep(0.074, 0.084, spH.y)
+                                    + (1.0 - smoothstep(0.008, 0.028, spH.z));
             foreheadClearMask = clamp(foreheadClearMask, 0.0, 1.0);
             float covH = clamp(vHairCov, 0.0, 1.0) * foreheadClearMask;
             float microH = sk_n(spH * 520.0);
-            float follH = smoothstep(0.58, 0.90, microH) * smoothstep(0.05, 0.55, covH);
-            float rootShadowH = clamp(covH * 0.42 + follH * 0.14, 0.0, 0.55) * uHairline;
+            float follH = smoothstep(0.58, 0.90, microH) * smoothstep(0.15, 0.65, covH);
+            float rootShadowH = clamp(covH * 0.28 + follH * 0.10, 0.0, 0.38) * uHairline;
             gHairDens = rootShadowH;
             vec3 rootTintH = mix(
-              diffuseColor.rgb * vec3(0.84, 0.80, 0.79),
-              uHairRoot * 1.15 + diffuseColor.rgb * 0.35,
-              clamp(covH * 0.55, 0.0, 0.65)
+              diffuseColor.rgb * vec3(0.88, 0.85, 0.84),
+              uHairRoot * 1.15 + diffuseColor.rgb * 0.42,
+              clamp(covH * 0.45, 0.0, 0.55)
             );
-            diffuseColor.rgb = mix(diffuseColor.rgb, rootTintH, rootShadowH * 0.50);
-            float contactAOH = smoothstep(0.10, 0.80, covH) * uScalpAO * uHairline;
-            diffuseColor.rgb *= 1.0 - contactAOH * 0.22;
+            diffuseColor.rgb = mix(diffuseColor.rgb, rootTintH, rootShadowH * 0.38);
+            float contactAOH = smoothstep(0.20, 0.85, covH) * uScalpAO * uHairline;
+            diffuseColor.rgb *= 1.0 - contactAOH * 0.14;
           }
         }
       }`

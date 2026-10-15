@@ -75,7 +75,7 @@ import {
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage69-hair-fix-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage69d-save-load-v1';
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -775,10 +775,17 @@ function renderSpecimenPlacards(placardsList = []) {
 
     let cardEl = existingCards.get(item.id);
     const photoSrc = resolveCollectibleLifePhotoSrc(col);
-    const baseShortName = col.name.split('·')[0].trim();
-    const displayName = col.customDisplayName || baseShortName;
-    const displayAge = col.customAge || col.fateRecord?.ageAtCollection || '19岁';
-    const briefStory = col.customBriefStory || col.customContrastText || col.fateRecord?.cause || col.subtitle || '静默案头藏品 · 任由主人端详摆布';
+    const displayName = col.customDisplayName || col.name || '未命名标本';
+    const parsedAge = (col.fateRecord?.vitalityStatus || col.subtitle || '').match(/\d+\s*岁/)?.[0] || '19岁';
+    const displayAge = col.customAge || col.fateRecord?.ageAtCollection || parsedAge;
+    const originText = col.dossier?.origin || col.subtitle || '私密典藏标本';
+    const briefStory = col.customBriefStory
+      || col.customContrastText
+      || col.fateRecord?.causeOfDeath
+      || col.fateRecord?.cause
+      || col.fateRecord?.vitalityStatus
+      || col.subtitle
+      || '静默案头藏品 · 任由主人端详摆布';
 
     if (!cardEl) {
       cardEl = document.createElement('div');
@@ -786,15 +793,22 @@ function renderSpecimenPlacards(placardsList = []) {
       cardEl.dataset.placardPetId = item.id;
       cardEl.title = '按住鼠标左键可自由拖拽此标牌 · 双击标牌归位 · 点击文字可直接修改名字/年龄/简要故事';
       cardEl.innerHTML = `
-        <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看/编辑人物照片与设置">
-          <img data-placard-photo src="${photoSrc}" alt="${displayName}照片" draggable="false" />
-        </div>
-        <div class="placard-info-col">
-          <div class="placard-top-row">
-            <span class="placard-name" data-placard-title contenteditable="true" spellcheck="false" title="点击直接修改人物名字">${displayName}</span>
-            <span class="placard-age-badge" data-placard-age contenteditable="true" spellcheck="false" title="点击直接修改人物年龄">${displayAge}</span>
+        <div class="placard-header-main">
+          <div class="placard-photo-wrap" data-placard-dossier="${item.id}" title="点击查看完整生平档案">
+            <img data-placard-photo src="${photoSrc}" alt="${displayName}照片" draggable="false" />
           </div>
-          <div class="placard-brief-line" data-placard-brief contenteditable="true" spellcheck="false" title="点击直接修改人物简要故事（也可在人物设置中编辑）">${briefStory}</div>
+          <div class="placard-info-col">
+            <div class="placard-top-row">
+              <span class="placard-name" data-placard-title contenteditable="true" spellcheck="false" title="点击直接修改人物名字">${displayName}</span>
+              <span class="placard-age-badge" data-placard-age contenteditable="true" spellcheck="false" title="点击直接修改人物年龄">${displayAge}</span>
+            </div>
+            <div class="placard-origin-line" data-placard-origin>${originText}</div>
+          </div>
+        </div>
+        <div class="placard-brief-line" data-placard-brief contenteditable="true" spellcheck="false" title="可上下滚动查看完整故事 · 点击文字可直接修改内容">${briefStory}</div>
+        <div class="placard-action-bar">
+          <button type="button" class="placard-mini-btn" data-placard-dossier="${item.id}" title="展开完整生前状态、死因经过与反差语录">📖 完整生平档案</button>
+          <button type="button" class="placard-mini-btn" data-placard-edit-studio="${item.id}" title="打开人物标牌与角色存档编辑器">✍️ 编辑标牌 / 存档</button>
         </div>
       `;
       const titleEditEl = cardEl.querySelector('[data-placard-title]');
@@ -805,6 +819,7 @@ function renderSpecimenPlacards(placardsList = []) {
           col.customDisplayName = raw;
           persistCollectibles();
           if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+          if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
           showToast(`✍️ 已更新标牌名字为「${raw}」`);
         }
       });
@@ -824,6 +839,7 @@ function renderSpecimenPlacards(placardsList = []) {
           if (col.fateRecord) col.fateRecord.ageAtCollection = rawAge;
           persistCollectibles();
           if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+          if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
           showToast(`✍️ 已更新标牌年龄为「${rawAge}」`);
         }
       });
@@ -843,6 +859,7 @@ function renderSpecimenPlacards(placardsList = []) {
           col.customContrastText = text;
           persistCollectibles();
           if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+          if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
           showToast('✍️ 已保存人物简要故事！');
         }
       });
@@ -854,6 +871,7 @@ function renderSpecimenPlacards(placardsList = []) {
       });
 
       cardEl.querySelectorAll('[data-placard-dossier]').forEach((btn) => {
+        btn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
         btn.addEventListener('click', (ev) => {
           if (cardEl.dataset.justDragged === '1') return;
           ev.stopPropagation();
@@ -862,6 +880,27 @@ function renderSpecimenPlacards(placardsList = []) {
             window.__syncVcdSelectedPetUI(item.id);
           }
           togglePinnedDossierForPet(item.id);
+        });
+      });
+
+      cardEl.querySelectorAll('[data-placard-edit-studio]').forEach((btn) => {
+        btn.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+        btn.addEventListener('click', (ev) => {
+          if (cardEl.dataset.justDragged === '1') return;
+          ev.stopPropagation();
+          state.activeStripPetId = item.id;
+          if (typeof window.__syncVcdSelectedPetUI === 'function') {
+            window.__syncVcdSelectedPetUI(item.id);
+          }
+          const studio = document.getElementById('obsidian-char-hair-studio');
+          if (studio) {
+            studio.classList.remove('hidden');
+            document.getElementById('btn-open-obsidian-studio')?.classList.add('active-top');
+            const charTab = studio.querySelector('.obs-tab-btn[data-obs-tab="char"]');
+            charTab?.click();
+            if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(col);
+            if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+          }
         });
       });
 
@@ -929,6 +968,10 @@ function renderSpecimenPlacards(placardsList = []) {
       const ageEl = cardEl.querySelector('[data-placard-age]');
       if (ageEl && document.activeElement !== ageEl) {
         ageEl.textContent = displayAge;
+      }
+      const originEl = cardEl.querySelector('[data-placard-origin]');
+      if (originEl) {
+        originEl.textContent = originText;
       }
       const briefEl = cardEl.querySelector('[data-placard-brief]');
       if (briefEl && document.activeElement !== briefEl) {
@@ -2356,12 +2399,345 @@ window.addEventListener('DOMContentLoaded', async () => {
     persistCollectibles,
     resolveCollectibleLifePhotoSrc,
     showToast,
+    renderVaultGrid,
     refreshPlacards() {
       if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
     },
     getActiveCollectible() {
       const targetId = state.activeStripPetId || 'SPEC-2026-FYP';
       return state.collectibles.find(c => c.id === targetId) || state.collectibles[0] || null;
+    },
+    syncLivePetToCollectible(col) {
+      if (!col) return null;
+      const pet = desktopEngine?.pets?.get(col.id);
+      if (pet?.collectible) {
+        Object.assign(col, JSON.parse(JSON.stringify(pet.collectible)));
+      }
+      const headGroup = pet?.node || pet?.headNode;
+      if (headGroup?.userData?.currentMorphs) {
+        col.morphs = { ...(col.morphs || {}), ...JSON.parse(JSON.stringify(headGroup.userData.currentMorphs)) };
+      }
+      if (headGroup?.userData?.currentHairStyle) {
+        col.hairStyle = headGroup.userData.currentHairStyle;
+      }
+      if (headGroup?.userData?.hairColor) {
+        col.hairColor = headGroup.userData.hairColor;
+      }
+      return col;
+    },
+    saveActiveCharacterDesign() {
+      const col = this.getActiveCollectible();
+      if (!col) return null;
+      this.syncLivePetToCollectible(col);
+      const nameInp = document.getElementById('obs-placard-name-input');
+      const ageInp = document.getElementById('obs-placard-age-input');
+      const storyInp = document.getElementById('obs-placard-story-input');
+      if (nameInp?.value?.trim()) col.customDisplayName = nameInp.value.trim();
+      if (ageInp?.value?.trim()) {
+        col.customAge = ageInp.value.trim();
+        if (col.fateRecord) col.fateRecord.ageAtCollection = col.customAge;
+      }
+      if (storyInp?.value?.trim()) {
+        col.customBriefStory = storyInp.value.trim();
+        col.customContrastText = col.customBriefStory;
+      }
+      persistCollectibles();
+      renderVaultGrid();
+      this.refreshPlacards();
+      if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+      const title = col.customDisplayName || col.name;
+      showToast(`💾 已保存角色「${title}」的全部脸型、发型、彩妆与标牌设定！`);
+      return col;
+    },
+    async saveAsNewCharacterSlot(customTitle = '') {
+      const baseCol = this.saveActiveCharacterDesign() || this.getActiveCollectible();
+      if (!baseCol) return null;
+      const cloned = JSON.parse(JSON.stringify(baseCol));
+      const suffix = String(Date.now()).slice(-4);
+      cloned.id = `SPEC-USER-${suffix}`;
+      const baseName = customTitle.trim() || `${(baseCol.customDisplayName || baseCol.name.split('·')[0]).trim()} · 自定义存档#${state.collectibles.length + 1}`;
+      cloned.name = baseName;
+      cloned.customDisplayName = baseName;
+      cloned.isCustomUserSlot = true;
+      cloned.summoned = true;
+      state.collectibles.unshift(cloned);
+      state.activeStripPetId = cloned.id;
+      persistCollectibles();
+      if (desktopEngine) {
+        try {
+          await desktopEngine.summonCollectible(cloned);
+          desktopEngine.selectedPetId = cloned.id;
+          desktopEngine.emitPetsChange();
+        } catch (_) {}
+      }
+      renderVaultGrid();
+      this.refreshPlacards();
+      if (typeof window.__syncVcdSelectedPetUI === 'function') window.__syncVcdSelectedPetUI(cloned.id);
+      if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+      showToast(`➕ 已另存为新角色槽位「${baseName}」并召唤至桌面！`);
+      return cloned;
+    },
+    async applySavedCharacterToActivePet(sourceId, mode = 'select_or_apply') {
+      const srcCol = state.collectibles.find(c => c.id === sourceId);
+      if (!srcCol) return;
+      if (mode === 'select_or_apply' && desktopEngine?.pets?.has(sourceId)) {
+        state.activeStripPetId = sourceId;
+        desktopEngine.selectedPetId = sourceId;
+        desktopEngine.emitPetsChange();
+        loadCollectibleIntoStudio(srcCol);
+        if (typeof window.__syncVcdSelectedPetUI === 'function') window.__syncVcdSelectedPetUI(sourceId);
+        if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(srcCol);
+        if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+        this.refreshPlacards();
+        showToast(`📂 已切换并读取桌上角色「${srcCol.customDisplayName || srcCol.name}」`);
+        return;
+      }
+      // Apply srcCol's full appearance onto the currently active desktop pet
+      const targetCol = this.getActiveCollectible();
+      if (!targetCol) return;
+      const copyKeys = [
+        'skinVariant', 'faceArchetype', 'eyebrowStyle', 'deadExpression',
+        'hairStyle', 'hairColor', 'hairSheen', 'topCrown', 'frontBangs', 'sideLocks', 'backAttachment',
+        'hairWispyFeather', 'hairOmbreMix', 'hairTipColor', 'hairHighlightColor', 'hairHighlightStrength',
+        'skinTone', 'lipColor', 'blushColor', 'blushIntensity', 'eyeshadowColor', 'eyeshadowIntensity',
+        'irisColor', 'eyelinerStyle', 'eyelinerStrength', 'eyelinerColor', 'lashColor', 'eyelashDensity',
+      ];
+      for (const k of copyKeys) {
+        if (srcCol[k] !== undefined) targetCol[k] = srcCol[k];
+      }
+      targetCol.morphs = JSON.parse(JSON.stringify(srcCol.morphs || {}));
+      persistCollectibles();
+      if (desktopEngine?.pets?.has(targetCol.id)) {
+        desktopEngine.recallCollectible(targetCol.id);
+        await desktopEngine.summonCollectible(targetCol);
+        desktopEngine.selectedPetId = targetCol.id;
+        desktopEngine.emitPetsChange();
+      }
+      loadCollectibleIntoStudio(targetCol);
+      if (typeof window.__syncVcdSelectedPetUI === 'function') window.__syncVcdSelectedPetUI(targetCol.id);
+      if (typeof window.__syncPlacardEditorFields === 'function') window.__syncPlacardEditorFields(targetCol);
+      if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+      renderVaultGrid();
+      this.refreshPlacards();
+      showToast(`📂 已将存档「${srcCol.customDisplayName || srcCol.name}」的全套脸型/发型/彩妆读档应用至「${targetCol.customDisplayName || targetCol.name}」！`);
+    },
+    async overwriteCharacterSlotWithCurrent(targetId) {
+      const curCol = this.saveActiveCharacterDesign() || this.getActiveCollectible();
+      const dstCol = state.collectibles.find(c => c.id === targetId);
+      if (!curCol || !dstCol) return;
+      if (curCol.id === dstCol.id) {
+        showToast(`💾 已保存当前角色「${dstCol.customDisplayName || dstCol.name}」`);
+        return;
+      }
+      const keepId = dstCol.id;
+      const keepSummoned = dstCol.summoned;
+      Object.assign(dstCol, JSON.parse(JSON.stringify(curCol)), { id: keepId, summoned: keepSummoned });
+      persistCollectibles();
+      if (desktopEngine?.pets?.has(keepId)) {
+        desktopEngine.recallCollectible(keepId);
+        await desktopEngine.summonCollectible(dstCol);
+      }
+      renderVaultGrid();
+      this.refreshPlacards();
+      if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+      showToast(`💾 已将当前外观与标牌覆盖保存至槽位「${dstCol.customDisplayName || dstCol.name}」！`);
+    },
+    async toggleSummonCollectibleById(colId) {
+      const col = state.collectibles.find(c => c.id === colId);
+      if (!col || !desktopEngine) return;
+      if (desktopEngine.pets.has(colId)) {
+        desktopEngine.recallCollectible(colId);
+        col.summoned = false;
+        showToast(`📦 已从桌面撤回角色「${col.customDisplayName || col.name}」`);
+      } else {
+        await desktopEngine.summonCollectible(col);
+        col.summoned = true;
+        state.activeStripPetId = colId;
+        desktopEngine.selectedPetId = colId;
+        showToast(`✨ 已将角色「${col.customDisplayName || col.name}」召唤至桌面！`);
+      }
+      persistCollectibles();
+      renderVaultGrid();
+      this.refreshPlacards();
+      if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+    },
+    deleteCharacterSlotById(colId) {
+      const idx = state.collectibles.findIndex(c => c.id === colId);
+      if (idx < 0) return;
+      const col = state.collectibles[idx];
+      const def = DEFAULT_COLLECTIBLES.find(d => d.id === colId);
+      if (def) {
+        const fresh = JSON.parse(JSON.stringify(def));
+        fresh.summoned = col.summoned;
+        state.collectibles[idx] = fresh;
+        persistCollectibles();
+        if (desktopEngine?.pets?.has(colId)) {
+          desktopEngine.recallCollectible(colId);
+          desktopEngine.summonCollectible(fresh);
+        }
+        renderVaultGrid();
+        this.refreshPlacards();
+        if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+        showToast(`↺ 已将预设角色「${fresh.name}」恢复为出厂默认设定`);
+      } else {
+        if (desktopEngine?.pets?.has(colId)) desktopEngine.recallCollectible(colId);
+        state.collectibles.splice(idx, 1);
+        if (state.activeStripPetId === colId) {
+          state.activeStripPetId = state.collectibles[0]?.id || '';
+        }
+        persistCollectibles();
+        renderVaultGrid();
+        this.refreshPlacards();
+        if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+        showToast(`🗑️ 已删除自定义角色存档「${col.customDisplayName || col.name}」`);
+      }
+    },
+    exportCharacterJson(colId) {
+      const col = (colId ? state.collectibles.find(c => c.id === colId) : null) || this.saveActiveCharacterDesign() || this.getActiveCollectible();
+      if (!col) return;
+      const payload = {
+        type: 'cervix3d_character_preset_v1',
+        exportedAt: new Date().toISOString(),
+        character: col,
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = (col.customDisplayName || col.name || 'character').replace(/[^\w\u4e00-\u9fa5\-]+/g, '_');
+      a.href = url;
+      a.download = `CERVIX3D_角色存档_${safeName}.json`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      showToast(`📤 已导出角色存档文件：CERVIX3D_角色存档_${safeName}.json`);
+    },
+    async importCharacterJsonObject(payload) {
+      const charData = payload?.character || payload;
+      if (!charData || typeof charData !== 'object' || (!charData.name && !charData.morphs)) {
+        showToast('⚠️ 角色存档 JSON 格式无效');
+        return null;
+      }
+      const imported = JSON.parse(JSON.stringify(charData));
+      imported.id = `SPEC-IMPORT-${String(Date.now()).slice(-4)}`;
+      imported.isCustomUserSlot = true;
+      imported.summoned = true;
+      state.collectibles.unshift(imported);
+      state.activeStripPetId = imported.id;
+      persistCollectibles();
+      if (desktopEngine) {
+        try {
+          await desktopEngine.summonCollectible(imported);
+          desktopEngine.selectedPetId = imported.id;
+          desktopEngine.emitPetsChange();
+        } catch (_) {}
+      }
+      renderVaultGrid();
+      this.refreshPlacards();
+      if (typeof window.__syncVcdSelectedPetUI === 'function') window.__syncVcdSelectedPetUI(imported.id);
+      if (typeof window.__refreshObsCharSaveSlots === 'function') window.__refreshObsCharSaveSlots();
+      showToast(`📥 已成功导入角色存档「${imported.customDisplayName || imported.name}」并召唤至桌面！`);
+      return imported;
+    },
+    captureVisualEffectSnapshot(customName = '', includeCamera = true) {
+      const vc = JSON.parse(JSON.stringify(state.visualCustomConfig || {}));
+      const cam = desktopEngine?.camera;
+      const ctrl = desktopEngine?.controls;
+      return {
+        type: 'cervix3d_visual_effect_preset_v1',
+        name: customName || '自定义画面效果存档',
+        savedAt: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        visualCustomConfig: vc,
+        filterPreset: document.getElementById('top-pet-filter-select')?.value || vc.filterPreset || 'natural_studio',
+        blurMode: document.getElementById('top-pet-blur-select')?.value || vc.blurMode || 'none',
+        blurPower: Number(document.getElementById('obs-pet-blur-power')?.value ?? vc.blurPower ?? 0.65),
+        focusCenterY: Number(document.getElementById('obs-pet-blur-focus-y')?.value ?? vc.focusCenterY ?? 0.52),
+        backdropPreset: desktopEngine?.currentBackdropPreset || 'transparent',
+        desktopPetMode: Boolean(desktopEngine?.desktopPetMode),
+        floorStyle: desktopEngine?.settings?.floorStyle || 'walnut_parquet',
+        shelfLayout: desktopEngine?.settings?.shelfLayout || 'minimal_desk',
+        placardsEnabled: Boolean(state.placardsEnabled),
+        cameraState: (includeCamera && cam) ? {
+          pos: [cam.position.x, cam.position.y, cam.position.z],
+          target: ctrl?.target ? [ctrl.target.x, ctrl.target.y, ctrl.target.z] : [0, 0, 0],
+          fov: cam.fov,
+        } : null,
+      };
+    },
+    applyVisualEffectSnapshot(snap, restoreCamera = true) {
+      if (!snap || typeof snap !== 'object') return;
+      const vc = snap.visualCustomConfig || {};
+      if (state.visualCustomConfig) {
+        Object.assign(state.visualCustomConfig, vc);
+      }
+      if (snap.filterPreset) {
+        const topFilter = document.getElementById('top-pet-filter-select');
+        if (topFilter) {
+          topFilter.value = snap.filterPreset;
+          topFilter.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      // Re-apply exact fine-tuned grade values on top of the filter preset
+      if (state.visualCustomConfig && Object.keys(vc).length > 0) {
+        Object.assign(state.visualCustomConfig, vc);
+        if (desktopEngine) applyCustomVisualConfigToEngine(desktopEngine, state.visualCustomConfig);
+        if (studioEngine) applyCustomVisualConfigToEngine(studioEngine, state.visualCustomConfig);
+        desktopEngine?.beautyPost?.setGradeParams?.(state.visualCustomConfig);
+        studioEngine?.beautyPost?.setGradeParams?.(state.visualCustomConfig);
+      }
+      if (snap.blurMode !== undefined) {
+        const bpEl = document.getElementById('obs-pet-blur-power');
+        const fyEl = document.getElementById('obs-pet-blur-focus-y');
+        if (bpEl && snap.blurPower !== undefined) bpEl.value = String(snap.blurPower);
+        if (fyEl && snap.focusCenterY !== undefined) fyEl.value = String(snap.focusCenterY);
+        const topBlur = document.getElementById('top-pet-blur-select');
+        if (topBlur) {
+          topBlur.value = snap.blurMode;
+          topBlur.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+      if (snap.backdropPreset && desktopEngine?.setBackdropPreset) {
+        desktopEngine.setBackdropPreset(snap.backdropPreset);
+      }
+      if (typeof snap.desktopPetMode === 'boolean' && desktopEngine?.setDesktopPetMode) {
+        desktopEngine.setDesktopPetMode(snap.desktopPetMode);
+        state.desktopPetMode = snap.desktopPetMode;
+        const topBtn = document.getElementById('btn-desktop-pet-mode-toggle');
+        if (topBtn) {
+          topBtn.classList.toggle('active-top', snap.desktopPetMode);
+          topBtn.textContent = snap.desktopPetMode ? '🐾 桌宠模式:开' : '🐾 桌宠无地板';
+        }
+      }
+      if (!snap.desktopPetMode && desktopEngine?.updateSettings) {
+        const stagePatch = {};
+        if (snap.floorStyle) stagePatch.floorStyle = snap.floorStyle;
+        if (snap.shelfLayout) stagePatch.shelfLayout = snap.shelfLayout;
+        if (Object.keys(stagePatch).length > 0) desktopEngine.updateSettings(stagePatch);
+      }
+      if (typeof snap.placardsEnabled === 'boolean') {
+        state.placardsEnabled = snap.placardsEnabled;
+        const pChk = document.getElementById('obs-chk-placards-visible');
+        if (pChk) pChk.checked = snap.placardsEnabled;
+        this.refreshPlacards();
+      }
+      if (restoreCamera && snap.cameraState && desktopEngine?.camera) {
+        const { pos, target, fov } = snap.cameraState;
+        if (Array.isArray(pos) && pos.length === 3) {
+          desktopEngine.camera.position.set(pos[0], pos[1], pos[2]);
+        }
+        if (Array.isArray(target) && target.length === 3 && desktopEngine.controls?.target) {
+          desktopEngine.controls.target.set(target[0], target[1], target[2]);
+          desktopEngine.controls.update?.();
+        }
+        if (typeof fov === 'number') {
+          desktopEngine.camera.fov = fov;
+          desktopEngine.camera.updateProjectionMatrix();
+        }
+      }
+      desktopEngine?.wakeRender?.(2.5, true);
+      studioEngine?.wakeRender?.(2.5, true);
+      if (typeof window.__syncObsVisualFineSliders === 'function') {
+        window.__syncObsVisualFineSliders();
+      }
+      showToast(`🎬 已读档应用画面效果：「${snap.name || '画面存档'}」`);
     },
   };
 

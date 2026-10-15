@@ -741,7 +741,30 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       if (u.uHairHighlightStrength) u.uHairHighlightStrength.value = highlightStr;
     }
     if (!child.isMesh || !child.geometry?.attributes?.position) return;
-    if (child.name === 'ScalpRootFeatherCap') return;
+    if (child.name === 'ScalpRootFeatherCap') {
+      const morphSig = rootGroup.userData.morphSignature || '';
+      if (child.userData.lastMorphSignature !== morphSig) {
+        child.userData.lastMorphSignature = morphSig;
+        const headMesh = rootGroup.userData.modelContainer?.getObjectByName('HeadSkinMesh');
+        const headPos = headMesh?.geometry?.attributes?.position;
+        const capPos = child.geometry.attributes.position;
+        if (headPos && capPos && headPos.count === capPos.count) {
+          const hArr = headPos.array;
+          const cArr = capPos.array;
+          for (let i = 0; i < headPos.count; i++) {
+            const i3 = i * 3;
+            const x = hArr[i3], y = hArr[i3 + 1], z = hArr[i3 + 2];
+            const dx = x, dy = y - 0.02, dz = z + 0.01;
+            const len = Math.hypot(dx, dy, dz) || 1.0;
+            cArr[i3] = x + (dx / len) * 0.0014;
+            cArr[i3 + 1] = y + (dy / len) * 0.0014;
+            cArr[i3 + 2] = z + (dz / len) * 0.0014;
+          }
+          capPos.needsUpdate = true;
+        }
+      }
+      return;
+    }
     const isStrandMesh = child.name === 'MasterStrandHairMesh' || child.name === 'BabyHairWisps';
     const crownBoost = topCrownStyle === 'fluffy_high_crown' ? 0.28 : (topCrownStyle === 'photo_sleek_crown' ? -0.12 : 0.0);
     const effHairVol = hairVol + crownBoost;
@@ -767,7 +790,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     if (!geo.userData.basePositions) {
       geo.userData.basePositions = Float32Array.from(posAttr.array);
     }
-    const signature = JSON.stringify([bangsLen,bangsPart,hairVol,hairLen,sideburn,hairFlare,hairCurlWave,neckClear,topCrownStyle,frontBangsStyle,sideLocksStyle]);
+    const signature = JSON.stringify([bangsLen,bangsPart,hairVol,hairLen,sideburn,hairFlare,hairCurlWave,neckClear,topCrownStyle,frontBangsStyle,sideLocksStyle,rootGroup.userData.morphSignature || '']);
     if (geo.userData.hairShapeSignature === signature) return;
     geo.userData.hairShapeSignature = signature;
     if (!geo.userData.baseHairNormals && geo.attributes.normal) geo.userData.baseHairNormals = Float32Array.from(geo.attributes.normal.array);
@@ -1789,16 +1812,18 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
     shader.fragmentShader = shader.fragmentShader.replace('#include <map_fragment>', `
       #ifdef USE_MAP
         vec4 hairTexel = texture2D(map, vMapUv);
-        float atlasLuma = sqrt(clamp(dot(hairTexel.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
+        // Un-premultiply semi-transparent edge texels so overlapping hair cards never draw black scalloped borders
+        vec3 cleanTexRgb = clamp(hairTexel.rgb / max(hairTexel.a, 0.55), 0.0, 1.0);
+        float atlasLuma = sqrt(clamp(dot(cleanTexRgb, vec3(0.2126, 0.7152, 0.0722)), 0.0, 1.0));
         // Fine micro-strand fiber definition along the card cross-axis so hair never looks like flat plastic
         float microStrand = 0.5 + 0.5 * sin(vMapUv.x * 520.0 + sin(vMapUv.y * 16.0) * 0.6) * cos(vMapUv.x * 230.0 - 0.5);
         float lockValue = clamp(mix(atlasLuma, microStrand, 0.28), 0.0, 1.0);
         float tips = smoothstep(0.12, 0.88, clamp((0.038 - vHairLocalPos.y) / 0.095, 0.0, 1.0));
         vec3 tint = mix(diffuse, uHairTipColor, tips * uHairOmbreMix);
         tint = mix(tint, uHairHighlightColor, smoothstep(0.55, 0.9, lockValue) * uHairHighlightStrength);
-        // Root-to-tip & crown ambient depth + crisp strand contrast (matching masterQuality/featureMaterials.js)
+        // Smooth strand value contrast without dark border step
         float crownLift = smoothstep(-0.04, 0.11, vHairLocalPos.y);
-        diffuseColor.rgb = tint * mix(0.54, 1.38, lockValue) * (0.82 + 0.22 * crownLift);
+        diffuseColor.rgb = tint * mix(0.74, 1.26, lockValue) * (0.88 + 0.16 * crownLift);
 
         // Airy see-through feathering on lower forehead bang tips only (keep upper root 100% dense!)
         float bangTipMask = smoothstep(0.052, 0.072, vHairLocalPos.z)
@@ -1806,11 +1831,9 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
                           * (1.0 - smoothstep(0.040, 0.054, vHairLocalPos.y))
                           * (1.0 - smoothstep(0.048, 0.064, abs(vHairLocalPos.x)));
         float coverage = hairTexel.a;
-        coverage *= 1.0 - 0.16 * uHairWispyFeather * (1.0 - coverage);
+        coverage *= 1.0 - 0.14 * uHairWispyFeather * (1.0 - coverage);
         float bangStrandComb = smoothstep(0.18, 0.56, atlasLuma * 0.72 + microStrand * 0.28);
-        coverage *= mix(1.0, mix(0.55, 1.0, bangStrandComb), bangTipMask * clamp(uHairWispyFeather * 0.55, 0.0, 0.55));
-        // Darken semi-transparent border texels so un-premultiplied grey PNG borders never create a crusty white/grey halo
-        diffuseColor.rgb *= mix(0.66, 1.0, smoothstep(0.16, 0.68, coverage));
+        coverage *= mix(1.0, mix(0.58, 1.0, bangStrandComb), bangTipMask * clamp(uHairWispyFeather * 0.50, 0.0, 0.50));
         diffuseColor.a = coverage;
       #endif
     `);
@@ -1845,8 +1868,12 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const xm = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3.0;
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Strictly confine scalp parting shadow cap to the top crown parting zone — never on forehead or temples!
-    if (ym > 0.068 && zm < 0.036 && Math.abs(xm) < 0.052) {
+    // Full anatomical cranial hair base cap: covers crown, upper temples, and back of skull so partings/updos never expose bare pink skin,
+    // while strictly excluding the bare forehead/face (zm > 0.036 && ym < 0.076), ears, and lower temples.
+    const isForeheadOrFace = zm > 0.035 && ym < 0.077;
+    const isEar = Math.abs(xm) > 0.054 && ym < 0.032 && zm > -0.028 && zm < 0.028;
+    const isLowerTemple = zm > 0.012 && ym < 0.048;
+    if (ym > 0.015 && !isForeheadOrFace && !isEar && !isLowerTemple) {
       capIndices.push(a, b, c);
     }
   }
@@ -1856,26 +1883,34 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
   const newPos = new Float32Array(pos.array.length);
   const colors = new Float32Array(pos.count * 4);
   const hcX = 0.0, hcY = 0.02, hcZ = -0.01;
-  const baseR = displayColor.r * 0.68;
-  const baseG = displayColor.g * 0.65;
-  const baseB = displayColor.b * 0.65;
+  const baseR = displayColor.r * 0.86;
+  const baseG = displayColor.g * 0.84;
+  const baseB = displayColor.b * 0.84;
+
+  const ss = (a, b, v) => {
+    const t = Math.max(0.0, Math.min(1.0, (v - a) / (b - a)));
+    return t * t * (3.0 - 2.0 * t);
+  };
 
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const dx = x - hcX, dy = y - hcY, dz = z - hcZ;
     const len = Math.hypot(dx, dy, dz) || 1.0;
-    newPos[i * 3] = x + (dx / len) * 0.00018;
-    newPos[i * 3 + 1] = y + (dy / len) * 0.00018;
-    newPos[i * 3 + 2] = z + (dz / len) * 0.00018;
+    newPos[i * 3] = x + (dx / len) * 0.0014;
+    newPos[i * 3 + 1] = y + (dy / len) * 0.0014;
+    newPos[i * 3 + 2] = z + (dz / len) * 0.0014;
 
-    const fadeY = Math.min(1.0, Math.max(0.0, (y - 0.070) / 0.016));
-    const fadeFront = Math.min(1.0, Math.max(0.0, (0.034 - z) / 0.016));
-    const fadeSide = Math.min(1.0, Math.max(0.0, (0.050 - Math.abs(x)) / 0.016));
-    const alpha = fadeY * fadeFront * fadeSide * 0.55;
+    const fadeY = ss(0.015, 0.034, y);
+    const foreheadClear = z > 0.028 ? ss(0.068, 0.082, y) : 1.0;
+    const templeClear = z > 0.008 ? ss(0.044, 0.060, y) : 1.0;
+    const earClear = (Math.abs(x) > 0.050 && z > -0.028 && z < 0.028) ? ss(0.028, 0.044, y) : 1.0;
+    // Subtle micro-strand variation so the scalp underlayer blends seamlessly with overlying hair cards
+    const strandMod = 0.84 + 0.16 * Math.sin(x * 480.0 + z * 320.0);
+    const alpha = fadeY * foreheadClear * templeClear * earClear * 0.96;
 
-    colors[i * 4] = baseR;
-    colors[i * 4 + 1] = baseG;
-    colors[i * 4 + 2] = baseB;
+    colors[i * 4] = baseR * strandMod;
+    colors[i * 4 + 1] = baseG * strandMod;
+    colors[i * 4 + 2] = baseB * strandMod;
     colors[i * 4 + 3] = alpha;
   }
   capGeo.setAttribute('position', new THREE.BufferAttribute(newPos, 3));
@@ -2318,27 +2353,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
         });
         if (hairLocalEntries.length > 0) {
           const hairlineAnchors = { eyeY: 0.0184, headCenter: [0.0, 0.02, -0.01] };
-          const covInfo = computeHairCoverage(skinMeshForHairline, hairLocalEntries, hairlineAnchors, { useLocalSpace: true });
-          const babyRes = covInfo ? buildBabyHairGeometry(covInfo, hairlineAnchors) : null;
-          if (babyRes?.geometry && babyRes.strands > 0) {
-            const babyMat = createStrandMaterial(hairlineAnchors.headCenter, {
-              color: strandRgb,
-              gainR: MASTER_HAIR_CONFIG.gainR,
-              gainTT: MASTER_HAIR_CONFIG.gainTT,
-              gainTRT: MASTER_HAIR_CONFIG.gainTRT,
-              gainDiffuse: MASTER_HAIR_CONFIG.gainDiffuse,
-              hairOmbreMix,
-              hairTipColor,
-            });
-            const babyMesh = new THREE.Mesh(babyRes.geometry, babyMat);
-            babyMesh.name = 'BabyHairWisps';
-            babyMesh.castShadow = false;
-            babyMesh.receiveShadow = true;
-            babyMesh.frustumCulled = false;
-            babyMesh.renderOrder = 2;
-            hairGroup.add(babyMesh);
-            globalStrandMeshVersion++;
-          }
+          computeHairCoverage(skinMeshForHairline, hairLocalEntries, hairlineAnchors, { useLocalSpace: true });
         }
       }
     } catch (_) {}
