@@ -142,17 +142,17 @@ const state = {
   collectibles: restoreCollectibles(),
   archiveItems: [],
   selectedArchiveIndex: 0,
-  windowHidden: false,
+  windowHidden: true,
   bgModeIndex: 0, // 0: os, 1: void, 2: transparent
-  studyTriumphEnabled: true,
+  studyTriumphEnabled: false,
   studyStartTime: Date.now(),
   studyEnergyPoints: 1580,
   studyMindset: 'survivor_crown',
   activeRoleBuffMultiplier: 1.6,
-  pomodoroRunning: true,
+  pomodoroRunning: false,
   pomodoroRemainingSec: 25 * 60,
   rainStudyAudioEnabled: true,
-  placardsEnabled: true,
+  placardsEnabled: false,
   placardOffsets: {},
   vcdTargetPetId: 'selected',
   pinnedDossierPetId: null,
@@ -649,23 +649,16 @@ function populateAndShowDossierHUD(hoverInfo) {
 }
 
 function updateHoverDossierHUD(hoverInfo) {
-  // Stage 37: When Always-On Connected Specimen Placards are active ("不用关的那种类似标牌的连接"),
-  // hovering a 3D head highlights its connected placard strip instead of popping up the 395x385px modal over the screen!
-  // The full dossier modal only appears when the user clicks [📋详档] or the portrait photo on the placard, or if placards are disabled.
-  if (state.placardsEnabled) {
-    if (state.pinnedDossierPetId && desktopEngine && desktopEngine.pets.has(state.pinnedDossierPetId)) {
-      if (hoverInfo && hoverInfo.collectible?.id === state.pinnedDossierPetId) {
-        populateAndShowDossierHUD(hoverInfo);
-      }
-      return;
-    }
-    const hud = document.getElementById('pet-hover-dossier');
-    if (hud && !hud.classList.contains('hidden')) {
-      hud.classList.add('hidden');
+  if (state.pinnedDossierPetId && desktopEngine && desktopEngine.pets.has(state.pinnedDossierPetId)) {
+    if (hoverInfo && hoverInfo.collectible?.id === state.pinnedDossierPetId) {
+      populateAndShowDossierHUD(hoverInfo);
     }
     return;
   }
-  populateAndShowDossierHUD(hoverInfo);
+  const hud = document.getElementById('pet-hover-dossier');
+  if (hud && !hud.classList.contains('hidden')) {
+    hud.classList.add('hidden');
+  }
 }
 
 function togglePinnedDossierForPet(petId) {
@@ -1047,48 +1040,8 @@ function renderSpecimenPlacards(placardsList = []) {
 
 function updateStructureFloatingHUD(info) {
   const hud = document.getElementById('structure-floating-hud');
-  if (!hud) return;
-  if (!info || !info.id) {
-    hud.classList.add('hidden');
-    hud.dataset.structId = '';
-    return;
-  }
-  // Never overlap the open Studio / Manager window!
-  const win = document.getElementById('software-window');
-  const studioActive = document.getElementById('tab-studio')?.classList.contains('active');
-  if (win && !win.classList.contains('window-hidden')) {
-    if (studioActive) {
-      hud.classList.add('hidden');
-      return;
-    }
-    const rect = win.getBoundingClientRect();
-    const sx = info.screenX || window.innerWidth * 0.5;
-    const sy = info.screenY || window.innerHeight * 0.5;
-    if (sx >= rect.left - 180 && sx <= rect.right + 180 && sy >= rect.top - 50 && sy <= rect.bottom + 50) {
-      hud.classList.add('hidden');
-      return;
-    }
-  }
-  hud.dataset.structId = info.id;
-  const titleEl = document.getElementById('struct-hud-title');
-  if (titleEl) {
-    const icon = info.isShelfStructure ? '🪵' : info.isDecorProp ? '🕯️' : '🏗️';
-    const occSuffix = info.occupiedByName ? ` (已装入: ${info.occupiedByName.split('·')[0].trim()})` : '';
-    titleEl.textContent = `${icon} ${info.label}${occSuffix}`;
-  }
-  const depthEl = document.getElementById('struct-hud-depth');
-  if (depthEl && info.zMm !== undefined) {
-    depthEl.textContent = `Z:${info.zMm}mm`;
-  }
-  const ejectBtn = document.getElementById('btn-struct-hud-eject');
-  if (ejectBtn) {
-    ejectBtn.style.display = info.occupiedByPetId ? 'inline-flex' : 'none';
-  }
-  const left = Math.max(185, Math.min(window.innerWidth - 185, info.screenX || window.innerWidth * 0.5));
-  const top = Math.max(68, Math.min(window.innerHeight - 60, (info.screenY || window.innerHeight * 0.5) - 18));
-  hud.style.left = `${left}px`;
-  hud.style.top = `${top}px`;
-  hud.classList.remove('hidden');
+  if (hud) hud.classList.add('hidden');
+  return;
 }
 
 function renderPlacedStructuresList(list = []) {
@@ -5756,15 +5709,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   function triggerHeartbeatCheckNow() {
-    puzzleRuntime.hbActive = true;
-    puzzleRuntime.hbCountdownSec = 25;
-    if (hbBanner) hbBanner.classList.remove('hidden');
-    const cdEl = document.getElementById('hb-countdown-badge');
-    if (cdEl) cdEl.textContent = '25s';
-    soundEngine.playSummon(true);
-    updateFocusClockUI();
-    refreshPuzzleHubUI();
-    showToast('🚨【活人专注签到奖励】请在 25 秒内点击确认或点击桌面任意头颅，立得 +150 PTS 暴击分！');
+    puzzleRuntime.hbActive = false;
+    if (hbBanner) hbBanner.classList.add('hidden');
   }
 
   function confirmHeartbeatCheck() {
@@ -6041,42 +5987,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   let tactileToastTimer = null;
   let lastTactilePtsTime = 0;
 
-  function spawnDopaminePopup(text, x, y) {
-    if (!popupLayer) return;
-    const el = document.createElement('div');
-    const px = x || (window.innerWidth * 0.42 + (Math.random() - 0.5) * 180);
-    const py = y || (window.innerHeight * 0.42 + (Math.random() - 0.5) * 120);
-    el.style.cssText = `
-      position:absolute;left:${px}px;top:${py}px;transform:translate(-50%,-50%);
-      padding:4px 12px;border-radius:999px;font-weight:900;font-size:13.5px;
-      color:#fef08a;
-      background:rgba(120,53,15,0.92);
-      border:1.5px solid #fbbf24;
-      box-shadow:0 6px 20px rgba(0,0,0,0.65);pointer-events:none;white-space:nowrap;
-      transition:transform 0.85s cubic-bezier(0.16,1,0.3,1), opacity 0.85s ease;
-    `;
-    el.textContent = text;
-    popupLayer.appendChild(el);
-    requestAnimationFrame(() => {
-      el.style.transform = 'translate(-50%, -145%) scale(1.08)';
-      el.style.opacity = '0';
-    });
-    setTimeout(() => el.remove(), 900);
+  function spawnDopaminePopup() {
+    return;
   }
 
-  function showTactileToast(title, desc, ptsText = '+15 PTS ✨') {
-    if (!tactileToast) return;
-    const tEl = document.getElementById('tactile-toast-title');
-    const dEl = document.getElementById('tactile-toast-desc');
-    const pEl = document.getElementById('tactile-toast-pts');
-    if (tEl) tEl.textContent = title;
-    if (dEl) dEl.textContent = desc;
-    if (pEl) pEl.textContent = ptsText;
-    tactileToast.classList.remove('hidden');
-    if (tactileToastTimer) clearTimeout(tactileToastTimer);
-    tactileToastTimer = setTimeout(() => {
-      tactileToast.classList.add('hidden');
-    }, 3400);
+  function showTactileToast() {
+    if (tactileToast) tactileToast.classList.add('hidden');
+    return;
   }
 
   function setDesktopTactilePlayMode(mode = 'move', focusPetId = null) {
@@ -6406,20 +6323,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
   renderComfortReader();
 
-  function openComfortReaderDrawer(categoryId = null, targetPetId = null) {
-    if (!comfortDrawer) return;
-    curComfortTargetPetId = targetPetId || null;
-    if (categoryId) {
-      curComfortCatId = categoryId;
-      const firstArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.category === curComfortCatId);
-      if (firstArt) curComfortArticleId = firstArt.id;
-    }
-    renderComfortReader();
-    comfortDrawer.classList.remove('hidden');
-    const curArt = COMFORT_HANDBOOK_ARTICLES.find(a => a.id === curComfortArticleId) || COMFORT_HANDBOOK_ARTICLES[0];
-    if (curArt && desktopEngine) {
-      desktopEngine.performLinkedComfort3DAction(curArt.linked3DAction, curComfortTargetPetId);
-    }
+  function openComfortReaderDrawer() {
+    if (comfortDrawer) comfortDrawer.classList.add('hidden');
   }
   window.__openComfortReaderDrawer = openComfortReaderDrawer;
 

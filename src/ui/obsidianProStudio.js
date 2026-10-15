@@ -146,10 +146,38 @@ function makeShortSliderRow({ label, targetId, fallbackId = '', min, max, step, 
 export function initObsidianProStudio() {
   if (document.getElementById('obsidian-char-hair-studio')) return;
 
-  // 1. Transform #desktop-overlay-bar into a sleek Minimalist Capsule Dock
+  // 1. Force all floating drawers, toasts, and modals hidden at boot so NOTHING blocks the 3D viewport
+  for (const id of [
+    'comfort-reader-drawer',
+    'victor-puzzle-hub-modal',
+    'tactile-sculpt-hud-toast',
+    'structure-floating-hud',
+    'pet-hover-dossier',
+    'visual-customizer-drawer',
+    'heartbeat-anticheat-banner',
+    'start-game-overlay',
+  ]) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('hidden');
+      if (el.style && el.style.display === 'flex') {
+        el.style.removeProperty('display');
+      }
+    }
+  }
+
+  // Ensure #software-window and #specimen-placards-layer start hidden for a 100% clean 3D desktop
+  const swWin = document.getElementById('software-window');
+  if (swWin) swWin.classList.add('window-hidden');
+  const placardsLayer = document.getElementById('specimen-placards-layer');
+  if (placardsLayer) placardsLayer.classList.add('hidden');
+  const btnPlacards = document.getElementById('btn-quick-placards');
+  if (btnPlacards) btnPlacards.classList.remove('active-top');
+
+  // 2. Transform #desktop-overlay-bar into a sleek Minimalist Capsule Dock
   transformTopOverlayBar();
 
-  // 2. Clean up verbose slider labels across existing drawers/windows
+  // 3. Clean up verbose slider labels across existing drawers/windows
   cleanExistingVerboseLabels();
 
   // 3. Build Unified Character & Hair Studio Drawer (#obsidian-char-hair-studio)
@@ -624,43 +652,42 @@ function transformTopOverlayBar() {
     }
   });
 
-  // Shorten tactile mode button labels
-  const tactileLabels = {
-    'btn-tactile-move': '移动',
-    'btn-tactile-pinch': '捏脸',
-    'btn-tactile-pupil': '瞳孔',
-    'btn-tactile-hair': '拨发',
-    'btn-tactile-pose': '姿态',
-    'btn-tactile-fluid': '流体',
+  // Shorten tactile mode button labels using [data-tactile-mode]
+  const tactileModes = {
+    move: '移动',
+    pinch_face: '捏脸',
+    roll_eyeball: '瞳孔',
+    groom_hair: '拨发',
+    bow_gaze: '姿态',
+    paint_fluid: '流体',
   };
-  Object.entries(tactileLabels).forEach(([id, text]) => {
-    const el = document.getElementById(id);
+  Object.entries(tactileModes).forEach(([mode, text]) => {
+    const el = bar.querySelector(`[data-tactile-mode="${mode}"]`);
     if (el) {
       el.textContent = text;
       el.removeAttribute('style');
     }
   });
 
-  // Move secondary buttons into a clean popover (#obs-more-popover) so the dock is ultra-clean
+  // Move secondary buttons into a clean popover (#obs-more-popover) so the dock is a single sleek pill
   const secondaryIds = [
-    ['btn-victor-puzzle-hub', '积分与整备台'],
-    ['btn-comfort-reader', '伴学手札'],
-    ['btn-quick-catharsis', '一键泄压'],
-    ['btn-quick-top-view', '俯视视角'],
-    ['btn-quick-place-container', '放置容器'],
-    ['btn-quick-ultra-hd', '4K超清'],
-    ['btn-quick-strong-shadow', '强光影'],
-    ['btn-quick-beauty-grade', '胶片调色'],
-    ['btn-quick-slow-light', '慢速流光'],
     ['btn-quick-placards', '连接标牌'],
-    ['btn-quick-rain-ambience', '雨声伴学'],
+    ['btn-open-puzzle-hub', '积分与整备台'],
+    ['btn-open-comfort-reader', '伴学手札'],
+    ['btn-desktop-superiority-pulse', '一键泄压'],
+    ['btn-desktop-lookdown-view', '俯视视角'],
+    ['btn-quick-place-container', '放置容器'],
+    ['btn-quick-ultra-crisp', '4K超清'],
+    ['btn-quick-chiaroscuro', '强光影'],
+    ['btn-quick-postfx', '胶片调色'],
+    ['btn-quick-dyn-light', '慢速流光'],
+    ['btn-quick-rain-study', '雨声伴学'],
     ['btn-quick-gravity', '物理重力'],
-    ['btn-quick-dock-right', '右侧停靠'],
-    ['btn-quick-always-top', '桌宠置顶'],
-    ['btn-quick-grid', '透视网格'],
+    ['btn-quick-dock-window', '右侧停靠'],
+    ['btn-quick-pets-top', '桌宠置顶'],
+    ['btn-quick-box-grid', '透视网格'],
     ['btn-quick-bg-mode', '背景切换'],
-    ['btn-quick-audio', '音效开关'],
-    ['btn-quick-export-exe', '导出程序'],
+    ['btn-quick-mute', '音效开关'],
   ];
 
   const moreWrap = document.createElement('div');
@@ -792,6 +819,10 @@ function wireObsidianStudioEvents(studio) {
     btnOpen.addEventListener('click', () => {
       refreshTargetDropdown();
       syncObsidianCardsFromDOM(studio);
+      const willOpen = studio.classList.contains('hidden');
+      if (willOpen) {
+        document.getElementById('visual-customizer-drawer')?.classList.add('hidden');
+      }
       studio.classList.toggle('hidden');
       btnOpen.classList.toggle('active-top', !studio.classList.contains('hidden'));
     });
@@ -806,8 +837,10 @@ function wireObsidianStudioEvents(studio) {
 
   if (btnOpen3D) {
     btnOpen3D.addEventListener('click', () => {
+      studio.classList.add('hidden');
+      btnOpen?.classList.remove('active-top');
       const win = document.getElementById('software-window');
-      if (win && win.classList.contains('hidden')) {
+      if (win && (win.classList.contains('window-hidden') || win.classList.contains('hidden'))) {
         document.getElementById('btn-toggle-window')?.click();
       }
       const studioTab = document.querySelector('#software-tabs .nav-tab[data-tab="studio"]');

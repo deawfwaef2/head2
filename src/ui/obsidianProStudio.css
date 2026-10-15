@@ -25,15 +25,49 @@
   --obs-shadow: 0 20px 50px rgba(0, 0, 0, 0.78), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 
-/* 1. Clean Uncluttered Default Screen */
+/* 1. Bulletproof .hidden & Clean Uncluttered Default Screen */
+.hidden,
+[hidden] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 #os-desktop-icons,
 #screen-pets-strip,
-#study-triumph-hud {
+#study-triumph-hud,
+#tactile-sculpt-hud-toast,
+#dopamine-floating-popups,
+#heartbeat-anticheat-banner,
+#structure-floating-hud,
+#vanishing-point-hud,
+#start-game-overlay,
+#comfort-reader-drawer,
+#victor-puzzle-hub-modal,
+#btn-open-comfort-reader,
+#btn-open-puzzle-hub,
+#btn-desktop-superiority-pulse {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Keep secondary drawers strictly hidden unless explicitly opened */
+#visual-customizer-drawer.hidden,
+#pet-hover-dossier.hidden,
+#specimen-placards-layer.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 body.obs-show-triumph #study-triumph-hud {
   display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 /* 2. Minimalist Top Floating Capsule Dock (#desktop-overlay-bar) */

@@ -55,8 +55,8 @@
     <!-- FULL-SCREEN 3D DESKTOP PET CANVAS (True Screen-Space 3D Perspective Box Space) -->
     <canvas id="desktop-pet-canvas"></canvas>
 
-    <!-- Stage 37: Always-On Connected Specimen Placards & Brass Callout Leader Lines ("不用关的那种类似标牌的连接，能看到角色照片、简要信息") -->
-    <div id="specimen-placards-layer" aria-label="断头标本连接标牌层">
+    <!-- Stage 37: Connected Specimen Placards & Brass Callout Leader Lines -->
+    <div id="specimen-placards-layer" class="hidden" aria-label="断头标本连接标牌层">
       <svg id="specimen-placards-svg" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="specimen-placards-cards"></div>
     </div>
@@ -122,8 +122,8 @@
     </div>
   </div>
 
-  <!-- Stage 28 & 38: Floating 3D Structure / Shelf / Prop Action HUD (Supports Wheel Depth + Closer/Farther Buttons + Reliable Close; z-index: 35 below Studio window) -->
-  <div id="structure-floating-hud" class="hidden" style="position:fixed;z-index:35;transform:translate(-50%,-100%);background:rgba(15,12,10,0.94);border:1px solid rgba(217,179,130,0.62);border-radius:10px;padding:7px 11px;box-shadow:0 10px 28px rgba(0,0,0,0.72);backdrop-filter:blur(10px);color:#f5ebd9;font-size:12px;pointer-events:auto;white-space:nowrap;">
+  <!-- Stage 28 & 38: Floating 3D Structure / Shelf / Prop Action HUD -->
+  <div id="structure-floating-hud" class="hidden" style="display:none;position:fixed;z-index:35;transform:translate(-50%,-100%);background:rgba(15,12,10,0.94);border:1px solid rgba(217,179,130,0.62);border-radius:10px;padding:7px 11px;box-shadow:0 10px 28px rgba(0,0,0,0.72);backdrop-filter:blur(10px);color:#f5ebd9;font-size:12px;pointer-events:auto;white-space:nowrap;">
     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
       <strong id="struct-hud-title" style="color:#fde68a;font-size:12px;">🧪 维多利亚玻璃钟罩座</strong>
       <span id="struct-hud-depth" style="font-size:10.5px;color:#fcd34d;background:rgba(217,179,130,0.16);padding:1px 6px;border-radius:5px;border:1px solid rgba(217,179,130,0.32);">Z:-160mm</span>
@@ -306,7 +306,7 @@
        STAGE 55/57/58: DIRECT 3D DESKTOP TACTILE SCULPTING & SUPERIORITY LIVE HUD TOAST (z-index: 9780)
        Positioned at top-left-center below the control bar so it NEVER overlaps bottom placards or the right-hand Comfort Reader!
        ========================================================================= -->
-  <div id="tactile-sculpt-hud-toast" class="hidden" style="position:fixed;top:118px;left:32%;transform:translateX(-50%);z-index:9780;width:min(580px,56vw);background:linear-gradient(135deg,rgba(15,23,42,0.94),rgba(28,16,32,0.96));border:1.5px solid rgba(251,191,36,0.65);border-radius:12px;padding:10px 16px;box-shadow:0 12px 36px rgba(0,0,0,0.65),0 0 20px rgba(245,158,11,0.28);color:#fef3c7;pointer-events:none;backdrop-filter:blur(10px);">
+  <div id="tactile-sculpt-hud-toast" class="hidden" style="display:none;position:fixed;top:118px;left:32%;transform:translateX(-50%);z-index:9780;width:min(580px,56vw);background:linear-gradient(135deg,rgba(15,23,42,0.94),rgba(28,16,32,0.96));border:1.5px solid rgba(251,191,36,0.65);border-radius:12px;padding:10px 16px;box-shadow:0 12px 36px rgba(0,0,0,0.65),0 0 20px rgba(245,158,11,0.28);color:#fef3c7;pointer-events:none;backdrop-filter:blur(10px);">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
       <div style="font-size:13px;font-weight:800;color:#fde68a;" id="tactile-toast-title">
         🤏 桌面 3D 直接上手把玩中 · 静默标本
@@ -320,10 +320,8 @@
 
   <!-- =========================================================================
        STAGE 58: NON-BLOCKING COMFORT & LIVING SUPERIORITY HANDBOOK DRAWER (z-index: 9700)
-       ("继续各种和头的互动，然后你多来一些文本，比如说每次难受不舒服的时候玩家可以点开看")
-       Positioned on the right side so the player can read while watching & touching the 3D desktop heads!
        ========================================================================= -->
-  <div id="comfort-reader-drawer" class="hidden" style="position:fixed;top:118px;right:16px;z-index:9700;width:min(485px,92vw);max-height:calc(100vh - 182px);display:flex;flex-direction:column;background:linear-gradient(160deg,rgba(16,13,24,0.96),rgba(26,15,28,0.97));border:1.5px solid rgba(244,114,182,0.68);border-radius:15px;box-shadow:0 20px 55px rgba(0,0,0,0.85),0 0 28px rgba(236,72,153,0.28);color:#fdf2f8;backdrop-filter:blur(14px);overflow:hidden;pointer-events:auto;">
+  <div id="comfort-reader-drawer" class="hidden" style="display:none;position:fixed;top:118px;right:16px;z-index:9700;width:min(485px,92vw);max-height:calc(100vh - 182px);flex-direction:column;background:linear-gradient(160deg,rgba(16,13,24,0.96),rgba(26,15,28,0.97));border:1.5px solid rgba(244,114,182,0.68);border-radius:15px;box-shadow:0 20px 55px rgba(0,0,0,0.85),0 0 28px rgba(236,72,153,0.28);color:#fdf2f8;backdrop-filter:blur(14px);overflow:hidden;pointer-events:auto;">
     <!-- Header -->
     <div id="comfort-reader-drag-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(90deg,rgba(131,24,67,0.65),rgba(49,46,129,0.65));border-bottom:1px solid rgba(244,114,182,0.35);cursor:move;">
       <div>
@@ -396,7 +394,7 @@
        STAGE 52: VICTOR DOPAMINE, MONTHLY SCORE POOL & PUZZLE-SKILL HUB (z-index: 9650)
        ("每个月收集总分 · 每个头都有完全不一样的特殊技能与触发器 · 笔记本写字防作弊 · BOOTH奖池与拼图KEY预演")
        ========================================================================= -->
-  <div id="victor-puzzle-hub-modal" class="hidden" style="position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:9650;width:min(920px,95vw);max-height:86vh;display:flex;flex-direction:column;background:rgba(14,12,16,0.96);border:1.5px solid rgba(251,191,36,0.65);border-radius:16px;box-shadow:0 24px 68px rgba(0,0,0,0.88),0 0 32px rgba(180,83,9,0.28);color:#f8fafc;backdrop-filter:blur(16px);overflow:hidden;pointer-events:auto;">
+  <div id="victor-puzzle-hub-modal" class="hidden" style="display:none;position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:9650;width:min(920px,95vw);max-height:86vh;flex-direction:column;background:rgba(14,12,16,0.96);border:1.5px solid rgba(251,191,36,0.65);border-radius:16px;box-shadow:0 24px 68px rgba(0,0,0,0.88),0 0 32px rgba(180,83,9,0.28);color:#f8fafc;backdrop-filter:blur(16px);overflow:hidden;pointer-events:auto;">
     <!-- Hub Header -->
     <div id="victor-hub-drag-header" style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:linear-gradient(90deg,rgba(120,53,15,0.58),rgba(30,20,28,0.85));border-bottom:1px solid rgba(251,191,36,0.35);cursor:move;">
       <div>
@@ -1538,7 +1536,7 @@
   <!-- =========================================================================
        LAYER 3: FLOATING SOFTWARE WINDOW (CERVIX-3D Management & Creation Suite)
        ========================================================================= -->
-  <div id="software-window" class="window-dock-right">
+  <div id="software-window" class="window-dock-right window-hidden">
     <!-- Draggable Window Titlebar -->
     <div id="window-titlebar">
       <div class="win-brand">

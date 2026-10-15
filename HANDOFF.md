@@ -1315,3 +1315,9 @@
 - 新工作全部在 `安全/` 内进行：写实风格**收藏胸像**（活人自然神态、虚构角色、中性底座）的生成/管理/设置/桌宠软件。
 - 可玩入口：`安全/点击开始_写实收藏胸像.html`（双击 → 点击开始）。
 - 内容红线、用户偏好（频繁推送、先打包 HTML、≤128MB 工作区、不强推、诚实报告）详见 **`安全/HANDOFF_安全.md`**。请勿把旧项目的断头/血迹/具名真人档案/真人照片资产带入 `安全/`。
+
+---
+
+## [2026-10-15] Stage 63 UI Cleanup — Permanently Hid All Blocking HUDs / Drawers / Toasts
+- Fixed missing `.hidden { display: none !important; }` and inline `display:flex` overrides that caused `#comfort-reader-drawer`, `#tactile-sculpt-hud-toast`, and `#structure-floating-hud` to remain visible on screen.
+- Disabled automatic popup of `#tactile-sculpt-hud-toast`, `#dopamine-floating-popups`, `#structure-floating-hud`, `#comfort-reader-drawer`, `#heartbeat-anticheat-banner`, `#pet-hover-dossier`, and defaulted `#software-window` (`windowHidden: true`) and `#specimen-placards-layer` (`placardsEnabled: false`) to hidden so the 3D scene has zero blocking panels.
