@@ -1784,9 +1784,10 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           diffuseColor.rgb *= 1.0 - poreDark3D * 0.032 * smoothstep(-0.07, -0.02, p.y);
           if (uHairline > 0.001) {
             vec3 spH = p;
-            float covH = clamp(vHairCov, 0.0, 1.0);
-            float scalpZone = smoothstep(0.012, 0.058, spH.y) * (1.0 - smoothstep(0.055, 0.090, spH.z) * smoothstep(0.058, 0.015, spH.y));
-            covH = max(covH, scalpZone * 0.65);
+            // Never invent scalp coverage on bare forehead. The old fallback
+            // forced 65% hair everywhere above the brows and painted vertical
+            // dark stripes underneath center-parted hairstyles.
+            float covH = clamp(vHairCov, 0.0, 1.0) * smoothstep(0.040, 0.057, spH.y);
             vec3 dirH = length(vHairDir) > 0.01 ? normalize(vHairDir) : normalize(vec3(spH.x * 0.5, -1.0, 0.15));
             vec3 orthoH = normalize(cross(dirH, vec3(0.0, 0.0, 1.0)) + vec3(1.0, 0.0, 0.0) * 0.01);
             float alongH = dot(spH, dirH) * 65.0;
@@ -1797,7 +1798,7 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
             float edgeBandH = smoothstep(0.02, 0.38, covH) * (1.0 - smoothstep(0.55, 0.92, covH));
             float microH = sk_n(spH * 620.0);
             float follH = smoothstep(0.68, 0.92, microH) * smoothstep(0.0, 0.5, covH);
-            float rootShadowH = clamp(covH * 0.78 + wispsH * edgeBandH * 0.52 + follH * 0.28, 0.0, 1.0) * uHairline;
+            float rootShadowH = clamp(covH * 0.72 + wispsH * edgeBandH * 0.12 + follH * 0.06, 0.0, 0.84) * uHairline;
             gHairDens = rootShadowH;
             vec3 rootTintH = mix(
               diffuseColor.rgb * vec3(0.72, 0.64, 0.62),

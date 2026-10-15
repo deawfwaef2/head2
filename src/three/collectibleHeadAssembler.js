@@ -2048,7 +2048,9 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (config.customHairUrl) fitImportedHairScene(loadedScene);
     }
 
-    if (!config.customHairUrl && !useStrandMode) loadedScene.traverse(child => {
+    // The photo-style mesh already has overlapping authored cards; Loop subdivision
+    // rounds their open boundaries into holes and creates faceted crown overlaps.
+    if (!config.customHairUrl && !useStrandMode && resolvedStyle !== 'hair_user_photo') loadedScene.traverse(child => {
       if (!child.isMesh) return;
       const original = child.geometry;
       child.geometry = refineArtistHairCards(original);
