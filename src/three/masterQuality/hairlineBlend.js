@@ -99,7 +99,7 @@ export function computeHairCoverage(skinMesh, hairGeom, hairMatrix, alphaAt, anc
       }
     }
   }
-  // 2) 每个皮肤顶点：法线方向上方 3.5cm 内、横向 4mm 内是否有头发
+  // 2) 每个皮肤顶点：法线方向上方 6.5mm 内、横向 3.5mm 内是否有贴头皮发根（排除悬空在额头前的刘海发梢！）
   const raw = new Float32Array(count);
   for (let i = 0; i < count; i++) {
     const px = P[i * 3], py = P[i * 3 + 1], pz = P[i * 3 + 2], nx = N[i * 3], ny = N[i * 3 + 1], nz = N[i * 3 + 2];
@@ -109,21 +109,22 @@ export function computeHairCoverage(skinMesh, hairGeom, hairMatrix, alphaAt, anc
       const a = grid.get(x + ',' + y + ',' + z); if (!a) continue;
       for (const k of a) {
         const dx = pts[k] - px, dy = pts[k + 1] - py, dz = pts[k + 2] - pz;
-        const along = dx * nx + dy * ny + dz * nz; if (along < -0.003 || along > 0.02) continue;
+        const along = dx * nx + dy * ny + dz * nz; if (along < -0.0025 || along > 0.0068) continue;
         const lat2 = dx * dx + dy * dy + dz * dz - along * along;
-        if (lat2 < 0.004 * 0.004) hits++;
+        if (lat2 < 0.0035 * 0.0035) hits++;
       }
     }
     raw[i] = Math.min(1, hits / 3);
   }
-  // 头皮区域遮罩：只有额头以上、鬓角、耳后才可能是发际线；垂在脸颊/下颌前的长发不算（否则脸上会出现“胡茬”）
+  // 头皮区域遮罩：只有上额发际线（y > eyeY + 0.048）、太阳穴鬓角、耳后才可能是发际线；前额中下部的悬空刘海不算发根
   if (anchors) {
     const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
     for (let i = 0; i < count; i++) {
-      const y = P[i * 3 + 1], z = P[i * 3 + 2];
-      const top = ss(anchors.eyeY + 0.012, anchors.eyeY + 0.032, y);
+      const x = Math.abs(P[i * 3]), y = P[i * 3 + 1], z = P[i * 3 + 2];
+      const top = ss(anchors.eyeY + 0.048, anchors.eyeY + 0.064, y);
+      const temple = ss(0.046, 0.058, x) * ss(anchors.eyeY + 0.012, anchors.eyeY + 0.032, y);
       const side = ss(anchors.headCenter[2] + 0.01, anchors.headCenter[2] - 0.02, z) * ss(anchors.eyeY - 0.03, anchors.eyeY - 0.005, y);
-      raw[i] *= Math.max(top, side);
+      raw[i] *= Math.max(top, temple, side);
     }
   }
   // 3) 沿网格拓扑平滑（形成几毫米宽的过渡带）
@@ -168,11 +169,12 @@ export function buildBabyHairGeometry(info, anchors, opts = {}) {
   let seed = 98765; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
   const seeds = [];
   for (let i = 0; i < count; i++) {
-    const c = cov[i]; if (c < 0.15 || c > 0.75) continue;
-    const y = P[i * 3 + 1], z = P[i * 3 + 2];
-    if (y < anchors.eyeY + 0.006) continue;                 // 只在额头、太阳穴
+    const c = cov[i]; if (c < 0.20 || c > 0.72) continue;
+    const x = Math.abs(P[i * 3]), y = P[i * 3 + 1], z = P[i * 3 + 2];
+    if (y < anchors.eyeY + 0.050 && x < 0.048) continue;    // 严禁在前额中下部裸露皮肤长碎发
+    if (y < anchors.eyeY + 0.012) continue;                 // 只在发际线与太阳穴
     if (z < anchors.headCenter[2] - 0.035) continue;          // 后脑不需要
-    const k = Math.max(0, 1 - Math.abs(c - 0.45) / 0.3) * 4.5 * o.babyHair;
+    const k = Math.max(0, 1 - Math.abs(c - 0.46) / 0.26) * 2.8 * o.babyHair;
     const n = Math.floor(k) + (rnd() < k % 1 ? 1 : 0);
     for (let s = 0; s < n; s++) seeds.push(i);
   }

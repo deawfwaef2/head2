@@ -83,11 +83,15 @@ export function fitArtistHairOutsideScalp(geometry, head) {
 
   const p = geometry.attributes.position;
   const { center, size, grid, v } = entry;
+  const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   let adjusted = 0;
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
-    // Upper scalp only. Leave face-framing locks, bangs, ears and lower hairstyle intact.
-    if (v.y < center.y + 0.012 || (v.z > center.z + size.z * 0.24 && v.y < center.y + size.y * 0.25)) continue;
+    // Smoothly weight upper scalp vs face-framing bangs so no hair card is kinked across a boolean boundary
+    const yWeight = ss(center.y + 0.006, center.y + 0.024, v.y);
+    if (yWeight <= 1e-4) continue;
+    const frontMask = ss(center.z + size.z * 0.16, center.z + size.z * 0.30, v.z)
+                    * (1.0 - ss(center.y + size.y * 0.18, center.y + size.y * 0.30, v.y));
     const dx = v.x - center.x;
     const dy = v.y - center.y;
     const dz = v.z - center.z;
@@ -99,9 +103,11 @@ export function fitArtistHairOutsideScalp(geometry, head) {
     const ti = Math.min(NT, Math.max(0, Math.round((theta / Math.PI) * NT)));
     const pi = ((Math.round((phi / (Math.PI * 2)) * NP) % NP) + NP) % NP;
     const radius = grid[ti * NP + pi];
-    const safe = radius + 0.0022;
+    const clearance = 0.0020 - 0.0012 * frontMask;
+    const safe = radius + clearance;
     if (radius > 0 && distance < safe && safe - distance < size.x * 0.22) {
-      const scale = safe / distance;
+      const push = (safe - distance) * yWeight * (1.0 - 0.65 * frontMask);
+      const scale = (distance + push) / distance;
       p.setXYZ(i, center.x + dx * scale, center.y + dy * scale, center.z + dz * scale);
       adjusted++;
     }

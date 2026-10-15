@@ -1784,30 +1784,25 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
           diffuseColor.rgb *= 1.0 - poreDark3D * 0.032 * smoothstep(-0.07, -0.02, p.y);
           if (uHairline > 0.001) {
             vec3 spH = p;
-            // Never invent scalp coverage on bare forehead. The old fallback
-            // forced 65% hair everywhere above the brows and painted vertical
-            // dark stripes underneath center-parted hairstyles.
-            float covH = clamp(vHairCov, 0.0, 1.0) * smoothstep(0.040, 0.057, spH.y);
-            vec3 dirH = length(vHairDir) > 0.01 ? normalize(vHairDir) : normalize(vec3(spH.x * 0.5, -1.0, 0.15));
-            vec3 orthoH = normalize(cross(dirH, vec3(0.0, 0.0, 1.0)) + vec3(1.0, 0.0, 0.0) * 0.01);
-            float alongH = dot(spH, dirH) * 65.0;
-            float acrossH = dot(spH, orthoH) * 420.0;
-            float n1H = sk_n(vec3(acrossH * 0.25, alongH * 0.08, spH.z * 30.0));
-            float n2H = sk_n(vec3(acrossH * 0.85 + n1H * 2.5, alongH * 0.18, spH.z * 70.0));
-            float wispsH = smoothstep(0.42, 0.78, n2H * 0.65 + n1H * 0.35);
-            float edgeBandH = smoothstep(0.02, 0.38, covH) * (1.0 - smoothstep(0.55, 0.92, covH));
-            float microH = sk_n(spH * 620.0);
-            float follH = smoothstep(0.68, 0.92, microH) * smoothstep(0.0, 0.5, covH);
-            float rootShadowH = clamp(covH * 0.72 + wispsH * edgeBandH * 0.12 + follH * 0.06, 0.0, 0.84) * uHairline;
+            // Strictly restrict scalp shadow/follicle transition to the true anatomical scalp/crown/temples
+            // NEVER stain the bare front forehead (spH.y < 0.062 && spH.z > 0.035 && abs(spH.x) < 0.052)
+            float foreheadClearMask = smoothstep(0.060, 0.072, spH.y)
+                                    + (1.0 - smoothstep(0.018, 0.042, spH.z))
+                                    + smoothstep(0.048, 0.060, abs(spH.x)) * smoothstep(0.018, 0.038, spH.y);
+            foreheadClearMask = clamp(foreheadClearMask, 0.0, 1.0);
+            float covH = clamp(vHairCov, 0.0, 1.0) * foreheadClearMask;
+            float microH = sk_n(spH * 520.0);
+            float follH = smoothstep(0.58, 0.90, microH) * smoothstep(0.05, 0.55, covH);
+            float rootShadowH = clamp(covH * 0.42 + follH * 0.14, 0.0, 0.55) * uHairline;
             gHairDens = rootShadowH;
             vec3 rootTintH = mix(
-              diffuseColor.rgb * vec3(0.72, 0.64, 0.62),
-              uHairRoot * 1.35 + diffuseColor.rgb * 0.18,
-              clamp(covH * 0.75 + wispsH * edgeBandH * 0.45, 0.0, 0.88)
+              diffuseColor.rgb * vec3(0.84, 0.80, 0.79),
+              uHairRoot * 1.15 + diffuseColor.rgb * 0.35,
+              clamp(covH * 0.55, 0.0, 0.65)
             );
-            diffuseColor.rgb = mix(diffuseColor.rgb, rootTintH, rootShadowH * 0.82);
-            float contactAOH = smoothstep(0.05, 0.75, covH) * uScalpAO * uHairline;
-            diffuseColor.rgb *= 1.0 - contactAOH * 0.38;
+            diffuseColor.rgb = mix(diffuseColor.rgb, rootTintH, rootShadowH * 0.50);
+            float contactAOH = smoothstep(0.10, 0.80, covH) * uScalpAO * uHairline;
+            diffuseColor.rgb *= 1.0 - contactAOH * 0.22;
           }
         }
       }`

@@ -1429,3 +1429,14 @@
 - `src/three/studioPreviewEngine.js`：修复 SwiftShader 软件渲染至少 220 ms 一帧而旧唤醒窗口仅 160 ms，连续拖动滑杆偶尔不刷新画面的实际 bug，保证有一帧待渲染。`src/ui/obsidianProStudio.css` 与 `src/main.js`：工坊窗口打开时收起挡住帽子上缘的桌面浮动控制条，最小化返回桌宠时自动恢复。
 - **先行构建的最新单文件 HTML 已可运行**（根目录 `点击开始游戏_CERVIX3D.html`，约 31 MB，`docs/index.html` 硬链接）；`file://` 点击启动进入工坊后，已亲看 3 款眼镜×3 款帽子及正面/侧面、默认照片款/八字露额款/无发态截图，调整帽子包裹深度和刘海穿出问题。SwiftShader 页面错误 0。保存 QA：变形值嘴宽/下眼睑 0.4、眼镜/帽子颜色位置角度均进档案，桌宠实际带配件网格，刷新离线 HTML 后从档案重新载入，主/Obsidian 滑杆还原。已知旧发片有局部交叠、极端发型须微调帽位。
 - **并行协作提醒**：远端 `main` 已被另一 Agent 推进至 `b12bb4b82`（Stage 69c 发型裁切/贴图/边缘修复），它从共同祖先 `5c0aeb6` 分叉；本地脸形 Stage 69c 是 `db461ca`，现阶段绝不能强推覆盖远端。应先安全合并双方 Stage 69c 与本 Stage 69d，保留远端发型资产与改动，重新构建/视觉复核离线 HTML 后再正常推送。首次推送被拒后已查远端并阅读其 HANDOFF；认证不要写入本仓库、日志或 HANDOFF。
+
+---
+
+## [2026-10-15 Stage 69c] 修复预设发型刘海/鬓角锯齿裁切破洞、修复受损编发/照片款GLB贴图与发丝边缘Alpha（追加记录）
+- **1. 移除 `stripFrontBangs` / `stripSideLocks` 破坏性三角面剔除 (`src/three/collectibleHeadAssembler.js`, `src/three/desktopBoxSpaceEngine.js`, `src/main.js`)**：
+  - 排查发现 `HAIR_STYLE_PRESET_RECIPES` 中 22 款预设发型及模块化选项触发了 `filterGeometryByCentroid`（按包围盒 `y < 0.086` 与 `y < 0.042` 直接删除基础发模三角面），在额头中央与双耳上方留下规则锯齿状破洞 (`/\ /\ /\`)。现已移除对前额/鬓角基础网格的三角面删除，`forehead_bare` 与 `tucked_ear` 改为在 `applyArtistHairFineTuning` 中通过平滑连续顶点权重向两侧拨开/向耳后收拢，并在切换主发型时重置模块化残留状态、升级 `STORAGE_KEY`。
+- **2. 修复 `hairColorHex` 未定义报错与额头 `aHairCov` 覆盖范围 (`src/three/collectibleHeadAssembler.js`, `src/three/masterQuality/hairlineBlend.js`, `src/three/photorealLighting.js`)**：
+  - 修复 `attachRealHairModel` 第 2288 行 `hexToMasterStrandRgb(hairColorHex)`（原写为未定义的 `hairColor` 导致 `computeHairCoverage` 与 `BabyHairWisps` 静默中断），并将 `computeHairCoverage` 法线距离阈值收紧至 `6.8 mm`（排除悬空在额头前的刘海发梢）、彻底移除 `photorealLighting.js` 中 `acrossH * 420.0` 竖条纹。
+- **3. 修复受损发型 GLB 贴图与发片边缘灰白晕边 (`public/models/*.glb`, `src/three/collectibleHeadAssembler.js`, `src/three/beautyPostChain.js`, `src/three/hairScalpFit.js`, `src/three/hairCardSubdivision.js`)**：
+  - 修复 `hair_user_photo.glb`（保留 `0.1662m` 修复版头顶几何，补全原贴图 `u < 0.60` 透明缺失区与 `v = 0.50` 亮度断层）、`daz_hair_double_braid.glb`、`daz_hair_french_braid_bun.glb`、`daz_hair_unkempt_french_braid.glb` 的内嵌贴图，使三角面有效发丝覆盖率从 `9%~21%` 恢复至 `93%~98%`。
+  - 修复 `injectArtistHairColor` 中 `diffuseColor.a` 被重复平方的问题，对半透明发片边缘做预乘压暗消除灰白硬边；平滑化 `hairScalpFit.js` 前额过渡权重与 `hairCardSubdivision.js` 法线插值。

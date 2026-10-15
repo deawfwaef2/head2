@@ -76,7 +76,7 @@ import {
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage57-universal-superiority-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage69-hair-fix-v1';
 const ACCESSORY_DEFAULTS = Object.freeze({
   glassesStyle: 'none', glassesColor: '#a07857', glassesSize: 1,
   glassesOffsetY: 0, glassesOffsetZ: 0, glassesTilt: 0, glassesLensTint: 0,
@@ -5213,8 +5213,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     for (const pet of pets) {
       if (!pet?.collectible) continue;
       pet.collectible.hairStyle = newHairStyle;
+      pet.collectible.frontBangs = 'default';
+      pet.collectible.sideLocks = 'default';
+      pet.collectible.topCrown = 'default';
+      pet.collectible.backAttachment = 'none';
+      if (pet.collectible.morphs) {
+        pet.collectible.morphs.frontBangs = 'default';
+        pet.collectible.morphs.frontBangsStyle = 'default';
+        pet.collectible.morphs.sideLocks = 'default';
+        pet.collectible.morphs.sideLocksStyle = 'default';
+        pet.collectible.morphs.topCrown = 'default';
+        pet.collectible.morphs.topCrownStyle = 'default';
+        pet.collectible.morphs.backAttachment = 'none';
+        pet.collectible.morphs.backAttachmentStyle = 'none';
+      }
       const col = state.collectibles.find(c => c.id === pet.id);
-      if (col) col.hairStyle = newHairStyle;
+      if (col) {
+        col.hairStyle = newHairStyle;
+        col.frontBangs = 'default';
+        col.sideLocks = 'default';
+        col.topCrown = 'default';
+        col.backAttachment = 'none';
+      }
       const savedPos = pet.pos ? pet.pos.clone() : null;
       await desktopEngine.summonCollectible(pet.collectible);
       const updatedPet = desktopEngine.pets.get(pet.id);
