@@ -1291,3 +1291,19 @@
      - Removed the bogus `if (dx * pdx + dy * pdy + dz * pdz < 0) { dx = -dx; ... }` 180° flip and added a UV-seam discontinuity guard (`|uu - prevU| > 0.10 || |vv - prevV| > 0.10`) in `traceDir()` (`src/three/masterQuality/strandHair.js`), reducing mid-forehead crossing points on `daz_hair_curtain_wave.glb` from `353` down to `1`.
   3. **Sub-Pixel Coverage & `_cachedStrandUniforms` Cache Fix**:
      - Fixed `updateMasterStrandHairPxScale` (`globalStrandMeshVersion++`) so `uPxScale` updates after async hair loading, restored `4x MSAA` on `hdrTarget`, and tuned `STRAND_SHADING_DEFAULTS` (`gainR: 0.68, envMapIntensity: 0.08`) and `N = 8..24` smooth resampling.
+
+---
+
+## Stage 63 — Complete Obsidian Pro UI Overhaul (`极简胶囊 Dock + 人物与发型高定视觉卡片总控台 + 黑曜石专业暗色主题`)
+- **1. Minimalist Default Desktop & Floating Capsule Dock (`minimal_dock` in `src/ui/obsidianProStudio.css` & `src/ui/obsidianProStudio.js`)**:
+  - Transformed `#desktop-overlay-bar` into a centered, single-line Obsidian Pro Floating Capsule Dock (`height: 44px`, `border-radius: 999px`) featuring `CERVIX PRO`, `✦ 人物与发型` (`#btn-open-obsidian-studio`), `画风调制`, `颅相工坊`, `光影镜头`, a compact 6-mode tactile segmented strip (`移动`/`捏脸`/`瞳孔`/`拨发`/`姿态`/`流体`), `纯享画面`, and a `更多工具 ▾` popover (`#obs-more-popover`) housing all 18 secondary toggles without losing any DOM IDs or listeners.
+  - Hidden `#os-desktop-icons`, `#screen-pets-strip`, and `#study-triumph-hud` by default, and restyled `.specimen-placard-card` into sleek dark-glass museum placards with a `✦造型` button (`[data-placard-studio]`) and hover-revealed secondary controls.
+- **2. Unified Character & Hair Visual Card Studio (`unified_card_studio` — `#obsidian-char-hair-studio`)**:
+  - Consolidated duplicated hair/character controls across `#vcd-selected-pet-inspector`, `#visual-customizer-drawer`, and `#tab-studio` into a unified right-side Obsidian Pro Studio (`#obsidian-char-hair-studio`) with two-way sync to both Desktop 3D specimens and the Studio 3D preview:
+    - **发型高定 (`hair`)**: Category filter pills + 29 visual SVG hairstyle cards (`REAL_HAIR_CATALOG`), 4-zone modular hair visual pill/select grid (`前额刘海`, `两侧鬓角`, `颅顶发缝`, `后脑尾饰`), 8 hair color swatches + root/tip pickers, render mode selector (`card`/`strand`), and 11 compact single-line fine-tuning sliders.
+    - **人物基底 (`character`)**: 8 visual character archetype cards (`FACE_ARCHETYPE_CATALOG`), 8 visual skin tone swatch cards (`SKIN_MATERIAL_CATALOG`), 7 expression pills, and 8 compact blend/expression sliders.
+    - **眉眼五官 (`face`)**: 12 visual SVG eye shape cards (`EYE_SHAPE_PRESET_CATALOG`), 8 visual SVG 3D eyebrow cards (`EYEBROW_STYLE_CATALOG`), 8 iris color swatches, and 21 collapsible compact eye/bone sliders.
+    - **肤质与断面 (`material`)**: 6 realism skin preset pills (`CHAR_MATERIAL_PRESET_CATALOG`), 5 eyeliner style pills, 4 makeup color pickers, and 19 collapsible dermis & anatomical cross-section fluid sliders.
+- **3. Obsidian Pro Dark Glass Theme (`obsidian_pro`)**:
+  - Replaced all high-saturation neon gradients, rainbow borders, and verbose multi-line parenthetical slider labels across `#desktop-overlay-bar`, `#visual-customizer-drawer`, `#software-window`, `#start-game-overlay`, `#comfort-reader-drawer`, and `#victor-puzzle-hub-modal` with deep obsidian frosted glass (`rgba(9,10,13,0.92)` + `blur(28px)`) and muted champagne gold (`#d4b483`) hairline accents.
+

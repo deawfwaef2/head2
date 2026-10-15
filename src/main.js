@@ -1,4 +1,6 @@
 import { createVisualRepair } from './ui/visualRepair.js';
+import { initObsidianProStudio } from './ui/obsidianProStudio.js';
+import './ui/obsidianProStudio.css';
 import {
   DEFAULT_COLLECTIBLES,
   DAZ_TUTORIAL_STEPS,
@@ -809,7 +811,8 @@ function renderSpecimenPlacards(placardsList = []) {
           <div class="placard-sub-line">
             <span class="placard-cut-tag" data-placard-cut>${stateLabel}</span>
             <div class="placard-actions">
-              <button type="button" class="placard-mini-btn" data-placard-skill="${item.id}" title="触发此头装配的通用拼图技能与月度总分触发器" style="background:rgba(245,158,11,0.28);border-color:rgba(251,191,36,0.75);color:#fef08a;font-weight:800;">${skillBtnLabel}</button>
+              <button type="button" class="placard-mini-btn" data-placard-studio="${item.id}" title="打开黑曜石人物与发型高定总控台" style="border-color:rgba(212,180,131,0.55);color:#ebd2a8;">✦造型</button>
+              <button type="button" class="placard-mini-btn" data-placard-skill="${item.id}" title="触发此头装配的通用拼图技能与月度总分触发器">${skillBtnLabel}</button>
               <button type="button" class="placard-mini-btn" data-placard-pinch="${item.id}" title="切换至【🤏直接上手捏脸/扒眼皮/掰嘴模式】，用鼠标直接在3D头颅上推拉眼皮、掰嘴、捏脸颊！" style="border-color:rgba(244,114,182,0.65);color:#fbcfe8;">🤏捏脸</button>
               <button type="button" class="placard-mini-btn" data-placard-eyeball="${item.id}" title="直接在桌面拨弄这颗3D头颅的眼球与瞳孔（上翻白眼/瞳孔涣散放大/针尖缩瞳/垂眸失焦）！" style="border-color:rgba(56,189,248,0.65);color:#bae6fd;">👁️拨眼</button>
               <button type="button" class="placard-mini-btn" data-placard-hairlift="${item.id}" title="直接揪住这颗3D头颅的发顶将其拎到半空掂量重量，再松手让4.5kg头颅重重落回桌面！" style="border-color:rgba(192,132,252,0.65);color:#e9d5ff;">🪮拎发</button>
@@ -857,6 +860,18 @@ function renderSpecimenPlacards(placardsList = []) {
         if (ev.key === 'Enter') {
           ev.preventDefault();
           briefEl.blur();
+        }
+      });
+      cardEl.querySelector('[data-placard-studio]')?.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        state.activeStripPetId = item.id;
+        if (typeof window.__syncVcdSelectedPetUI === 'function') {
+          window.__syncVcdSelectedPetUI(item.id);
+        }
+        const studioEl = document.getElementById('obsidian-char-hair-studio');
+        const btnOpen = document.getElementById('btn-open-obsidian-studio');
+        if (studioEl && studioEl.classList.contains('hidden')) {
+          btnOpen?.click();
         }
       });
       cardEl.querySelector('[data-placard-skill]')?.addEventListener('click', (ev) => {
@@ -6604,6 +6619,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const visualRepair = createVisualRepair({ desktop: desktopEngine, studio: studioEngine, notify: showToast });
   if (window.__cervixQA) window.__cervixQA.visualRepair = visualRepair;
+  initObsidianProStudio();
 
   if (bootStatus) bootStatus.remove();
   if (window.__cervixQA) window.__cervixQA.ready = true;
