@@ -36,7 +36,13 @@ float sk_n(vec3 x){ vec3 i=floor(x); vec3 f=fract(x); f=f*f*(3.0-2.0*f);
   return mix(mix(mix(sk_h(i),sk_h(i+vec3(1,0,0)),f.x),mix(sk_h(i+vec3(0,1,0)),sk_h(i+vec3(1,1,0)),f.x),f.y),
              mix(mix(sk_h(i+vec3(0,0,1)),sk_h(i+vec3(1,0,1)),f.x),mix(sk_h(i+vec3(0,1,1)),sk_h(i+vec3(1,1,1)),f.x),f.y),f.z); }
 // 毛孔：倒置的细胞状凹坑 + 细纹
-float sk_pore(vec3 p){ float a = sk_n(p); float b = sk_n(p*2.13+7.1); return 1.0 - pow(1.0 - min(a,b), 3.0); }
+// 毛孔：稀疏、圆润的小凹点（平滑噪声阈值化）+ 极细的皮纹，避免“拉毛墙面”的块状感
+float sk_pore(vec3 p){
+  float a = sk_n(p) * 0.6 + sk_n(p * 1.97 + 11.3) * 0.4;
+  float pits = smoothstep(0.62, 0.86, a);            // 稀疏凹点
+  float fine = sk_n(p * 3.7 + 5.0) * 0.25;           // 细皮纹
+  return -pits + fine;
+}
 `;
 
 
@@ -128,10 +134,10 @@ export function upgradeSkinMaterial(src, opts = {}) {
         `#include <normal_fragment_maps>
         {
           // 程序化毛孔微法线：对象空间噪声梯度扰动法线；按屏幕像素尺寸自动淡出，远看不闪烁
-          vec3 P = vSkinObj * 1400.0;
-          float fw = length(fwidth(vSkinObj)) * 1400.0;
+          vec3 P = vSkinObj * 2300.0;
+          float fw = length(fwidth(vSkinObj)) * 2300.0;
           float fade = 1.0 - smoothstep(0.25, 1.2, fw);
-          float hgt = sk_pore(P) * 0.00028 * uMicro * fade;
+          float hgt = sk_pore(P) * 0.00006 * uMicro * fade;
           vec2 dH = vec2(dFdx(hgt), dFdy(hgt));
           vec3 sp = -vViewPosition; vec3 sx = dFdx(sp); vec3 sy = dFdy(sp);
           vec3 R1 = cross(sy, normal); vec3 R2 = cross(normal, sx);

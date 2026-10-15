@@ -81,12 +81,12 @@ export const LIGHT_PRESETS = {
   },
   indoorDay: {
     label: '室内柔和日光（参考图1）',
-    exposure: 1.12,
-    key: { dir: [-0.65, 0.3, 0.7], color: 0xfff6ee, intensity: 2.2, size: 2.2 },
-    fill: { dir: [0.8, 0.05, 0.6], color: 0xf3ece4, intensity: 0.55 },
+    exposure: 0.9,
+    key: { dir: [-0.72, 0.32, 0.6], color: 0xfff3e8, intensity: 2.4, size: 1.8 },
+    fill: { dir: [0.8, 0.05, 0.6], color: 0xf3ece4, intensity: 0.22 },
     rim: [{ dir: [0.55, 0.35, -0.75], color: 0xfff4ea, intensity: 0.5 }],
-    top: 0.5, floor: [0.42, 0.37, 0.31],
-    envIntensity: 1.1,
+    top: 0.35, floor: [0.3, 0.26, 0.22],
+    envIntensity: 0.7,
     backdrop: ['#e6ddd2', '#a8998a'],
   },
   butterfly: {

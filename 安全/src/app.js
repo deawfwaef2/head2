@@ -47,8 +47,8 @@ const VIEWS = {
 };
 // 一键风格（布光 + 胶片 + 皮肤）
 const LOOKS = {
-  daylight: { label: '☀️ 室内日光', light: 'indoorDay', film: 'portra400', skin: { scatter: 1.05, roughness: 0.55 }, dof: false },
-  window: { label: '🪟 窗格光影', light: 'windowGobo', film: 'moodyFilm', skin: { scatter: 1.15, roughness: 0.52 }, dof: false },
+  daylight: { label: '☀️ 室内日光', light: 'indoorDay', film: 'portra400', skin: { scatter: 1.05, roughness: 0.55 }, dof: true },
+  window: { label: '🪟 窗格光影', light: 'windowGobo', film: 'moodyFilm', skin: { scatter: 1.15, roughness: 0.52 }, dof: true },
   golden: { label: '🌅 暖阳逆光', light: 'goldenBack', film: 'gold200', skin: { scatter: 1.3, roughness: 0.5 }, dof: true },
   studio: { label: '📸 棚拍精修', light: 'softbox', film: 'clean', skin: { scatter: 1.0, roughness: 0.56 }, dof: false },
   leaf: { label: '🌿 树影午后', light: 'leafDapple', film: 'pro400h', skin: { scatter: 1.1, roughness: 0.54 }, dof: false },
@@ -76,9 +76,9 @@ function defaultCharacter() {
     hair: HAIRS[0].id, hairColor: 'natural', hairCustom: '',
     hairShine: 1, hairBack: 1,
     stand: 'obsidian',
-    light: 'windowGobo', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5 },
+    light: 'windowGobo', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5, bgMul: 0.55 },
     skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.8, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5 },
-    film: 'moodyFilm', post: {},
+    film: 'moodyFilm', post: { dof: true, aperture: 0.0016 }, eyeOcc: 0.75,
   };
 }
 function defaultSettings() {
@@ -186,6 +186,18 @@ async function loadHead() {
     else o.visible = false; // 任何未知网格一律不显示
   });
   head.add(root);
+  // 眼球中心与半径（用于眼部遮蔽）
+  const eyeball = (parts.eyes || []).find((e) => !(e.material.name || '').toLowerCase().includes('cornea')) || parts.eyes?.[0];
+  if (eyeball) {
+    const pa = eyeball.geometry.attributes.position; const L = new THREE.Box3(), R = new THREE.Box3(); const v = new THREE.Vector3();
+    for (let i = 0; i < pa.count; i++) { v.fromBufferAttribute(pa, i); (v.x < 0 ? L : R).expandByPoint(v); }
+    eyeInfo = { L: L.getCenter(new THREE.Vector3()), R: R.getCenter(new THREE.Vector3()), r: Math.max(L.getSize(v).y, 0.01) * 0.5 };
+  }
+}
+let eyeInfo = null;
+function setupEyeOcclusion(mat) {
+  const u = mat?.userData?.eyeUniforms; if (!u || !eyeInfo) return;
+  u.uEyeL.value.copy(eyeInfo.L); u.uEyeR.value.copy(eyeInfo.R); u.uEyeRad.value = eyeInfo.r; u.uEyeOcc.value = ch.eyeOcc ?? 0.75;
 }
 
 // ---------------- 形体 / 表情（只用资产自带的 morph target） ----------------
@@ -293,9 +305,26 @@ function applyMaterials() {
   for (const e of parts.eyes || []) {
     const o = origMats.get(e);
     e.material = after ? (e.userData.after ||= upgradeEyeMaterial(o)) : o;
+    if (after) setupEyeOcclusion(e.material);
     if (o.name.toLowerCase().includes('cornea')) e.castShadow = false;
   }
-  if (parts.lashes) { const o = origMats.get(parts.lashes); parts.lashes.material = after ? (parts.lashes.userData.after ||= upgradeLashMaterial(o)) : o; }
+  if (parts.lashes) {
+    const o = origMats.get(parts.lashes);
+    if (after && !parts.lashes.userData.after) {
+      const lm = upgradeLashMaterial(o);
+      // 下睫毛：真人很细很短，这里按眼球中心以下逐渐淡化（避免像往下流的线）
+      const eyeY = eyeInfo ? (eyeInfo.L.y + eyeInfo.R.y) / 2 : 0;
+      lm.onBeforeCompile = (sh) => {
+        sh.uniforms.uEyeY = { value: eyeY };
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vLashY;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLashY = transformed.y;');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vLashY; uniform float uEyeY;')
+          .replace('#include <alphatest_fragment>', 'diffuseColor.a *= mix(0.18, 1.0, smoothstep(uEyeY - 0.004, uEyeY + 0.001, vLashY));\n#include <alphatest_fragment>');
+      };
+      lm.customProgramCacheKey = () => 'photoreal-lash-v2';
+      parts.lashes.userData.after = lm;
+    }
+    parts.lashes.material = after ? parts.lashes.userData.after : o;
+  }
   if (parts.brows) { const o = origMats.get(parts.brows); parts.brows.material = after ? (parts.brows.userData.after ||= upgradeBrowMaterial(o)) : o; parts.brows.castShadow = false; }
   const strandOn = after && S.hairMode === 'strand' && !!strandMesh;
   for (const m of hairMeshes) {
@@ -336,7 +365,7 @@ function applyLighting() {
   rig.group.visible = true;
   const p = rig.apply(ch.light, ch.lightOv);
   if (!backdrop) backdrop = createBackdrop(scene, p.backdrop);
-  backdrop.set(p.backdrop); backdrop.mesh.visible = true;
+  setBackdrop(p); backdrop.mesh.visible = true;
   scene.background = null;
   renderer.toneMapping = { agx: THREE.AgXToneMapping, aces: THREE.ACESFilmicToneMapping, neutral: THREE.NeutralToneMapping }[S.toneMap] || THREE.NeutralToneMapping;
 }
@@ -396,9 +425,10 @@ function check(parent, label, get, set) {
   parent.append(h('label', { class: 'chk' }, c, label)); return c;
 }
 let envT = 0;
+function setBackdrop(p) { if (!backdrop) return; const k = ch.lightOv.bgMul ?? 0.55; const sc = (hex) => '#' + new THREE.Color(hex).multiplyScalar(k).getHexString(); backdrop.set([sc(p.backdrop[0]), sc(p.backdrop[1])]); }
 const relight = () => {
   if (compare || !rig) return;
-  const p = rig.apply(ch.light, ch.lightOv, { skipEnv: true }); backdrop?.set(p.backdrop); invalidateShadow();
+  const p = rig.apply(ch.light, ch.lightOv, { skipEnv: true }); setBackdrop(p); invalidateShadow();
   clearTimeout(envT); envT = setTimeout(() => { rig.apply(ch.light, ch.lightOv); invalidateShadow(); }, 180);
 };
 const repost = () => { post && post.set(postParams()); invalidate(); };
@@ -417,7 +447,7 @@ function buildStudio() {
     const b = h('button', { class: ch.look === k ? 'on' : '' }, v.label);
     b.onclick = async () => {
       ch.look = k; ch.light = v.light; ch.film = v.film; ch.skinP = { ...ch.skinP, ...v.skin };
-      ch.lightOv = defaultCharacter().lightOv; ch.post = { dof: v.dof };
+      ch.lightOv = defaultCharacter().lightOv; ch.post = { dof: v.dof, aperture: 0.0016 };
       await applyAll(); buildStudio();
     };
     looks.append(b);
@@ -434,6 +464,7 @@ function buildStudio() {
   slider(C, '眉毛高低', -1, 1, 0.01, () => ch.expr.browUp, (v) => { ch.expr.browUp = v; applyShape(); });
   const skins = Object.keys(gltfHead.parser.json.extras?.realWebAssets?.skins || {}).filter((s) => SKIN_LABELS[s]);
   select(C, '肤质贴图', skins.map((s) => [s, SKIN_LABELS[s]]), () => ch.skin, async (v) => { ch.skin = v; await applySkinTexture(); applyMaterials(); });
+  slider(C, '眼部遮蔽（眼睑软阴影，去“贴图眼”）', 0, 1.2, 0.01, () => ch.eyeOcc ?? 0.75, (v) => { ch.eyeOcc = v; (parts.eyes || []).forEach((e) => setupEyeOcclusion(e.material)); invalidate(); });
   select(C, '眉形', Object.keys(gltfHead.parser.json.extras?.realWebAssets?.eyebrows || {}).map((b) => [b, BROW_LABELS[b] || b]), () => ch.brow, async (v) => { ch.brow = v; await applyBrow(v); });
 
   const Hh = section(P, '💇 发型发色');
@@ -455,6 +486,7 @@ function buildStudio() {
   slider(Li, '补光', 0, 3, 0.01, () => o.fillMul, (v) => { o.fillMul = v; relight(); });
   slider(Li, '环境反射', 0, 2.5, 0.01, () => o.envMul, (v) => { o.envMul = v; relight(); });
   slider(Li, '曝光', 0.5, 1.8, 0.01, () => o.exposureMul, (v) => { o.exposureMul = v; relight(); });
+  slider(Li, '背景亮度（真实照片背景通常更暗）', 0, 1.5, 0.01, () => o.bgMul ?? 0.55, (v) => { o.bgMul = v; relight(); });
   select(Li, '光斑遮挡（Gobo）', [['preset', '跟随预设'], ['none', '无'], ['window', '窗格'], ['leaf', '树叶']], () => o.gobo, (v) => { o.gobo = v; relight(); });
   slider(Li, '光斑尺寸', 0.5, 2, 0.01, () => o.goboScale, (v) => { o.goboScale = v; relight(); });
   slider(Li, '光斑边缘柔和', 0, 1, 0.01, () => o.goboSoft, (v) => { o.goboSoft = v; relight(); });
@@ -483,7 +515,8 @@ function buildStudio() {
   ps('aoIntensity', 'AO 强度', 0, 1.5, 0.01);
   check(F, '景深虚化（对焦面部）', () => pp.dof, (v) => { P2.dof = v; repost(); });
   ps('aperture', '光圈（越大越虚）', 0.0002, 0.008, 0.0001);
-  ps('focus', '对焦距离', 0.4, 2.2, 0.01);
+  check(F, '自动对焦到眼睛', () => ch.post.autoFocus !== false, (v) => { ch.post.autoFocus = v; repost(); });
+  ps('focus', '手动对焦距离（关闭自动对焦时）', 0.4, 2.2, 0.01);
 
   const St = section(P, '🏛 展示底座');
   select(St, '底座材质', Object.entries(STAND_STYLES).map(([k, v]) => [k, v.label]), () => ch.stand, (v) => { ch.stand = v; stand?.userData.setStyle(v); });
@@ -694,6 +727,10 @@ const blink = { next: 2.5, t: -1 };
 function accumTarget() { return QA ? Math.min(6, qProfile().accum) : qProfile().accum; }
 function renderFrame(forceAccum) {
   if (strandMat) { const hpx = renderer.getDrawingBufferSize(_dbs).y; setStrandParams(strandMat, { pxScale: 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.max(1, hpx) }); }
+  if (post && ch.post.autoFocus !== false && eyeInfo) {
+    const eyeW = head.localToWorld(eyeInfo.L.clone().add(eyeInfo.R).multiplyScalar(0.5));
+    const d = camera.position.distanceTo(eyeW); if (Math.abs(post.bokeh.uniforms.focus.value - d) > 1e-4) post.bokeh.uniforms.focus.value = d;
+  }
   const useAccum = !compare && post && (S.accum || forceAccum) && !interacting;
   if (useAccum) {
     if (!accum) { accum = createAccumulator(renderer); const sz = renderer.getDrawingBufferSize(new THREE.Vector2()); accum.setSize(sz.x, sz.y); }
@@ -780,6 +817,7 @@ async function boot() {
     await loadHair(ch.hair);
     progress(0.75, '布置摄影棚灯光…'); await new Promise((r) => setTimeout(r, 20));
     stand = createDisplayStand(parts.skin, ch.stand); head.add(stand);
+    if (qs.has('hideui')) document.body.classList.add('hideui');
     setView(qs.get('view') || 'portrait');
     applyViewOffset();
     await applyAll();
