@@ -1307,3 +1307,11 @@
 - **3. Obsidian Pro Dark Glass Theme (`obsidian_pro`)**:
   - Replaced all high-saturation neon gradients, rainbow borders, and verbose multi-line parenthetical slider labels across `#desktop-overlay-bar`, `#visual-customizer-drawer`, `#software-window`, `#start-game-overlay`, `#comfort-reader-drawer`, and `#victor-puzzle-hub-modal` with deep obsidian frosted glass (`rgba(9,10,13,0.92)` + `blur(28px)`) and muted champagne gold (`#d4b483`) hairline accents.
 
+
+---
+
+## [2026-10-15] 安全版（`安全/` 文件夹）—— 新的主线，后续 Agent 必读
+- 用户明确表示：根目录旧项目（断头/血迹/解剖断面/支配玩法等）是“其他 AI 乱跑的”，**用户本意不想继续**。
+- 新工作全部在 `安全/` 内进行：写实风格**收藏胸像**（活人自然神态、虚构角色、中性底座）的生成/管理/设置/桌宠软件。
+- 可玩入口：`安全/点击开始_写实收藏胸像.html`（双击 → 点击开始）。
+- 内容红线、用户偏好（频繁推送、先打包 HTML、≤128MB 工作区、不强推、诚实报告）详见 **`安全/HANDOFF_安全.md`**。请勿把旧项目的断头/血迹/具名真人档案/真人照片资产带入 `安全/`。
