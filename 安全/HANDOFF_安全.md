@@ -117,3 +117,20 @@ node 安全/tools/qa_shots.mjs /tmp/qa
 - **暖阳逆光脸发光/三角面块**：逆光透射原来用屏幕导数曲率 gSkinCurv（逐三角形跳变）且整脸都透 → 改为只在轮廓薄处透光（1-N·V），强度降低。
 - 新增阴影浓度/柔和度（`light.shadowStrength` 0.8、`light.shadowSoft` 1.3，用 three r170 的 `shadow.intensity`）。新镜头 `view=hairline` 发际线特写。
 - 已知待办：卡片模式下 10 款 Stage64 `.mhclo` 发型（HairCardMaterial，贴图 160px 几乎不透明）像头盔，发丝模式正常；唇上方仍有轻微法线残影；低模在逆光暗部能看出面片。
+
+## 阶段 8 · 眼睛：睫毛修复 + 程序化睫毛/眉毛（2026-10-15）
+用户反馈"眼睛诡异、没睫毛"。排查结论（之前各阶段其实也一直看不到睫毛）：
+1. 原睫毛贴图每根丝只有 1~2px，mipmap 后 alpha < alphaTest 0.14 → 整根被丢弃，只剩根部几个点；
+2. 下睫毛 alpha 再 ×0.18 → ≈0.10 < 0.14 → 全部丢弃；
+3. 原贴片即使显示出来也是一团团色块（贴图质量差），正面看像"贴纸"。
+修复：
+- `src/three/lashStrands.js`（新）：以原 Eyelashes 网格为"睑缘向导"（每个 x 区间离眼球中心最近的顶点 = 根），沿上/下睑缘长出 150/60 根弯曲睫毛丝 + 一条深色睫毛根线（天然眼线）；
+  每根丝复制根部顶点的 morph 增量，`morphTargetInfluences` 与向导网格共享数组 → 眨眼/表情自动跟随。
+  屏幕空间最小宽度 0.75px + alpha 补偿（与发丝同思路），累积超采样下不闪。
+- 同文件 `buildBrowGeometry`：按原眉毛贴图 alpha 密度撒 1800 根贴肤眉丝（眉头竖、眉身斜上、眉尾微下），原眉毛贴图降为底色（`uBrowBase`）。
+- 眼球着色加"上睑缘接触阴影"（`photoreal-eye-v3`）。
+- 旧贴片材质也修好（`photoreal-lash-v3`，负 LOD + 邻域 max），关闭程序化睫毛时作为回退。
+- 新效果节点（effectRegistry，全部可开关/连线）：`char.lashStrands` `char.lashDensity` `char.lashLower` `char.lashDark` `char.lashLine` `char.browStrands` `char.browDensity` `char.browBase`。
+- 调试：`window.SafeBust.debug.{parts,scene,camera,renderer,head,renderNow(n)}`；`renderNow` 同步渲染，避免 rAF 在 swiftshader 下截到旧帧（之前"改了材质截图没变"就是这个坑）。
+- 注意：沙箱仅 2GB 内存且 /tmp 为 tmpfs，**不要并行跑两个 QA 浏览器**，会把机器卡死。
+待办：卡片模式发片像头盔、唇部涂抹感、左眼外眼角少量散落睫毛丝。

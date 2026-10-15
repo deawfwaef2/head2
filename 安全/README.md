@@ -49,3 +49,12 @@ fx.on('*', (v, id) => console.log(id, v));   // 监听所有效果
 fx.export();                                  // 导出开关+连线 JSON
 ```
 URL 参数：`fxoff=post.ao,render.hairShadow`、`face=<骨相id>`、`hair=<发型id>`、`look=<风格>`、`view=hairline` 等。
+
+### 阶段 8 新增效果节点
+| id | 说明 |
+|---|---|
+| char.lashStrands | 程序化真实睫毛（关 = 回退旧贴片） |
+| char.lashDensity / lashLower / lashDark / lashLine | 睫毛浓密度 / 下睫毛 / 深浅 / 睫毛根线 |
+| char.browStrands | 程序化根根分明眉毛 |
+| char.browDensity / browBase | 眉丝浓密度 / 原贴图底色 |
+模块：`src/three/lashStrands.js`（`buildLashGeometry` `buildBrowGeometry` `createLashStrandMaterial` `setLashStrandParams`）。
