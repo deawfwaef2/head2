@@ -250,8 +250,8 @@ function patchHairShader(s, o, tipsPass, shared) {
          diffuseColor.a *= hTex.a;
        #endif
        gHairTint = normalize(diffuseColor.rgb + 1e-4) * 1.2;
-       // 内层发丝更暗（发量体积感），越靠近头皮越暗
-       gHairAO = mix(0.35, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
+       // 内层发丝底衬与真发丝根部亮度自然衔接，绝不压成死黑条纹
+       gHairAO = mix(0.68, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
        diffuseColor.rgb *= gHairAO;`,
     )
     .replace(
@@ -300,9 +300,11 @@ export function buildHairMaterials(src, opts = {}) {
   if (base.map) { base.map.colorSpace = THREE.SRGBColorSpace; base.map.anisotropy = 8; }
   const shared = { uInset: { value: o.inset }, uScalpFade: { value: 0 } };
   const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.45 });
+  core.userData.uniforms = shared;
   core.onBeforeCompile = (s) => patchHairShader(s, o, false, shared);
   core.customProgramCacheKey = () => 'photoreal-hair-core-v3';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
+  tips.userData.uniforms = shared;
   tips.onBeforeCompile = (s) => patchHairShader(s, o, true, shared);
   tips.customProgramCacheKey = () => 'photoreal-hair-tips-v3';
   return { core, tips, shared };

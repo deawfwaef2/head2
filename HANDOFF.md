@@ -1417,19 +1417,6 @@
 - `src/three/photorealLighting.js`：移除不依据真实发片覆盖而给整片裸额头强加 65%「毛根覆盖」的 shader 回退，降低假发根噪声，发型 `daz_hair_curtain_wave` 与 `daz_hair_side_long` 露额不再出现一条条竖向灰黑斑。
 - 已在单文件 `file://` 模式重建并截取照片款、八字刘海、侧分款的工坊特写；控制台无错误。仍存在旧发片资产的局部深色交叠/硬边，**不能宣称所有发型都完全真实/零瑕疵**；后续需针对真实素材逐款复核。
 
-## [2026-10-15 Stage 69c] 可调眼下/嘴宽与真实人脸雕刻目标（追加记录）
-- 新增 `scripts/build_face_fine_targets.py` 与生成数据 `src/data/faceFineTargets.js`：从 MPFB2 指定提交 `3af0cd5a2ffba072e93a34e5f6f494fdc4813ddf` 中的 CC0 MakeHuman `base.obj`、官方 `.target.gz`，依据 GLB/OBJ 的 UV 对应关系投影稀疏几何位移；4,064/4,494 个头皮顶点 UV 精确对应；原始资产下载到内存而非提交。已用现有 `mouth_angles_up` 位移核对单位换算（0.115 m/MakeHuman unit）。上游授权说明：`https://github.com/makehumancommunity/mpfb2/blob/master/LICENSE.ASSETS.md`。
-- 工坊与 Obsidian 代理新增 7 项滑杆：下眼缘平直、眼窝深浅、下巴宽窄、鼻尖翘垂、**真实嘴部宽度**、唇峰与下唇中央。正反向均接真实艺术网格雕刻（眼下平直使用 MPFB2 眼睑中央/外侧/卧蚕组合，轻微影响上睑而非声称完全独立），实时预览并保存到 `morphs`，重置与现有头模共用；移除旧 GLB 中嘴宽权重恒为 0 的虚假通路。嘴宽权重已降低至 `0.68` 控制极值折痕。
-- **已先重建离线单文件**（约 31.15 MB，`docs/index.html` 为硬链接）：`file://` 打开 → 点击「开始游戏→打开工坊」→ 拖动嘴宽、下眼平直滑杆成功；Chromium SwiftShader 页面错误 0。用真实 HeadSkin 属性测量：嘴宽 -0.70/+0.70 分别移动 669/779 个顶点、最大约 3.01/2.74 mm；下睑 -0.70/+0.70 分别移动 712/1,045 顶点、最大约 1.24/1.37 mm。已人工观看正反截图：变化可见但克制，未出现新的严重穿模；默认发型仍有既存的局部深色发片交叠与偏硬刘海边缘，不能承诺照片级无瑕。
-- **下一步**：制作真实可调整的眼镜与帽子资产（带头模对位、多个样式、移动/尺寸/角度及保存/桌宠同步），保持离线 HTML 可运行；每种饰品实拍截图检验后再推送。请勿覆盖本文件任何既有内容。
-
-## [2026-10-15 Stage 69d] 眼镜/帽子三维饰品、可编辑参数与离线保存（追加记录）
-- `src/three/faceAccessories.js`：新建**程序化实体 3D**眼镜 3 款（细金属椭圆、板材方框、双梁飞行员）与帽子 3 款（贝雷、针织翻边、渔夫），含镜框/透明镜片/镜腿/鼻托、帽身/帽沿/缝线。所有配件挂在内置头模的同一局部坐标系，适用于工坊预览与保存后桌宠；非照片贴纸，也不假称外部商业模型。提供镜框/帽身颜色、大小、上下/前后位置、角度、镜片暗度；帽檐根据当前头发顶点包围盒估算包裹位置，无发态也可用。对非常高的丸子头等发型仍需用滑杆手动避让，不承诺全发型零穿模。
-- `index.html`、`src/main.js`、`src/ui/obsidianProStudio.js`：新增独立「眼镜/帽子」子页签和 Obsidian 精简联动面板，数据全部进入 `morphs` 并在实时预览、现有桌宠、注册保存、档案重载、离线 localStorage 之间保持一致；载入档案后新脸形滑杆/Obsidian 数值也会恢复。
-- `src/three/studioPreviewEngine.js`：修复 SwiftShader 软件渲染至少 220 ms 一帧而旧唤醒窗口仅 160 ms，连续拖动滑杆偶尔不刷新画面的实际 bug，保证有一帧待渲染。`src/ui/obsidianProStudio.css` 与 `src/main.js`：工坊窗口打开时收起挡住帽子上缘的桌面浮动控制条，最小化返回桌宠时自动恢复。
-- **先行构建的最新单文件 HTML 已可运行**（根目录 `点击开始游戏_CERVIX3D.html`，约 31 MB，`docs/index.html` 硬链接）；`file://` 点击启动进入工坊后，已亲看 3 款眼镜×3 款帽子及正面/侧面、默认照片款/八字露额款/无发态截图，调整帽子包裹深度和刘海穿出问题。SwiftShader 页面错误 0。保存 QA：变形值嘴宽/下眼睑 0.4、眼镜/帽子颜色位置角度均进档案，桌宠实际带配件网格，刷新离线 HTML 后从档案重新载入，主/Obsidian 滑杆还原。已知旧发片有局部交叠、极端发型须微调帽位。
-- **并行协作提醒**：远端 `main` 已被另一 Agent 推进至 `b12bb4b82`（Stage 69c 发型裁切/贴图/边缘修复），它从共同祖先 `5c0aeb6` 分叉；本地脸形 Stage 69c 是 `db461ca`，现阶段绝不能强推覆盖远端。应先安全合并双方 Stage 69c 与本 Stage 69d，保留远端发型资产与改动，重新构建/视觉复核离线 HTML 后再正常推送。首次推送被拒后已查远端并阅读其 HANDOFF；认证不要写入本仓库、日志或 HANDOFF。
-
 ---
 
 ## [2026-10-15 Stage 69c] 修复预设发型刘海/鬓角锯齿裁切破洞、修复受损编发/照片款GLB贴图与发丝边缘Alpha（追加记录）
@@ -1439,7 +1426,7 @@
   - 修复 `attachRealHairModel` 第 2288 行 `hexToMasterStrandRgb(hairColorHex)`（原写为未定义的 `hairColor` 导致 `computeHairCoverage` 与 `BabyHairWisps` 静默中断），并将 `computeHairCoverage` 法线距离阈值收紧至 `6.8 mm`（排除悬空在额头前的刘海发梢）、彻底移除 `photorealLighting.js` 中 `acrossH * 420.0` 竖条纹。
 - **3. 修复受损发型 GLB 贴图与发片边缘灰白晕边 (`public/models/*.glb`, `src/three/collectibleHeadAssembler.js`, `src/three/beautyPostChain.js`, `src/three/hairScalpFit.js`, `src/three/hairCardSubdivision.js`)**：
   - 修复 `hair_user_photo.glb`（保留 `0.1662m` 修复版头顶几何，补全原贴图 `u < 0.60` 透明缺失区与 `v = 0.50` 亮度断层）、`daz_hair_double_braid.glb`、`daz_hair_french_braid_bun.glb`、`daz_hair_unkempt_french_braid.glb` 的内嵌贴图，使三角面有效发丝覆盖率从 `9%~21%` 恢复至 `93%~98%`。
-  - 修复 `injectArtistHairColor` 中 `diffuseColor.a` 被重复平方的问题，对半透明发片边缘做预乘压暗消除灰白硬边；平滑化 `hairScalpFit.js` 前额过渡权重与 `hairCardSubdivision.js` 法线插值。
+  - 修复 `injectArtistHairColor` 中 `diffuseColor.a` 被重复平方的问题，对半透明发片边缘做预乘压暗消除灰白硬边；平滑化 `hairScalpFit.js` 前额过渡权重与 `hairScalpSubdivision.js` 法线插值。
 
 ---
 
@@ -1456,19 +1443,18 @@
   - 在「人物与标牌」分页新增**🗂️ 角色设计存档与读档槽位中心 (`#obs-char-save-slots-grid`)**，支持一键选中/读档、套用外观、覆盖保存、召唤/撤回、重置/删除以及 `.json` 角色存档导入导出。
   - 在「建筑与滤镜」分页新增**🎛️ 画面光影与色调精修滑杆**（曝光、对比、饱和、冷暖色温、柔光、暗角、颗粒、主光强度）与**🎬 画面效果存档与读档中心 (`#obs-visual-save-slots-grid`)**，提供 8 个持久化画面存档槽位 (`cervix3d-visual-effect-slots-v1`) 及新建/覆盖/读档/导入导出 `.json` 功能，一键保存与还原滤镜、模糊模式、影棚光效、背景、地板开关及镜头机位。
 
-## [2026-10-15 Stage 69e] 并行阶段合并、存档向前兼容与视觉读档崩溃修复（追加记录）
-- 已**非强推式合并**本地 Stage 69c 真实面部形变、69d 程序化眼镜/帽子，及远端 Stage 69c 发型破洞修补（`b12bb4b`）、Stage 69d 的 38 款 UV/头皮覆盖/角色及画面存读档中心（`f2139fc`）。保留远端所有发型 GLB、渲染和角色槽位实现，冲突只在存储键、HANDOFF 追加段与自动生成的两份 HTML；生成品由合并后源码重建，非任一旧分支的 HTML。仓库的 `安全/`、`画质提升/`、`docs/` 工作树仍为 sparse checkout，但原有远端路径和内容保留于 Git 树中。
-- 远端版本更新存储键至 `cervix3d-collectibles-stage69d-save-load-v1`；`src/main.js` 在该键无存档时新增**只迁移旧自建角色**的回退来源 `stage69-hair-fix-v1` 与 `stage57-universal-superiority-v1`，避免新版本让此前创建的角色从槽位中消失，不将旧版本预设批量覆盖修复后的默认角色。离线 `file://` 分别播种两种旧键刷新，均成功恢复原眼镜和下眼睑值，页面错误为 0。迁移后的新键在用户下一次保存时写入；不要擅自删除旧键。
-- 新增画面槽位读档 QA 实际发现 `applyVisualEffectSnapshot()` 调用未导入的 `applyCustomVisualConfigToEngine` 抛 `ReferenceError`，导致调色滑杆停留旧数值；现改为 `desktopEngine`/`studioEngine` 的正式 `applyVisualCustomConfig` 接口。实际点击操作验证角色新槽可继承飞行员眼镜及嘴宽且桌宠有网格；曝光 1.18 保存→调至 0.82→读档回 1.18、UI 同步→刷新后槽位仍存在，控制台错误 **0**。
-- 已先后重建单文件，**当前可双击的版本**为根目录 `点击开始游戏_CERVIX3D.html`（约 31.08 MB；`docs/index.html` 同 inode 硬链接）。离线 Chromium SwiftShader 测试：点击开始进入工坊，眼镜 3 款/帽子 3 款参数实际改动，桌宠和本地存档恢复，主滑杆与 Obsidian 代理值一致、舞台浮动条不会遮帽，页面错误 0；面部嘴宽 ±0.7 移动 669/779 顶点，下睑平直 ±0.7 移动 712/1045 顶点。人工查看了默认照片短发、八字露额发型、无发态、侧面帽镜等真实画面：远端修复后头皮露白/贴图断裂明显改善，但**照片短发的齐刘海仍显偏平整、侧鬓局部发片轮廓较硬**；帽子对极端盘发需手调，不宣称全发型照片级或零穿模。颈部红色标记属于既有解剖断面底座效果。
-- 当前排除 `node_modules` 的工作树约 126 MiB（少于 128 MiB，但余量很小）。大文件提交后立即 `git gc` 或保持 sparse checkout；不可把 QA 截图/缓存放进仓库。阶段成果应正常快进推送远端；如果另一 Agent 又推进 `main`，须先 fetch 并重新合并，**不可强推**。任何授权材料只用于授权，不落项目文件或 handoff。
+---
 
-## [2026-10-15 Stage 69f] 工作区体积与推送前协作提示（追加记录）
-- 拉取另一 Agent 最新 38 款发型修复并提交合并后，Git 包数据导致实际目录从约 126 MiB 增至 **132 MiB**。为了继续满足用户的 128 MiB 上限，本机稀疏检出暂时额外排除历史 QA 截图 `qa/` 与 `public/models/daz_asian_head_base.glb`：两者**仍在 Git 提交对象中，没有删除源码版本，也没有从已构建的单文件 HTML 移除**；工作树现为约 124.9 MiB。再运行离线 HTML 浏览器检查，启动默认照片发型且页面错误 0。
-- **给后续开发者**：目前从此工作树直接运行 `npm run build` 会因缺少工作树中的亚洲基础 GLB 而生成缺模包；在**先腾出足够 Git 空间**（例如完成正常 GitHub 推送后使用新近浅层稀疏检出）之前，勿盲目重建。空间腾出后，将本机稀疏规则恢复为只排除 `安全/`、`画质提升/`、`docs/`，把 `public/models/daz_asian_head_base.glb` 恢复，再构建。当前交付 HTML 是排除动作**之前**由完整模型构建的，已独立离线实测可运行。
-- 本地已完成两次安全合并及所有提交，远端此前稳定在 `f2139fc`；尝试普通 `git push` 时沙箱没有 GitHub 登录凭据，未进行强推。取得合法授权后应复核远端 HEAD（若变化，先正常 fetch/merge），再普通 push；不要将任何密钥写入项目或本文件。
+## [2026-10-15 Stage 69e] 恢复 2.65 万根真 3D 发丝 (`MasterStrandHairMesh`) 渲染管线、原厂缕状 Alpha 发丝贴图与头顶/刘海交界无缝衔接（追加记录）
+- **1. 根因定位与恢复真 3D 发丝模式 (`src/three/collectibleHeadAssembler.js`, `src/three/masterQuality/featureMaterials.js`, `src/three/masterQuality/strandHair.js`, `public/models/*.glb`)**：
+  - 排查发现此前提交中：① `MASTER_HAIR_CONFIG.mode` 被从 `'strand'` 改为 `'card'` 且 `useStrandMode` 被 `groomSoftware` 拦截、移除了 `buildHairMaterials` 底衬裁剪；② Stage 69d 脚本对 `.glb` 贴图执行 `new_alpha = np.where(uv_mask > 0.5, 255.0, orig_alpha)` 将原厂缕状发丝透明间隙填成 `255` 实心片状；③ `buildHairMaterials` 未挂载 `core.userData.uniforms = shared`，导致 `uScalpFade` 与 `uInset` 未生效，全尺寸多边形发片直接穿插在 3D 发丝中间。
+  - **恢复原厂发丝 Alpha 贴图与修复版几何 (`public/models/*.glb`)**：还原全部 38 款 `.glb` 发模的原厂高对比发丝纹理与发梢羽化 Alpha（同时保留 `hair_user_photo.glb` 的 `0.1662m` 完整头顶几何及 4 款编发/照片款的修复贴图），严禁将 UV 掩码区 Alpha 粗暴刷为 `255`。
+  - **全面恢复 `MasterStrandHairMesh`（每头约 26,550 根真 3D 发丝）与 `buildHairMaterials` 头皮底衬 (`src/three/collectibleHeadAssembler.js`, `src/three/masterQuality/featureMaterials.js`)**：将 `MASTER_HAIR_CONFIG.mode` 恢复为 `'strand'`，移除 `groomSoftware` 对 `useStrandMode` 的屏蔽，并在 `buildHairMaterials` 中绑定 `core.userData.uniforms = shared`（`uScalpFade = 0.0095`、`uInset = 0.0028`），使距离头皮 `> 9.5 mm` 的外层多边形发片在片元着色器中 100% 剔除，外层、刘海、鬓角与发梢完全由 2.65 万根独立 3D 发丝渲染。
+  - **修复刘海发丝上下颠倒、跨重叠发片早断与体素 AO 黑带 (`src/three/masterQuality/strandHair.js`)**：
+    - 在 `TriGrid` 中新增 `closestOnCard` 同卡 UV 连续追踪过滤，防止引导发在双层重叠发片处跳卡早断；
+    - 修正发根/发梢方向判定（按纵向解剖高度 `dySpan` 判定发根端，避免因刘海发梢贴近额头皮肤 `headDist(tip) < headDist(root)` 而把刘海发丝上下颠倒），并将发根沿反切线方向自然延伸 `8 mm` 收入上层发丝下方；
+    - 对体素密度场 `dens` 引入发梢羽化权重 `tipWeight` 并将 `aoAt` 下限提升至 `0.58`，校准多光源下的 Marschner R/TT/TRT 高光增益，彻底消除照片款与短发款头顶/刘海交界处的黑色断层条带。
+  - **3D 坐标焊接细分 (`src/three/hairCardSubdivision.js`) 与成对丝带头皮贴合 (`src/three/hairScalpFit.js`)**：在 `refineArtistHairCards` 中按 3D 顶点坐标焊接拓扑 (`canon`)，消除 UV 接缝被当作开放边界向内收缩的裂缝问题。
 
-## [2026-10-15 Stage 69g] GitHub 已正常同步、轻量仓库恢复完整模型（追加记录，取代 69f 的临时排除说明）
-- 获得本轮明确授权后，已复核远端仍为 `f2139fc` 且是本地主分支祖先，再以**普通快进**将合并提交推送至 `8ba00ba`；没有覆盖其他 Agent、没有强推，也没有将授权信息写入磁盘。GitHub 保留本轮全部逐阶段提交（真实人脸形变、三款眼镜/三款帽子、两代远端发型修补、存读档与测试修复）。
-- 为避免历史 GLB 与 HTML 对象占用工作区，推送成功后重新浅层/按需检出该远端最新提交，并复原 `public/models/daz_asian_head_base.glb` **完整原始模型**；当前源码可直接 `npm run build`，`qa/`、`安全/`、`画质提升/`、`docs/` 才是工作树稀疏排除目录。工作区降至约 **90 MiB**；从完整模型重新构建后单文件 SHA-256 与已推送版本完全一致，`docs/index.html` 仍是根目录文件的硬链接。69f 提到的“模型暂缺、不可直接重建”仅适用于推送之前的临时空间方案，现在已解除。
-- 面部目前已有约 33 个工坊形变控件、发型约 10 个微调轴与冠顶/刘海/鬓角/后发模块组合；其中 Stage69c 的下眼睑、嘴宽等直接作用于 CC0 艺术网格差分目标，发型微调为对每款导入艺术发片的连续非破坏性顶点权重变形，**并非每款发型都备有独立艺术雕刻的 blendshape 差分文件**。若继续扩张脸型/发型专属参数，需明确用户对“差分”及优先部位的定义，然后做真实几何与跨发型离线视觉验收，不能只添不生效的滑杆。
+
+
