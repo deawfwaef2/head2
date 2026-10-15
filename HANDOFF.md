@@ -1646,3 +1646,11 @@
 
 - Stage71c 持久副本曾误写「远端已在 1849935 的提交中追加保存」；**1849935 只是本地未推送的提交**，当前 GitHub `main` 仍为 `ad9e0dc`，推送因无可用身份验证失败。该误写是「待推送分支」与「已推送远端」的混淆，不应据此宣称同步完成。身份验证解决前，必须以离线 HTML 交付并明确说明推送受阻。
 - 试验性高密度发丝与更亮的头皮纹理没有根治默认束发顶端的平滑暗区，而且可能增加软件渲染成本，已恢复至提交状态、没有纳入交付。最终离线 HTML 与 docs 页面字节一致，SHA-256 为 `e30f564db3ff068ef0ad14bdb33c7eeedd75dcac2fde3e74f789a22093fe45b9`。默认束发需如实告知「仍有轻微平滑深色区域」，不能称为彻底照片级。
+
+
+---
+
+## [2026-10-15 Stage 71e] 普通快进推送成功（追加记录）
+
+- 收到用户本轮临时推送授权后，先重新 `git fetch --no-tags origin main` 验证远端 `ad9e0dc` 与本地功能提交 `4cbeb05` 的差异为 `0 behind / 4 ahead`，确认快进关系；随后只用当次进程环境和临时 askpass（执行后删除），普通执行 `git push origin HEAD:refs/heads/main`，输出 `ad9e0dc..4cbeb05 HEAD -> main`。再用 `git ls-remote origin refs/heads/main` 独立确认 GitHub `main` 指向 `4cbeb0569481`。**这条记录取代 Stage71b/71d 当时的「尚未推送」状态；没有强推，授权没有写入仓库或仓库配置。**
+- 本条 HANDOFF 更正本身将在紧接着的普通推送中同步；最终远端提交号应以该次推送后的 `ls-remote` 再次验证为准。离线 HTML 内容不变，SHA-256 `e30f564db3ff068ef0ad14bdb33c7eeedd75dcac2fde3e74f789a22093fe45b9`。
