@@ -181,12 +181,14 @@ const HAIR_VERT_DECL = /* glsl */ `
 uniform vec3 uHeadCenter; uniform vec3 uCrown; uniform float uInset;
 attribute float aScalpD; varying float vScalpD;
 varying vec3 vHairFlow; varying vec3 vHairRadial; varying float vHairDepth;
+varying vec3 vHairLocalPos;
 `;
 const HAIR_VERT_MAIN = /* glsl */ `
+vHairLocalPos = transformed;
 {
-  float cranialMask = smoothstep(-0.025, 0.020, transformed.y);
-  float dynamicInset = uInset > 0.0 ? clamp(aScalpD * 0.55, 0.0020, 0.012) * cranialMask : 0.0;
-  transformed -= normalize(transformed - uHeadCenter) * dynamicInset;
+  float minScalpClearance = 0.0022;
+  float targetScalpD = max(minScalpClearance, aScalpD - uInset * smoothstep(0.0035, 0.015, aScalpD));
+  transformed += normalize(transformed - uHeadCenter) * (targetScalpD - aScalpD);
 }
 vScalpD = aScalpD;
 {
@@ -202,6 +204,7 @@ const HAIR_FRAG_DECL = /* glsl */ `
 uniform float uTexInfluence, uSpec1, uSpec1Exp, uSpec2, uSpec2Exp, uShift2, uNormalBlend, uScalpRadius, uScalpFade;
 varying float vScalpD;
 varying vec3 vHairFlow; varying vec3 vHairRadial; varying float vHairDepth;
+varying vec3 vHairLocalPos;
 vec3 gHairT = vec3(0.0, 1.0, 0.0);
 vec3 gHairTint = vec3(1.0);
 float gHairAO = 1.0;
@@ -237,8 +240,7 @@ function patchHairShader(s, o, tipsPass, shared) {
          vec3 T2 = normalize(gHairT + geometryNormal * uShift2);
          float t2 = dot(T2, H);
          float s2 = pow(sqrt(max(0.0, 1.0 - t2 * t2)), uSpec2Exp);
-         float specScale = uScalpFade > 0.0 ? 0.25 : 1.0;
-         reflectedLight.directSpecular += irradiance * gHairAO * specScale * (uSpec1 * s1 + uSpec2 * s2 * gHairTint);
+         reflectedLight.directSpecular += irradiance * gHairAO * (uSpec1 * s1 + uSpec2 * s2 * gHairTint);
        }`,
     );
   s.fragmentShader = s.fragmentShader
@@ -255,8 +257,8 @@ function patchHairShader(s, o, tipsPass, shared) {
          diffuseColor.a *= hTex.a;
        #endif
        gHairTint = normalize(diffuseColor.rgb + 1e-4) * 1.2;
-       // 内层发丝底衬与真发丝根部亮度自然衔接，绝不压成死黑条纹
-       gHairAO = mix(0.84, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
+       // 内层发丝更暗（发量体积感），越靠近头皮越暗
+       gHairAO = mix(0.35, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
        diffuseColor.rgb *= gHairAO;`,
     )
     .replace(
@@ -264,18 +266,21 @@ function patchHairShader(s, o, tipsPass, shared) {
       `#include <normal_fragment_maps>
        {
          vec3 rad = normalize(vHairRadial);
-         if (dot(normal, rad) < 0.0) normal = -normal;
          normal = normalize(mix(normal, rad, uNormalBlend));
          vec3 f = normalize(vHairFlow);
          gHairT = normalize(f - normal * dot(f, normal));
        }`,
     );
-  // 发丝模式：发片底衬已在顶点着色器中按 aScalpD 向内收缩至真发丝后方，仅剔除远离头部的长马尾底衬，绝不在额头刘海处一刀切！
+  // 发丝模式：发片底衬只保留贴近头皮的部分（距头皮 > uScalpFade 的发片剔除），且前额刘海下方绝不渲染低模底衬发片
   s.fragmentShader = s.fragmentShader.replace(
     '#include <alphatest_fragment>',
     `#include <alphatest_fragment>
      if (uScalpFade > 0.0) {
-       if (vScalpD > max(uScalpFade, 0.028)) discard;
+       if (vScalpD > uScalpFade) discard;
+       if (vHairLocalPos.z > 0.044 && vHairLocalPos.y < 0.082) {
+         float fhKeep = (1.0 - smoothstep(0.044, 0.056, vHairLocalPos.z)) * smoothstep(0.068, 0.082, vHairLocalPos.y);
+         if (fhKeep < 0.5) discard;
+       }
      }`,
   );
   if (tipsPass) {
@@ -288,7 +293,7 @@ function patchHairShader(s, o, tipsPass, shared) {
 
 /**
  * 头发：两遍渲染
- *  A. 不透明核心（alphaTest 0.3，写深度，投射阴影）→ 体积、遮挡、发丝投影到额头
+ *  A. 不透明核心（alphaTest 0.22，写深度，投射阴影）→ 体积、遮挡、发丝投影到额头
  *  B. 半透明发梢（只画 alpha<0.3 的部分，不写深度）→ 发际线与发梢的柔软过渡
  * 着色：Kajiya-Kay 双高光（R 冷白细高光 + TRT 带发色宽高光），切线来自“头顶→发梢”的 3D 连续流场，
  * 不依赖发片 UV 方向；法线与头部体积法线混合，消除发片棱角与三角面闪烁。
@@ -305,14 +310,12 @@ export function buildHairMaterials(src, opts = {}) {
   };
   if (base.map) { base.map.colorSpace = THREE.SRGBColorSpace; base.map.anisotropy = 8; }
   const shared = { uInset: { value: o.inset }, uScalpFade: { value: 0 } };
-  const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.45 });
-  core.userData.uniforms = shared;
+  const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.22, alphaToCoverage: true });
   core.onBeforeCompile = (s) => patchHairShader(s, o, false, shared);
-  core.customProgramCacheKey = () => 'photoreal-hair-core-v3';
+  core.customProgramCacheKey = () => 'photoreal-hair-core-v5';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
-  tips.userData.uniforms = shared;
   tips.onBeforeCompile = (s) => patchHairShader(s, o, true, shared);
-  tips.customProgramCacheKey = () => 'photoreal-hair-tips-v3';
+  tips.customProgramCacheKey = () => 'photoreal-hair-tips-v5';
   return { core, tips, shared };
 }
 

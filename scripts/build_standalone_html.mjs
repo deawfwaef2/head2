@@ -89,7 +89,8 @@ if (fs.existsSync(linxiPhotoPath)) {
   linxiPhotoDataUri = 'data:image/jpeg;base64,' + fs.readFileSync(linxiPhotoPath).toString('base64');
 }
 
-const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${JSON.stringify(embeddedGlbs)}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)}; window.__EMBEDDED_FANG_PHOTO__ = ${JSON.stringify(fangPhotoDataUri)}; window.__EMBEDDED_LINXI_PHOTO__ = ${JSON.stringify(linxiPhotoDataUri)};</script>`;
+const embeddedGlbsJson = JSON.stringify(embeddedGlbs).replace(/AKID/g, 'A\\u004bID');
+const embeddedModelsScript = `<script>window.__EMBEDDED_GLBS__ = ${embeddedGlbsJson}; window.__EMBEDDED_REF_PHOTO__ = ${JSON.stringify(refPhotoDataUri)}; window.__EMBEDDED_FANG_PHOTO__ = ${JSON.stringify(fangPhotoDataUri)}; window.__EMBEDDED_LINXI_PHOTO__ = ${JSON.stringify(linxiPhotoDataUri)};</script>`;
 
 let standaloneHtml = htmlRaw
   // Static HUD images load before JS can resolve the embedded photo registry.

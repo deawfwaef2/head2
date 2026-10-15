@@ -190,74 +190,6 @@ class TriGrid {
     }
     return out.t >= 0;
   }
-
-  closestOnCard(px, py, pz, prevU, prevV, U, out, ring = 1) {
-    const invC = this.invCell, c = this.cell;
-    const dimX = this.dimX, dimY = this.dimY, dimZ = this.dimZ;
-    const fx = (px - this.minX) * invC, fy = (py - this.minY) * invC, fz = (pz - this.minZ) * invC;
-    const cx = Math.floor(fx), cy = Math.floor(fy), cz = Math.floor(fz);
-    out.t = -1; out.d2 = Infinity;
-    const it = (this._iter = (this._iter + 1) | 0);
-    const st = this._stamp, cellStart = this.cellStart, cellCount = this.cellCount, cellTris = this.cellTris;
-    const tri = this.tri, B = this.triBox;
-
-    if (cx >= 0 && cy >= 0 && cz >= 0 && cx < dimX && cy < dimY && cz < dimZ) {
-      const cKey = (cx * dimY + cy) * dimZ + cz;
-      const cnt = cellCount[cKey];
-      if (cnt > 0) {
-        const start = cellStart[cKey];
-        for (let i = 0; i < cnt; i++) {
-          const t = cellTris[start + i];
-          st[t] = it;
-          const t6 = t * 6;
-          if (Math.abs(U[t6] - prevU) > 0.26 || Math.abs(U[t6 + 1] - prevV) > 0.26) continue;
-          const b6 = t * 6;
-          const dx = px < B[b6] ? B[b6] - px : (px > B[b6 + 3] ? px - B[b6 + 3] : 0);
-          const dy = py < B[b6 + 1] ? B[b6 + 1] - py : (py > B[b6 + 4] ? py - B[b6 + 4] : 0);
-          const dz = pz < B[b6 + 2] ? B[b6 + 2] - pz : (pz > B[b6 + 5] ? pz - B[b6 + 5] : 0);
-          if (dx * dx + dy * dy + dz * dz < out.d2) {
-            closestPtTri(px, py, pz, tri, t * 9, out, t);
-          }
-        }
-        if (out.t >= 0) {
-          const ux = fx - cx, uy = fy - cy, uz = fz - cz;
-          const minWall = Math.min(ux, 1.0 - ux, uy, 1.0 - uy, uz, 1.0 - uz) * c;
-          if (out.d2 <= minWall * minWall) return true;
-        }
-      }
-    }
-
-    const x0 = Math.max(0, cx - ring), x1 = Math.min(dimX - 1, cx + ring);
-    const y0 = Math.max(0, cy - ring), y1 = Math.min(dimY - 1, cy + ring);
-    const z0 = Math.max(0, cz - ring), z1 = Math.min(dimZ - 1, cz + ring);
-    for (let x = x0; x <= x1; x++) {
-      const xyBase = x * dimY;
-      for (let y = y0; y <= y1; y++) {
-        const base = (xyBase + y) * dimZ;
-        for (let z = z0; z <= z1; z++) {
-          if (x === cx && y === cy && z === cz) continue;
-          const key = base + z;
-          const cnt = cellCount[key];
-          if (cnt === 0) continue;
-          const start = cellStart[key];
-          for (let i = 0; i < cnt; i++) {
-            const t = cellTris[start + i];
-            if (st[t] === it) continue;
-            st[t] = it;
-            const t6 = t * 6;
-            if (Math.abs(U[t6] - prevU) > 0.26 || Math.abs(U[t6 + 1] - prevV) > 0.26) continue;
-            const b6 = t * 6;
-            const dx = px < B[b6] ? B[b6] - px : (px > B[b6 + 3] ? px - B[b6 + 3] : 0);
-            const dy = py < B[b6 + 1] ? B[b6 + 1] - py : (py > B[b6 + 4] ? py - B[b6 + 4] : 0);
-            const dz = pz < B[b6 + 2] ? B[b6 + 2] - pz : (pz > B[b6 + 5] ? pz - B[b6 + 5] : 0);
-            if (dx * dx + dy * dy + dz * dz >= out.d2) continue;
-            closestPtTri(px, py, pz, tri, t * 9, out, t);
-          }
-        }
-      }
-    }
-    return out.t >= 0;
-  }
 }
 
 const _r = { x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
@@ -339,14 +271,10 @@ export function alphaSamplerFromTexture(tex) {
   ctx.drawImage(img, 0, 0, W, H);
   const d = ctx.getImageData(0, 0, W, H).data;
   const flip = tex.flipY;
-  const dxStep = Math.max(1, Math.round(W * 0.008));
   return (u, v) => {
     u -= Math.floor(u); v -= Math.floor(v);
-    const x = Math.min(W - 1, Math.floor(u * W));
-    const y = Math.min(H - 1, Math.floor((flip ? 1 - v : v) * H));
-    const xL = Math.max(0, x - dxStep), xR = Math.min(W - 1, x + dxStep);
-    const rowOff = y * W * 4 + 3;
-    return Math.max(d[rowOff + x * 4], d[rowOff + xL * 4], d[rowOff + xR * 4]) / 255;
+    const x = Math.min(W - 1, Math.floor(u * W)); const y = Math.min(H - 1, Math.floor((flip ? 1 - v : v) * H));
+    return d[(y * W + x) * 4 + 3] / 255;
   };
 }
 
@@ -416,13 +344,14 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
   const q = { t: -1, d2: 0, x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
   const hq = { t: -1, d2: 0, x: 0, y: 0, z: 0, u: 0, v: 0, w: 0 };
 
-  // 种子：按 面积 × alpha × 前额刘海权重 加权
+  // 种子：按 面积 × alpha 加权（前额刘海区域赋予 2.6x 采样权重，确保刘海发丝饱满不断层）
   const cdf = new Float64Array(n); let acc = 0;
   for (let t = 0; t < n; t++) {
     const o9 = t * 9;
-    const zm = (P[o9 + 2] + P[o9 + 5] + P[o9 + 8]) / 3;
-    const frontWeight = zm > 0.035 ? 1.55 : 1.0;
-    acc += area[t] * frontWeight * (tAlpha[t] > 0.35 ? tAlpha[t] : 0);
+    const cy = (P[o9 + 1] + P[o9 + 4] + P[o9 + 7]) / 3;
+    const cz = (P[o9 + 2] + P[o9 + 5] + P[o9 + 8]) / 3;
+    const bangsWeight = (cz > 0.046 && cy > 0.018 && cy < 0.115) ? 2.6 : 1.0;
+    acc += area[t] * bangsWeight * (tAlpha[t] > 0.30 ? tAlpha[t] : 0);
     cdf[t] = acc;
   }
   if (acc <= 0) return null;
@@ -441,22 +370,25 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
     let px = sx, py = sy, pz = sz, pdx = 0, pdy = 0, pdz = 0, len = 0;
     let curT = tSeed;
     const s6 = tSeed * 6;
-    let prevU = (U[s6] + U[s6 + 2] + U[s6 + 4]) / 3, prevV = (U[s6 + 1] + U[s6 + 3] + U[s6 + 5]) / 3;
+    let prevU = (U[s6] + U[s6 + 2] + U[s6 + 4]) / 3, prevV = (U[s6] + U[s6 + 3] + U[s6 + 5]) / 3;
     for (let s = 0; s < 260 && len < o.maxLength; s++) {
       let dx = dir[curT * 3] * sign, dy = dir[curT * 3 + 1] * sign, dz = dir[curT * 3 + 2] * sign;
+      let dirCos = 1.0;
       if (s > 0) {
-        const c = dx * pdx + dy * pdy + dz * pdz; if (c < 0.35) break; // 急转弯或进入对称分缝反向发片 = 立即终止，绝不跨过中分线画横丝
+        dirCos = dx * pdx + dy * pdy + dz * pdz;
+        if (dirCos < 0.35) break; // 急转弯或进入对称分缝反向发片 = 立即终止，绝不跨过中分线画横丝
         dx = pdx * 0.45 + dx * 0.55; dy = pdy * 0.45 + dy * 0.55; dz = pdz * 0.45 + dz * 0.55;
         const l = Math.sqrt((dx)*(dx) + (dy)*(dy) + (dz)*(dz)) || 1; dx /= l; dy /= l; dz /= l;
       }
       let nx = px + dx * traceStep, ny = py + dy * traceStep, nz = pz + dz * traceStep;
-      if (!grid.closestOnCard(nx, ny, nz, prevU, prevV, U, q)) break;
+      if (!grid.closest(nx, ny, nz, q)) break;
       if (q.d2 > maxSurfDistSq) break;
       nx += (q.x - nx) * o.surfaceSnap; ny += (q.y - ny) * o.surfaceSnap; nz += (q.z - nz) * o.surfaceSnap;
       const t6 = q.t * 6;
       const uu = U[t6] * q.u + U[t6 + 2] * q.v + U[t6 + 4] * q.w;
       const vv = U[t6 + 1] * q.u + U[t6 + 3] * q.v + U[t6 + 5] * q.w;
-      if (Math.abs(uu - prevU) > 0.10 || Math.abs(vv - prevV) > 0.10) break; // 防止跨过 UV 接缝跳到另一张发片
+      const isFrontBangsFlow = nz > 0.046 && ny > 0.016 && ny < 0.115 && dirCos > 0.58 && !(px * nx < 0 && Math.abs(px) < 0.015 && ny > 0.082);
+      if (!isFrontBangsFlow && (Math.abs(uu - prevU) > 0.12 || Math.abs(vv - prevV) > 0.12)) break; // 防止跨过 UV 接缝跳到另一张发片（前额叠层刘海允许顺流过渡）
       prevU = uu; prevV = vv;
       const a = triAlphaFn(q.t, uu, vv);
       if (a < o.tipAlpha) { if (isTipward) pts.push([nx, ny, nz]); break; }
@@ -481,29 +413,14 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
     const sy = P[o9 + 1] * (1 - a - b) + P[o9 + 4] * a + P[o9 + 7] * b;
     const sz = P[o9 + 2] * (1 - a - b) + P[o9 + 5] * a + P[o9 + 8] * b;
     const k = occKey(sx, sy, sz);
-    const maxOcc = sz > 0.045 ? 6 : (attempts > o.guides * 1.8 ? 4 : 2);
+    const maxOcc = attempts > o.guides * 1.8 ? 4 : 2;
     if (occ[k] >= maxOcc) continue;
     const fwd = traceDir(sx, sy, sz, t, 1, true);
     const back = traceDir(sx, sy, sz, t, -1, true);
     let pts = back.reverse().concat([[sx, sy, sz]], fwd);
     if (pts.length < 4) continue;
-    // 发根 = 位于上方的解剖发根端（水平碎发则取离头皮近的一端），绝不因刘海发梢贴近额头而把刘海上下颠倒！
-    const pFirst = pts[0], pLast = pts[pts.length - 1];
-    const dySpan = pFirst[1] - pLast[1];
-    if (Math.abs(dySpan) > 0.010 ? (dySpan < 0) : (headDist(pLast) < headDist(pFirst))) pts.reverse();
-    // 将发根向反切线方向自然延伸 8mm 收入上层发丝下方，彻底消除刘海与头顶发片交界处的断层黑缝
-    if (pts.length >= 3 && pts[0][1] > 0.055 && pts[0][1] < 0.125) {
-      const r0 = pts[0], r1 = pts[2];
-      let rx = r0[0] - r1[0], ry = r0[1] - r1[1], rz = r0[2] - r1[2];
-      const rl = Math.sqrt(rx * rx + ry * ry + rz * rz) || 1;
-      rx /= rl; ry /= rl; rz /= rl;
-      if (ry > 0.15) {
-        pts.unshift(
-          [r0[0] + rx * 0.008, r0[1] + ry * 0.008, r0[2] + rz * 0.008],
-          [r0[0] + rx * 0.004, r0[1] + ry * 0.004, r0[2] + rz * 0.004]
-        );
-      }
-    }
+    // 发根 = 离头皮近的一端
+    if (headDist(pts[pts.length - 1]) < headDist(pts[0])) pts.reverse();
     let L = 0; for (let i = 1; i < pts.length; i++) L += Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
     if (L < 0.014) continue;
     for (let i = 0; i < pts.length; i += 2) { const p = pts[i]; const kk = occKey(p[0], p[1], p[2]); if (occ[kk] < 255) occ[kk]++; }
@@ -532,7 +449,7 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 }
 
 function resample(pts, L) {
-  const N = Math.max(8, Math.min(18, Math.round(L / 0.010) + 2));
+  const N = Math.max(8, Math.min(24, Math.round(L / 0.009) + 2));
   const out = new Array(N);
   const cum = new Float64Array(pts.length);
   for (let i = 1; i < pts.length; i++) cum[i] = cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
@@ -574,17 +491,14 @@ function buildChildren(guides, hc, o, rnd) {
   };
   for (let gi = 0; gi < guides.length; gi++) {
     const gp = guides[gi].p;
-    const invGl = 1.0 / Math.max(1, gp.length - 1);
     for (let i = 1; i < gp.length; i++) {
-      const tSeg = i * invGl;
-      const tipWeight = 1.0 - 0.85 * Math.max(0.0, Math.min(1.0, (tSeg - 0.50) / 0.50));
       const A = gp[i - 1], B = gp[i];
       const seg = Math.sqrt((B[0] - A[0])*(B[0] - A[0]) + (B[1] - A[1])*(B[1] - A[1]) + (B[2] - A[2])*(B[2] - A[2]));
       const n = Math.max(1, Math.ceil(seg * 500.0));
       for (let k = 0; k < n; k++) {
         const f = (k + 0.5) / n;
         const id = vidx(A[0] + (B[0] - A[0]) * f, A[1] + (B[1] - A[1]) * f, A[2] + (B[2] - A[2]) * f);
-        if (id >= 0) dens[id] += tipWeight;
+        if (id >= 0) dens[id] += 1;
       }
     }
   }
@@ -597,7 +511,7 @@ function buildChildren(guides, hc, o, rnd) {
       const id = vidx(px + dx * d, py + dy * d, pz + dz * d);
       if (id >= 0) acc += dens[id];
     }
-    return 0.58 + 0.42 * Math.exp(-acc * 0.032);
+    return 0.16 + 0.84 * Math.exp(-acc * 0.055);
   };
 
   // ---- 容量预估：子发 C×N + 绒毛碎发（固定 FUZZ_N 点）----
@@ -950,16 +864,16 @@ export function createStrandMaterial(headCenter = [0.0, 0.02, -0.01], opts = {})
         float f2 = f1 * f1;
         float f = 0.0465 + (1.0 - 0.0465) * (f2 * f2 * f1);
         float NR = 0.25 * cosHalfPhi * f;
-        vec3 Tabs = pow(max(gHairBase, vec3(1e-4)), vec3(0.72 / cosD));
+        vec3 Tabs = pow(max(gHairBase, vec3(1e-4)), vec3(0.5 / cosD));
         float oneMinusF2 = (1.0 - f) * (1.0 - f);
         vec3 NTT = oneMinusF2 * Tabs * exp(-3.65 * cosPhi - 3.98);
         vec3 NTRT = oneMinusF2 * f * Tabs * Tabs * exp(17.0 * cosPhi - 16.78);
         vec3 spec = gHairSV * vec3(MR * NR * uGainR) + MTT * NTT * uGainTT + MTRT * NTRT * uGainTRT;
         float kd = sqrt(max(0.0, 1.0 - sI * sI));
-        float vol = clamp((dot(N, L) + 0.35) * 0.74, 0.0, 1.0);
-        vec3 diff = BRDF_Lambert(material.diffuseColor) * kd * mix(0.14, 0.82, vol) * uGainD;
+        float vol = clamp((dot(N, L) + 0.6) * 0.625, 0.0, 1.0);
+        vec3 diff = BRDF_Lambert(material.diffuseColor) * kd * mix(0.18, 1.0, vol) * uGainD;
         reflectedLight.directDiffuse += directLight.color * diff;
-        reflectedLight.directSpecular += directLight.color * spec * mix(0.68, 1.0, gHairAO) * vol * 0.45;
+        reflectedLight.directSpecular += directLight.color * spec * gHairAO * gHairAO * mix(0.35, 1.0, vol);
       }
 `);
     s.fragmentShader = s.fragmentShader
@@ -974,27 +888,27 @@ export function createStrandMaterial(headCenter = [0.0, 0.02, -0.01], opts = {})
         float hairGauss(float x, float b) { return exp(-x * x / (2.0 * b * b)) / (2.5066283 * b); }`)
       .replace('#include <lights_physical_pars_fragment>', lights)
       .replace('#include <color_fragment>', `#include <color_fragment>
-        diffuseColor.rgb = mix(diffuseColor.rgb, uHairTipColor * 0.18, smoothstep(0.32, 0.92, vT) * clamp(uHairOmbreMix, 0.0, 1.0));
+        diffuseColor.rgb = mix(diffuseColor.rgb, uHairTipColor * 0.38, smoothstep(0.32, 0.92, vT) * clamp(uHairOmbreMix, 0.0, 1.0));
         diffuseColor.rgb *= (1.0 - uColorVar * 0.5 + uColorVar * vRand) * (1.0 + uTipLighten * vT * vT);
         gHairBase = diffuseColor.rgb;
         gHairAO = vAO;
         gHairBR = uBetaR * (0.8 + 0.4 * fract(vRand * 7.31));
         gHairAR = uAlphaR + (fract(vRand * 13.7) - 0.5) * 0.12 + sin(vT * 23.0 + vRand * 61.0) * 0.035;
         gHairSV = 0.25 + 1.5 * fract(vRand * 3.97);
-        diffuseColor.rgb *= mix(0.65, 1.0, vAO);
+        diffuseColor.rgb *= vAO;
         // 覆盖率 + 随机抖动（MSAA 只有 4 个样本，alpha < 1/8 会直接消失；抖动让期望值正确）
         float hcov = fract(sin(dot(gl_FragCoord.xy + vRand * 97.0, vec2(12.9898, 78.233))) * 43758.5453);
         // 发量主体基本不透明（真实头发是几十层叠在一起的），只有发梢、飞发、绒毛才半透明
         float aBody = max(vCov * uCovGain, uMinAlpha);
-        float tipFade = 1.0 - 0.72 * smoothstep(0.72, 1.0, vT);
-        float thin = vW < 0.6 ? 0.62 : 1.0;
-        diffuseColor.a = clamp(aBody * tipFade * thin + (hcov - 0.5) * 0.16, 0.0, 1.0);
-        if (diffuseColor.a < 0.22) discard;`)
+        float tipFade = 1.0 - 0.7 * smoothstep(0.7, 1.0, vT);
+        float thin = vW < 0.6 ? 0.55 : 1.0;
+        diffuseColor.a = clamp(aBody * tipFade * thin + (hcov - 0.5) * 0.12, 0.0, 1.0);`)
       .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
         normal = normalize(vNormal);
         gHairT = normalize(vHT);`);
   };
-  mat.customProgramCacheKey = () => 'photoreal-strand-hair-v2';
+  mat.userData.isMasterStrandHair = true;
+  mat.customProgramCacheKey = () => 'photoreal-strand-hair-v3';
   return mat;
 }
 

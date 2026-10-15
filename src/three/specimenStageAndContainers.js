@@ -33,12 +33,19 @@ export const SHELF_LAYOUT_CATALOG = [
 ];
 
 export const CONTAINER_STYLE_CATALOG = [
-  { id: 'glass_bell_jar', shortLabel: '玻璃钟罩座', label: '🧪 维多利亚玻璃钟罩座 · 黑金黄铜底座 (可放置收纳建筑)', headMountY: 13.5, snapRadius: 14.5 },
-  { id: 'velvet_chalice', shortLabel: '丝绒圣杯座', label: '👑 黑金丝绒高脚圣杯座 · 露天颈口托盘 (可放置收纳建筑)', headMountY: 14.6, snapRadius: 14.0 },
-  { id: 'formalin_cylinder', shortLabel: '福尔马林缸', label: '🧫 福尔马林圆柱防腐缸 · 琥珀刻度液 (可放置收纳建筑)', headMountY: 13.6, snapRadius: 14.5 },
-  { id: 'acrylic_cube', shortLabel: '水晶方盒座', label: '💎 博物馆亚克力水晶方盒 · 底射灯座 (可放置收纳建筑)', headMountY: 13.5, snapRadius: 15.0 },
-  { id: 'surgical_tray', shortLabel: '解剖浅盘座', label: '🩸 法医不锈钢解剖浅盘 · 凝血标本垫 (可放置收纳建筑)', headMountY: 12.1, snapRadius: 14.0 },
-  { id: 'guillotine_plinth', shortLabel: '断头木托座', label: '🪓 黑胡桃断头台木托座 · 处决铜铭牌 (可放置收纳建筑)', headMountY: 13.0, snapRadius: 14.0 },
+  { id: 'glass_bell_jar', category: 'container', shortLabel: '玻璃钟罩座', label: '🧪 维多利亚玻璃钟罩座 · 黑金黄铜底座 (可放置收纳建筑)', headMountY: 13.5, snapRadius: 14.5 },
+  { id: 'velvet_chalice', category: 'container', shortLabel: '丝绒圣杯座', label: '👑 黑金丝绒高脚圣杯座 · 露天颈口托盘 (可放置收纳建筑)', headMountY: 14.6, snapRadius: 14.0 },
+  { id: 'formalin_cylinder', category: 'container', shortLabel: '福尔马林缸', label: '🧫 福尔马林圆柱防腐缸 · 琥珀刻度液 (可放置收纳建筑)', headMountY: 13.6, snapRadius: 14.5 },
+  { id: 'acrylic_cube', category: 'container', shortLabel: '水晶方盒座', label: '💎 博物馆亚克力水晶方盒 · 底射灯座 (可放置收纳建筑)', headMountY: 13.5, snapRadius: 15.0 },
+  { id: 'surgical_tray', category: 'container', shortLabel: '解剖浅盘座', label: '🩸 法医不锈钢解剖浅盘 · 凝血标本垫 (可放置收纳建筑)', headMountY: 12.1, snapRadius: 14.0 },
+  { id: 'guillotine_plinth', category: 'container', shortLabel: '断头木托座', label: '🪓 黑胡桃断头台木托座 · 处决铜铭牌 (可放置收纳建筑)', headMountY: 13.0, snapRadius: 14.0 },
+  // Stage 69h · 6款恶趣味配合断头 · 且具备真实实用伴学功能的 3D 互动底座/道具
+  { id: 'paperweight_exam_ledger', category: 'morbid_prop', toolAction: 'ledger', shortLabel: '死人头镇纸台', label: '⚖️ 4.5kg死人头错题镇纸台 · 染血试卷与黄铜压条 (真·错题速记与断头抽考)', headMountY: 12.6, snapRadius: 15.0 },
+  { id: 'carotid_drip_hourglass', category: 'morbid_prop', toolAction: 'timer', shortLabel: '颈动脉沙漏座', label: '⏳ 颈动脉滴血沙漏计时座 · 动脉导血软管 (真·番茄钟/倒计时/防摸鱼审视)', headMountY: 13.2, snapRadius: 15.0 },
+  { id: 'cranial_crawler_rig', category: 'morbid_prop', toolAction: 'crawler', shortLabel: '颅腔神经探针', label: '🕷️ 颅腔神经探针爬虫座 · 太阳穴电极与脉冲管 (真·定向学科爬虫与毒舌催学)', headMountY: 13.4, snapRadius: 15.0 },
+  { id: 'trachea_flashcard_spike', category: 'morbid_prop', toolAction: 'flashcard', shortLabel: '断颈闪卡钢针', label: '📌 断颈钢针记忆闪卡座 · 气管固定环与血签 (真·艾宾浩斯单词/考点抽背)', headMountY: 12.8, snapRadius: 15.0 },
+  { id: 'electro_wake_stock', category: 'morbid_prop', toolAction: 'alarm', shortLabel: '耳垂电击唤醒座', label: '⚡ 双耳鳄鱼夹电击唤醒座 · 发条铜铃与40Hz脑波泵 (真·防犯困电击闹钟与白噪音)', headMountY: 13.0, snapRadius: 15.0 },
+  { id: 'skull_night_vigil', category: 'morbid_prop', toolAction: 'vigil', shortLabel: '天灵盖守夜烛台', label: '🕯️ 天灵盖滴蜡守夜祭坛 · 血墨Deadline倒数牌 (真·熬夜计时与考试倒数Todo)', headMountY: 13.3, snapRadius: 15.0 },
 ];
 
 export const DECOR_STYLE_CATALOG = [
@@ -1401,6 +1408,183 @@ export function buildSpecimenContainerGroup(containerStyle = 'glass_bell_jar') {
     group.add(plaque);
 
     group.userData.baseBottomOffset = -15.6;
+  } else if (containerStyle === 'paperweight_exam_ledger') {
+    // ⚖️ 4.5kg 死人头错题镇纸台：胡桃木镇纸底座 + 摊开的染血错题试卷 + 黄铜压书条 (断头直接压在错题卷中央)
+    const deskBase = new THREE.Mesh(getBeveledBoxGeometry(24.0, 1.4, 20.0, 0.9, 0.24, 5), walnutCarvedMat);
+    deskBase.position.set(0, -14.2, -0.4);
+    deskBase.castShadow = true;
+    deskBase.receiveShadow = true;
+    group.add(deskBase);
+
+    const paperMat = new THREE.MeshStandardMaterial({ color: '#f5ebd6', roughness: 0.65, metalness: 0.02 });
+    const bloodInkMat = new THREE.MeshStandardMaterial({ color: '#7f1d1d', roughness: 0.32, metalness: 0.08 });
+    // Stacked open exam sheets under the severed neck
+    for (let i = 0; i < 3; i++) {
+      const sheet = new THREE.Mesh(getBeveledBoxGeometry(21.5 - i * 0.6, 0.28, 16.8 - i * 0.4, 0.2, 0.05, 3), paperMat);
+      sheet.position.set((i - 1) * 0.35, -13.2 + i * 0.26, -0.3);
+      sheet.rotation.y = (i - 1) * 0.04;
+      group.add(sheet);
+    }
+    // Blood-soaked neck stain ring on top of the exam sheet where the 4.5kg head presses down
+    const bloodSeal = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 7.8, 0.18, 48), bloodInkMat);
+    bloodSeal.position.set(0, -12.45, -0.4);
+    group.add(bloodSeal);
+
+    // Twin Heavy Brass Paperweight Bars clamping the front & back edges of the exam scroll
+    for (const sz of [-6.8, 6.4]) {
+      const bar = new THREE.Mesh(getBeveledBoxGeometry(18.6, 0.68, 1.35, 0.22, 0.08, 4), brassMat);
+      bar.position.set(0, -12.35, sz);
+      group.add(bar);
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.62, 20, 16), brassMat);
+      knob.position.set(0, -11.75, sz);
+      group.add(knob);
+    }
+    group.userData.baseBottomOffset = -14.9;
+  } else if (containerStyle === 'carotid_drip_hourglass') {
+    // ⏳ 颈动脉滴血沙漏计时座：黑金解剖圆盘 + 右侧高耸双球滴血沙漏 + 连接断颈动脉的暗红输血导管
+    const baseDisc = new THREE.Mesh(new THREE.CylinderGeometry(10.6, 11.4, 1.6, 56), obsidianMat);
+    baseDisc.position.set(0, -14.2, -0.4);
+    group.add(baseDisc);
+    const brassRim = new THREE.Mesh(new THREE.TorusGeometry(10.8, 0.36, 18, 64), brassMat);
+    brassRim.rotateX(Math.PI / 2);
+    brassRim.position.set(0, -13.4, -0.4);
+    group.add(brassRim);
+    group.add(buildHighPolyTuftedVelvetCushion(8.0, 8.4, 0.75, -12.6, velvetMat, brassMat));
+
+    // Side Brass & Glass Blood Hourglass Tower (positioned at x = +10.2 so it stands right beside the severed head!)
+    const hgX = 10.4, hgZ = 2.2;
+    const hgBot = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, 0.55, 32), brassMat);
+    hgBot.position.set(hgX, -13.6, hgZ);
+    group.add(hgBot);
+    const hgTop = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.55, 32), brassMat);
+    hgTop.position.set(hgX, -3.2, hgZ);
+    group.add(hgTop);
+    for (let p = 0; p < 3; p++) {
+      const ang = (p / 3) * Math.PI * 2;
+      const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 10.4, 14), brassMat);
+      rod.position.set(hgX + Math.cos(ang) * 2.2, -8.4, hgZ + Math.sin(ang) * 2.2);
+      group.add(rod);
+    }
+    const bloodMat = new THREE.MeshPhysicalMaterial({ color: '#991b1b', emissive: new THREE.Color('#450a0a'), roughness: 0.12, transmission: 0.35, transparent: true, opacity: 0.90 });
+    const bulbTop = new THREE.Mesh(new THREE.ConeGeometry(2.0, 4.6, 32), glassMat);
+    bulbTop.rotation.x = Math.PI;
+    bulbTop.position.set(hgX, -5.8, hgZ);
+    group.add(bulbTop);
+    const bulbBot = new THREE.Mesh(new THREE.ConeGeometry(2.0, 4.6, 32), bloodMat);
+    bulbBot.position.set(hgX, -11.0, hgZ);
+    group.add(bulbBot);
+
+    // Arterial Cannula Tube running from the severed carotid artery into the top of the hourglass
+    const tubeCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(3.2, -11.8, -0.2),
+      new THREE.Vector3(6.8, -6.5, 1.2),
+      new THREE.Vector3(hgX, -3.0, hgZ),
+    ]);
+    group.add(new THREE.Mesh(new THREE.TubeGeometry(tubeCurve, 28, 0.24, 12, false), bloodMat));
+    group.userData.baseBottomOffset = -15.0;
+  } else if (containerStyle === 'cranial_crawler_rig') {
+    // 🕷️ 颅腔神经探针爬虫座：赛博黄铜脑电底座 + 4根环抱断头太阳穴的弧形神经探针臂 + 琥珀真空脉冲管
+    const rigBase = new THREE.Mesh(getBeveledBoxGeometry(21.0, 1.8, 21.0, 1.1, 0.28, 5), obsidianMat);
+    rigBase.position.set(0, -14.2, -0.4);
+    group.add(rigBase);
+    const coilRing = new THREE.Mesh(new THREE.TorusGeometry(9.2, 0.42, 20, 72), brassMat);
+    coilRing.rotateX(Math.PI / 2);
+    coilRing.position.set(0, -13.1, -0.4);
+    group.add(coilRing);
+    group.add(buildHighPolyTuftedVelvetCushion(7.8, 8.2, 0.72, -12.5, velvetMat, brassMat));
+
+    const amberMat = new THREE.MeshStandardMaterial({ color: '#f59e0b', emissive: new THREE.Color('#d97706'), emissiveIntensity: 0.75, roughness: 0.18 });
+    // 4 Curved Cranial Probe Arms reaching up toward the temples & occipital lobe of the severed head
+    for (const side of [-1, 1]) {
+      for (const zOff of [-2.4, 2.2]) {
+        const armCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(side * 9.0, -13.0, zOff),
+          new THREE.Vector3(side * 11.2, -5.5, zOff * 0.9),
+          new THREE.Vector3(side * 8.2, 1.5, zOff * 0.7),
+        ]);
+        group.add(new THREE.Mesh(new THREE.TubeGeometry(armCurve, 24, 0.22, 10, false), brassMat));
+        const tipGlow = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 14), amberMat);
+        tipGlow.position.set(side * 8.2, 1.5, zOff * 0.7);
+        group.add(tipGlow);
+      }
+    }
+    group.userData.baseBottomOffset = -15.1;
+  } else if (containerStyle === 'trachea_flashcard_spike') {
+    // 📌 断颈钢针记忆闪卡座：解剖底座 + 气管固定铜环 + 前方竖立的法医长钢针与串刺染血单词闪卡
+    const spikeBase = new THREE.Mesh(getBeveledBoxGeometry(20.4, 1.5, 20.4, 0.85, 0.22, 5), obsidianMat);
+    spikeBase.position.set(0, -14.1, -0.4);
+    group.add(spikeBase);
+    group.add(buildHighPolyTuftedVelvetCushion(7.8, 8.2, 0.72, -12.6, velvetMat, brassMat));
+
+    const steelNeedleMat = new THREE.MeshStandardMaterial({ color: '#e2e8f0', roughness: 0.15, metalness: 0.92 });
+    const cardMat = new THREE.MeshStandardMaterial({ color: '#fef3c7', roughness: 0.55 });
+    // Twin Forensic Memo Spikes in front-left and front-right of the severed head
+    for (const sx of [-8.8, 8.8]) {
+      const needleBase = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 0.65, 28), brassMat);
+      needleBase.position.set(sx, -13.1, 7.6);
+      group.add(needleBase);
+      const needle = new THREE.Mesh(new THREE.ConeGeometry(0.18, 9.2, 18), steelNeedleMat);
+      needle.position.set(sx, -8.4, 7.6);
+      group.add(needle);
+      for (let c = 0; c < 3; c++) {
+        const card = new THREE.Mesh(getBeveledBoxGeometry(4.2, 0.16, 2.8, 0.12, 0.04, 3), cardMat);
+        card.position.set(sx, -11.8 + c * 1.4, 7.6);
+        card.rotation.y = (c - 1) * 0.25 + (sx > 0 ? -0.2 : 0.2);
+        group.add(card);
+      }
+    }
+    group.userData.baseBottomOffset = -14.85;
+  } else if (containerStyle === 'electro_wake_stock') {
+    // ⚡ 双耳鳄鱼夹电击唤醒座：法医固定颈枷 + 两侧鳄鱼夹导线夹向断头耳垂 + 发条铜警铃
+    const stockBase = new THREE.Mesh(getBeveledBoxGeometry(21.2, 1.8, 20.2, 0.9, 0.25, 5), walnutCarvedMat);
+    stockBase.position.set(0, -14.1, -0.4);
+    group.add(stockBase);
+    group.add(buildHighPolyTuftedVelvetCushion(7.9, 8.3, 0.75, -12.5, velvetMat, brassMat));
+
+    const redWireMat = new THREE.MeshStandardMaterial({ color: '#dc2626', roughness: 0.42 });
+    const blkWireMat = new THREE.MeshStandardMaterial({ color: '#1e293b', roughness: 0.42 });
+    for (const side of [-1, 1]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 4.2, 20), brassMat);
+      post.position.set(side * 9.4, -11.5, 2.4);
+      group.add(post);
+      const wireCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * 9.4, -9.5, 2.4),
+        new THREE.Vector3(side * 10.6, -5.8, 1.5),
+        new THREE.Vector3(side * 7.6, -2.2, 0.4),
+      ]);
+      group.add(new THREE.Mesh(new THREE.TubeGeometry(wireCurve, 24, 0.18, 10, false), side < 0 ? redWireMat : blkWireMat));
+    }
+    // Brass Twin-Bell Alarm on front corner
+    for (const bx of [-2.2, 2.2]) {
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(1.35, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.6), brassMat);
+      bell.position.set(bx, -12.6, 8.6);
+      group.add(bell);
+    }
+    group.userData.baseBottomOffset = -15.0;
+  } else if (containerStyle === 'skull_night_vigil') {
+    // 🕯️ 天灵盖滴蜡守夜祭坛：哥特黑金底座 + 环绕断头的三盏高脚红烛台 + 前方血墨Deadline铭牌
+    const altarBase = new THREE.Mesh(getBeveledBoxGeometry(22.0, 1.7, 21.0, 1.0, 0.26, 5), obsidianMat);
+    altarBase.position.set(0, -14.2, -0.4);
+    group.add(altarBase);
+    group.add(buildHighPolyTuftedVelvetCushion(8.0, 8.4, 0.75, -12.5, velvetMat, brassMat));
+
+    const waxMat = new THREE.MeshStandardMaterial({ color: '#fef2f2', roughness: 0.38 });
+    const flameMat = new THREE.MeshStandardMaterial({ color: '#fde047', emissive: new THREE.Color('#f59e0b'), emissiveIntensity: 1.4 });
+    for (const [cx, cz, ch] of [[-9.4, 5.2, 6.5], [9.4, 5.2, 6.5], [0, -9.2, 8.2]]) {
+      const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.4, 1.6, 24), brassMat);
+      holder.position.set(cx, -12.6, cz);
+      group.add(holder);
+      const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.68, ch, 24), waxMat);
+      candle.position.set(cx, -12.6 + ch * 0.5 + 0.6, cz);
+      group.add(candle);
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.95, 16), flameMat);
+      flame.position.set(cx, -12.6 + ch + 1.15, cz);
+      group.add(flame);
+    }
+    const plaque = new THREE.Mesh(getBeveledBoxGeometry(8.6, 1.6, 0.45, 0.26, 0.10, 4), plaqueMat);
+    plaque.position.set(0, -13.3, 9.8);
+    group.add(plaque);
+    group.userData.baseBottomOffset = -15.05;
   } else {
     group.userData.baseBottomOffset = -12.6;
   }

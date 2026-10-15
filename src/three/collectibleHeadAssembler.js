@@ -154,16 +154,18 @@ export function updateMasterStrandHairPxScale(scene, renderer, camera) {
 }
 
 function hexToMasterStrandRgb(hairColorHex = '#121216') {
-  const normalizedHex = String(hairColorHex || '#121216').toLowerCase();
+  const normalizedHex = String(hairColorHex || '#121216').trim().toLowerCase();
   const c = new THREE.Color(normalizedHex);
   const maxC = Math.max(c.r, c.g, c.b);
-  if (maxC < 0.025) {
-    return [0.024, 0.017, 0.014];
+  if (maxC < 0.008) {
+    return [0.022, 0.016, 0.014];
   }
+  // Preserve full chromaticity & lightness for dyed hair (brown, blonde, red, blue, silver, pink, white)
+  const boost = maxC < 0.06 ? 0.95 : (maxC < 0.25 ? 0.82 : 0.68);
   return [
-    Math.min(0.45, 0.018 + c.r * 0.52),
-    Math.min(0.42, 0.013 + c.g * 0.48),
-    Math.min(0.42, 0.011 + c.b * 0.45),
+    Math.min(0.78, 0.014 + c.r * boost),
+    Math.min(0.75, 0.011 + c.g * boost),
+    Math.min(0.78, 0.010 + c.b * boost),
   ];
 }
 const CANONICAL_HEAD_HEIGHT = 0.58;
@@ -783,29 +785,13 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       if (u.uHairHighlightColor) u.uHairHighlightColor.value.copy(highlightCol);
       if (u.uHairHighlightStrength) u.uHairHighlightStrength.value = highlightStr;
     }
+    if (child.isMesh && child.material?.userData?.strandUniforms) {
+      const su = child.material.userData.strandUniforms;
+      if (su.uHairOmbreMix) su.uHairOmbreMix.value = ombreMix;
+      if (su.uHairTipColor) su.uHairTipColor.value.copy(tipCol);
+    }
     if (!child.isMesh || !child.geometry?.attributes?.position) return;
     if (child.name === 'ScalpRootFeatherCap') {
-      const morphSig = rootGroup.userData.morphSignature || '';
-      if (child.userData.lastMorphSignature !== morphSig) {
-        child.userData.lastMorphSignature = morphSig;
-        const headMesh = rootGroup.getObjectByName('HeadSkinMesh');
-        const headPos = headMesh?.geometry?.attributes?.position;
-        const capPos = child.geometry.attributes.position;
-        if (headPos && capPos && headPos.count === capPos.count) {
-          const hArr = headPos.array;
-          const cArr = capPos.array;
-          for (let i = 0; i < headPos.count; i++) {
-            const i3 = i * 3;
-            const x = hArr[i3], y = hArr[i3 + 1], z = hArr[i3 + 2];
-            const dx = x, dy = y - 0.02, dz = z + 0.01;
-            const len = Math.hypot(dx, dy, dz) || 1.0;
-            cArr[i3] = x + (dx / len) * 0.0005;
-            cArr[i3 + 1] = y + (dy / len) * 0.0005;
-            cArr[i3 + 2] = z + (dz / len) * 0.0005;
-          }
-          capPos.needsUpdate = true;
-        }
-      }
       return;
     }
     const isStrandMesh = child.name === 'MasterStrandHairMesh' || child.name === 'BabyHairWisps';
@@ -1383,16 +1369,9 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   }
   const eyeDepth = fineValue('eyeDepth');
   addW(eyeDepth >= 0 ? 'eye_depth_deep' : 'eye_depth_shallow', Math.abs(eyeDepth) * 0.55);
-  // MPFB2 corner1 is the *lateral* canthus. The older sparse table calls it
-  // "eye_inner_corner"; keep the established key but give this fine slider its
-  // anatomically correct label. Unlike overall eye tilt, only the corner sculpt moves.
-  const outerCanthus = fineValue('outerCanthusLift');
-  addW(outerCanthus >= 0 ? 'eye_inner_corner_up' : 'eye_inner_corner_down', Math.abs(outerCanthus) * 0.82);
 
   const mouthWidth = fineValue('mouthWidth');
   addW(mouthWidth >= 0 ? 'mouth_scale_horiz_incr' : 'mouth_scale_horiz_decr', Math.abs(mouthWidth) * 0.68);
-  const mouthHeight = fineValue('mouthHeight');
-  addW(mouthHeight >= 0 ? 'mouth_scale_vert_incr' : 'mouth_scale_vert_decr', Math.abs(mouthHeight) * 0.60);
   const cupidBow = fineValue('cupidBow');
   addW(cupidBow >= 0 ? 'mouth_cupidsbow_incr' : 'mouth_cupidsbow_decr', Math.abs(cupidBow) * 0.70);
   const lowerLip = fineValue('lowerLipCenter');
@@ -1401,8 +1380,6 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   addW(chinWidth >= 0 ? 'chin_width_incr' : 'chin_width_decr', Math.abs(chinWidth) * 0.70);
   const noseTip = fineValue('noseTipAngle');
   addW(noseTip >= 0 ? 'nose_point_up' : 'nose_point_down', Math.abs(noseTip) * 0.68);
-  const noseTipWidth = fineValue('noseTipWidth');
-  addW(noseTipWidth >= 0 ? 'nose_point_width_incr' : 'nose_point_width_decr', Math.abs(noseTipWidth) * 0.84);
 
   // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)
   if (!skinMesh.userData.hasMpfbClone) {
@@ -1950,9 +1927,11 @@ function injectArtistHairColor(material, hairShaderParams = {}) {
 }
 
 function buildScalpRootShadowCap(modelContainer, displayColor) {
+  let headMesh = null;
   let headGeo = null;
   modelContainer.traverse((child) => {
     if (!headGeo && child.isMesh && child.geometry?.attributes?.position && (child.name === 'HeadSkinMesh' || child.material?.name === 'Skin')) {
+      headMesh = child;
       headGeo = child.geometry;
     }
   });
@@ -1966,11 +1945,12 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const xm = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3.0;
     const ym = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3.0;
     const zm = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3.0;
-    // Strictly upper/rear cranial dome only — NEVER extend onto the forehead (zm > 0.015 && ym < 0.082)!
+    // Strictly upper/rear/side cranial dome — NEVER extend onto the forehead (zm > 0.015 && ym < 0.082)!
     const isForeheadOrFace = zm > 0.015 && ym < 0.082;
     const isEar = Math.abs(xm) > 0.052 && ym < 0.036 && zm > -0.028 && zm < 0.028;
     const isLowerTemple = zm > 0.005 && ym < 0.058;
-    if (ym > 0.022 && !isForeheadOrFace && !isEar && !isLowerTemple) {
+    const minCapY = zm < -0.016 ? -0.026 : 0.016;
+    if (ym > minCapY && !isForeheadOrFace && !isEar && !isLowerTemple) {
       capIndices.push(a, b, c);
     }
   }
@@ -1980,9 +1960,6 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
   const newPos = new Float32Array(pos.array.length);
   const colors = new Float32Array(pos.count * 4);
   const hcX = 0.0, hcY = 0.02, hcZ = -0.01;
-  const baseR = Math.max(0.068, displayColor.r * 1.48);
-  const baseG = Math.max(0.056, displayColor.g * 1.40);
-  const baseB = Math.max(0.050, displayColor.b * 1.35);
 
   const ss = (a, b, v) => {
     const t = Math.max(0.0, Math.min(1.0, (v - a) / (b - a)));
@@ -1993,20 +1970,22 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const dx = x - hcX, dy = y - hcY, dz = z - hcZ;
     const len = Math.hypot(dx, dy, dz) || 1.0;
-    newPos[i * 3] = x + (dx / len) * 0.0005;
-    newPos[i * 3 + 1] = y + (dy / len) * 0.0005;
-    newPos[i * 3 + 2] = z + (dz / len) * 0.0005;
+    // Offset 1.2mm outside the skull and share GPU morph targets so pink skin never pokes through the back/side
+    newPos[i * 3] = x + (dx / len) * 0.0012;
+    newPos[i * 3 + 1] = y + (dy / len) * 0.0012;
+    newPos[i * 3 + 2] = z + (dz / len) * 0.0012;
 
-    const fadeY = ss(0.022, 0.042, y);
+    const minFadeY = z < -0.016 ? -0.026 : 0.016;
+    const fadeY = ss(minFadeY, minFadeY + 0.022, y);
     const foreheadClear = z > 0.010 ? ss(0.080, 0.106, y) : 1.0;
     const templeClear = z > 0.002 ? ss(0.056, 0.074, y) : 1.0;
     const earClear = (Math.abs(x) > 0.048 && z > -0.028 && z < 0.028) ? ss(0.032, 0.048, y) : 1.0;
     const strandMod = 0.90 + 0.10 * Math.sin(x * 480.0 + z * 320.0);
-    const alpha = fadeY * foreheadClear * templeClear * earClear * 0.72;
+    const alpha = fadeY * foreheadClear * templeClear * earClear * 0.92;
 
-    colors[i * 4] = baseR * strandMod;
-    colors[i * 4 + 1] = baseG * strandMod;
-    colors[i * 4 + 2] = baseB * strandMod;
+    colors[i * 4] = strandMod;
+    colors[i * 4 + 1] = strandMod;
+    colors[i * 4 + 2] = strandMod;
     colors[i * 4 + 3] = alpha;
   }
   capGeo.setAttribute('position', new THREE.BufferAttribute(newPos, 3));
@@ -2014,10 +1993,21 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
   if (headGeo.attributes.normal) {
     capGeo.setAttribute('normal', headGeo.attributes.normal);
   }
+  if (headGeo.morphAttributes?.position) {
+    capGeo.morphAttributes.position = headGeo.morphAttributes.position;
+  }
+  if (headGeo.morphAttributes?.normal) {
+    capGeo.morphAttributes.normal = headGeo.morphAttributes.normal;
+  }
   capGeo.setIndex(capIndices);
 
+  const capColor = new THREE.Color(
+    Math.max(0.032, displayColor.r * 1.15),
+    Math.max(0.024, displayColor.g * 1.12),
+    Math.max(0.020, displayColor.b * 1.10)
+  );
   const capMat = new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#ffffff'),
+    color: capColor,
     vertexColors: true,
     roughness: 0.88,
     metalness: 0.0,
@@ -2025,12 +2015,16 @@ function buildScalpRootShadowCap(modelContainer, displayColor) {
     opacity: 1.0,
     depthWrite: false,
     polygonOffset: true,
-    polygonOffsetFactor: 1,
-    polygonOffsetUnits: 1,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
   });
   capMat.userData.builtInHair = true;
+  capMat.userData.isScalpCap = true;
   const capMesh = new THREE.Mesh(capGeo, capMat);
   capMesh.name = 'ScalpRootFeatherCap';
+  if (headMesh?.morphTargetInfluences) {
+    capMesh.morphTargetInfluences = headMesh.morphTargetInfluences;
+  }
   capMesh.renderOrder = 0;
   return capMesh;
 }
@@ -2141,10 +2135,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   );
   const hairRenderMode = config.hairRenderMode || config.morphs?.hairRenderMode || rootGroup.userData.hairRenderMode || MASTER_HAIR_CONFIG.mode || 'card';
   const strandDensity = config.strandDensity || config.morphs?.strandDensity || rootGroup.userData.strandDensity || MASTER_HAIR_CONFIG.density || 'mid';
-  const groomSoftware = Boolean(config.groomSoftware ?? rootGroup.userData.groomSoftware);
-  const groomLod = config.groomLod || rootGroup.userData.groomLod || 'studio';
-  rootGroup.userData.groomSoftware = groomSoftware;
-  rootGroup.userData.groomLod = groomLod;
 
   rootGroup.userData.topCrownStyle = topCrownStyle;
   rootGroup.userData.frontBangsStyle = frontBangsStyle;
@@ -2273,12 +2263,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     let guideCount = 0;
     const customAsset = Boolean(config.customHairUrl);
     const strandRgb = hexToMasterStrandRgb(hairColorHex);
-    // Keep the full artist strand budget on hardware GPUs. Software WebGL
-    // still renders *real 3D strand meshes*, but at an adaptive per-view LOD
-    // so three desk pets + the workbench do not stall the browser for minutes.
-    const strandRuntimeLod = groomSoftware
-      ? (groomLod === 'desktop' ? 'software-desktop' : 'software-studio') : 'gpu';
-    const strandCacheKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${strandDensity}|${strandRuntimeLod}`;
+    const strandCacheKey = `v8|${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${strandDensity}`;
     let strandRes = useStrandMode ? masterStrandGeometryCache.get(strandCacheKey) : null;
     const headSkinMesh = modelContainer.getObjectByName('HeadSkinMesh');
     const headSoup = (useStrandMode && !strandRes && headSkinMesh) ? morphedHeadSoup(headSkinMesh, true) : null;
@@ -2299,7 +2284,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       }
       if (useStrandMode && g?.attributes?.position && g?.attributes?.uv) {
         if (!g.attributes.aScalpD) {
-          const scalpKey = `${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${curMeshIdx}|${g.attributes.position.count}`;
+          const scalpKey = `v8|${resolvedStyle}|${frontBangsStyle}|${sideLocksStyle}|${backAttachmentStyle}|${curMeshIdx}|${g.attributes.position.count}`;
           let cachedScalpAttr = masterStrandGeometryCache.get(`scalp:${scalpKey}`);
           if (!cachedScalpAttr && (headSoup || headSkinMesh)) {
             const soup = headSoup || morphedHeadSoup(headSkinMesh, true);
@@ -2340,15 +2325,17 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           const coreMat = hMats.core;
           coreMat.userData.builtInHair = true;
           coreMat.userData.isMasterCardHair = true;
+          coreMat.userData.uniforms = hMats.shared;
           coreMat.polygonOffset = true;
-          coreMat.polygonOffsetFactor = 4;
-          coreMat.polygonOffsetUnits = 4;
+          coreMat.polygonOffsetFactor = -1;
+          coreMat.polygonOffsetUnits = -1;
           if (hMats.shared) {
-            hMats.shared.uScalpFade.value = 0.028;
-            hMats.shared.uInset.value = 0.0028;
+            hMats.shared.uScalpFade.value = 0.026;
+            hMats.shared.uInset.value = 0.0018;
           }
-          coreMat.alphaTest = 0.32;
-          coreMat.color.setRGB(strandRgb[0] * 0.95, strandRgb[1] * 0.95, strandRgb[2] * 0.95);
+          coreMat.alphaTest = 0.22;
+          coreMat.alphaToCoverage = true;
+          coreMat.color.setRGB(strandRgb[0] * 0.96, strandRgb[1] * 0.96, strandRgb[2] * 0.96);
           return coreMat;
         }
         const material = new THREE.MeshPhysicalMaterial({
@@ -2375,14 +2362,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
 
     if (useStrandMode && (strandRes || (headSoup && strandEntries.length > 0))) {
       if (!strandRes) {
-        const baseDensity = MASTER_HAIR_DENSITIES[strandDensity] || MASTER_HAIR_DENSITIES.mid;
-        const desktopSoftware = strandRuntimeLod === 'software-desktop';
-        const densitySpec = groomSoftware ? {
-          ...baseDensity,
-          guides: Math.max(260, Math.round(baseDensity.guides * (desktopSoftware ? .38 : .55))),
-          childrenPerGuide: Math.max(4, Math.round(baseDensity.childrenPerGuide * (desktopSoftware ? .63 : .72))),
-          fuzzPerGuide: baseDensity.fuzzPerGuide * (desktopSoftware ? .80 : .82),
-        } : baseDensity;
+        const densitySpec = MASTER_HAIR_DENSITIES[strandDensity] || MASTER_HAIR_DENSITIES.mid;
         strandRes = generateStrands(strandEntries, null, null, headSoup, densitySpec);
         if (strandRes?.geometry) {
           strandRes.geometry.userData.sharedBuiltinGeo = true;
@@ -2417,7 +2397,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           window.__STRAND_STATS__ = {
             id: resolvedStyle,
             density: strandDensity,
-            runtimeLod: strandRuntimeLod,
             guides: strandRes.guides,
             strands: strandRes.strandCount,
             main: strandRes.mainStrands,
@@ -2442,7 +2421,6 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       guides: guideCount,
       mode: useStrandMode ? 'strand' : 'card',
       density: strandDensity,
-      runtimeLod: strandRuntimeLod,
       style: selectedStyle,
     };
 
@@ -2584,8 +2562,6 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
       backAttachmentStyle: nextBack,
       hairRenderMode: nextMode,
       strandDensity: nextDensity,
-      groomSoftware: rootGroup.userData.groomSoftware,
-      groomLod: rootGroup.userData.groomLod,
       hairColor: rootGroup.userData.hairColor,
       hairTipColor: rootGroup.userData.hairTipColor,
       hairOmbreMix: rootGroup.userData.hairOmbreMix,
@@ -2604,15 +2580,22 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
     const dispCol = computeTrueHairDisplayColor(patch.hairColor);
     const strandRgb = hexToMasterStrandRgb(patch.hairColor);
     hairGroup.traverse((child) => {
-      if (child.isMesh && child.name !== 'ScalpRootFeatherCap') {
-        for (const mat of Array.isArray(child.material) ? child.material : [child.material]) {
-          if (mat?.userData?.isMasterStrandHair || mat?.userData?.strandUniforms) {
-            mat.color.setRGB(strandRgb[0], strandRgb[1], strandRgb[2]);
-          } else if (mat?.userData?.isMasterCardHair) {
-            mat.color.setRGB(strandRgb[0] * 0.95, strandRgb[1] * 0.95, strandRgb[2] * 0.95);
-          } else if (mat?.userData?.builtInHair) {
-            mat.color.copy(dispCol);
-          }
+      if (!child.isMesh) return;
+      if (child.name === 'ScalpRootFeatherCap' && child.material) {
+        child.material.color.setRGB(
+          Math.max(0.032, dispCol.r * 1.15),
+          Math.max(0.024, dispCol.g * 1.12),
+          Math.max(0.020, dispCol.b * 1.10)
+        );
+        return;
+      }
+      for (const mat of Array.isArray(child.material) ? child.material : [child.material]) {
+        if (mat?.userData?.isMasterStrandHair || mat?.userData?.strandUniforms) {
+          mat.color.setRGB(strandRgb[0], strandRgb[1], strandRgb[2]);
+        } else if (mat?.userData?.isMasterCardHair) {
+          mat.color.setRGB(strandRgb[0] * 0.96, strandRgb[1] * 0.96, strandRgb[2] * 0.96);
+        } else if (mat?.userData?.builtInHair) {
+          mat.color.copy(dispCol);
         }
       }
     });
@@ -3955,6 +3938,26 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
       if (mat.userData?.uCrossWetness) mat.userData.uCrossWetness.value = w;
     }
   });
+
+  // 5. HairGroup: Live 0ms Hair Color, Tip Ombre Color, Ombre Mix & Sheen Update
+  if (
+    m.hairColor !== undefined ||
+    m.hairTipColor !== undefined ||
+    m.hairOmbreMix !== undefined ||
+    m.hairHighlightColor !== undefined ||
+    m.hairHighlightStrength !== undefined ||
+    m.hairSheen !== undefined
+  ) {
+    // When user explicitly picks a new base hairColor without specifying a new tip color,
+    // also align tip color if it was still on a default preset so the whole hair visibly changes color
+    if (m.hairColor && !m.hairTipColor) {
+      rootGroup.userData.hairTipColor = m.hairColor;
+      if (rootGroup.userData.currentMorphs) {
+        rootGroup.userData.currentMorphs.hairTipColor = m.hairColor;
+      }
+    }
+    updateHairDesignOnGroup(rootGroup, m);
+  }
 }
 
 export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {

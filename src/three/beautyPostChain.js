@@ -243,43 +243,6 @@ export const DESKTOP_PET_FILTER_PRESETS = [
       filmLutMode: 4, filmLutStrength: 1.0,
     },
   },
-  {
-    // No LUT or blur: symmetrical broad fill is the distinct physical treatment.
-    id: 'neutral_dual_softbox',
-    shortLabel: '📄 双柔光中性肖像',
-    label: '📄 双柔光中性肖像 · 大面积正面补光、低阴影、自然肤色',
-    visualPreset: 'dlss5_neural_photoreal', lightPreset: 'butterfly', gobo: 'none',
-    grade: {
-      keyColor: '#fffdf9', fillColor: '#e9f0ff', rimColor: '#f5f8ff',
-      keyAzimuthDeg: -21, keyElevationDeg: 38, keyIntensity: 1.62,
-      fillIntensity: 1.28, rimIntensity: 0.66, hemiIntensity: 0.60, chiaroscuro: 0.12,
-      dynamicLightMode: 'static_locked',
-      exposure: 1.06, contrast: 0.98, saturation: 1.0, warmth: 0.0,
-      tintShift: 0, lift: 0.018, fade: 0, toe: 0, shoulder: 0.16,
-      softFocus: 0.025, depthBlur: 0, vignette: 0.05, halation: 0.0,
-      diffusion: 0.0, filmGrain: 0.01, filmLutStrength: 0, filmLutMode: 7,
-      bw: 0, shadowLift: 0.46, shadowCrush: 0.0,
-    },
-  },
-  {
-    // Lateral cool key + counter-rim, unlike the warm Rembrandt, orange/teal,
-    // neon, window gobo and overcast recipes already in the library.
-    id: 'blue_hour_edge',
-    shortLabel: '🌙 蓝时侧轮廓光',
-    label: '🌙 蓝时侧轮廓光 · 低位冷侧光、反向边缘补光、暗部层次',
-    visualPreset: 'cinema_85mm_portrait', lightPreset: 'rembrandt', gobo: 'none',
-    grade: {
-      keyColor: '#a4c8ff', fillColor: '#8ca3d0', rimColor: '#94c2ff',
-      keyAzimuthDeg: 55, keyElevationDeg: 23, keyIntensity: 2.05,
-      fillIntensity: 0.58, rimIntensity: 1.98, hemiIntensity: 0.32, chiaroscuro: 0.68,
-      dynamicLightMode: 'static_locked',
-      exposure: 1.08, contrast: 1.10, saturation: 0.89, warmth: -0.20,
-      tintShift: -0.08, lift: 0.014, fade: 0, toe: 0.26, shoulder: 0.22,
-      softFocus: 0.04, depthBlur: 0, vignette: 0.31, halation: 0.06,
-      diffusion: 0.0, filmGrain: 0.022, filmLutStrength: 0.10, filmLutMode: 7,
-      bw: 0, shadowLift: 0.26, shadowCrush: 0.11,
-    },
-  },
 ];
 for (const fp of DESKTOP_PET_FILTER_PRESETS) {
   if (fp.grade) Object.assign(fp, fp.grade);
