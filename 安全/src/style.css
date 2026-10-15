@@ -67,3 +67,10 @@
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:60;background:rgba(20,20,22,.92);border:1px solid var(--line);color:#f3e7d3;padding:10px 18px;border-radius:24px;font-size:13px;display:none}
   #busy{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:40;background:rgba(15,15,17,.9);padding:14px 22px;border-radius:14px;display:none;font-size:13px;color:#ddd}
   #abLabel{position:fixed;left:12px;bottom:12px;z-index:9;font-size:12px;color:#ddd;background:var(--bg);padding:6px 10px;border-radius:10px;display:none}
+/* 效果开关控件 */
+.fx.off{opacity:.45}
+.fxl input[type=checkbox]{margin:0 6px 0 0;vertical-align:-2px;accent-color:#c9a56a}
+.links{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.linkrow{font-size:12px;color:#cfc6b8;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+button.mini{font-size:11px;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:#ddd;cursor:pointer}
+input[type=number]{width:70px;background:#1b1a19;color:#eee;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:3px}

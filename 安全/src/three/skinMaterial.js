@@ -9,6 +9,7 @@
 //     皮肤 IOR 1.4（F0≈0.028）。再加少量 sheen 模拟面部绒毛在逆光边缘的柔亮。
 //  4) 反照率只做全局色彩校准（对比/饱和/伽马），不涂任何妆容。
 import * as THREE from 'three';
+import { HAIRLINE_SKIN_GLSL } from './hairlineBlend.js';
 
 export const SKIN_DEFAULTS = {
   roughness: 0.56,
@@ -114,12 +115,13 @@ export function upgradeSkinMaterial(src, opts = {}) {
     uMicro: { value: o.micro }, uBreakup: { value: o.breakup }, uMottle: { value: o.mottle },
     uRegional: { value: o.regional }, uTrans: { value: o.translucency },
     uFaceEyeL: { value: new THREE.Vector3(-0.032, 0.03, 0.08) }, uFaceEyeR: { value: new THREE.Vector3(0.032, 0.03, 0.08) }, uFaceNose: { value: new THREE.Vector3(0, 0.0, 0.11) },
+    uHairline: { value: o.hairline ?? 1.0 }, uScalpAO: { value: o.scalpAO ?? 0.7 }, uHairRoot: { value: new THREE.Vector3(0.03, 0.022, 0.018) },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, mat.userData.skinUniforms);
     shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vSkinObj;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSkinObj = transformed;');
+      .replace('#include <common>', '#include <common>\nvarying vec3 vSkinObj; varying vec3 vSkinObjN; varying float vHairCov; varying vec3 vHairDir; attribute float aHairCov; attribute vec3 aHairDir;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvSkinObj = transformed; vSkinObjN = objectNormal; vHairCov = aHairCov; vHairDir = aHairDir;');
     let lights = THREE.ShaderChunk.lights_physical_pars_fragment.replace(
       'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseColor );',
       `vec3 skinIrr = skinPreintegratedDiffuse( geometryNormal, directLight.direction ) * directLight.color;
@@ -133,7 +135,7 @@ export function upgradeSkinMaterial(src, opts = {}) {
     );
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <lights_physical_pars_fragment>', SKIN_DIRECT_GLSL + lights)
-      .replace('#include <common>', '#include <common>\nuniform float uCurvScale;\nuniform vec3 uAlbedoGrade;\n' + NOISE_GLSL)
+      .replace('#include <common>', '#include <common>\nuniform float uCurvScale;\nuniform vec3 uAlbedoGrade;\nvarying vec3 vSkinObjN; varying float vHairCov; varying vec3 vHairDir; uniform float uHairline, uScalpAO; uniform vec3 uHairRoot; float gHairDens = 0.0;\n' + NOISE_GLSL)
       .replace(
         '#include <map_fragment>',
         `#include <map_fragment>
@@ -151,7 +153,8 @@ export function upgradeSkinMaterial(src, opts = {}) {
           c *= mix(vec3(1.0), vec3(1.07, 0.93, 0.92), rg.x);   // 鼻头、脸颊微红
           c *= mix(vec3(1.0), vec3(0.9, 0.86, 0.9), rg.y);     // 眼下微暗偏紫
           diffuseColor.rgb = c;
-        }`,
+        }
+        ${HAIRLINE_SKIN_GLSL}`,
       )
       .replace(
         '#include <roughnessmap_fragment>',
@@ -159,7 +162,8 @@ export function upgradeSkinMaterial(src, opts = {}) {
         { float rn = sk_n(vSkinObj * 260.0) * 0.6 + sk_n(vSkinObj * 61.0) * 0.4;
           roughnessFactor = clamp(roughnessFactor + (rn - 0.5) * 0.22 * uBreakup, 0.2, 1.0);
           vec4 rgr = sk_regions(vSkinObj) * uRegional;
-          roughnessFactor = clamp(roughnessFactor - rgr.z * 0.1 - rgr.w * 0.18 + rgr.x * 0.02, 0.18, 1.0); }`,
+          roughnessFactor = clamp(roughnessFactor - rgr.z * 0.1 - rgr.w * 0.18 + rgr.x * 0.02, 0.18, 1.0);
+          roughnessFactor = mix(roughnessFactor, 0.78, gHairDens * 0.7); }`,
       )
       .replace(
         '#include <normal_fragment_maps>',
@@ -193,7 +197,7 @@ export function upgradeSkinMaterial(src, opts = {}) {
         #include <lights_fragment_begin>`,
       );
   };
-  mat.customProgramCacheKey = () => 'photoreal-skin-v3';
+  mat.customProgramCacheKey = () => 'photoreal-skin-v4';
   return mat;
 }
 
@@ -212,4 +216,7 @@ export function setSkinParams(mat, p) {
   if (p.mottle != null) u.uMottle.value = p.mottle;
   if (p.regional != null) u.uRegional.value = p.regional;
   if (p.translucency != null) u.uTrans.value = p.translucency;
+  if (p.hairline != null) u.uHairline.value = p.hairline;
+  if (p.scalpAO != null) u.uScalpAO.value = p.scalpAO;
+  if (p.hairRoot) u.uHairRoot.value.set(...p.hairRoot);
 }
