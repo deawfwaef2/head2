@@ -1471,6 +1471,27 @@
   - 在 `injectArtistHairColor` 中叠加 3 阶亚像素发丝脊线着色 (`180/420/780` 周期 + 深色发丝 `fiberSheen` 脊线提亮)，并在前额刘海最底端 `6 mm` (`y = 0.025..0.032, z > 0.052`) 生成 `100%` 不透明的 V 型碎发簇尖端切口 (`lockWave`)，既消除水平齐切“片状感”，又杜绝亚像素半透明导致的灰边。
   - 重新打包生成单文件离线可玩版 `/home/user/点击开始游戏_CERVIX3D.html` (`29.41 MB`) 并同步 `docs/index.html`。
 
+---
+
+## [2026-10-15 Stage 69g] 彻底根治头发“塑料/泥塑头盔假感 (`头发越来越假了`)”：摄影级真发丝纹理合成 + 轻量化 60 FPS 3D 真发丝 (`MasterStrandHairMesh`) + 拖拽动态 LOD + 修复 `BeautyPostChain` Alpha 穿孔与标牌遮挡（追加记录）
+- **1. 深度复盘 Stage 69e/69f 头发失真与 Bug 根因**：
+  - **为什么 Stage 69f 发片模式像“塑料/泥塑头盔”**：将 38 款 `.glb` 发模的 Alpha 通道强行刷成 `255` 全不透明并把高频正弦波 (`420/780` 周期) 画在贴图上，在 Mipmap 与后期链下被平均成毫无毛流分缕的实心色块，刘海与鬓角丧失了半透明空气感碎发梢。
+  - **为什么 Stage 69e 的 3D 真发丝 (`MasterStrandHairMesh`) 出现额头透明噪点黑洞、刘海腰斩黑条与卡顿**：
+    1. **WebGL2 Alpha 覆盖穿透 (`src/three/beautyPostChain.js`)**：`MasterStrandHairMesh` 使用 `transparent: false` (`NoBlending`) + `alphaToCoverage: true`；在 WebGL2 中，不透明 Pass 仍会将片元的 `diffuseColor.a`（发梢与绒毛处仅 `0.02..0.11`）直接写入 `hdrTarget.a`，把原本 `HeadSkinMesh` 已写好的 `alpha = 1.0` 覆盖成 `< 0.12`。随后 `BeautyPostChain` 的 `alphaMaterial` (`smoothstep(0.005, 0.12, c.a)`) 将透明画布 `<canvas>` 的 `gl_FragColor.a` 挖成透明，导致网页深色背景直接穿透额头与头发形成麻点黑洞！
+    2. **发片底衬 (`PhotorealHairCore`) 被 `uScalpFade = 0.0095` 在前额一刀切且颜色被覆写为 `0.3 * strandRgb` (`src/three/collectibleHeadAssembler.js`)**：`hair_user_photo.glb` 与 `hair_bob01.glb` 的前额刘海悬空在额头皮肤前方 `12~20 mm`，当 `vScalpD > 9.5 mm` 被直接 `discard`，且 `updateHairDesignOnGroup` 第 2583 行将底衬颜色覆写为 `0.3 * strandRgb`（死黑），同时 `applyArtistHairFineTuning` 单独放大了底衬几何而未放大 `MasterStrandHairMesh`，导致额头中部出现明显的明暗断层线。
+    3. **单像素 Alpha 采样导致刘海引导线提前终止 (`src/three/masterQuality/strandHair.js`)**：`alphaSamplerFromTexture` 单点采样在遇到发梢分缕间隙时会在 `v ≈ 0.72` 提前中断引导线追踪。
+- **2. 摄影级真发丝贴图重制 (`public/models/*.glb`)**：
+  - 从 `hair_long01.glb` 提取真实摄影级高分辨率发丝纤维细节，融合进全部 38 款 `.glb` 发模贴图；
+  - 保留颅顶与侧发 (`u < 0.60, v < 0.96`) 的严密遮盖度（彻底消灭发缝露头皮破洞），修补 `daz_hair_curtain_wave.glb` 侧发中段 (`u ∈ [0.15, 0.26], v ∈ [0.48, 0.60]`) 的原始透明空洞，并在前额刘海眉上区域 (`u >= 0.60, v ∈ [0.66, 0.84]`, 对应 `y ∈ [0.039, 0.052]`) 生成自然参差渐隐的摄影级空气碎发梢。
+- **3. 60 FPS 轻量化 3D 真发丝 (`MasterStrandHairMesh`) + 交互拖拽自动 LOD (`src/three/masterQuality/strandHair.js`, `src/three/masterQuality/featureMaterials.js`, `src/three/collectibleHeadAssembler.js`, `src/three/beautyPostChain.js`)**：
+  - **修复 `BeautyPostChain` 透明画布穿孔 (`src/three/beautyPostChain.js`)**：在 `alphaMaterial` 中使用 `max(c.a, smoothstep(0.0002, 0.003, dot(c.rgb, vec3(1.0))))`，保证任何已渲染出皮肤或发丝亮度的像素 `srcAlpha` 恒为 `1.0`；同时在 `createStrandMaterial` 中加入 `if (diffuseColor.a < 0.22) discard;`。
+  - **无缝底衬与发丝同步 (`src/three/masterQuality/featureMaterials.js`, `src/three/collectibleHeadAssembler.js`)**：将 `PhotorealHairCore` 按 `clamp(aScalpD * 0.55, 0.0020, 0.012)` 精准退让于 3D 真发丝与额头皮肤正中间（既不穿入额头皮肤，也不外露压住真发丝），将 `uScalpFade` 提升至 `0.028`（仅剔除远离头部的长马尾底衬，绝不在额头刘海处一刀切），并将底衬颜色统一为 `0.95 * strandRgb`、禁止 `applyArtistHairFineTuning` 单独形变底衬网格。
+  - **60 FPS 极速流畅优化 + 交互动态 LOD**：将默认发丝档位设为高帧率 `low`（`1150` 根引导线、约 `1.15 万` 根真发丝，分段上限 `18`，顶点量较 Stage 69e 降低 `78%`），并在 `updateMasterStrandHairPxScale` 中绑定全局拖拽/滚轮自动 LOD（按住拖动或缩放滚轮时自动切换为 0 开销发片预览，松手 `90~160 ms` 后无缝恢复 3D 真发丝）。
+- **4. 修复标本连接标牌遮挡面部与水平重叠 (`src/main.js`, `src/style.css`, `src/ui/obsidianProStudio.css`)**：
+  - 在 `renderSpecimenPlacards` 中将默认标牌纵向锚点下移至托盘下方 (`Math.max(item.anchorY + cardHalfH + 18, winH - cardHalfH - 14)`) 并加入横向防重叠自动排布，同时移除 `.placard-brief-line` 的 `nowrap/ellipsis`，确保 3 颗头颅面部与发型 `100%` 零遮挡、标牌 4 项信息完整展示零截断。
+  - 重新打包生成单文件离线可玩版 `/home/user/点击开始游戏_CERVIX3D.html` (`32.47 MB`) 并同步 `docs/index.html`。
+
+
 
 
 

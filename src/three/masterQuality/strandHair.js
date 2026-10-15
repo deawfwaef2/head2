@@ -339,10 +339,14 @@ export function alphaSamplerFromTexture(tex) {
   ctx.drawImage(img, 0, 0, W, H);
   const d = ctx.getImageData(0, 0, W, H).data;
   const flip = tex.flipY;
+  const dxStep = Math.max(1, Math.round(W * 0.008));
   return (u, v) => {
     u -= Math.floor(u); v -= Math.floor(v);
-    const x = Math.min(W - 1, Math.floor(u * W)); const y = Math.min(H - 1, Math.floor((flip ? 1 - v : v) * H));
-    return d[(y * W + x) * 4 + 3] / 255;
+    const x = Math.min(W - 1, Math.floor(u * W));
+    const y = Math.min(H - 1, Math.floor((flip ? 1 - v : v) * H));
+    const xL = Math.max(0, x - dxStep), xR = Math.min(W - 1, x + dxStep);
+    const rowOff = y * W * 4 + 3;
+    return Math.max(d[rowOff + x * 4], d[rowOff + xL * 4], d[rowOff + xR * 4]) / 255;
   };
 }
 
@@ -528,7 +532,7 @@ export function generateStrands(hairGeom, hairMatrix, alphaAt, headSoup, opts = 
 }
 
 function resample(pts, L) {
-  const N = Math.max(8, Math.min(24, Math.round(L / 0.009) + 2));
+  const N = Math.max(8, Math.min(18, Math.round(L / 0.010) + 2));
   const out = new Array(N);
   const cum = new Float64Array(pts.length);
   for (let i = 1; i < pts.length; i++) cum[i] = cum[i - 1] + Math.sqrt((pts[i][0] - pts[i - 1][0])*(pts[i][0] - pts[i - 1][0]) + (pts[i][1] - pts[i - 1][1])*(pts[i][1] - pts[i - 1][1]) + (pts[i][2] - pts[i - 1][2])*(pts[i][2] - pts[i - 1][2]));
@@ -982,9 +986,10 @@ export function createStrandMaterial(headCenter = [0.0, 0.02, -0.01], opts = {})
         float hcov = fract(sin(dot(gl_FragCoord.xy + vRand * 97.0, vec2(12.9898, 78.233))) * 43758.5453);
         // 发量主体基本不透明（真实头发是几十层叠在一起的），只有发梢、飞发、绒毛才半透明
         float aBody = max(vCov * uCovGain, uMinAlpha);
-        float tipFade = 1.0 - 0.7 * smoothstep(0.7, 1.0, vT);
-        float thin = vW < 0.6 ? 0.55 : 1.0;
-        diffuseColor.a = clamp(aBody * tipFade * thin + (hcov - 0.5) * 0.12, 0.0, 1.0);`)
+        float tipFade = 1.0 - 0.72 * smoothstep(0.72, 1.0, vT);
+        float thin = vW < 0.6 ? 0.62 : 1.0;
+        diffuseColor.a = clamp(aBody * tipFade * thin + (hcov - 0.5) * 0.16, 0.0, 1.0);
+        if (diffuseColor.a < 0.22) discard;`)
       .replace('#include <normal_fragment_begin>', `#include <normal_fragment_begin>
         normal = normalize(vNormal);
         gHairT = normalize(vHT);`);

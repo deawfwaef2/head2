@@ -76,7 +76,7 @@ import {
 // ============================================================================
 // APPLICATION STATE
 // ============================================================================
-const STORAGE_KEY = 'cervix3d-collectibles-stage69f-hdcard-v1';
+const STORAGE_KEY = 'cervix3d-collectibles-stage69g-photostrand-v1';
 const ACCESSORY_DEFAULTS = Object.freeze({
   glassesStyle: 'none', glassesColor: '#a07857', glassesSize: 1,
   glassesOffsetY: 0, glassesOffsetZ: 0, glassesTilt: 0, glassesLensTint: 0,
@@ -768,8 +768,8 @@ function renderSpecimenPlacards(placardsList = []) {
 
   const winW = window.innerWidth;
   const winH = window.innerHeight;
-  const cardHalfW = 114;
-  const cardHalfH = 30;
+  const cardHalfW = 156;
+  const cardHalfH = 98;
   const existingCards = new Map();
   cardsEl.querySelectorAll('.specimen-placard-card').forEach((el) => {
     existingCards.set(el.dataset.placardPetId, el);
@@ -778,12 +778,7 @@ function renderSpecimenPlacards(placardsList = []) {
   const activeIds = new Set();
   const svgParts = [];
 
-  for (const item of placardsList) {
-    const col = item.collectible;
-    if (!col) continue;
-    activeIds.add(item.id);
-
-    // Apply user custom drag offset (if moved) & clamp inside screen bounds
+  const layoutItems = placardsList.filter((it) => it && it.collectible).map((item) => {
     const userOff = state.placardOffsets?.[item.id] || { dx: 0, dy: 0 };
     const hasCustomOffset = Math.abs(userOff.dx) > 1 || Math.abs(userOff.dy) > 1;
     let maxRight = winW - cardHalfW - 12;
@@ -794,8 +789,37 @@ function renderSpecimenPlacards(placardsList = []) {
         maxRight = Math.min(maxRight, rect.left - cardHalfW - 10);
       }
     }
-    const cx = Math.max(cardHalfW + 12, Math.min(maxRight, item.cardX + userOff.dx));
-    const cy = Math.max(54, Math.min(winH - cardHalfH - 28, item.cardY + userOff.dy));
+    const baseCx = hasCustomOffset ? (item.cardX + userOff.dx) : item.anchorX;
+    const baseCy = hasCustomOffset
+      ? (item.cardY + userOff.dy)
+      : Math.max(item.anchorY + cardHalfH + 18, winH - cardHalfH - 14);
+    return {
+      item,
+      hasCustomOffset,
+      maxRight,
+      cx: Math.max(cardHalfW + 12, Math.min(maxRight, baseCx)),
+      cy: Math.max(cardHalfH + 16, Math.min(winH - cardHalfH - 12, baseCy)),
+    };
+  });
+
+  // De-overlap non-custom placards horizontally so cards never stack on top of each other
+  const autoItems = layoutItems.filter((x) => !x.hasCustomOffset).sort((a, b) => a.cx - b.cx);
+  const minGap = cardHalfW * 2 + 14;
+  for (let i = 1; i < autoItems.length; i++) {
+    if (autoItems[i].cx - autoItems[i - 1].cx < minGap) {
+      autoItems[i].cx = Math.min(autoItems[i].maxRight, autoItems[i - 1].cx + minGap);
+    }
+  }
+  for (let i = autoItems.length - 2; i >= 0; i--) {
+    if (autoItems[i + 1].cx - autoItems[i].cx < minGap) {
+      autoItems[i].cx = Math.max(cardHalfW + 12, autoItems[i + 1].cx - minGap);
+    }
+  }
+
+  for (const entry of layoutItems) {
+    const { item, cx, cy } = entry;
+    const col = item.collectible;
+    activeIds.add(item.id);
 
     // Dynamic 4-Edge Brass Callout Leader Line from 3D Neck Cut (anchorX, anchorY) -> Elbow -> Nearest Card Edge
     const dxCard = cx - item.anchorX;

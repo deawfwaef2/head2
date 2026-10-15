@@ -2182,12 +2182,11 @@ input[type="text"]:focus, select:focus, textarea:focus {
 }
 
 .placard-brief-line {
-  font-size: 10px;
+  font-size: 10.5px;
   color: #e2d5c1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: 0.94;
+  white-space: normal;
+  overflow-y: auto;
+  opacity: 0.96;
 }
 
 .placard-sub-line {

@@ -183,7 +183,11 @@ attribute float aScalpD; varying float vScalpD;
 varying vec3 vHairFlow; varying vec3 vHairRadial; varying float vHairDepth;
 `;
 const HAIR_VERT_MAIN = /* glsl */ `
-transformed -= normalize(transformed - uHeadCenter) * uInset;
+{
+  float cranialMask = smoothstep(-0.025, 0.020, transformed.y);
+  float dynamicInset = uInset > 0.0 ? clamp(aScalpD * 0.55, 0.0020, 0.012) * cranialMask : 0.0;
+  transformed -= normalize(transformed - uHeadCenter) * dynamicInset;
+}
 vScalpD = aScalpD;
 {
   vec3 p = transformed;
@@ -233,7 +237,8 @@ function patchHairShader(s, o, tipsPass, shared) {
          vec3 T2 = normalize(gHairT + geometryNormal * uShift2);
          float t2 = dot(T2, H);
          float s2 = pow(sqrt(max(0.0, 1.0 - t2 * t2)), uSpec2Exp);
-         reflectedLight.directSpecular += irradiance * gHairAO * (uSpec1 * s1 + uSpec2 * s2 * gHairTint);
+         float specScale = uScalpFade > 0.0 ? 0.25 : 1.0;
+         reflectedLight.directSpecular += irradiance * gHairAO * specScale * (uSpec1 * s1 + uSpec2 * s2 * gHairTint);
        }`,
     );
   s.fragmentShader = s.fragmentShader
@@ -251,7 +256,7 @@ function patchHairShader(s, o, tipsPass, shared) {
        #endif
        gHairTint = normalize(diffuseColor.rgb + 1e-4) * 1.2;
        // 内层发丝底衬与真发丝根部亮度自然衔接，绝不压成死黑条纹
-       gHairAO = mix(0.68, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
+       gHairAO = mix(0.84, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
        diffuseColor.rgb *= gHairAO;`,
     )
     .replace(
@@ -259,17 +264,18 @@ function patchHairShader(s, o, tipsPass, shared) {
       `#include <normal_fragment_maps>
        {
          vec3 rad = normalize(vHairRadial);
+         if (dot(normal, rad) < 0.0) normal = -normal;
          normal = normalize(mix(normal, rad, uNormalBlend));
          vec3 f = normalize(vHairFlow);
          gHairT = normalize(f - normal * dot(f, normal));
        }`,
     );
-  // 发丝模式：发片底衬只保留贴近头皮的部分（距头皮 > uScalpFade 的发片抖动剔除），外层与发梢只剩真发丝 → 透光、不成“一坨”
+  // 发丝模式：发片底衬已在顶点着色器中按 aScalpD 向内收缩至真发丝后方，仅剔除远离头部的长马尾底衬，绝不在额头刘海处一刀切！
   s.fragmentShader = s.fragmentShader.replace(
     '#include <alphatest_fragment>',
     `#include <alphatest_fragment>
      if (uScalpFade > 0.0) {
-       if (vScalpD > uScalpFade) discard;
+       if (vScalpD > max(uScalpFade, 0.028)) discard;
      }`,
   );
   if (tipsPass) {

@@ -55,15 +55,15 @@ const BUILTIN_HEAD_URL = '/models/daz_asian_head_base.glb';
 const BUST_WORLD_SCALE = 115.0;
 
 export const MASTER_HAIR_DENSITIES = {
-  low:   { label: '流畅 (约 1.3 万根)', guides: 1200, childrenPerGuide: 10, fuzzPerGuide: 1.0 },
+  low:   { label: '流畅 (约 1.3 万根)', guides: 1150, childrenPerGuide: 9, fuzzPerGuide: 0.9 },
   mid:   { label: '标准 (约 2.7 万根)', guides: 1850, childrenPerGuide: 13, fuzzPerGuide: 1.35 },
   high:  { label: '高精 (约 4.8 万根)', guides: 2600, childrenPerGuide: 17, fuzzPerGuide: 1.6 },
   ultra: { label: '极致 (约 8.8 万根)', guides: 3400, childrenPerGuide: 24, fuzzPerGuide: 2.2 },
 };
 
 export const MASTER_HAIR_CONFIG = {
-  mode: 'card', // Fast 60FPS HD multi-strand wispy card pipeline (eliminates 930k-vertex lag & strand cutoff bugs)
-  density: 'mid',
+  mode: 'strand',
+  density: 'low',
   gainR: 0.48,
   gainTT: 0.42,
   gainTRT: 0.68,
@@ -89,11 +89,42 @@ export function setMasterHairConfig(patch = {}) {
 }
 
 const _strandDbs = new THREE.Vector2();
+let _interactiveCardLOD = false;
+let _interactiveLodTimer = null;
+let _pointerDownActive = false;
+
+if (typeof window !== 'undefined' && !window.__HAIR_LOD_BOUND__) {
+  window.__HAIR_LOD_BOUND__ = true;
+  const triggerInteractiveLOD = (holdMs = 160) => {
+    _interactiveCardLOD = true;
+    if (_interactiveLodTimer) clearTimeout(_interactiveLodTimer);
+    _interactiveLodTimer = setTimeout(() => {
+      if (!_pointerDownActive) _interactiveCardLOD = false;
+    }, holdMs);
+  };
+  window.addEventListener('pointerdown', () => { _pointerDownActive = true; }, { passive: true });
+  window.addEventListener('pointermove', (e) => {
+    if (_pointerDownActive || (e.buttons & 7) !== 0) triggerInteractiveLOD(150);
+  }, { passive: true });
+  window.addEventListener('pointerup', () => {
+    _pointerDownActive = false;
+    triggerInteractiveLOD(90);
+  }, { passive: true });
+  window.addEventListener('pointercancel', () => {
+    _pointerDownActive = false;
+    triggerInteractiveLOD(90);
+  }, { passive: true });
+  window.addEventListener('wheel', () => {
+    triggerInteractiveLOD(180);
+  }, { passive: true });
+}
+
 export function updateMasterStrandHairPxScale(scene, renderer, camera) {
   if (!scene || !renderer || !camera) return;
   const hpx = renderer.getDrawingBufferSize(_strandDbs).y;
   const pxScale = (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov || 24) / 2)) / Math.max(1, hpx);
-  if (scene.userData._strandUniformsVersion === globalStrandMeshVersion && scene.userData._cachedStrandUniforms) {
+  const lodChanged = scene.userData._lastCardLOD !== _interactiveCardLOD;
+  if (!lodChanged && scene.userData._strandUniformsVersion === globalStrandMeshVersion && scene.userData._cachedStrandUniforms) {
     if (scene.userData._lastStrandPxScale === pxScale) return;
     const list = scene.userData._cachedStrandUniforms;
     for (let i = 0; i < list.length; i++) list[i].uPxScale.value = pxScale;
@@ -102,11 +133,21 @@ export function updateMasterStrandHairPxScale(scene, renderer, camera) {
   }
   const list = [];
   scene.traverse((obj) => {
-    if (obj.isMesh && obj.material?.userData?.strandUniforms) {
+    if (!obj.isMesh) return;
+    if (obj.name === 'MasterStrandHairMesh') {
+      obj.visible = !_interactiveCardLOD;
+    }
+    if (obj.material?.userData?.isMasterCardHair && obj.material?.userData?.uniforms) {
+      const cu = obj.material.userData.uniforms;
+      if (cu.uInset) cu.uInset.value = _interactiveCardLOD ? 0.0 : 0.0028;
+      if (cu.uScalpFade) cu.uScalpFade.value = _interactiveCardLOD ? 0.0 : 0.028;
+    }
+    if (obj.material?.userData?.strandUniforms) {
       obj.material.userData.strandUniforms.uPxScale.value = pxScale;
       list.push(obj.material.userData.strandUniforms);
     }
   });
+  scene.userData._lastCardLOD = _interactiveCardLOD;
   scene.userData._lastStrandPxScale = pxScale;
   scene.userData._strandUniformsVersion = globalStrandMeshVersion;
   scene.userData._cachedStrandUniforms = list;
@@ -773,7 +814,7 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
     const effBangsLen = frontBangsStyle === 'forehead_bare' ? Math.min(bangsLen, -0.42) : (frontBangsStyle === 'choppy_micro' ? Math.min(bangsLen, -0.25) : bangsLen);
     const effBangsPart = frontBangsStyle === 'forehead_bare' ? Math.max(bangsPart, 0.68) : (frontBangsStyle === 'curtain_part' ? Math.max(bangsPart, 0.36) : bangsPart);
     const effSideburn = sideLocksStyle === 'tucked_ear' ? Math.min(sideburn, -0.46) : sideburn;
-    if (isStrandMesh) {
+    if (isStrandMesh || child.material?.userData?.isMasterCardHair) {
       const u = child.material?.userData?.strandUniforms;
       if (child.name === 'BabyHairWisps') return;
       if (u?.uHairFineTune0 && u?.uHairFineTune1 && u?.uHairFineTune2) {
@@ -2124,7 +2165,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
   rootGroup.userData.customHairType = config.customHairType || null;
   const hairUrl = config.customHairUrl || `/models/${resolvedStyle}.glb`;
   const isCustomObj = Boolean(config.customHairUrl && (config.customHairType === 'obj' || String(config.customHairUrl).toLowerCase().endsWith('.obj')));
-  const useStrandMode = Boolean(typeof window !== 'undefined' && window.__FORCE_STRAND_HAIR__ && !config.customHairUrl && hairRenderMode === 'strand');
+  const useStrandMode = Boolean(!config.customHairUrl && hairRenderMode === 'strand');
 
   try {
     let loadedScene = null;
@@ -2285,11 +2326,11 @@ export async function attachRealHairModel(rootGroup, config = {}) {
           coreMat.polygonOffsetFactor = 4;
           coreMat.polygonOffsetUnits = 4;
           if (hMats.shared) {
-            hMats.shared.uScalpFade.value = 0.0095;
+            hMats.shared.uScalpFade.value = 0.028;
             hMats.shared.uInset.value = 0.0028;
           }
-          coreMat.alphaTest = 0.50;
-          coreMat.color.setRGB(strandRgb[0] * 0.92, strandRgb[1] * 0.92, strandRgb[2] * 0.92);
+          coreMat.alphaTest = 0.32;
+          coreMat.color.setRGB(strandRgb[0] * 0.95, strandRgb[1] * 0.95, strandRgb[2] * 0.95);
           return coreMat;
         }
         const material = new THREE.MeshPhysicalMaterial({
@@ -2536,10 +2577,10 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
     hairGroup.traverse((child) => {
       if (child.isMesh && child.name !== 'ScalpRootFeatherCap') {
         for (const mat of Array.isArray(child.material) ? child.material : [child.material]) {
-          if (mat?.userData?.isMasterStrandHair) {
+          if (mat?.userData?.isMasterStrandHair || mat?.userData?.strandUniforms) {
             mat.color.setRGB(strandRgb[0], strandRgb[1], strandRgb[2]);
           } else if (mat?.userData?.isMasterCardHair) {
-            mat.color.setRGB(strandRgb[0] * 0.3, strandRgb[1] * 0.3, strandRgb[2] * 0.3);
+            mat.color.setRGB(strandRgb[0] * 0.95, strandRgb[1] * 0.95, strandRgb[2] * 0.95);
           } else if (mat?.userData?.builtInHair) {
             mat.color.copy(dispCol);
           }
