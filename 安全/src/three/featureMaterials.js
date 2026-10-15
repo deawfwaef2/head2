@@ -56,30 +56,74 @@ export function upgradeEyeMaterial(src) {
          float upper = smoothstep(0.05, 0.62, q.y);            // 上眼睑阴影
          float lower = smoothstep(-0.25, -0.7, q.y) * 0.45;    // 下眼睑轻微阴影
          float corner = smoothstep(0.35, 0.85, abs(q.x)) * 0.6; // 内外眼角
-         float occ = clamp(upper + lower + corner, 0.0, 1.0) * uEyeOcc;
+         float lidLine = smoothstep(0.28, 0.5, q.y) * 0.55;      // 上睑缘接触阴影（睫毛根投在眼球上的那条暗线）
+         float occ = clamp(upper + lower + corner + lidLine, 0.0, 1.0) * uEyeOcc;
          diffuseColor.rgb *= mix(vec3(1.0), vec3(0.42, 0.36, 0.35), occ);
          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.05, 0.86, 0.84), corner * 0.6 * uEyeOcc); // 眼角湿润粉红
        }`,
     );
   };
-  m.customProgramCacheKey = () => 'photoreal-eye-v2';
+  m.customProgramCacheKey = () => 'photoreal-eye-v3';
   return m;
 }
 
-export function upgradeLashMaterial(src) {
+export const LASH_DEFAULTS = { lashDensity: 1.0, lashLower: 0.5, lashDark: 0.9, lashLine: 0.6 };
+
+/**
+ * 睫毛（v3）。旧版两个 bug 让睫毛几乎完全不可见：
+ *  1) 贴图里每根睫毛只有 1~2px 宽，mipmap 平均后 alpha < alphaTest(0.14) → 整根被丢弃，只剩根部几个点；
+ *  2) 下睫毛再乘 0.18 → 0.62×0.9×0.18≈0.10 < 0.14 → 下睫毛全部丢弃。
+ * 新版：负 LOD 偏移采样 + 邻域 max 保留细丝，alpha 用 smoothstep 抬升；alphaTest 降到 0.02 只裁掉空白；
+ * 根部更浓（睫毛线 / 天然眼线），下睫毛按强度淡化但不丢弃。所有强度走 uniform，可在效果总线里开关/连线。
+ */
+export function upgradeLashMaterial(src, eyeY = 0) {
   const m = new THREE.MeshStandardMaterial({
     name: 'PhotorealLash',
     map: src.map || null,
-    color: new THREE.Color(0.11, 0.09, 0.085),
-    roughness: 0.55,
+    color: new THREE.Color(1, 1, 1),
+    roughness: 0.48,
     transparent: true,
-    opacity: 0.9,
-    alphaTest: 0.14,
+    opacity: 1,
+    alphaTest: 0.02,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
-  if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+  if (m.map) { m.map.colorSpace = THREE.SRGBColorSpace; m.map.anisotropy = 8; m.map.needsUpdate = true; }
+  m.userData.lashUniforms = {
+    uEyeY: { value: eyeY }, uLashDensity: { value: LASH_DEFAULTS.lashDensity }, uLashLower: { value: LASH_DEFAULTS.lashLower },
+    uLashDark: { value: LASH_DEFAULTS.lashDark }, uLashLine: { value: LASH_DEFAULTS.lashLine },
+  };
+  m.onBeforeCompile = (s) => {
+    Object.assign(s.uniforms, m.userData.lashUniforms);
+    s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying float vLashY;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLashY = transformed.y;');
+    s.fragmentShader = s.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vLashY; uniform float uEyeY, uLashDensity, uLashLower, uLashDark, uLashLine;')
+      .replace('#include <map_fragment>', `
+      #ifdef USE_MAP
+        vec2 lpx = vec2(1.0 / 512.0);
+        float la = texture(map, vMapUv, -1.5).a;
+        la = max(la, 0.8 * texture(map, vMapUv + vec2(lpx.x, 0.0), -1.5).a);
+        la = max(la, 0.8 * texture(map, vMapUv - vec2(lpx.x, 0.0), -1.5).a);
+        float lblur = texture(map, vMapUv, 2.5).a;               // 粗 mip：睫毛密集处（根部）
+        float lashA = smoothstep(0.02, 0.32, la);
+        float rootA = smoothstep(0.08, 0.35, lblur) * uLashLine;  // 根部连成一条细细的睫毛线
+        float upper = smoothstep(uEyeY - 0.004, uEyeY + 0.001, vLashY);
+        float a = max(lashA, rootA * 0.85) * uLashDensity * mix(uLashLower, 1.0, upper);
+        diffuseColor.rgb = mix(vec3(0.075, 0.06, 0.052), vec3(0.012, 0.009, 0.008), uLashDark);
+        diffuseColor.a = clamp(a, 0.0, 1.0);
+      #endif`);
+  };
+  m.customProgramCacheKey = () => 'photoreal-lash-v3';
   return m;
+}
+
+export function setLashParams(m, p) {
+  const u = m?.userData?.lashUniforms; if (!u) return;
+  if (p.eyeY != null) u.uEyeY.value = p.eyeY;
+  if (p.lashDensity != null) u.uLashDensity.value = p.lashDensity;
+  if (p.lashLower != null) u.uLashLower.value = p.lashLower;
+  if (p.lashDark != null) u.uLashDark.value = p.lashDark;
+  if (p.lashLine != null) u.uLashLine.value = p.lashLine;
 }
 
 export function upgradeBrowMaterial(src) {
@@ -96,9 +140,11 @@ export function upgradeBrowMaterial(src) {
     polygonOffsetFactor: -2,
   });
   if (m.map) m.map.colorSpace = THREE.SRGBColorSpace;
+  m.userData.browU = { uBrowBase: { value: 1 } };
   // 原眉毛贴图 alpha 只有 0/224 两档 → 边缘像贴纸。这里对真实贴图做多点采样羽化，边缘自然过渡
   m.onBeforeCompile = (s) => {
-    s.fragmentShader = s.fragmentShader.replace(
+    Object.assign(s.uniforms, m.userData.browU);
+    s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uBrowBase;').replace(
       '#include <map_fragment>',
       `#ifdef USE_MAP
          vec4 bt = texture2D(map, vMapUv);
@@ -108,11 +154,11 @@ export function upgradeBrowMaterial(src) {
          a /= 25.0;
          float soft = smoothstep(0.15, 0.95, a) * 0.8 + bt.a * 0.2;
          diffuseColor.rgb *= mix(vec3(0.16, 0.12, 0.105), bt.rgb, 0.35);
-         diffuseColor.a *= soft * 0.78;
+         diffuseColor.a *= soft * 0.78 * uBrowBase;
        #endif`,
     );
   };
-  m.customProgramCacheKey = () => 'photoreal-brow-v2';
+  m.customProgramCacheKey = () => 'photoreal-brow-v3';
   m.color.setRGB(1, 1, 1);
   return m;
 }

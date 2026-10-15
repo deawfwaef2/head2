@@ -75,6 +75,14 @@ export const EFFECT_REGISTRY = [
   R('post.focus', 'lens', 'post', 'focus', '手动对焦距离', 0.4, 2.2, 0.01, 1.05),
   // 角色材质
   R('char.eyeOcc', 'char', 'char', 'eyeOcc', '眼部遮蔽（眼睑软阴影）', 0, 1.2, 0.01, 0),
+  T('char.lashStrands', 'char', 'char', 'lashStrands', '程序化真实睫毛（替换旧贴片）'),
+  R('char.lashDensity', 'char', 'char', 'lashDensity', '睫毛浓密度', 0, 2, 0.01, 0),
+  R('char.lashLower', 'char', 'char', 'lashLower', '下睫毛强度', 0, 1, 0.01, 0),
+  R('char.lashDark', 'char', 'char', 'lashDark', '睫毛深浅（棕→黑）', 0, 1, 0.01, 0),
+  R('char.lashLine', 'char', 'char', 'lashLine', '睫毛根线（天然眼线）', 0, 1.5, 0.01, 0),
+  T('char.browStrands', 'char', 'char', 'browStrands', '程序化真实眉毛（根根分明）'),
+  R('char.browDensity', 'char', 'char', 'browDensity', '眉丝浓密度', 0, 2, 0.01, 0),
+  R('char.browBase', 'char', 'char', 'browBase', '眉毛底色（原贴图）', 0, 1, 0.01, 0),
   R('char.hairShine', 'char', 'char', 'hairShine', '发丝光泽（R/TRT 高光）', 0, 2.5, 0.01, 0),
   R('char.hairBack', 'char', 'char', 'hairBack', '发丝逆光透射（TT）', 0, 3, 0.01, 0),
   // 渲染

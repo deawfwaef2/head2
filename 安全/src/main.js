@@ -5,7 +5,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { createStudioRig, createBackdrop, LIGHT_PRESETS } from './three/studioLighting.js';
 import { upgradeSkinMaterial, setSkinParams } from './three/skinMaterial.js';
-import { upgradeEyeMaterial, upgradeLashMaterial, upgradeBrowMaterial, buildHairMaterials, applyHairColor } from './three/featureMaterials.js';
+import { buildLashGeometry, buildBrowGeometry, createLashStrandMaterial, setLashStrandParams } from './three/lashStrands.js';
+import { upgradeEyeMaterial, upgradeLashMaterial, setLashParams, upgradeBrowMaterial, buildHairMaterials, applyHairColor } from './three/featureMaterials.js';
 import { createPostChain, createAccumulator, FILM_PRESETS, POST_DEFAULTS } from './three/postChain.js';
 import { createDisplayStand, STAND_STYLES } from './three/displayStand.js';
 import { BACKGROUNDS, backgroundTexture } from './three/backgrounds.js';
@@ -88,7 +89,7 @@ function defaultCharacter() {
     expr: { smile: 0.0, serene: 0.15, browUp: 0 },
     skin: 'cn_scholar_natural', brow: 'eyebrow010',
     hair: HAIRS[0].id, hairColor: 'natural', hairCustom: '',
-    hairShine: 1, hairBack: 1,
+    hairShine: 1, hairBack: 1, lashStrands: true, lashDensity: 1, lashLower: 0.65, lashDark: 0.9, lashLine: 0.6, browStrands: true, browDensity: 1, browBase: 0.45,
     stand: 'obsidian',
     light: 'windowGobo', lightOv: { azimuth: 0, elevation: 0, keyMul: 1, softMul: 1, kelvin: 0, rimMul: 1, fillMul: 1, envMul: 1, exposureMul: 1, gobo: 'preset', goboScale: 1, goboSoft: 0.5, bgMul: 0.55, shadowStrength: 0.8, shadowSoft: 1.3 },
     skinP: { scatter: 1.15, roughness: 0.52, normalScale: 0.3, sheen: 0.1, dualLobe: 0.07, albedoSaturation: 1.22, micro: 0.55, breakup: 0.5, mottle: 0.5, regional: 0.7, translucency: 0.8, delight: 0.75, normalHP: 1 },
@@ -113,7 +114,7 @@ function saveStore() {
 let ch = (store.current && store.items.find((x) => x.id === store.current)) ? structuredClone(store.items.find((x) => x.id === store.current)) : defaultCharacter();
 ch = { ...defaultCharacter(), ...ch, lightOv: { ...defaultCharacter().lightOv, ...(ch.lightOv || {}) }, skinP: { ...defaultCharacter().skinP, ...(ch.skinP || {}) } };
 const S = store.settings;
-function normalizeChar(c) { const d = defaultCharacter(); if (c.skinP && c.skinP.normalScale === 0.8) c.skinP.normalScale = 0.3; /* 旧默认值会放大法线贴图里的脏斑 */ c.hairline = { ...d.hairline, ...(c.hairline || {}) }; c.fx = { bypass: { ...(c.fx?.bypass || {}) }, links: [...(c.fx?.links || [])] }; return c; }
+function normalizeChar(c) { const d = defaultCharacter(); if (c.skinP && c.skinP.normalScale === 0.8) c.skinP.normalScale = 0.3; /* 旧默认值会放大法线贴图里的脏斑 */ c.hairline = { ...d.hairline, ...(c.hairline || {}) }; for (const k of ['browStrands', 'browDensity', 'browBase', 'lashStrands', 'lashDensity', 'lashLower', 'lashDark', 'lashLine', 'eyeOcc', 'hairShine', 'hairBack']) if (c[k] == null) c[k] = d[k]; c.fx = { bypass: { ...(c.fx?.bypass || {}) }, links: [...(c.fx?.links || [])] }; return c; }
 normalizeChar(ch);
 
 // ---------------- 效果总线：所有画面效果 = 可开关 / 可调 / 可连线的节点 ----------------
@@ -151,10 +152,10 @@ function applyScope(scope, heavy) {
   if (scope === 'post') repost();
   else if (scope === 'skin' || scope === 'hairline') { applySkinParams(); if (heavy) { clearTimeout(babyT); babyT = setTimeout(buildBabyHair, 200); } invalidate(); }
   else if (scope === 'light') relight();
-  else if (scope === 'char') { (parts.eyes || []).forEach((e) => setupEyeOcclusion(e.material)); applyHairLook(); }
+  else if (scope === 'char') { (parts.eyes || []).forEach((e) => setupEyeOcclusion(e.material)); applyLashLook(); applyHairLook(); }
   else if (scope === 'render') { applyRenderToggles(); }
 }
-window.SafeBust = { fx: fxBus, get character() { return ch; }, settings: S, invalidate: () => invalidate(), registry: EFFECT_REGISTRY };
+window.SafeBust = { debug: { get parts() { return parts; }, get scene() { return scene; }, get camera() { return camera; }, get renderer() { return renderer; }, get head() { return head; }, renderNow: (n = 1) => { accum?.reset(); for (let i = 0; i < n; i++) renderFrame(true); } }, fx: fxBus, get character() { return ch; }, settings: S, invalidate: () => invalidate(), registry: EFFECT_REGISTRY };
 
 // ---------------- 渲染器 ----------------
 const canvas = $('c');
@@ -227,6 +228,7 @@ async function applyBrow(id) {
   if (info.uv && g.attributes.uv.array.length === info.uv.length) { g.attributes.uv.array.set(info.uv); g.attributes.uv.needsUpdate = true; }
   origMats.get(mesh).map = browCache[id];
   if (mesh.userData.after) { mesh.userData.after.map = browCache[id]; mesh.userData.after.needsUpdate = true; }
+  if (eyeInfo) buildBrowStrands();
 }
 
 async function loadHead() {
@@ -263,6 +265,52 @@ function setupFaceAnchors() {
   }
   u.uFaceEyeL.value.copy(eyeInfo.L); u.uFaceEyeR.value.copy(eyeInfo.R); u.uFaceNose.value.copy(noseTip);
 }
+let lashMesh = null; let lashMat = null; let browMesh = null;
+function buildLashStrands() {
+  if (!parts.skin || !eyeInfo) return;
+  if (lashMesh) { lashMesh.parent?.remove(lashMesh); lashMesh.geometry.dispose(); lashMesh = null; }
+  const res = buildLashGeometry(parts.skin, [{ c: eyeInfo.L }, { c: eyeInfo.R }], eyeInfo.r, { guide: parts.lashes });
+  window.__LASH_INFO__ = res?.info;
+  if (!res?.geometry) return;
+  lashMat ||= createLashStrandMaterial();
+  lashMesh = new THREE.Mesh(res.geometry, lashMat);
+  lashMesh.name = 'LashStrands'; lashMesh.renderOrder = 3; lashMesh.castShadow = false; lashMesh.receiveShadow = true;
+  const msrc = parts.lashes || parts.skin; // morph 增量取自向导网格 → 字典/权重也用它的（共享数组：眨眼/表情自动同步）
+  lashMesh.morphTargetDictionary = msrc.morphTargetDictionary;
+  lashMesh.morphTargetInfluences = msrc.morphTargetInfluences;
+  lashMesh.position.copy(parts.skin.position); lashMesh.quaternion.copy(parts.skin.quaternion); lashMesh.scale.copy(parts.skin.scale);
+  parts.skin.parent.add(lashMesh);
+  buildBrowStrands();
+}
+function buildBrowStrands() {
+  if (browMesh) { browMesh.parent?.remove(browMesh); browMesh.geometry.dispose(); browMesh = null; }
+  const b = parts.brows; const map = b && (origMats.get(b)?.map);
+  if (b && map?.image && lashMat) {
+    const res = buildBrowGeometry(b, alphaSamplerFromTexture(map));
+    window.__BROW_INFO__ = res?.info;
+    if (res?.geometry) {
+      browMesh = new THREE.Mesh(res.geometry, lashMat);
+      browMesh.name = 'BrowStrands'; browMesh.renderOrder = 3; browMesh.castShadow = false; browMesh.receiveShadow = true;
+      browMesh.morphTargetDictionary = b.morphTargetDictionary; browMesh.morphTargetInfluences = b.morphTargetInfluences;
+      browMesh.position.copy(b.position); browMesh.quaternion.copy(b.quaternion); browMesh.scale.copy(b.scale);
+      b.parent.add(browMesh);
+    }
+  }
+  applyLashLook();
+}
+function applyLashLook() {
+  const fx = (id, d) => { const v = fxBus.effective(id); return v == null ? d : v; };
+  const p = { eyeY: eyeInfo ? (eyeInfo.L.y + eyeInfo.R.y) / 2 : 0, lashDensity: fx('char.lashDensity', 1), lashLower: fx('char.lashLower', 0.5), lashDark: fx('char.lashDark', 0.9), lashLine: fx('char.lashLine', 0.6) };
+  const m = parts.lashes?.userData?.after; if (m) setLashParams(m, p);
+  if (lashMat) setLashStrandParams(lashMat, p);
+  const after = !compare; const strands = after && fxOn('char.lashStrands') && !!lashMesh;
+  if (lashMesh) lashMesh.visible = strands;
+  if (parts.lashes) parts.lashes.visible = !strands;
+  const bs = after && fxOn('char.browStrands') && !!browMesh;
+  if (browMesh) browMesh.visible = bs;
+  if (lashMat) setLashStrandParams(lashMat, { browDensity: fx('char.browDensity', 1) });
+  const bm = parts.brows?.userData?.after; if (bm?.userData?.browU) bm.userData.browU.uBrowBase.value = bs ? fx('char.browBase', 0.45) : 1;
+}
 function setupEyeOcclusion(mat) {
   const u = mat?.userData?.eyeUniforms; if (!u || !eyeInfo) return;
   u.uEyeL.value.copy(eyeInfo.L); u.uEyeR.value.copy(eyeInfo.R); u.uEyeRad.value = eyeInfo.r; u.uEyeOcc.value = fxBus.effective('char.eyeOcc') ?? 0.75;
@@ -279,6 +327,7 @@ function applyFace() {
   if (r) { eyeInfo.L.copy(eyeInfo.L0).add(new THREE.Vector3(...r.dL)); eyeInfo.R.copy(eyeInfo.R0).add(new THREE.Vector3(...r.dR)); }
   noseTip = null; setupFaceAnchors();
   for (const e of parts.eyes || []) if (e.material?.userData?.eyeUniforms) setupEyeOcclusion(e.material);
+  buildLashStrands();
 }
 function setMorph(name, v) {
   gltfHead.scene.traverse((o) => {
@@ -425,22 +474,11 @@ function applyMaterials() {
   }
   if (parts.lashes) {
     const o = origMats.get(parts.lashes);
-    if (after && !parts.lashes.userData.after) {
-      const lm = upgradeLashMaterial(o);
-      // 下睫毛：真人很细很短，这里按眼球中心以下逐渐淡化（避免像往下流的线）
-      const eyeY = eyeInfo ? (eyeInfo.L.y + eyeInfo.R.y) / 2 : 0;
-      lm.onBeforeCompile = (sh) => {
-        sh.uniforms.uEyeY = { value: eyeY };
-        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vLashY;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvLashY = transformed.y;');
-        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vLashY; uniform float uEyeY;')
-          .replace('#include <alphatest_fragment>', 'diffuseColor.a *= mix(0.18, 1.0, smoothstep(uEyeY - 0.004, uEyeY + 0.001, vLashY));\n#include <alphatest_fragment>');
-      };
-      lm.customProgramCacheKey = () => 'photoreal-lash-v2';
-      parts.lashes.userData.after = lm;
-    }
+    if (after && !parts.lashes.userData.after) parts.lashes.userData.after = upgradeLashMaterial(o);
     parts.lashes.material = after ? parts.lashes.userData.after : o;
   }
   if (parts.brows) { const o = origMats.get(parts.brows); parts.brows.material = after ? (parts.brows.userData.after ||= upgradeBrowMaterial(o)) : o; parts.brows.castShadow = false; }
+  applyLashLook();
   const strandOn = after && S.hairMode === 'strand' && !!strandMesh;
   for (const m of hairMeshes) {
     if (m.userData.afterOnly) m.visible = after && !strandOn;
@@ -641,6 +679,8 @@ function buildStudio() {
   const skins = Object.keys(gltfHead.parser.json.extras?.realWebAssets?.skins || {}).filter((s) => SKIN_LABELS[s]);
   select(C, '肤质贴图', skins.map((s) => [s, SKIN_LABELS[s]]), () => ch.skin, async (v) => { ch.skin = v; await applySkinTexture(); applyMaterials(); });
   fxCtl(C, 'char.eyeOcc');
+  fxCtl(C, 'char.lashStrands'); fxCtl(C, 'char.lashDensity'); fxCtl(C, 'char.lashLower'); fxCtl(C, 'char.lashDark'); fxCtl(C, 'char.lashLine');
+  fxCtl(C, 'char.browStrands'); fxCtl(C, 'char.browDensity'); fxCtl(C, 'char.browBase');
   select(C, '眉形', Object.keys(gltfHead.parser.json.extras?.realWebAssets?.eyebrows || {}).map((b) => [b, BROW_LABELS[b] || b]), () => ch.brow, async (v) => { ch.brow = v; await applyBrow(v); });
 
   const Hh = section(P, '💇 发型发色');
@@ -882,7 +922,7 @@ const _dbs = new THREE.Vector2();
 const blink = { next: 2.5, t: -1 };
 function accumTarget() { return QA ? Math.min(6, qProfile().accum) : qProfile().accum; }
 function renderFrame(forceAccum) {
-  { const hpx = renderer.getDrawingBufferSize(_dbs).y; const pxs = { pxScale: 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.max(1, hpx) }; if (strandMat) setStrandParams(strandMat, pxs); if (babyMat) setStrandParams(babyMat, pxs); }
+  { const hpx = renderer.getDrawingBufferSize(_dbs).y; const pxs = { pxScale: 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) / Math.max(1, hpx) }; if (strandMat) setStrandParams(strandMat, pxs); if (babyMat) setStrandParams(babyMat, pxs); if (lashMat) lashMat.userData.u.uPxScale.value = pxs.pxScale; }
   if (post && fxOn('post.autoFocus') && eyeInfo) {
     const eyeW = head.localToWorld(eyeInfo.L.clone().add(eyeInfo.R).multiplyScalar(0.5));
     const d = camera.position.distanceTo(eyeW); if (Math.abs(post.bokeh.uniforms.focus.value - d) > 1e-4) post.bokeh.uniforms.focus.value = d;

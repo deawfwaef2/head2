@@ -4,6 +4,10 @@
 import * as THREE from 'three';
 import { MPFB_SPARSE_HEAD_TARGETS, EAST_ASIAN_ARCHETYPE_MPFB_RECIPES } from '../data/eastAsianHeadTargets.js';
 
+// 注意：睫毛/眼球等网格的 position 可能是交错缓冲（InterleavedBufferAttribute），.array 里混着法线/UV，
+// 绝不能按 i*3 直接读写数组，必须用 getX/setXYZ。
+function readPos(attr) { const out = new Float32Array(attr.count * 3); for (let i = 0; i < attr.count; i++) { out[i * 3] = attr.getX(i); out[i * 3 + 1] = attr.getY(i); out[i * 3 + 2] = attr.getZ(i); } return out; }
+function markUpdate(attr) { if (attr.isInterleavedBufferAttribute) attr.data.needsUpdate = true; else attr.needsUpdate = true; }
 function nearestMap(geomPos, skinBase, M) {
   // M: 把部件局部坐标变到皮肤局部坐标的矩阵
   const n = geomPos.count, out = new Int32Array(n); const v = new THREE.Vector3();
@@ -43,6 +47,7 @@ export function recipeWeights(archetype, strength = 1) {
 export function applyFaceTargets(parts, weights, anchors) {
   const skin = parts.skin; if (!skin) return;
   const g = skin.geometry; const pa = g.attributes.position;
+  if (pa.isInterleavedBufferAttribute) { g.setAttribute('position', new THREE.BufferAttribute(readPos(pa), 3)); return applyFaceTargets(parts, weights, anchors); }
   if (!skin.userData.mpfbBase) skin.userData.mpfbBase = new Float32Array(pa.array);
   const base = skin.userData.mpfbBase; const n = pa.count;
   const D = new Float32Array(n * 3);
@@ -65,7 +70,7 @@ export function applyFaceTargets(parts, weights, anchors) {
   pa.needsUpdate = true; g.computeBoundingSphere(); g.computeBoundingBox();
   // 法线：原法线 + (新形状法线 − 原形状法线)。不直接 computeVertexNormals，避免 UV 接缝处出现硬边
   const na = g.attributes.normal;
-  if (na) {
+  if (na && !na.isInterleavedBufferAttribute) {
     const idx = g.index ? g.index.array : Uint32Array.from({ length: n }, (_, i) => i);
     if (!skin.userData.mpfbN0) { skin.userData.mpfbN0 = new Float32Array(na.array); skin.userData.mpfbNb = vertexNormals(base, idx, n); }
     const N0 = skin.userData.mpfbN0, Nb = skin.userData.mpfbNb, Nn = vertexNormals(pa.array, idx, n);
@@ -80,25 +85,25 @@ export function applyFaceTargets(parts, weights, anchors) {
   // 睫毛 / 眉毛：跟随最近皮肤顶点
   for (const part of [parts.lashes, parts.brows]) {
     if (!part) continue; const pg = part.geometry; const pp = pg.attributes.position;
-    if (!pg.userData.mpfbBase) { pg.userData.mpfbBase = new Float32Array(pp.array); pg.userData.mpfbMap = nearestMap(pp, base, toSkin(part)); }
+    if (!pg.userData.mpfbBase) { pg.userData.mpfbBase = readPos(pp); pg.userData.mpfbMap = nearestMap(pp, base, toSkin(part)); }
     const pb = pg.userData.mpfbBase, map = pg.userData.mpfbMap;
     const M = toSkin(part); const R = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().copy(M).invert()); const v = new THREE.Vector3();
     for (let i = 0; i < pp.count; i++) {
       const j = map[i]; let dx = 0, dy = 0, dz = 0;
       if (j >= 0) { v.set(D[j * 3], D[j * 3 + 1], D[j * 3 + 2]).applyMatrix3(R); dx = v.x; dy = v.y; dz = v.z; }
-      pp.array[i * 3] = pb[i * 3] + dx; pp.array[i * 3 + 1] = pb[i * 3 + 1] + dy; pp.array[i * 3 + 2] = pb[i * 3 + 2] + dz;
+      pp.setXYZ(i, pb[i * 3] + dx, pb[i * 3 + 1] + dy, pb[i * 3 + 2] + dz);
     }
-    pp.needsUpdate = true; pg.computeBoundingSphere();
+    markUpdate(pp); pg.computeBoundingSphere();
   }
   // 眼球：只随“眼距”平移（与主项目一致）；眼睑形变不带动眼球，否则眼球会错位
   if (parts.eyes?.length) {
     const dx = (anchors?.eyeSpacing || 0) * 0.00145;
     for (const e of parts.eyes) {
       const eg = e.geometry; const ep = eg.attributes.position;
-      if (!eg.userData.mpfbBase) eg.userData.mpfbBase = new Float32Array(ep.array);
+      if (!eg.userData.mpfbBase) eg.userData.mpfbBase = readPos(ep);
       const eb = eg.userData.mpfbBase;
-      for (let i = 0; i < ep.count; i++) { ep.array[i * 3] = eb[i * 3] + (eb[i * 3] >= 0 ? dx : -dx); ep.array[i * 3 + 1] = eb[i * 3 + 1]; ep.array[i * 3 + 2] = eb[i * 3 + 2]; }
-      ep.needsUpdate = true; eg.computeBoundingSphere();
+      for (let i = 0; i < ep.count; i++) ep.setXYZ(i, eb[i * 3] + (eb[i * 3] >= 0 ? dx : -dx), eb[i * 3 + 1], eb[i * 3 + 2]);
+      markUpdate(ep); eg.computeBoundingSphere();
     }
     return { dL: [-dx, 0, 0], dR: [dx, 0, 0] };
   }
