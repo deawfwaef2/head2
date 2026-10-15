@@ -1738,8 +1738,9 @@
               <button type="button" class="studio-subtab-btn" data-studio-subtab="color">🎨 颜色微调</button>
               <button type="button" class="studio-subtab-btn" data-studio-subtab="texture">🖼️ 贴图/肤质</button>
               <button type="button" class="studio-subtab-btn" data-studio-subtab="hair">💇‍♀️ 发型设计</button>
+              <button type="button" class="studio-subtab-btn" data-studio-subtab="accessories">🕶️ 眼镜/帽子</button>
               <button type="button" class="studio-subtab-btn" data-studio-subtab="save">🩸 断面/保存</button>
-              <button type="button" class="studio-subtab-btn expand-all-btn" id="btn-studio-expand-all" title="展开或折叠全部6个调参模块">📑 全部展开</button>
+              <button type="button" class="studio-subtab-btn expand-all-btn" id="btn-studio-expand-all" title="展开或折叠全部7个调参模块">📑 全部展开</button>
             </div>
 
             <!-- SUB-TAB 1: BASE PRESETS, SINGLE-MODEL ARCHETYPES, MULTI-HEAD BLENDER & FORENSIC EXPRESSIONS -->
@@ -2721,7 +2722,48 @@
               </div>
             </div>
 
-            <!-- SUB-TAB 6: ANATOMICAL CROSS-SECTION & DOSSIER REGISTRATION -->
+            <!-- SUB-TAB 6: ACTUAL 3D EYEGLASSES AND HATS -->
+            <div class="card-block studio-subtab-panel" data-subtab-panel="accessories">
+              <h3>🕶️ 模块 6：眼镜与帽子 · 真实 3D 配件</h3>
+              <p style="font-size:12px;color:#a9bfce;line-height:1.7;margin:4px 0 14px;">镜框、镜片、镜腿、鼻托与帽身都是可旋转的三维网格，不是贴在照片上的图案。配件保存在人物档案里并随桌宠出现。以项目内置头模为基准；高丸子头等极端发型请用高度/大小滑杆手动避让。</p>
+              <div class="control-group compact">
+                <h4 style="margin:6px 0;color:#ebc98f;">眼镜 · 款式与佩戴位置</h4>
+                <div class="control-group compact">
+                  <label for="sel-glasses-style">选择眼镜</label>
+                  <select id="sel-glasses-style">
+                    <option value="none">不戴眼镜</option>
+                    <option value="wire_oval">轻金属椭圆细框</option>
+                    <option value="acetate_square">琥珀板材方框</option>
+                    <option value="aviator">复古飞行员双梁</option>
+                  </select>
+                </div>
+                <label style="display:inline-flex;gap:9px;align-items:center;font-size:12px;">镜框颜色 <input type="color" id="col-glasses-frame" value="#a07857" /></label>
+                <div class="slider-row"><span>镜框整体大小</span><input type="range" id="acc-glasses-size" min="0.82" max="1.18" step="0.01" value="1" /><span id="val-acc-glasses-size">100%</span></div>
+                <div class="slider-row"><span>眼镜上下位置</span><input type="range" id="acc-glasses-height" min="-9" max="9" step="1" value="0" /><span id="val-acc-glasses-height">0 mm</span></div>
+                <div class="slider-row"><span>眼镜前后贴合</span><input type="range" id="acc-glasses-depth" min="-9" max="9" step="1" value="0" /><span id="val-acc-glasses-depth">0 mm</span></div>
+                <div class="slider-row"><span>镜架俯仰角度</span><input type="range" id="acc-glasses-tilt" min="-12" max="12" step="1" value="0" /><span id="val-acc-glasses-tilt">0°</span></div>
+                <div class="slider-row"><span>镜片深色渐变（0 = 透明）</span><input type="range" id="acc-glasses-tint" min="0" max="0.8" step="0.02" value="0" /><span id="val-acc-glasses-tint">0%</span></div>
+              </div>
+              <div class="control-group compact" style="margin-top:14px;">
+                <h4 style="margin:6px 0;color:#ebc98f;">帽子 · 与发型贴合</h4>
+                <div class="control-group compact">
+                  <label for="sel-hat-style">选择帽子</label>
+                  <select id="sel-hat-style">
+                    <option value="none">不戴帽子</option>
+                    <option value="beret">软呢贝雷帽</option>
+                    <option value="beanie">针织翻边冷帽</option>
+                    <option value="bucket">织物宽檐渔夫帽</option>
+                  </select>
+                </div>
+                <label style="display:inline-flex;gap:9px;align-items:center;font-size:12px;">帽身颜色 <input type="color" id="col-hat-fabric" value="#785670" /></label>
+                <div class="slider-row"><span>帽子整体大小</span><input type="range" id="acc-hat-size" min="0.86" max="1.19" step="0.01" value="1" /><span id="val-acc-hat-size">100%</span></div>
+                <div class="slider-row"><span>帽沿相对头发高度</span><input type="range" id="acc-hat-height" min="-14" max="14" step="1" value="0" /><span id="val-acc-hat-height">0 mm</span></div>
+                <div class="slider-row"><span>帽身侧倾角度</span><input type="range" id="acc-hat-tilt" min="-14" max="14" step="1" value="0" /><span id="val-acc-hat-tilt">0°</span></div>
+              </div>
+              <button type="button" class="chip-btn" id="btn-remove-face-accessories" style="margin-top:12px;">↺ 摘下眼镜与帽子</button>
+            </div>
+
+            <!-- SUB-TAB 7: ANATOMICAL CROSS-SECTION & DOSSIER REGISTRATION -->
             <div class="card-block highlight-card studio-subtab-panel" data-subtab-panel="save">
               <h3>🩸 模块 6：颈部解剖断面精调与收藏品档案登记</h3>
               <div class="control-group compact">

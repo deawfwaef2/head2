@@ -17,6 +17,7 @@ import {
   EAST_ASIAN_ARCHETYPE_MPFB_RECIPES,
 } from '../data/eastAsianHeadAndEyeTargets.js';
 import { FACE_FINE_TARGETS } from '../data/faceFineTargets.js';
+import { syncFaceAccessories } from './faceAccessories.js';
 import {
   buildSpecimenContainerGroup,
   buildSpecimenDecorGroup,
@@ -1171,6 +1172,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
 
   applyMpfbEastAsianTargetsToGroup(rootGroup, m, faceArchetype);
   applyArtistHairFineTuning(rootGroup, m);
+  syncFaceAccessories(rootGroup, m);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
   if (capMesh) {
@@ -2304,6 +2306,10 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     hairGroup.add(loadedScene);
     disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
+    // Refit hats to the actual loaded hair asset, not the previous hairstyle.
+    rootGroup.userData.accessoryHairBaseY = undefined;
+    rootGroup.userData.accessoryHairTopY = undefined;
+    rootGroup.userData.accessoryBareHead = undefined;
     rootGroup.userData.currentHairStyle = selectedStyle;
     delete rootGroup.userData.hairLoadError;
     rootGroup.userData.hairStats = {
@@ -3535,6 +3541,8 @@ export async function buildCollectibleHeadNode(config = {}) {
 
   applyHeadMorphsToGroup(rootGroup, morphs);
   await attachRealHairModel(rootGroup, config);
+  rootGroup.userData.accessoriesReady = isBuiltInAsset;
+  syncFaceAccessories(rootGroup, rootGroup.userData.currentMorphs);
   attachSpecimenContainerAndDecor(rootGroup, config);
 
   const gimbalGroup = buildGimbalOverlayGroup();

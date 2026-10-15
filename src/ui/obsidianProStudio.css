@@ -94,6 +94,12 @@ body.obs-show-triumph #study-triumph-hud {
   flex-wrap: wrap !important;
 }
 
+/* Do not cover the 3D hat/eye preview with the desktop-only command dock. */
+body.studio-preview-mode #desktop-overlay-bar,
+body.studio-preview-mode #obs-more-popover {
+  display: none !important;
+}
+
 #desktop-overlay-bar .overlay-brand {
   display: inline-flex !important;
   align-items: center !important;

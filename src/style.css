@@ -872,7 +872,7 @@ select.pill-mini-btn:hover {
   gap: 10px;
 }
 
-/* Stage 36: Clean Categorized 6-Sub-Tab Bar in Studio Right Column */
+/* Categorized 7-subtab bar in the Studio right column. */
 .studio-subtab-bar {
   display: flex;
   flex-wrap: wrap;

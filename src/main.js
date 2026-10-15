@@ -23,6 +23,7 @@ import {
 } from './data/defaultCollectibles.js';
 import { DesktopBoxSpaceEngine } from './three/desktopBoxSpaceEngine.js';
 import { StudioPreviewEngine } from './three/studioPreviewEngine.js';
+import { syncFaceAccessories } from './three/faceAccessories.js';
 import {
   FORENSIC_EXPRESSION_PRESETS,
   updateHairSheen,
@@ -76,6 +77,55 @@ import {
 // APPLICATION STATE
 // ============================================================================
 const STORAGE_KEY = 'cervix3d-collectibles-stage57-universal-superiority-v1';
+const ACCESSORY_DEFAULTS = Object.freeze({
+  glassesStyle: 'none', glassesColor: '#a07857', glassesSize: 1,
+  glassesOffsetY: 0, glassesOffsetZ: 0, glassesTilt: 0, glassesLensTint: 0,
+  hatStyle: 'none', hatColor: '#785670', hatSize: 1, hatOffsetY: 0, hatTilt: 0,
+});
+const ACCESSORY_SLIDERS = [
+  ['acc-glasses-size', 'val-acc-glasses-size', 'glassesSize', 'pct'],
+  ['acc-glasses-height', 'val-acc-glasses-height', 'glassesOffsetY', 'mm'],
+  ['acc-glasses-depth', 'val-acc-glasses-depth', 'glassesOffsetZ', 'mm'],
+  ['acc-glasses-tilt', 'val-acc-glasses-tilt', 'glassesTilt', 'deg'],
+  ['acc-glasses-tint', 'val-acc-glasses-tint', 'glassesLensTint', 'pct'],
+  ['acc-hat-size', 'val-acc-hat-size', 'hatSize', 'pct'],
+  ['acc-hat-height', 'val-acc-hat-height', 'hatOffsetY', 'mm'],
+  ['acc-hat-tilt', 'val-acc-hat-tilt', 'hatTilt', 'deg'],
+];
+function accessoryDisplay(value, unit) {
+  const n = Number(value) || 0;
+  if (unit === 'pct') return `${Math.round(n * 100)}%`;
+  return `${n > 0 ? '+' : ''}${Math.round(n)}${unit === 'mm' ? ' mm' : '°'}`;
+}
+function syncStudioAccessoryUI(morphs = {}) {
+  const m = { ...ACCESSORY_DEFAULTS, ...morphs };
+  for (const [id, key, obsId] of [
+    ['sel-glasses-style', 'glassesStyle', 'obs-glasses-style'],
+    ['sel-hat-style', 'hatStyle', 'obs-hat-style'],
+    ['col-glasses-frame', 'glassesColor', 'obs-glasses-color'],
+    ['col-hat-fabric', 'hatColor', 'obs-hat-color'],
+  ]) {
+    const el = document.getElementById(id);
+    if (el) el.value = m[key];
+    const obs = document.getElementById(obsId);
+    if (obs) obs.value = m[key];
+  }
+  for (const [id, valueId, key, unit] of ACCESSORY_SLIDERS) {
+    const val = Number(m[key]);
+    const inp = document.getElementById(id);
+    const label = document.getElementById(valueId);
+    if (inp) inp.value = String(val);
+    if (label) label.textContent = accessoryDisplay(val, unit);
+    const proxy = document.querySelector(`.obs-slider-row[data-sync-target="${id}"]`);
+    if (proxy) {
+      const proxyInput = proxy.querySelector('.obs-proxy-range');
+      const proxyLabel = proxy.querySelector('.obs-proxy-val');
+      if (proxyInput) proxyInput.value = String(val);
+      if (proxyLabel) proxyLabel.textContent = accessoryDisplay(val, unit);
+    }
+  }
+}
+let syncStudioShapeUI = () => {};
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -308,6 +358,7 @@ const state = {
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
+      ...ACCESSORY_DEFAULTS,
       jawVLine: -0.08,
       chinLength: -0.04,
       cheekSoftness: 0.16,
@@ -1886,6 +1937,7 @@ function loadCollectibleIntoStudio(col) {
       hairOffsetY: 0.0,
       hairOffsetZ: 0.0,
       hairScale: 1.0,
+      ...ACCESSORY_DEFAULTS,
       ...cm
     },
     anatomyOptions: { ...col.anatomyOptions }
@@ -1893,6 +1945,8 @@ function loadCollectibleIntoStudio(col) {
 
   document.getElementById('sel-base-preset').value = state.studioDraft.basePreset;
   syncStudioHairUI(state.studioDraft.hairStyle);
+  syncStudioShapeUI(state.studioDraft.morphs);
+  syncStudioAccessoryUI(state.studioDraft.morphs);
   const selGroom = document.getElementById('sel-groom-density');
   if (selGroom) selGroom.value = String(state.studioDraft.groomDensity || 6000);
   syncStudioExpressionUI(deadExpr);
@@ -2036,6 +2090,13 @@ function renderTutorialTab() {
 // ============================================================================
 // TAB SWITCHING & WINDOW DRAGGING
 // ============================================================================
+function updateStudioDockVisibility() {
+  // The floating desktop command dock covers the upper half of the hat when
+  // the modelling window is open. Hide it only in the visible Studio tab;
+  // the dock returns when the window is minimized to the desktop pets.
+  const studioOpen = !state.windowHidden && document.getElementById('tab-studio')?.classList.contains('active');
+  document.body.classList.toggle('studio-preview-mode', Boolean(studioOpen));
+}
 function switchSoftwareTab(tabId) {
   document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
@@ -2047,6 +2108,7 @@ function switchSoftwareTab(tabId) {
   if (win) {
     win.classList.toggle('studio-active-wide', tabId === 'studio');
   }
+  updateStudioDockVisibility();
   if (tabId === 'studio') {
     document.getElementById('structure-floating-hud')?.classList.add('hidden');
     if (studioEngine) {
@@ -2149,6 +2211,7 @@ function initWindowDragging() {
 function setWindowVisibility(hidden, fromMainProcess = false) {
   state.windowHidden = hidden;
   document.getElementById('software-window').classList.toggle('window-hidden', hidden);
+  updateStudioDockVisibility();
   document.getElementById('btn-toggle-window').textContent = hidden
     ? '🗖 展开 CERVIX-3D 软件主窗口'
     : '🗕 隐藏软件窗口 (纯看屏幕桌宠)';
@@ -2843,8 +2906,16 @@ window.addEventListener('DOMContentLoaded', async () => {
         else if (unit === '%scale') vEl.textContent = `${Math.round((1 + val) * 100)}%`;
         else vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
       }
+      const proxy = document.querySelector(`.obs-slider-row[data-sync-target="${sId}"]`);
+      if (proxy) {
+        const range = proxy.querySelector('.obs-proxy-range');
+        const label = proxy.querySelector('.obs-proxy-val');
+        if (range) range.value = String(val);
+        if (label && vEl) label.textContent = vEl.textContent;
+      }
     }
   };
+  syncStudioShapeUI = syncStudioShapeSlidersFromMorphs;
 
   const applyStudioFaceArchetype = (archId) => {
     state.studioDraft.faceArchetype = archId;
@@ -3153,7 +3224,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     expandAllBtn.addEventListener('click', () => {
       const expanded = studioColRight.classList.toggle('expand-all-mode');
       expandAllBtn.textContent = expanded ? '🗂️ 分页收起' : '📑 全部展开';
-      showToast(expanded ? '📑 已展开右侧工作台全部 6 大微调面板' : '🗂️ 已切换回清爽分类子页签模式');
+      showToast(expanded ? '📑 已展开右侧工作台全部 7 大微调面板' : '🗂️ 已切换回清爽分类子页签模式');
     });
   }
 
@@ -3265,6 +3336,43 @@ window.addEventListener('DOMContentLoaded', async () => {
     bindMorphSlider(sId, vId, mKey, unit || '');
   }
 
+  // Accessory changes update only the small 3D accessory subtrees, avoiding a
+  // costly full hair/skin recompute for every colour or millimetre adjustment.
+  const applyAccessoryValue = (key, value) => {
+    state.studioDraft.morphs[key] = value;
+    const head = studioEngine?.headNode;
+    if (head) {
+      head.userData.currentMorphs = { ...(head.userData.currentMorphs || {}), [key]: value };
+      syncFaceAccessories(head, head.userData.currentMorphs);
+      studioEngine.wakeRender(1.4, true);
+    }
+    for (const pet of getTargetDesktopPetsList()) {
+      const node = pet?.node || pet?.headNode;
+      if (!node) continue;
+      const next = { ...(pet.collectible?.morphs || {}), [key]: value };
+      node.userData.currentMorphs = { ...(node.userData.currentMorphs || {}), [key]: value };
+      syncFaceAccessories(node, node.userData.currentMorphs);
+      if (pet.collectible) pet.collectible.morphs = next;
+    }
+    if (desktopEngine) desktopEngine.wakeRender(1.5, true);
+    syncStudioAccessoryUI(state.studioDraft.morphs);
+  };
+  for (const [id, key] of [
+    ['sel-glasses-style', 'glassesStyle'], ['sel-hat-style', 'hatStyle'],
+    ['col-glasses-frame', 'glassesColor'], ['col-hat-fabric', 'hatColor'],
+  ]) {
+    const el = document.getElementById(id);
+    el?.addEventListener(el?.type === 'color' ? 'input' : 'change', (e) => applyAccessoryValue(key, e.target.value));
+  }
+  for (const [id, , key] of ACCESSORY_SLIDERS) {
+    document.getElementById(id)?.addEventListener('input', (e) => applyAccessoryValue(key, Number(e.target.value)));
+  }
+  document.getElementById('btn-remove-face-accessories')?.addEventListener('click', () => {
+    applyAccessoryValue('glassesStyle', 'none');
+    applyAccessoryValue('hatStyle', 'none');
+    showToast('已摘下眼镜和帽子；再次选择款式即可重新佩戴');
+  });
+
   document.getElementById('studio-eye-preset-select')?.addEventListener('change', (e) => {
     const preset = EYE_SHAPE_PRESET_CATALOG.find(p => p.id === e.target.value);
     if (!preset) return;
@@ -3310,6 +3418,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (sEl) sEl.value = String(defVal);
       if (vEl) vEl.textContent = unit === '%' ? '100%' : '+0.00';
     }
+    syncStudioShapeUI(state.studioDraft.morphs);
     studioEngine.updateMorphsFast(state.studioDraft.morphs);
     for (const pet of getTargetDesktopPetsList()) {
       const headGroup = pet?.node || pet?.headNode;

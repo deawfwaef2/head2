@@ -33,6 +33,9 @@ export class StudioPreviewEngine {
 
     this.lastFrameTime = performance.now();
     this.renderWakeUntil = performance.now() + 2500;
+    // Software WebGL caps each frame at 220 ms, but wakes for only 160 ms.
+    // Preserve one pending frame so a slider change never gets silently lost.
+    this.pendingRender = true;
     this.needsShadowRefresh = true;
 
     this.initScene();
@@ -42,6 +45,7 @@ export class StudioPreviewEngine {
   }
 
   wakeRender(durationSeconds = 1.6, refreshShadow = false) {
+    this.pendingRender = true;
     const dur = this.softwareRenderer ? Math.min(durationSeconds, 0.16) : durationSeconds;
     const until = performance.now() + dur * 1000;
     if (until > this.renderWakeUntil) {
@@ -320,12 +324,13 @@ export class StudioPreviewEngine {
 
     const now = performance.now();
     const isIdle = !this.autoRotate && now > this.renderWakeUntil;
-    if (isIdle) {
+    if (isIdle && !this.pendingRender) {
       return;
     }
     const elapsedMs = now - this.lastFrameTime;
     const minIntervalMs = this.softwareRenderer ? 220.0 : 15.5;
     if (elapsedMs < minIntervalMs) return;
+    this.pendingRender = false;
     const dt = Math.min(0.05, elapsedMs / 1000);
     this.lastFrameTime = now;
 

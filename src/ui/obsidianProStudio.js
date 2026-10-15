@@ -287,6 +287,8 @@ function formatSliderDisplay(val, fmt) {
   const n = Number(val);
   if (fmt === 'pct') return `${Math.round(n * 100)}%`;
   if (fmt === 'signed') return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
+  if (fmt === 'mm') return `${n > 0 ? '+' : ''}${Math.round(n)} mm`;
+  if (fmt === 'deg') return `${n > 0 ? '+' : ''}${Math.round(n)}°`;
   return `${n}`;
 }
 
@@ -508,6 +510,38 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '颈部净空', targetId: 'slider-neck-clearance', min: 0, max: 1.0, step: 0.02, val: 0.78, fmt: 'pct' })}
           </div>
         </details>
+
+        <div class="obs-section" style="border-color:rgba(212,175,114,0.36);">
+          <div class="obs-sec-head"><span class="obs-sec-title">🕶️ 三维眼镜与帽子</span><span class="obs-sec-sub">实体镜架 / 帽檐 · 与人物档案同存</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <label style="font-size:11px;color:#cbd5e1;">眼镜款式
+              <select class="obs-select" id="obs-glasses-style" style="width:100%;margin-top:4px;">
+                <option value="none">不佩戴</option><option value="wire_oval">椭圆金属框</option>
+                <option value="acetate_square">板材方框</option><option value="aviator">飞行员双梁</option>
+              </select>
+            </label>
+            <label style="font-size:11px;color:#cbd5e1;">帽子款式
+              <select class="obs-select" id="obs-hat-style" style="width:100%;margin-top:4px;">
+                <option value="none">不佩戴</option><option value="beret">软呢贝雷帽</option>
+                <option value="beanie">翻边针织帽</option><option value="bucket">宽檐渔夫帽</option>
+              </select>
+            </label>
+          </div>
+          <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">
+            <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;">镜框 <input type="color" id="obs-glasses-color" value="#a07857" /></label>
+            <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;">帽布 <input type="color" id="obs-hat-color" value="#785670" /></label>
+          </div>
+          <div class="obs-accordion-body">
+            ${makeShortSliderRow({ label: '镜架大小', targetId: 'acc-glasses-size', min: 0.82, max: 1.18, step: 0.01, val: 1, fmt: 'pct' })}
+            ${makeShortSliderRow({ label: '镜架上下', targetId: 'acc-glasses-height', min: -9, max: 9, step: 1, val: 0, fmt: 'mm' })}
+            ${makeShortSliderRow({ label: '镜架前后', targetId: 'acc-glasses-depth', min: -9, max: 9, step: 1, val: 0, fmt: 'mm' })}
+            ${makeShortSliderRow({ label: '镜架俯仰', targetId: 'acc-glasses-tilt', min: -12, max: 12, step: 1, val: 0, fmt: 'deg' })}
+            ${makeShortSliderRow({ label: '镜片暗度', targetId: 'acc-glasses-tint', min: 0, max: 0.8, step: 0.02, val: 0, fmt: 'pct' })}
+            ${makeShortSliderRow({ label: '帽子大小', targetId: 'acc-hat-size', min: 0.86, max: 1.19, step: 0.01, val: 1, fmt: 'pct' })}
+            ${makeShortSliderRow({ label: '帽沿上下', targetId: 'acc-hat-height', min: -14, max: 14, step: 1, val: 0, fmt: 'mm' })}
+            ${makeShortSliderRow({ label: '帽身侧倾', targetId: 'acc-hat-tilt', min: -14, max: 14, step: 1, val: 0, fmt: 'deg' })}
+          </div>
+        </div>
       </div>
 
       <!-- ==================== TAB 2: 人物与标牌 (CHARACTER & PLACARD) ==================== -->
@@ -1178,6 +1212,7 @@ function cleanExistingVerboseLabels() {
     morph: '眉眼骨相',
     skin: '真皮彩妆',
     hair: '发型高定',
+    accessories: '眼镜帽子',
     anatomy: '解剖流体',
     export: '光影出库',
   };
@@ -1553,6 +1588,25 @@ function wireObsidianStudioEvents(studio) {
       setFormValueAndTrigger(inp.dataset.obsColor, inp.value, 'input');
     });
   });
+
+  // The compact accessory controls drive the same actual 3D meshes as the
+  // full editor subtab; they are not decorative UI-only copies.
+  for (const [obsId, studioId] of [
+    ['obs-glasses-style', 'sel-glasses-style'],
+    ['obs-hat-style', 'sel-hat-style'],
+  ]) {
+    document.getElementById(obsId)?.addEventListener('change', e => {
+      setFormValueAndTrigger(studioId, e.target.value, 'change');
+    });
+  }
+  for (const [obsId, studioId] of [
+    ['obs-glasses-color', 'col-glasses-frame'],
+    ['obs-hat-color', 'col-hat-fabric'],
+  ]) {
+    document.getElementById(obsId)?.addEventListener('input', e => {
+      setFormValueAndTrigger(studioId, e.target.value, 'input');
+    });
+  }
 
   // Proxy compact sliders -> drive both targetId and fallbackId
   studio.querySelectorAll('.obs-slider-row').forEach((row) => {
