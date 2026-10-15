@@ -1550,3 +1550,11 @@
 - **建筑是真正放置/清除**：自选面板现调用 `DesktopBoxSpaceEngine.placeContainerStructure` / `setPetContainerStyle`，可放空建筑也可承接当前头颅；清除仅移除非场景固定结构；抬高选择框层级，顶部操作不再被命令栏遮挡。离线实测空钟罩放置时 8→9、已选头模承接福尔马林缸时 8→9 且 `snappedStructureId` 有值、点击「清空已放建筑」后固定展台仍保留（6 个）。
 - **光影/档案回归**：离线实测「双柔光中性肖像」切到「蓝时侧轮廓光」时，桌宠实图明暗与偏色明显不同；`keyColor` 从 `#fffdf9` 变为 `#a4c8ff`、主光强度从 `1.62` 变为 `2.05`，软件降级还使用真实 canvas 滤镜。新档案在 UI 创建三段故事并保存后，输入框变为只读、第四个头模已召唤，随后「保存外观」不改写固定标牌；老档的标牌默认只读。未测试第三方模型自动拟合照片或全量发型的硬件 GPU FPS。
 - **构建与安全**：`npm run build` 完成 `33.15 MiB` 左右的可双击 `点击开始游戏_CERVIX3D.html`，`docs/index.html` 与其字节一致；`node --check` 核查改动 JS、`git diff --check` 通过；全部视觉操作在 `file://` + Playwright Chromium/SwiftShader 完成，未将上传参考照片打包或加入 Git。正式推送前仍应重新 fetch 确认快进，普通推送，禁止强推；授权不得写入仓库或日志。当前 Stage71 推送状态以其后的追加记录为准。
+
+---
+
+## [2026-10-15 Stage 71b] 完成提交但本沙箱尚未获得 GitHub 推送身份（追加记录）
+
+- Stage71 源码、HANDOFF 与相同字节的离线 HTML / `docs/index.html` 已本地提交为 `17d36fd`（父提交 `ad9e0dc`）；再取远端 `main` 后 `origin/main...HEAD` 为 `0 1`，确认普通快进可行，并且**仅尝试普通 `git push origin HEAD:refs/heads/main`**。当前沙箱没有可用推送认证，实际报错 `could not read Username for 'https://github.com': terminal prompts disabled`。**目前 GitHub 远端仍为 `ad9e0dc`；不得声称已推送或使用强推。**
+- 临时干净克隆在 `/var/tmp/head2-stage71-work`，可在同一沙箱继续推送；若跨消息临时目录消失，持久目录 `/home/user/head2` 保存这一版本的全部工作树文件和可双击 HTML，但其 `.git` 仍是旧历史，**不可从该旧 `.git` 直接推送**：应重新从远端 `ad9e0dc` 干净克隆，复制持久工作树改动并构建/正常提交，重新 fetch 确认快进后再普通推送。
+- 推送凭据只用于当次推送，不得写入项目、HANDOFF、Git remote、输出或会话记忆。完成推送后再追加一条已验证的远端提交号记录；不要覆盖本次失败记录。
