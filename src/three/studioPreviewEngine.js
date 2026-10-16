@@ -4,6 +4,7 @@ import {
   SCULPT_MAX_GESTURES, SCULPT_MAX_SEGMENTS, getBrushableHairMeshes,
   applyLiveSculptStroke, finalizeSculptStroke
 } from './sculptStrokeLayer.js';
+import { syncFaceAccessories } from './faceAccessories.js';
 import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
@@ -44,6 +45,7 @@ export class StudioPreviewEngine {
     this.sculptStrength = this.sculptProfiles.face.strength;
     this.sculptSymmetric = true;
     this.sculptDrag = null;
+    this.sculptSeriesSerial = 0;
     this.sculptRaycaster = new THREE.Raycaster();
     this.getSculptMorphs = null;
     this.onSculptCommit = null;
@@ -184,7 +186,7 @@ export class StudioPreviewEngine {
 
   setSculptTool(mode) {
     if (this.sculptDrag) this.finishSculptDrag();
-    this.sculptTool = ['orbit', 'face', 'hair'].includes(mode) ? mode : 'orbit';
+    this.sculptTool = ['orbit', 'face', 'hair', 'glasses'].includes(mode) ? mode : 'orbit';
     this.controls.enabled = this.sculptTool === 'orbit';
     this.autoRotate = false;
     this.canvas.style.cursor = this.sculptTool === 'orbit' ? '' : 'crosshair';
@@ -233,10 +235,61 @@ export class StudioPreviewEngine {
         .applyMatrix4(strandMesh.matrixWorld) };
   }
 
+  startGlassesDrag(event, morphs) {
+    const style = morphs.glassesStyle || 'none';
+    const frame = this.headNode.getObjectByName(`Glasses_${style}`);
+    if (!frame || style === 'none') {
+      this.onSculptStatus?.('请先在眼镜款式中选一副，再选择「直接拉眼镜」。');
+      return;
+    }
+    this.headNode.updateMatrixWorld(true);
+    this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
+    const hit = this.sculptRaycaster.intersectObject(frame, true)[0];
+    if (!hit) {
+      this.onSculptStatus?.('请在镜框或镜片表面按住左键：左右拉框宽，上下拉框高。');
+      return;
+    }
+    const local = frame.worldToLocal(hit.point.clone());
+    const before = {
+      width: Number(morphs.glassesWidth) || 1,
+      height: Number(morphs.glassesHeight) || 1,
+    };
+    const gestures = morphs.sculptGestures ||= [];
+    if (gestures.length >= SCULPT_MAX_GESTURES) gestures.shift();
+    const gesture = { tool: 'glasses', glassesBefore: before, strokes: [] };
+    gestures.push(gesture);
+    this.sculptDrag = {
+      tool: 'glasses', pointerId: event.pointerId, node: this.headNode,
+      gesture, before, startX: event.clientX, startY: event.clientY,
+      side: local.x < 0 ? -1 : 1, vertical: local.y < 0 ? -1 : 1,
+    };
+    this.canvas.setPointerCapture(event.pointerId);
+    this.onSculptStatus?.('正在直接塑形眼镜网格：左右拖动改变框宽，上下拖动改变框高，松开保存。');
+    event.preventDefault();
+  }
+
+  moveGlassesDrag(event, drag) {
+    const morphs = this.getSculptMorphs?.();
+    if (!morphs) return;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const width = clamp(drag.before.width + (event.clientX - drag.startX) * drag.side / 220, 0.68, 1.65);
+    const height = clamp(drag.before.height + (drag.startY - event.clientY) * drag.vertical / 210, 0.68, 1.55);
+    if (Math.abs((morphs.glassesWidth ?? 1) - width) < 0.002 &&
+        Math.abs((morphs.glassesHeight ?? 1) - height) < 0.002) return;
+    morphs.glassesWidth = width;
+    morphs.glassesHeight = height;
+    Object.assign(this.headNode.userData.currentMorphs, { glassesWidth: width, glassesHeight: height });
+    syncFaceAccessories(this.headNode, this.headNode.userData.currentMorphs);
+    this.wakeRender(0.4, true);
+    this.onSculptStatus?.(`镜框宽 ${Math.round(width * 100)}% · 框高 ${Math.round(height * 100)}% · 可松开保存或撤销`);
+    event.preventDefault();
+  }
+
   startSculptDrag(event) {
     if (this.sculptTool === 'orbit' || event.button !== 0 || !this.headNode) return;
     const morphs = this.getSculptMorphs?.();
     if (!morphs) return;
+    if (this.sculptTool === 'glasses') return this.startGlassesDrag(event, morphs);
     if (this.sculptTool === 'face' && this.currentConfig?.customModelUrl) {
       this.onSculptStatus?.('外部头模不包含内置 MPFB 顶点结构；请先用内置头模雕塑。');
       return;
@@ -270,17 +323,18 @@ export class StudioPreviewEngine {
     );
     const gestures = morphs.sculptGestures ||= [];
     if (gestures.length >= SCULPT_MAX_GESTURES) gestures.shift();
+    const seriesId = `drag-${Date.now().toString(36)}-${++this.sculptSeriesSerial}`;
     const gesture = {
       tool: this.sculptTool,
       ...(this.sculptTool === 'hair' ? { hairStyle: this.headNode.userData.currentHairStyle || '' } : {}),
-      strokes: []
+      seriesId, strokes: []
     };
     gestures.push(gesture);
     morphs.sculptRevision = (Number(morphs.sculptRevision) || 0) + 1;
     this.updateMorphsFast(morphs); // align runtime caches with this new undo step
     this.sculptDrag = {
       pointerId: event.pointerId, node: this.headNode, target, plane,
-      gesture, startLocal, lastLocal: startLocal.clone(), applied: new THREE.Vector3(),
+      seriesId, gesture, gestures: [gesture], startLocal, lastLocal: startLocal.clone(), applied: new THREE.Vector3(),
       lastFrame: 0
     };
     this.canvas.setPointerCapture(event.pointerId);
@@ -291,11 +345,24 @@ export class StudioPreviewEngine {
   moveSculptDrag(event) {
     const drag = this.sculptDrag;
     if (!drag || drag.pointerId !== event.pointerId || drag.node !== this.headNode) return;
+    if (drag.tool === 'glasses') return this.moveGlassesDrag(event, drag);
     if (event.timeStamp - drag.lastFrame < 12) return; // bounded CPU work while dragging
     drag.lastFrame = event.timeStamp;
     if (drag.gesture.strokes.length >= SCULPT_MAX_SEGMENTS) {
-      this.onSculptStatus?.('单笔已达到采样上限；请松开后继续梳理。');
-      return;
+      // Continue the *same pointer drag* in another serializable chunk, not
+      // a dead end after 64 samples. All chunks share an undo-series ID.
+      const morphs = this.getSculptMorphs?.();
+      if (!morphs) return;
+      const gestures = morphs.sculptGestures ||= [];
+      if (gestures.length >= SCULPT_MAX_GESTURES) gestures.shift();
+      drag.gesture = {
+        tool: drag.gesture.tool,
+        ...(drag.gesture.tool === 'hair' ? { hairStyle: drag.node.userData.currentHairStyle || '' } : {}),
+        seriesId: drag.seriesId, strokes: [],
+      };
+      drag.gestures.push(drag.gesture);
+      gestures.push(drag.gesture);
+      this.onSculptStatus?.('已自动续接这一笔；继续拖动，松开后仍可一次撤销整个拖拽。');
     }
     this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
     const world = this.sculptRaycaster.ray.intersectPlane(drag.plane, new THREE.Vector3());
@@ -330,15 +397,32 @@ export class StudioPreviewEngine {
     this.sculptDrag = null;
     if (this.canvas.hasPointerCapture(drag.pointerId)) this.canvas.releasePointerCapture(drag.pointerId);
     const morphs = this.getSculptMorphs?.();
-    if (morphs && !drag.gesture.strokes.length) {
-      const i = morphs.sculptGestures?.indexOf(drag.gesture);
+    if (drag.tool === 'glasses') {
+      const changed = morphs && (
+        Math.abs((morphs.glassesWidth ?? 1) - drag.before.width) > 0.002 ||
+        Math.abs((morphs.glassesHeight ?? 1) - drag.before.height) > 0.002
+      );
+      if (!changed) {
+        const i = morphs?.sculptGestures?.indexOf(drag.gesture) ?? -1;
+        if (i >= 0) morphs.sculptGestures.splice(i, 1);
+      } else {
+        this.updateMorphsFast(morphs);
+        this.onSculptCommit?.(morphs);
+      }
+      this.onSculptStatus?.(changed ? '镜框网格塑形已保存到外观草稿；可撤销或建档。' : '眼镜没有产生形变。');
+      return;
+    }
+    const hasStrokes = drag.gestures.some(g => g.strokes.length > 0);
+    for (const empty of drag.gestures.filter(g => !g.strokes.length)) {
+      const i = morphs?.sculptGestures?.indexOf(empty) ?? -1;
       if (i >= 0) morphs.sculptGestures.splice(i, 1);
-    } else if (drag.node === this.headNode) {
+    }
+    if (hasStrokes && drag.node === this.headNode) {
       finalizeSculptStroke(this.headNode, drag.gesture.tool);
       this.onSculptCommit?.(morphs);
       this.wakeRender(0.8, true);
     }
-    this.onSculptStatus?.(drag.gesture.strokes.length ? '已完成一笔；可撤销、继续雕塑或保存到档案。' : '未击中网格；没有生成笔画。');
+    this.onSculptStatus?.(hasStrokes ? '已完成一笔；可一次撤销整个拖拽或保存到档案。' : '未击中网格；没有生成笔画。');
   }
 
   undoSculpt() {
@@ -346,6 +430,17 @@ export class StudioPreviewEngine {
     const morphs = this.getSculptMorphs?.();
     if (!morphs?.sculptGestures?.length) return false;
     const undone = morphs.sculptGestures.pop();
+    if (undone.tool === 'glasses') {
+      morphs.glassesWidth = undone.glassesBefore?.width ?? 1;
+      morphs.glassesHeight = undone.glassesBefore?.height ?? 1;
+      this.updateMorphsFast(morphs);
+      this.onSculptCommit?.(morphs);
+      this.onSculptStatus?.('已撤销眼镜框宽 / 框高的直接拖拽形变。');
+      return true;
+    }
+    if (undone.seriesId) {
+      while (morphs.sculptGestures.at(-1)?.seriesId === undone.seriesId) morphs.sculptGestures.pop();
+    }
     morphs.sculptRevision = (Number(morphs.sculptRevision) || 0) + 1;
     this.updateMorphsFast(morphs);
     finalizeSculptStroke(this.headNode, undone.tool);

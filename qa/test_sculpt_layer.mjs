@@ -103,8 +103,12 @@ for (let n = 0; n < 20; n++) applySculptStrokeToBuffer(rootAndTip, lockDelta, dr
 assert(Math.abs(lockDelta[0]) < Math.abs(lockDelta[3]) * 0.22,
   'hair root must remain anchored while the free tip bends');
 for (let n = 0; n < 90; n++) applySculptStrokeToBuffer(rootAndTip, lockDelta, dragLock, true);
-assert(Math.hypot(...lockDelta.slice(3, 6)) <= 0.02301,
-  'long repeated dragging must cap the displacement per lock');
+assert(Math.hypot(...lockDelta.slice(3, 6)) > 0.02301,
+  'tip must keep moving past the old silent 2.3cm ceiling');
+assert(Math.hypot(...lockDelta.slice(3, 6)) <= 0.06001,
+  'long repeated drag must still cap free-tip displacement at 6cm');
+assert(Math.hypot(...lockDelta.slice(0, 3)) <= 0.00201,
+  'scalp root must stay within a 2mm anchor even after many strokes');
 const differentStyle = makeHairRoot('style_2');
 applyStoredHairSculpt(differentStyle.root, { sculptRevision: 1,
   sculptGestures: [{ tool: 'hair', hairStyle: 'style_1', strokes: [hairStroke] }] });

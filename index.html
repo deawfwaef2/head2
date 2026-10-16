@@ -1730,6 +1730,7 @@
                   <button type="button" class="chip-btn active" data-sculpt-tool="orbit">旋转检视</button>
                   <button type="button" class="chip-btn" data-sculpt-tool="face">直接拉动脸</button>
                   <button type="button" class="chip-btn" data-sculpt-tool="hair">梳理真实发束</button>
+                  <button type="button" class="chip-btn" data-sculpt-tool="glasses" title="直接在已选眼镜的镜框/镜片上按住拖动：左右改框宽，上下改框高；适用于全部内置与扫描款式">直接拉眼镜</button>
                   <label class="checkbox-inline" title="开启时对另一侧同步施加镜像笔画"><input type="checkbox" id="sculpt-symmetric" checked /> 左右对称</label>
                   <button type="button" id="sculpt-undo" class="chip-btn" title="仅撤销上一笔刷子；Ctrl+Z 同样可用">↶ 撤销上一笔</button>
                 </div>
@@ -1738,7 +1739,7 @@
                   <label>拖动强度 <input id="sculpt-strength" type="range" min="0.15" max="1" value="0.30" step="0.05" /><output id="sculpt-strength-val">30%</output></label>
                   <button type="button" id="sculpt-save" class="chip-btn" title="保存当前整个角色外观并召唤桌宠；已建档标牌不会被更改">💾 保存外观并召唤</button>
                 </div>
-                <small id="sculpt-status" role="status">选择直接拉脸或梳发，在 3D 网格上按住左键拖动；滑杆调整后笔画仍保留。外部头模不支持内置脸雕。</small>
+                <small id="sculpt-status" role="status">选直接拉脸 / 梳发 / 拉眼镜，在 3D 模型上按住拖动；眼镜左右拖框宽、上下拖框高，各款都有外形与材质控制。外部头模不支持内置脸雕。</small>
               </div>
 
                 <!-- 1:1 Semi-Transparent Photo Alignment Overlay -->
@@ -2848,14 +2849,14 @@
                   </select>
                 </div>
                 <div class="control-group compact" style="display:flex;gap:12px;flex-wrap:wrap;">
-                  <label for="sel-glasses-outline">方圆框外形
-                    <select id="sel-glasses-outline"><option value="soft_square">大号柔方圆 · 默认</option><option value="round">大号圆润</option><option value="cat_eye">上挑猫眼</option></select>
+                  <label for="sel-glasses-outline">各款镜框外形
+                    <select id="sel-glasses-outline"><option value="soft_square">柔方圆</option><option value="round">圆润</option><option value="cat_eye">上挑猫眼</option></select>
                   </label>
-                  <label for="sel-glasses-material">方圆框材质
+                  <label for="sel-glasses-material">各款镜架材质
                     <select id="sel-glasses-material"><option value="warm_acetate">琥珀板材 · 亮面</option><option value="matte_black">哑黑板材</option><option value="brushed_titanium">拉丝钛金属</option><option value="champagne_gold">香槟金属</option></select>
                   </label>
                 </div>
-                <p style="font-size:11px;color:#a9bfce;">外形、边宽与材质用于「大号方圆框」；切换真实扫描款时会暂停这些专用控件，保存值不丢失。</p>
+                <p style="font-size:11px;color:#a9bfce;">所有已选款式都可调整真实镜框外形、边宽和材质；若想直接拖出宽窄/高低，请在上方 3D 工坊点「直接拉眼镜」，按住镜框或镜片拖动，支持撤销与保存。</p>
                 <label style="display:inline-flex;gap:9px;align-items:center;font-size:12px;">镜框颜色 <input type="color" id="col-glasses-frame" value="#a07857" /></label>
                 <div class="slider-row"><span>镜框实体边宽</span><input type="range" id="acc-glasses-rim-width" min="0.55" max="1.65" step="0.05" value="1" /><span id="val-acc-glasses-rim-width">100%</span></div>
                 <div class="slider-row"><span>镜框整体大小</span><input type="range" id="acc-glasses-size" min="0.82" max="1.30" step="0.01" value="1" /><span id="val-acc-glasses-size">100%</span></div>

@@ -257,26 +257,26 @@ export class DesktopBoxSpaceEngine {
     pet.pos.x = Math.max(bz.minX, Math.min(bz.maxX, pet.pos.x));
     pet.pos.y = Math.max(bz.minY, Math.min(bz.maxY, pet.pos.y));
 
-    // Stage 41 Anti-Clipping Guard: Never allow a 3D shelf board to slice through a head's forehead/skull!
-    if (this.stagePlatforms && this.stagePlatforms.length > 0 && !pet.snappedStructureId) {
+    // An old anti-clipping guard used a 5.5cm-wide *extra* shelf footprint
+    // to snap the head UP onto a board. Gravity only considers the board's
+    // actual footprint; near its edge those two rules disagreed and produced
+    // a spontaneous upward teleport / repeated fall even with no input.
+    // Only a platform that the physics already considers a support may lift
+    // a head. Never convert mere proximity to a shelf into vertical motion.
+    if (this.settings.enableGravity && this.stagePlatforms?.length && !pet.snappedStructureId) {
       const baseOff = pet.node?.userData?.baseBottomOffset ?? -10.8;
       const headBottomY = pet.pos.y + baseOff * scale;
       const headTopY = pet.pos.y + 12.8 * scale;
+      const supportY = this.getSupportSurfaceY(pet.pos.x, pet.pos.y, pet.pos.z, scale, baseOff);
       for (const plat of this.stagePlatforms) {
-        if (plat.isMainFloor) continue;
-        const inX = pet.pos.x >= plat.minX - 5.5 && pet.pos.x <= plat.maxX + 5.5;
-        const inZ = pet.pos.z >= plat.minZ - 6.5 && pet.pos.z <= plat.maxZ + 6.5;
-        if (!inX || !inZ) continue;
+        if (plat.isMainFloor || Math.abs(supportY - plat.surfaceY) > 0.1) continue;
         const boardBottomY = plat.surfaceY - 2.4;
         const boardTopY = plat.surfaceY + 0.6;
-        // If the shelf board intersects the head's vertical span [headBottomY + 1.5, headTopY]:
         if (boardTopY > headBottomY + 1.5 && boardBottomY < headTopY) {
           const restOnShelfY = plat.surfaceY - baseOff * scale;
           if (restOnShelfY <= bz.maxY + 1.5) {
             pet.pos.y = Math.min(bz.maxY, restOnShelfY);
-          } else if (!pet.isGrounded) {
-            // Only push horizontally clear of the shelf edge while falling/dragged, never when grounded & idle
-            pet.pos.x = pet.pos.x < 0 ? Math.min(bz.maxX, plat.maxX + 7.0) : Math.max(bz.minX, plat.minX - 7.0);
+            if (pet.vel?.y < 0) pet.vel.y = 0;
           }
         }
       }
@@ -1716,8 +1716,14 @@ export class DesktopBoxSpaceEngine {
     let idx = 0;
     for (const pet of this.pets.values()) {
       const sc = pet.currentScale || pet.targetScale || 0.76;
-      // Anchor at the C4/C5 severed neck base of the 3D head
-      const neckWorld = pet.pos.clone().add(new THREE.Vector3(0, -9.2 * sc, 2.2 * sc));
+      // Project a point on the *actual rotated head* just above the cut,
+      // not an unrelated screen-space approximation of its position. The
+      // tether stays attached when the head is lifted/tilted/turned.
+      const neckLocalY = (pet.node?.userData?.baseBottomOffset ?? -10.8) + 0.65;
+      pet.node?.updateWorldMatrix?.(true, false);
+      const neckWorld = pet.node?.localToWorld
+        ? pet.node.localToWorld(new THREE.Vector3(0, neckLocalY, 2.2))
+        : pet.pos.clone().add(new THREE.Vector3(0, neckLocalY * sc, 2.2 * sc));
       const neckScreen = this.worldToScreen(neckWorld);
       // Offset the connected placard strip below-right or below-left so it NEVER covers the face!
       const sideSign = pet.pos.x < -8 ? -1 : 1;
@@ -2567,9 +2573,9 @@ export class DesktopBoxSpaceEngine {
                 pet.lastLandSoundAt = now;
                 const landingForce = Math.min(1, Math.abs(pet.vel.y) * 0.18);
                 soundEngine.playLanding(landingForce, panX);
-                // A small damped contact bounce makes the desk impact visible
-                // without turning a heavy head into an elastic ball.
-                pet.flickSpring = { age: 0, amplitude: Math.min(0.075, landingForce * 0.075) };
+                // No involuntary head recoil on landing. Recoil is reserved
+                // for an explicit forehead-flick tool action; a resting head
+                // must never twitch when physics/lighting wakes a render.
                 this.onBoxCollisionVisual('bottom');
               }
             }

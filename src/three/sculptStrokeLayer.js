@@ -86,11 +86,13 @@ export function applySculptStrokeToBuffer(pos, delta, stroke, hair = false, boun
       let sy = dy * weight * rootWeight;
       let sz = dz * weight * rootWeight;
       if (hair) {
-        // Across many pointermove events the same card vertex must never be
-        // pulled through the scalp or stretched several centimetres away.
+        // The old blanket 2.3cm cap made an otherwise continuing hair drag
+        // silently stop. Let free tips travel up to 6cm while the anchored
+        // crown remains within 2mm; the ease curve prevents a rubber-sheet
+        // seam or cards being pulled bodily off the scalp.
         const nx = delta[i] + sx, ny = delta[i + 1] + sy, nz = delta[i + 2] + sz;
         const len = Math.hypot(nx, ny, nz);
-        const limit = 0.023 * Math.sqrt(rootWeight);
+        const limit = 0.002 + 0.058 * flex * flex;
         if (len > limit) {
           const f = limit / len;
           sx = nx * f - delta[i]; sy = ny * f - delta[i + 1]; sz = nz * f - delta[i + 2];

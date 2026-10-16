@@ -84,6 +84,7 @@ const ACCESSORY_DEFAULTS = Object.freeze({
   // Existing archived characters retain their saved choice (including none).
   // A fresh studio draft starts with the requested wearable large squircle.
   glassesStyle: 'squircle_large', glassesColor: '#a07857', glassesSize: 1,
+  glassesWidth: 1, glassesHeight: 1,
   glassesOutline: 'soft_square', glassesFrameMaterial: 'warm_acetate', glassesRimThickness: 1,
   glassesOffsetY: 0, glassesOffsetZ: 0, glassesTilt: 0, glassesLensTint: 0,
   hatStyle: 'none', hatColor: '#785670', hatSize: 1, hatOffsetY: 0, hatTilt: 0,
@@ -133,9 +134,9 @@ function syncStudioAccessoryUI(morphs = {}) {
       if (proxyLabel) proxyLabel.textContent = accessoryDisplay(val, unit);
     }
   }
-  // A scanned CC0 frame cannot be reshaped without invalidating its authored
-  // UVs/hinges. Do not present inert geometry/finish controls on those styles.
-  const canReshape = m.glassesStyle === 'squircle_large';
+  // Procedural and CC0 scanned frames both have real mesh shaping / PBR
+  // finishes. Only 'none' has no frame to reshape.
+  const canReshape = m.glassesStyle !== 'none';
   for (const [studioId, obsId] of [
     ['sel-glasses-outline', 'obs-glasses-outline'],
     ['sel-glasses-material', 'obs-glasses-material'],
@@ -242,6 +243,9 @@ const state = {
   })(),
   desktopPetMode: false,
   placardOffsets: {},
+  // Screen-space home positions belong to the cards, not to moving heads.
+  // Only SVG tether endpoints track the 3D characters during dragging.
+  placardHomes: Object.create(null),
   placardLayouts: restorePlacardLayouts(),
   vcdTargetPetId: 'selected',
   pinnedDossierPetId: null,
@@ -997,14 +1001,17 @@ function renderSpecimenPlacards(placardsList = []) {
     const halfW = (cardEl._placardSize.w || 350) * .5;
     const halfH = (cardEl._placardSize.h || 190) * .5;
     const off = state.placardOffsets[item.id] || { dx: 0, dy: 0 };
-    const manuallyPlaced = Math.abs(off.dx) > 1 || Math.abs(off.dy) > 1;
+    const manualOffset = Math.abs(off.dx) > 1 || Math.abs(off.dy) > 1;
+    const homeKey = `${layoutKey}|${state.placardTheme}|${Math.round(halfW)}|${Math.round(halfH)}|${Boolean(dockRect)}`;
+    const home = state.placardHomes[item.id]?.key === homeKey ? state.placardHomes[item.id] : null;
+    const autoPlacement = !home && !manualOffset;
     const leftBound = halfW + 10;
     let rightBound = winW - halfW - 10;
-    if (!manuallyPlaced && dockRect?.width > 80 && item.anchorX < dockRect.left) {
+    if (autoPlacement && dockRect?.width > 80 && item.anchorX < dockRect.left) {
       rightBound = Math.min(rightBound, dockRect.left - halfW - 10);
     }
     const bottomBound = winH - halfH - 12;
-    const wishX = item.cardX + off.dx;
+    const wishX = (home?.x ?? item.cardX) + off.dx;
     let cx = clamp(wishX, leftBound, rightBound);
     const topBoundAt = x => {
       const barOverlap = barRect
@@ -1018,9 +1025,10 @@ function renderSpecimenPlacards(placardsList = []) {
     // the upper/side lane rather than cover a face or clip its paragraphs.
     const belowCenter = item.anchorY + halfH + 18;
     const canFitBelow = belowCenter <= bottomBound;
-    const wishY = manuallyPlaced ? item.cardY + off.dy
-      : canFitBelow ? Math.min(bottomBound, Math.max(belowCenter, winH - halfH - 22))
-        : Math.min(item.cardY, item.anchorY - halfH - 190);
+    const wishY = home ? home.y + off.dy
+      : manualOffset ? item.cardY + off.dy
+        : canFitBelow ? Math.min(bottomBound, Math.max(belowCenter, winH - halfH - 22))
+          : Math.min(item.cardY, item.anchorY - halfH - 190);
     let cy = clamp(wishY, topBound, bottomBound);
     const overlaps = (x, y, p) =>
       Math.abs(x - p.x) < halfW + p.halfW + 12 && Math.abs(y - p.y) < halfH + p.halfH + 12;
@@ -1035,8 +1043,9 @@ function renderSpecimenPlacards(placardsList = []) {
     }, 0);
     const placementScore = ([x,y]) =>
       Math.hypot(x - wishX, (y - wishY) * 1.15) + faceCoverPenalty([x,y]);
-    if (!manuallyPlaced) {
-      // Separate labels and protect *all* faces, not only the anchor's owner.
+    if (autoPlacement) {
+      // Separate labels once, when the card first gets a screen home. After
+      // that, animated heads may move but cards must NOT chase them.
       for (let attempt = 0; attempt < occupied.length + 2; attempt++) {
         const hit = occupied.find(p => overlaps(cx, cy, p));
         if (!hit && faceCoverPenalty([cx,cy]) < 40) break;
@@ -1064,6 +1073,7 @@ function renderSpecimenPlacards(placardsList = []) {
       }
     }
     occupied.push({ x: cx, y: cy, halfW, halfH });
+    if (!home) state.placardHomes[item.id] = { x: cx - off.dx, y: cy - off.dy, key: homeKey };
     const shouldHighlight = Boolean(item.isHovered || state.activeStripPetId === item.id);
     if (cardEl.classList.contains('is-hovered') !== shouldHighlight) cardEl.classList.toggle('is-hovered', shouldHighlight);
     const left = `${cx.toFixed(1)}px`, top = `${cy.toFixed(1)}px`;
@@ -1072,7 +1082,7 @@ function renderSpecimenPlacards(placardsList = []) {
 
     const dx = cx - item.anchorX, dy = cy - item.anchorY;
     let ax, ay, ex, ey, points;
-    const cardAboveFace = !manuallyPlaced && cy + halfH < item.anchorY - 85 && winW > 800;
+    const cardAboveFace = cy + halfH < item.anchorY - 85 && winW > 800;
     if (cardAboveFace) {
       // An old elbow route still ran horizontally THROUGH the eyes on its
       // final segment. Draw only a short card-side leader in this case.
@@ -1093,21 +1103,17 @@ function renderSpecimenPlacards(placardsList = []) {
       points = `${item.anchorX.toFixed(1)},${item.anchorY.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`;
     }
     const selected = item.isHovered || state.activeStripPetId === item.id;
-    const wireLength = Math.hypot(ax - item.anchorX, ay - item.anchorY);
-    // Long tethers used to bisect other portraits. Beyond the local lane show
-    // only a short card-side leader, leaving the 3D scene unobstructed.
-    const shortLeader = cardAboveFace || wireLength > 245;
-    const leader = shortLeader
-      ? `${(ax + (item.anchorX - ax) * Math.min(70 / Math.max(1, wireLength), .3)).toFixed(1)},${(ay + (item.anchorY - ay) * Math.min(70 / Math.max(1, wireLength), .3)).toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`
-      : points;
+    // Never truncate the connector into a card-side stub: the wearer must
+    // visibly remain connected even when they are dragged across the room.
+    // The above-face elbow already avoids the eyes; keep it for every card.
     lines.push(`<g>
-      <polyline points="${leader}" fill="none" stroke="${selected ? 'rgba(139,103,50,.78)' : 'rgba(92,73,47,.58)'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-      <polyline points="${leader}" fill="none" stroke="${selected ? 'rgba(251,191,36,.94)' : 'rgba(218,186,132,.76)'}" stroke-width="1.2" stroke-dasharray="${selected ? 'none' : '3 3'}" stroke-linecap="round" stroke-linejoin="round"/>
-      ${!shortLeader ? `<circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="2.7" fill="#efcb8e" stroke="#451a03" stroke-width=".8"/>` : ''}
+      <polyline points="${points}" fill="none" stroke="${selected ? 'rgba(139,103,50,.78)' : 'rgba(92,73,47,.58)'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="${points}" fill="none" stroke="${selected ? 'rgba(251,191,36,.94)' : 'rgba(218,186,132,.76)'}" stroke-width="1.2" stroke-dasharray="${selected ? 'none' : '3 3'}" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="3.2" fill="#efcb8e" stroke="#451a03" stroke-width=".8"/>
       <circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.5" fill="#d9b382"/>
     </g>`);
   }
-  for (const [id, el] of oldCards) if (!active.has(id)) el.remove();
+  for (const [id, el] of oldCards) if (!active.has(id)) { el.remove(); delete state.placardHomes[id]; }
   const markup = lines.join('');
   if (svgEl._lineMarkup !== markup) {
     svgEl.innerHTML = markup;
@@ -1967,16 +1973,24 @@ function installStudioSculptToolbar() {
         document.getElementById('sculpt-radius-val').textContent = `${(profile.radius * 100).toFixed(1)}cm`;
         document.getElementById('sculpt-strength-val').textContent = `${Math.round(profile.strength * 100)}%`;
       }
+      // Glasses are pulled by their actual rim/lens geometry, not the hair
+      // brush: don't present an inert radius/strength control in this mode.
+      if (radius) radius.disabled = studioEngine.sculptTool === 'glasses';
+      if (strength) strength.disabled = studioEngine.sculptTool === 'glasses';
       toolbar?.classList.add('compact'); // uncover the model as soon as the tool is chosen
       document.querySelectorAll('[data-sculpt-tool]').forEach(b => b.classList.toggle('active', b === btn));
       if (tip) tip.textContent = btn.dataset.sculptTool === 'orbit'
         ? '左键拖拽：旋转头雕 | 滚轮：缩放细节 | 右键：平移'
         : btn.dataset.sculptTool === 'face'
           ? '刷子模式：在脸部皮肤上左键拖动网格 | 滚轮缩放；切回旋转检视可转动模型'
-          : '刷子模式：在真实发束上左键梳理网格 | 滚轮缩放；换发保留该发型的笔画';
+          : btn.dataset.sculptTool === 'hair'
+            ? '刷子模式：在真实发束上左键梳理网格 | 滚轮缩放；换发保留该发型的笔画'
+            : '眼镜塑形：在镜框/镜片按住拖动 | 左右改框宽、上下改框高；所有已选款式有效';
       studioEngine.onSculptStatus?.(btn.dataset.sculptTool === 'orbit'
         ? '已回到旋转检视；先前的网格笔画仍保留。'
-        : '请在 3D 模型的实际表面开始拖动；左侧镜像开关可随时更改。');
+        : btn.dataset.sculptTool === 'glasses'
+          ? '请先选择一副眼镜，再在镜框/镜片表面按住左键拖拽；可以撤销。'
+          : '请在 3D 模型的实际表面开始拖动；左侧镜像开关可随时更改。');
     });
   });
   radius?.addEventListener('input', () => {

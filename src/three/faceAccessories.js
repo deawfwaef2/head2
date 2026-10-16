@@ -18,6 +18,7 @@ const HATS = new Set(['none', 'beret', 'beanie', 'bucket']);
 const EYE_Y = 0.021;
 const FRAME_Z = 0.105;
 const FRAME_ANCHOR = new THREE.Vector3(0, EYE_Y, FRAME_Z);
+const acetateStyle = style => style === 'squircle_large' || style === 'acetate_square';
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const limit = (v, fallback, min, max) => {
   const n = Number(v);
@@ -117,11 +118,16 @@ function glassesAsset(style, morphs = {}) {
     // shifts the cat-eye edge and its matching glass lens together.
     const xy = (t, inset = 0) => {
       const c = Math.cos(t), s = Math.sin(t);
-      const exPow = largeSquircle ? (outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.78 : 0.62) : 0.67;
-      const eyPow = largeSquircle ? (outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.80 : 0.66) : 0.75;
-      const ex = acetate ? Math.sign(c) * Math.pow(Math.abs(c), exPow) : c;
-      const ey = acetate ? Math.sign(s) * Math.pow(Math.abs(s), eyPow) : s;
-      const catLift = largeSquircle && outlineStyle === 'cat_eye'
+      // Every procedural frame responds to the outline selector. Keep the
+      // signature oval/aviator silhouette when untouched, but let round /
+      // squared / cat-eye reshape the real bezel AND the matching lens.
+      const exPow = outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.78
+        : largeSquircle ? 0.62 : acetate ? 0.67 : 0.78;
+      const eyPow = outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.80
+        : largeSquircle ? 0.66 : acetate ? 0.75 : 0.85;
+      const ex = Math.sign(c) * Math.pow(Math.abs(c), exPow);
+      const ey = Math.sign(s) * Math.pow(Math.abs(s), eyPow);
+      const catLift = outlineStyle === 'cat_eye'
         ? 0.0070 * Math.max(0, side * ex) ** 2 : 0;
       return [cx + (rx - inset) * ex, cy - EYE_Y + (ry - inset) * ey + catLift];
     };
@@ -138,7 +144,7 @@ function glassesAsset(style, morphs = {}) {
         if (i === 0) outline.moveTo(x, y); else outline.lineTo(x, y);
       }
       outline.closePath();
-      const rimWidth = largeSquircle ? 0.00215 * rimThickness : 0.00205;
+      const rimWidth = (largeSquircle ? 0.00215 : 0.00205) * rimThickness;
       const aperture = new THREE.Path();
       for (let i = steps - 1; i >= 0; i--) {
         const [x, y] = xy(i * Math.PI * 2 / steps, rimWidth);
@@ -147,25 +153,25 @@ function glassesAsset(style, morphs = {}) {
       aperture.closePath();
       outline.holes.push(aperture);
       const ring = mesh(root, new THREE.ExtrudeGeometry(outline, {
-        depth: largeSquircle ? 0.0017 * rimThickness : 0.0017, steps: 1, bevelEnabled: true,
+        depth: 0.0017 * rimThickness, steps: 1, bevelEnabled: true,
         bevelThickness: 0.00034, bevelSize: 0.00026, bevelSegments: 2,
       }), frameMat, `AcetateBevel_${side}`, false);
       ring.position.z = -0.0014;
     } else {
-      wire(root, rim, style === 'aviator' ? 0.00091 : 0.00079,
+      wire(root, rim, (style === 'aviator' ? 0.00091 : 0.00079) * rimThickness,
         frameMat, `TitaniumRim_${side}`, true);
       // A fine secondary rear eye-wire catches the studio key light.
       const inner = rim.map(([x, y, z]) => [
         cx + (x - cx) * 0.977, cy - EYE_Y + (y - (cy - EYE_Y)) * 0.977, z - 0.00115,
       ]);
-      wire(root, inner, 0.00027, hardwareMat, `InnerWire_${side}`, true);
+      wire(root, inner, 0.00027 * Math.sqrt(rimThickness), hardwareMat, `InnerWire_${side}`, true);
     }
 
     const lensVerts = [cx, cy - EYE_Y, -0.00115];
     const lensIdx = [];
     for (let i = 0; i <= steps; i++) {
       const [x, y] = xy(i * Math.PI * 2 / steps,
-        acetate ? (largeSquircle ? 0.00215 * rimThickness + 0.0002 : 0.00225) : 0.00075);
+        acetate ? (largeSquircle ? 0.00215 : 0.00205) * rimThickness + 0.0002 : 0.00075 * rimThickness);
       lensVerts.push(x, y, -0.0021 - 0.00045 * ((x - cx) / rx) ** 2);
       if (i < steps) lensIdx.push(0, i + 1, i + 2);
     }
@@ -360,6 +366,54 @@ async function polyhavenSource() {
   return polyhavenSourcePromise;
 }
 
+function reshapeScannedGlasses(glasses, outline, rimThickness) {
+  const key = `${outline}|${rimThickness.toFixed(2)}`;
+  if (!glasses.userData.physicalLoaded || glasses.userData.scannedShapeKey === key) return;
+  if (outline === 'round' && Math.abs(rimThickness - 1) < 0.005 && !glasses.userData.scannedShapeKey) {
+    glasses.userData.scannedShapeKey = key; // preserve authored scan normals at its untouched baseline
+    return;
+  }
+  glasses.updateWorldMatrix(true, true);
+  const fromWorld = glasses.matrixWorld.clone().invert();
+  const p = new THREE.Vector3();
+  glasses.traverse(obj => {
+    const attr = obj.isMesh && obj.geometry?.attributes?.position;
+    if (!attr || !obj.userData.scannedBasePositions) return;
+    const toGlasses = fromWorld.clone().multiply(obj.matrixWorld);
+    const toMesh = toGlasses.clone().invert();
+    const base = obj.userData.scannedBasePositions;
+    const isLens = Boolean(obj.userData.isOpticalLens);
+    for (let i = 0; i < attr.count; i++) {
+      p.fromArray(base, i * 3).applyMatrix4(toGlasses);
+      // The real CC0 scan has a contiguous bezel/hinge/temple: reshape it in
+      // frame-local coordinates, preserving its mesh, UVs and material map.
+      const forward = Math.min(1, Math.max(0, (p.z + 0.036) / 0.029));
+      const outer = Math.min(1, Math.max(0, (Math.abs(p.x) - 0.028) / 0.040));
+      if (outline === 'soft_square') {
+        p.y += Math.sign(p.y) * 0.0023 * outer * outer * forward;
+      } else if (outline === 'cat_eye') {
+        p.y += (0.002 + 0.008 * outer * outer) * forward * (p.y > -0.022 ? 1 : 0.25);
+      }
+      if (!isLens && Math.abs(rimThickness - 1) > 0.005 && forward > 0) {
+        const side = p.x < 0 ? -1 : 1;
+        const dx = Math.abs(p.x) - 0.029;
+        const r = Math.hypot(dx / 0.026, p.y / 0.022);
+        if (r > 0.60 && r < 1.45) {
+          const thick = (rimThickness - 1) * 0.0024 * (r >= 1 ? 1 : -1) * forward;
+          p.x += side * (dx / 0.026) / r * thick;
+          p.y += (p.y / 0.022) / r * thick;
+        }
+      }
+      p.applyMatrix4(toMesh).toArray(attr.array, i * 3);
+    }
+    attr.needsUpdate = true;
+    obj.geometry.computeVertexNormals();
+    obj.geometry.computeBoundingBox();
+    obj.geometry.computeBoundingSphere();
+  });
+  glasses.userData.scannedShapeKey = key;
+}
+
 function physicalGlassesAsset(rootGroup, glasses, morphs) {
   polyhavenSource().then(source => {
     // A head may have been rebuilt or the user may have switched style while
@@ -370,7 +424,13 @@ function physicalGlassesAsset(rootGroup, glasses, morphs) {
     const instance = source.clone(true);
     instance.traverse(obj => {
       if (!obj.isMesh) return;
+      // A GLTF scene clone shares geometry by default. Own this copy before
+      // per-head frame sculpting, or changing one person's glasses would
+      // irreversibly deform every other saved character's CC0 model.
+      obj.geometry = obj.geometry.clone();
+      obj.userData.scannedBasePositions = Float32Array.from(obj.geometry.attributes.position.array);
       const glass = obj.material?.name === 'round_spectacles_glass';
+      obj.userData.isOpticalLens = glass;
       const mat = obj.material.clone();
       if (glass) {
         // glTF transmission requires an entire extra screen pass. The thin
@@ -395,6 +455,7 @@ function physicalGlassesAsset(rootGroup, glasses, morphs) {
         mat.transparent = false;
         obj.castShadow = false;
         glasses.userData.frameMaterial = mat;
+        glasses.userData.scannedFrameMap = mat.map;
       }
       obj.material = mat;
     });
@@ -467,8 +528,11 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
   }
   const outline = FRAME_OUTLINES.has(morphs.glassesOutline) ? morphs.glassesOutline : 'soft_square';
   const rimThickness = limit(morphs.glassesRimThickness, 1, 0.55, 1.65);
-  const constructionKey = glassesStyle === 'squircle_large'
-    ? `${glassesStyle}|${outline}|${rimThickness.toFixed(2)}` : glassesStyle;
+  // Procedural styles rebuild real rim/lens vertices; the scanned CC0 style
+  // keeps its own geometry and is reshaped in place below (no GLB re-fetch).
+  const physicalStyle = glassesStyle.startsWith('polyhaven_');
+  const constructionKey = physicalStyle || glassesStyle === 'none'
+    ? glassesStyle : `${glassesStyle}|${outline}|${rimThickness.toFixed(2)}`;
   if (holder.userData.glassesConstructionKey !== constructionKey) {
     disposePart(holder.getObjectByName(`Glasses_${holder.userData.glassesStyle}`));
     if (glassesStyle === 'polyhaven_round' || glassesStyle === 'polyhaven_large_oval') {
@@ -498,38 +562,37 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
       FRAME_ANCHOR.z + limit(morphs.glassesOffsetZ, 0, -9, 9) * 0.001,
     );
     const s = limit(morphs.glassesSize, 1, 0.82, 1.30);
+    // Independent real geometry axes are also controlled by dragging the
+    // frame/lens directly in the studio; unlike 'size', they change SHAPE.
+    const frameWidth = limit(morphs.glassesWidth, 1, 0.68, 1.65);
+    const frameHeight = limit(morphs.glassesHeight, 1, 0.68, 1.55);
     const eyeFit = 1 + limit(morphs.eyeSpacing, 0, -1.2, 1.2) * 0.035;
     // Keep the optician's scanned frame, hinges, silicone pads and lenses.
     // Only the alternate fit widens the round original into a gentle oval
     // common in daily women's eyewear; it is NOT a photo-exact replica.
     glasses.scale.set(
-      s * eyeFit * (dailyLarge ? 1.04 : physical ? 0.84 : 1),
-      s * (dailyLarge ? 0.91 : physical ? 0.78 : 1),
+      s * eyeFit * frameWidth * (dailyLarge ? 1.04 : physical ? 0.84 : 1),
+      s * frameHeight * (dailyLarge ? 0.91 : physical ? 0.78 : 1),
       s * (dailyLarge ? 0.83 : physical ? 0.78 : 1)
     );
     glasses.rotation.set(limit(morphs.glassesTilt, 0, -12, 12) * Math.PI / 180, 0, 0);
+    if (physical && glasses.userData.physicalLoaded) reshapeScannedGlasses(glasses, outline, rimThickness);
     const frame = glasses.userData.frameMaterial;
     const lens = glasses.userData.lensMaterial;
     if (frame && lens) {
-      // For the new large squircle, selected finishes change the real
-      // MeshPhysicalMaterial BRDF (metal/roughness/clearcoat), not just an
-      // unlit colour swatch. Older scanned CC0 frames retain their maps.
+      const finish = FRAME_FINISHES[morphs.glassesFrameMaterial] || FRAME_FINISHES.warm_acetate;
       const chosenColor = hex(morphs.glassesColor, '#a07857');
-      if (glassesStyle === 'squircle_large') {
-        const finish = FRAME_FINISHES[morphs.glassesFrameMaterial] || FRAME_FINISHES.warm_acetate;
-        frame.color.set(chosenColor.toLowerCase() === '#a07857' ? finish.color : chosenColor);
-        frame.metalness = finish.metalness;
-        frame.roughness = finish.roughness;
-        frame.clearcoat = finish.clearcoat;
-        frame.envMapIntensity = finish.metalness > 0.5 ? 1.15 : 0.68;
-        const grainMap = morphs.glassesFrameMaterial === 'warm_acetate' || !FRAME_FINISHES[morphs.glassesFrameMaterial]
-          ? warmAcetateGrain() : null;
-        if (frame.map !== grainMap) { frame.map = grainMap; frame.needsUpdate = true; }
-      } else {
-        const metalTint = chosenColor === '#a07857' ? (dailyLarge ? '#d6c3b6' : '#d8dcda') : chosenColor;
-        frame.color.set(physical ? metalTint : chosenColor);
-        frame.color.multiplyScalar(physical ? 0.93 : (glassesStyle === 'acetate_square' ? 0.17 : 0.35));
-      }
+      // All seven styles now change their REAL PBR bezel material. Preserve
+      // the authored CC0 texture on scanned spectacles, use acetate grain
+      // only on acetate, and leave clear glass untinted unless requested.
+      frame.color.set(chosenColor.toLowerCase() === '#a07857' ? finish.color : chosenColor);
+      frame.metalness = finish.metalness;
+      frame.roughness = finish.roughness;
+      if (frame.isMeshPhysicalMaterial) frame.clearcoat = finish.clearcoat;
+      frame.envMapIntensity = finish.metalness > 0.5 ? 1.15 : 0.68;
+      const grainMap = physical ? glasses.userData.scannedFrameMap || null
+        : acetateStyle(glassesStyle) && finish === FRAME_FINISHES.warm_acetate ? warmAcetateGrain() : null;
+      if (frame.map !== grainMap) { frame.map = grainMap; frame.needsUpdate = true; }
       const tint = limit(morphs.glassesLensTint, 0, 0, 0.8);
       lens.color.set(tint > 0.12 ? '#536879' : '#e8f3fa');
       lens.opacity = (physical ? 0.07 : 0.12) + tint * (physical ? 0.31 : 0.55);

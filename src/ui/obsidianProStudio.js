@@ -523,7 +523,7 @@ export function initObsidianProStudio() {
         </details>
 
         <div class="obs-section" style="border-color:rgba(212,175,114,0.36);">
-          <div class="obs-sec-head"><span class="obs-sec-title">🕶️ 三维眼镜与帽子</span><span class="obs-sec-sub">实体镜架 / 帽檐 · 与人物档案同存</span></div>
+          <div class="obs-sec-head"><span class="obs-sec-title">🕶️ 三维眼镜与帽子</span><span class="obs-sec-sub">各款均可调框形 / 材质 · 3D 工坊点「直接拉眼镜」左右拉宽、上下拉高</span></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
             <label style="font-size:11px;color:#cbd5e1;">眼镜款式
               <select class="obs-select" id="obs-glasses-style" style="width:100%;margin-top:4px;">
@@ -1331,6 +1331,25 @@ function transformTopOverlayBar() {
       actions.appendChild(el);
     }
   });
+  // The old theme picker was hidden inside 'more tools' or the studio's
+  // character tab. Make the editable DISPLAY controls discoverable in one
+  // click without reopening the archived photo/story fields.
+  if (!document.getElementById('btn-edit-placard-display')) {
+    const placardDisplay = document.createElement('button');
+    placardDisplay.id = 'btn-edit-placard-display';
+    placardDisplay.type = 'button';
+    placardDisplay.className = 'overlay-btn';
+    placardDisplay.textContent = '🏷️ 标牌样式 / 尺寸';
+    placardDisplay.title = '打开人物与标牌：选择外观主题、尺寸和长宽比；照片与正文保持锁定';
+    placardDisplay.addEventListener('click', () => {
+      const studio = document.getElementById('obsidian-char-hair-studio');
+      if (studio?.classList.contains('hidden')) document.getElementById('btn-open-obsidian-studio')?.click();
+      studio?.querySelector('.obs-tab-btn[data-obs-tab="character"]')?.click();
+      studio?.querySelector('#obs-placard-theme-select')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    const visibility = document.getElementById('btn-quick-placards');
+    visibility?.insertAdjacentElement('afterend', placardDisplay);
+  }
 
   // Add 1-click Desktop Pet Mode (no floor blocking monitor screen) button directly on top bar
   let btnPetMode = document.getElementById('btn-desktop-pet-mode-toggle');

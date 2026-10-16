@@ -327,8 +327,15 @@ export function buildHairMaterials(src, opts = {}) {
   if (base.map) { base.map.colorSpace = THREE.SRGBColorSpace; base.map.anisotropy = 8; }
   const shared = { uInset: { value: o.inset }, uScalpFade: { value: 0 } };
   const core = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairCore', alphaTest: 0.22, alphaToCoverage: true });
-  core.onBeforeCompile = (s) => patchHairShader(s, o, false, shared);
-  core.customProgramCacheKey = () => 'photoreal-hair-core-v7-root-fibers';
+  // The authored card is an UNDERCOAT beneath the actual 3D strand mesh. Its
+  // old second full-strength specular lobe lit entire low-poly bang panels as
+  // silver/charcoal slabs across the forehead (especially hair_short04).
+  // Keep the dual-lobe sheen on real strands; only suppress it on the flat
+  // undercoat so existing hair color/texture and strand highlights survive.
+  core.onBeforeCompile = (s) => patchHairShader(s, {
+    ...o, spec1: o.spec1 * 0.10, spec2: o.spec2 * 0.12,
+  }, false, shared);
+  core.customProgramCacheKey = () => 'photoreal-hair-core-v8-fiber-undercoat';
   const tips = new THREE.MeshStandardMaterial({ ...base, name: 'PhotorealHairTips', transparent: true, depthWrite: false, alphaTest: 0.04 });
   tips.onBeforeCompile = (s) => patchHairShader(s, o, true, shared);
   tips.customProgramCacheKey = () => 'photoreal-hair-tips-v5';
