@@ -2,7 +2,7 @@ import { createVisualRepair } from './ui/visualRepair.js';
 import { createPlacardDossier, getPlacardDossier, getPlacardPhotoSrc, lockPlacardDossier } from './data/placardDossier.js';
 import { normalizePlacardLayout, restorePlacardLayouts, savePlacardLayouts, placardVisualDimensions } from './data/placardLayout.js';
 import { initObsidianProStudio } from './ui/obsidianProStudio.js';
-import { extendRangeForValue, installRangeNumericEditors, numericSafetyBounds, syncRangeNumericEditor } from './ui/rangeNumericInput.js';
+import { extendRangeForValue, installRangeNumericEditors, numericSafetyBounds, setRangeValueAndSync, syncRangeNumericEditor } from './ui/rangeNumericInput.js';
 import { initMorbidStudyToolkit } from './ui/morbidStudyToolkit.js';
 import './ui/obsidianProStudio.css';
 import {
@@ -102,10 +102,7 @@ const ACCESSORY_SLIDERS = [
   ['acc-hat-tilt', 'val-acc-hat-tilt', 'hatTilt', 'deg'],
 ];
 function syncRangeWithNumber(input, value) {
-  if (input?.type !== 'range') return;
-  if (!extendRangeForValue(input, value)) return;
-  input.value = String(value);
-  syncRangeNumericEditor(input);
+  return setRangeValueAndSync(input, value);
 }
 function accessoryDisplay(value, unit) {
   const n = Number(value) || 0;
@@ -1977,8 +1974,8 @@ function installStudioSculptToolbar() {
       if (profile) {
         studioEngine.sculptRadius = profile.radius;
         studioEngine.sculptStrength = profile.strength;
-        if (radius) radius.value = String(profile.radius * 100);
-        if (strength) strength.value = String(profile.strength);
+        if (radius) setRangeValueAndSync(radius, profile.radius * 100);
+        if (strength) setRangeValueAndSync(strength, profile.strength);
         document.getElementById('sculpt-radius-val').textContent = `${(profile.radius * 100).toFixed(1)}cm`;
         document.getElementById('sculpt-strength-val').textContent = `${Math.round(profile.strength * 100)}%`;
       }
@@ -2056,7 +2053,7 @@ function syncStudio3DStatus() {
   const sheen = state.studioDraft.hairSheen ?? 0.45;
   const sheenInput = document.getElementById('slider-hair-sheen');
   if (sheenInput) {
-    sheenInput.value = String(sheen);
+    setRangeValueAndSync(sheenInput, sheen);
     sheenInput.disabled = Boolean(state.studioDraft.customHairUrl);
     sheenInput.title = state.studioDraft.customHairUrl ? '外部模型保留艺术家材质；请在 Blender 调整其粗糙度。' : '';
   }
@@ -2219,7 +2216,7 @@ function loadCollectibleIntoStudio(col) {
     const val = Number(state.studioDraft[key] ?? 0);
     const sEl = document.getElementById(sId);
     const vEl = document.getElementById(vId);
-    if (sEl) sEl.value = String(val);
+    if (sEl) setRangeValueAndSync(sEl, val);
     if (vEl) vEl.textContent = `${Math.round(val * 100)}%`;
   }
   const mapStatusEl = document.getElementById('char-custom-map-status');
@@ -2434,10 +2431,10 @@ function initWindowDragging() {
       const canvas = document.getElementById('desktop-pet-canvas');
       if (canvas) canvas.classList.toggle('pets-behind-window', !nextTop);
       quickPetsTopBtn.classList.toggle('active-top', nextTop);
-      quickPetsTopBtn.textContent = nextTop ? '📌 3D桌宠: 置顶最前' : '🖥️ 3D桌宠: 桌面背景层';
+      quickPetsTopBtn.textContent = nextTop ? '📌 3D桌宠: 页内前景' : '🖥️ 3D桌宠: 页内背景';
       showToast(nextTop
-        ? '📌 3D桌宠已设为【置顶最前】：绝不被DAZ窗口遮挡，且可直接穿透拖拽/旋转！'
-        : '🖥️ 3D桌宠已设为【桌面背景层】：位于软件窗口后方');
+        ? '📌 3D桌宠已切到本软件内前景。跨应用透明置顶请启动 Windows Electron 桌宠模式，网页无法跨窗口置顶。'
+        : '🖥️ 3D桌宠已切到本软件内窗口背景层，未改变操作系统窗口置顶状态。');
     });
   }
 }
@@ -3236,7 +3233,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         state.studioDraft.photoBlend = Math.max(0.35, Number(state.studioDraft.photoBlend || 0));
         const projSlider = document.getElementById('slider-photo-proj');
         const projVal = document.getElementById('val-photo-proj');
-        if (projSlider) projSlider.value = String(state.studioDraft.photoBlend);
+        if (projSlider) setRangeValueAndSync(projSlider, state.studioDraft.photoBlend);
         if (projVal) projVal.textContent = `${Math.round(state.studioDraft.photoBlend * 100)}%`;
         studioEngine.updateMaterialsFast({
           photoElement: img,
@@ -4087,6 +4084,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   // costly full hair/skin recompute for every colour or millimetre adjustment.
   const applyAccessoryValue = (key, value) => {
     state.studioDraft.morphs[key] = value;
+    // The live head may still be in an async GLB/hair swap. Keep the saved
+    // rebuild snapshot aligned with the draft so removing glasses or a hat
+    // cannot be undone by a subsequent hairstyle selection.
+    if (studioEngine?.currentConfig) {
+      studioEngine.currentConfig.morphs = { ...(studioEngine.currentConfig.morphs || {}), [key]: value };
+    }
     const head = studioEngine?.headNode;
     if (head) {
       head.userData.currentMorphs = { ...(head.userData.currentMorphs || {}), [key]: value };
@@ -4168,7 +4171,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       state.studioDraft.morphs[mKey] = defVal;
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = String(defVal);
+      if (sEl) setRangeValueAndSync(sEl, defVal);
       if (vEl) vEl.textContent = unit === '%' ? '100%' : '+0.00';
     }
     syncStudioShapeUI(state.studioDraft.morphs);
@@ -4218,12 +4221,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     ]) {
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = '0';
+      if (sEl) setRangeValueAndSync(sEl, 0);
       if (vEl) vEl.textContent = '+0.00';
     }
     const scaleEl = document.getElementById('morph-hair-scale');
     const scaleValEl = document.getElementById('val-morph-hair-scale');
-    if (scaleEl) scaleEl.value = '1.00';
+    if (scaleEl) setRangeValueAndSync(scaleEl, 1);
     if (scaleValEl) scaleValEl.textContent = '100%';
     studioEngine.updateMorphsFast(state.studioDraft.morphs);
     showToast('↺ 已重置当前发型全部 10 轴微调参数至艺术家出厂形态');
@@ -4306,7 +4309,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (Number(state.studioDraft.hairOmbreMix ?? 0) < 0.35) {
           patch.hairOmbreMix = 0.58;
           const vcdOmbre = document.getElementById('vcd-hair-ombre');
-          if (vcdOmbre) vcdOmbre.value = '0.58';
+          if (vcdOmbre) setRangeValueAndSync(vcdOmbre, 0.58);
         }
         const vcdTipCol = document.getElementById('vcd-hair-tip-color');
         if (vcdTipCol) vcdTipCol.value = hex;
@@ -4326,32 +4329,32 @@ window.addEventListener('DOMContentLoaded', async () => {
           patch.eyelinerStrength = 0.45;
           const sl = document.getElementById('slider-eyeliner-strength');
           const vl = document.getElementById('val-eyeliner-strength');
-          if (sl) sl.value = '0.45';
+          if (sl) setRangeValueAndSync(sl, 0.45);
           if (vl) vl.textContent = '45%';
         }
       } else if (key === 'lipColor' && Number(state.studioDraft.lipStrength ?? 0.65) < 0.25) {
         patch.lipStrength = 0.65;
         const sl = document.getElementById('slider-lip-strength');
         const vl = document.getElementById('val-lip-strength');
-        if (sl) sl.value = '0.65';
+        if (sl) setRangeValueAndSync(sl, 0.65);
         if (vl) vl.textContent = '65%';
       } else if (key === 'blushColor' && Number(state.studioDraft.blushIntensity ?? 0.28) < 0.15) {
         patch.blushIntensity = 0.32;
         const sl = document.getElementById('slider-blush');
         const vl = document.getElementById('val-blush');
-        if (sl) sl.value = '0.32';
+        if (sl) setRangeValueAndSync(sl, 0.32);
         if (vl) vl.textContent = '32%';
       } else if (key === 'eyeshadowColor' && Number(state.studioDraft.eyeshadowIntensity ?? 0.0) < 0.12) {
         patch.eyeshadowIntensity = 0.28;
         const sl = document.getElementById('slider-eyeshadow');
         const vl = document.getElementById('val-eyeshadow');
-        if (sl) sl.value = '0.28';
+        if (sl) setRangeValueAndSync(sl, 0.28);
         if (vl) vl.textContent = '28%';
       } else if (key === 'hairHighlightColor' && Number(state.studioDraft.hairHighlightStrength ?? 0) < 0.20) {
         patch.hairHighlightStrength = 0.45;
         const sl = document.getElementById('slider-hair-highlight');
         const vl = document.getElementById('val-hair-highlight');
-        if (sl) sl.value = '0.45';
+        if (sl) setRangeValueAndSync(sl, 0.45);
         if (vl) vl.textContent = '45%';
       }
       applyLiveMaterialPatch(patch);
@@ -4368,7 +4371,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     const sl = document.getElementById('slider-eyeliner-strength');
     const vl = document.getElementById('val-eyeliner-strength');
-    if (sl) sl.value = String(strength);
+    if (sl) setRangeValueAndSync(sl, strength);
     if (vl) vl.textContent = `${Math.round(strength * 100)}%`;
     applyLiveMaterialPatch({ eyelinerStyle: styleId, eyelinerStrength: strength });
     const meta = EYELINER_STYLE_CATALOG.find(x => x.id === styleId);
@@ -4469,7 +4472,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       patch.tearTrackStrength = 0.85;
       const sEl = document.getElementById('slider-tear-track');
       const vEl = document.getElementById('val-tear-track');
-      if (sEl) sEl.value = '0.85';
+      if (sEl) setRangeValueAndSync(sEl, 0.85);
       if (vEl) vEl.textContent = '85%';
     }
     applyLiveMaterialPatch(patch);
@@ -4483,7 +4486,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       patch.nosebleedStrength = 0.82;
       const sEl = document.getElementById('slider-nosebleed');
       const vEl = document.getElementById('val-nosebleed');
-      if (sEl) sEl.value = '0.82';
+      if (sEl) setRangeValueAndSync(sEl, 0.82);
       if (vEl) vEl.textContent = '82%';
     }
     applyLiveMaterialPatch(patch);
@@ -4564,7 +4567,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (p[k] === undefined) continue;
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = String(p[k]);
+      if (sEl) setRangeValueAndSync(sEl, p[k]);
       if (vEl) vEl.textContent = `${Math.round(Number(p[k]) * 100)}%`;
     }
     if (p.tearType !== undefined) {
@@ -4617,7 +4620,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const val = Number(recipe[key]);
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = String(val);
+      if (sEl) setRangeValueAndSync(sEl, val);
       if (vEl) vEl.textContent = `${Math.round(val * 100)}%`;
     }
     if (recipe.eyelinerStyle !== undefined) {
@@ -4754,7 +4757,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     ]) {
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = String(val);
+      if (sEl) setRangeValueAndSync(sEl, val);
       if (vEl) vEl.textContent = txt;
     }
     applyLiveMaterialPatch(colorDefaults);
@@ -4786,7 +4789,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     button.addEventListener('click', () => {
       if (state.studioDraft.customHairUrl) return showToast('外部发型保留艺术家原材质；请在 Blender 修改粗糙度后重新导入。');
       const slider = document.getElementById('slider-hair-sheen');
-      slider.value = button.dataset.hairFinish;
+      setRangeValueAndSync(slider, button.dataset.hairFinish);
       slider.dispatchEvent(new Event('input', { bubbles: true }));
       studioEngine.wakeRender(1.5, false);
     });
@@ -5930,7 +5933,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const s = document.getElementById(sId);
       const v = document.getElementById(vId);
       const num = Number(val ?? 0);
-      if (s) s.value = String(num);
+      if (s) setRangeValueAndSync(s, num);
       if (v) {
         if (fmt === 'pct') v.textContent = `${Math.round(num * 100)}%`;
         else v.textContent = `${num >= 0 ? '+' : ''}${num.toFixed(2)}`;
@@ -6293,7 +6296,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     syncStudioHeadBlendSliders(zeroBlend);
     document.querySelectorAll('[data-head-blend]').forEach(inp => {
       const k = inp.dataset.headBlend;
-      inp.value = '0';
+      setRangeValueAndSync(inp, 0);
       const chk = document.querySelector(`[data-head-blend-on="${k}"]`);
       if (chk) chk.checked = false;
       const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
@@ -6387,9 +6390,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       const f2 = document.getElementById('vcd-hair-feather');
       const fv2 = document.getElementById('val-vcd-hair-feather');
       const pct = `${Math.round(Number(patch.hairWispyFeather) * 100)}%`;
-      if (f1) f1.value = String(patch.hairWispyFeather);
+      if (f1) setRangeValueAndSync(f1, patch.hairWispyFeather);
       if (fv1) fv1.textContent = pct;
-      if (f2) f2.value = String(patch.hairWispyFeather);
+      if (f2) setRangeValueAndSync(f2, patch.hairWispyFeather);
       if (fv2) fv2.textContent = pct;
     }
     if (patch.hairOmbreMix !== undefined) {
@@ -6398,9 +6401,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       const o2 = document.getElementById('vcd-hair-ombre');
       const ov2 = document.getElementById('val-vcd-hair-ombre');
       const pct = `${Math.round(Number(patch.hairOmbreMix) * 100)}%`;
-      if (o1) o1.value = String(patch.hairOmbreMix);
+      if (o1) setRangeValueAndSync(o1, patch.hairOmbreMix);
       if (ov1) ov1.textContent = pct;
-      if (o2) o2.value = String(patch.hairOmbreMix);
+      if (o2) setRangeValueAndSync(o2, patch.hairOmbreMix);
       if (ov2) ov2.textContent = pct;
     }
     if (patch.hairTipColor !== undefined) {

@@ -78,7 +78,7 @@ function createTray() {
   tray = new Tray(icon);
   tray.setToolTip('CERVIX-3D 真实屏幕透明穿透桌宠 (Ctrl+Alt+M 切换模式)');
 
-  const hdDemoPath = path.join(__dirname, '..', '画质提升', '画质提升演示.html');
+  const hdDemoPath = path.join(__dirname, '..', '画质提升', '点击打开_画质提升演示.html');
   const mainHtmlPath = path.join(__dirname, '..', '点击开始游戏_CERVIX3D.html');
 
   const menuTemplate = [

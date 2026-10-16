@@ -569,6 +569,12 @@ export class StudioPreviewEngine {
     const node = this.headNode;
     const before = performance.now();
     this.currentConfig = JSON.parse(JSON.stringify(config));
+    // A style-only swap must still honor live accessory choices. An earlier
+    // asynchronous head build can leave currentMorphs with the old glasses;
+    // copying the authoritative draft prevents the next hair rebuild from
+    // silently reattaching a pair that the user just removed.
+    node.userData.currentMorphs = { ...(node.userData.currentMorphs || {}), ...(config.morphs || {}) };
+    syncFaceAccessories(node, node.userData.currentMorphs);
     await updateHairDesignOnGroup(node, {
       hairStyle: config.hairStyle,
       hairColor: config.hairColor,

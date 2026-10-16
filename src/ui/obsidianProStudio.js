@@ -8,7 +8,7 @@
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
 import { VISUAL_STYLE_PRESETS } from '../three/photorealLighting.js';
-import { extendRangeForValue, syncRangeNumericEditor } from './rangeNumericInput.js';
+import { extendRangeForValue, setRangeValueAndSync, syncRangeNumericEditor } from './rangeNumericInput.js';
 import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
 
 const escapeMarkup = value => String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -1853,8 +1853,7 @@ function wireObsidianStudioEvents(studio) {
     const obsInp = studio.querySelector(`[data-obs-blend-val="${k}"]`);
     if (obsInp) {
       if (numV > 0.01) obsInp.dataset.lastWeight = String(numV);
-      extendRangeForValue(obsInp, numV);
-      obsInp.value = String(numV);
+      setRangeValueAndSync(obsInp, numV);
     }
     const obsChk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
     if (obsChk) obsChk.checked = isOn;
@@ -1914,7 +1913,7 @@ function wireObsidianStudioEvents(studio) {
     document.getElementById('btn-vcd-reset-blend')?.click();
     studio.querySelectorAll('[data-obs-blend-val]').forEach((inp) => {
       const k = inp.dataset.obsBlendVal;
-      inp.value = '0';
+      setRangeValueAndSync(inp, 0);
       const chk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
       if (chk) chk.checked = false;
       const txt = studio.querySelector(`[data-obs-blend-txt="${k}"]`);
@@ -2065,8 +2064,8 @@ function wireObsidianStudioEvents(studio) {
     const qa = window.__cervixQA;
     const col = qa?.state?.collectibles?.find(c => c.id === petId);
     const layout = qa?.state?.placardLayouts?.[petId] || { size: 1, aspect: 1 };
-    if (placardSizeInput) placardSizeInput.value = String(layout.size);
-    if (placardAspectInput) placardAspectInput.value = String(layout.aspect);
+    if (placardSizeInput) setRangeValueAndSync(placardSizeInput, layout.size);
+    if (placardAspectInput) setRangeValueAndSync(placardAspectInput, layout.aspect);
     const sv = document.getElementById('obs-placard-size-value');
     const av = document.getElementById('obs-placard-aspect-value');
     if (sv) sv.textContent = `${Math.round(layout.size * 100)}%`;

@@ -121,6 +121,16 @@ export function syncRangeNumericEditor(input) {
   return true;
 }
 
+// Button presets, reset actions and character switches set range.value without
+// firing input/change. Use one write path so the track is extended for a safe
+// advanced value BEFORE HTML clamps it, and its number field never stays stale.
+export function setRangeValueAndSync(input, value) {
+  if (!extendRangeForValue(input, value)) return false;
+  input.value = String(value);
+  syncRangeNumericEditor(input);
+  return true;
+}
+
 function install(input) {
   if (input.dataset.numberEditor === 'yes' &&
       input.nextElementSibling?.classList.contains('range-number-editor')) return;
