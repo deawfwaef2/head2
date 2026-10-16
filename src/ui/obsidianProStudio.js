@@ -237,7 +237,7 @@ function renderHairSvg(type) {
   }
 }
 
-function setFormValueAndTrigger(id, value, eventType = 'input') {
+function setFormValueAndTrigger(id, value, eventType = 'input', emitChange = true) {
   const el = document.getElementById(id);
   if (!el) return false;
   if (el.tagName === 'SELECT' && value !== undefined && value !== null) {
@@ -252,7 +252,7 @@ function setFormValueAndTrigger(id, value, eventType = 'input') {
   }
   el.value = value;
   el.dispatchEvent(new Event(eventType, { bubbles: true }));
-  if (eventType !== 'change') {
+  if (eventType !== 'change' && emitChange) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
   return true;
@@ -393,6 +393,11 @@ export function initObsidianProStudio() {
             <button class="obs-filter-pill" data-hair-cat="updo">古典盘发</button>
             <button class="obs-filter-pill" data-hair-cat="tail">马尾编发</button>
           </div>
+          <div style="display:flex;gap:6px;align-items:center;margin:8px 0 5px;">
+            <input type="search" id="obs-hair-search" class="obs-select" placeholder="搜索：长直、空气刘海、锁骨、偏分、盘发…" aria-label="按发型名称或特征筛选" style="min-width:0;flex:1;" />
+            <button type="button" id="obs-hair-search-clear" class="obs-icon-btn" title="清除筛选">清除</button>
+          </div>
+          <div id="obs-hair-search-count" class="obs-sec-sub" role="status" style="margin-bottom:6px;">可搜索发型名与标签；卡片插画仅是风格提示，点击后才加载真实 3D 网格。请手工对照照片。</div>
           <div class="obs-card-grid" id="obs-hair-card-grid" style="max-height:260px;overflow-y:auto;padding-right:2px;">
             ${[
               ...HAIRSTYLE_CARDS.filter((h) => NEW_32_HAIR_IDS.has(h.id)),
@@ -503,13 +508,13 @@ export function initObsidianProStudio() {
         <details class="obs-accordion" open>
           <summary>发型形态精调 (11项实时滑块)</summary>
           <div class="obs-accordion-body">
-            ${makeShortSliderRow({ label: '刘海长度', targetId: 'morph-bangs-len', min: -0.45, max: 0.55, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '八字分缝', targetId: 'morph-bangs-part', min: -0.45, max: 0.75, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '颅顶蓬松', targetId: 'morph-hair-vol', min: -0.35, max: 0.60, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '发尾长度', targetId: 'morph-hair-len', min: -0.45, max: 0.75, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '鬓角收拢', targetId: 'morph-sideburn-lock', min: -0.45, max: 0.55, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '发梢外翘', targetId: 'morph-hair-flare', min: -0.55, max: 0.75, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '卷曲波浪', targetId: 'morph-hair-curl', min: 0, max: 1.0, step: 0.02, val: 0, fmt: 'pct' })}
+            ${makeShortSliderRow({ label: '刘海长度', targetId: 'morph-bangs-len', min: -0.50, max: 0.80, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '八字分缝', targetId: 'morph-bangs-part', min: -0.50, max: 0.55, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '颅顶蓬松', targetId: 'morph-hair-vol', min: -0.35, max: 0.80, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '发尾长度', targetId: 'morph-hair-len', min: -0.50, max: 0.80, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鬓角收拢', targetId: 'morph-sideburn-lock', min: -0.50, max: 0.65, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '发梢外翘', targetId: 'morph-hair-flare', min: -0.60, max: 0.60, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '卷曲波浪', targetId: 'morph-hair-curl', min: -0.50, max: 0.85, step: 0.02, val: 0, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '空气羽化', targetId: 'vcd-hair-feather', fallbackId: 'slider-hair-feather', min: 0, max: 1.0, step: 0.02, val: 0.45, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '挑染比例', targetId: 'vcd-hair-ombre', fallbackId: 'slider-hair-ombre', min: 0, max: 1.0, step: 0.02, val: 0, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '发丝光泽', targetId: 'slider-hair-sheen', min: 0.1, max: 1.0, step: 0.02, val: 0.65, fmt: 'pct' })}
@@ -523,6 +528,8 @@ export function initObsidianProStudio() {
             <label style="font-size:11px;color:#cbd5e1;">眼镜款式
               <select class="obs-select" id="obs-glasses-style" style="width:100%;margin-top:4px;">
                 <option value="none">不佩戴</option><option value="wire_oval">椭圆金属框</option>
+                <option value="polyhaven_large_oval">宽版女式椭圆框 · 实物 CC0</option>
+                <option value="polyhaven_round">实物纹理金属圆框 · CC0</option>
                 <option value="acetate_square">板材方框</option><option value="aviator">飞行员双梁</option>
               </select>
             </label>
@@ -538,7 +545,7 @@ export function initObsidianProStudio() {
             <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;">帽布 <input type="color" id="obs-hat-color" value="#785670" /></label>
           </div>
           <div class="obs-accordion-body">
-            ${makeShortSliderRow({ label: '镜架大小', targetId: 'acc-glasses-size', min: 0.82, max: 1.18, step: 0.01, val: 1, fmt: 'pct' })}
+            ${makeShortSliderRow({ label: '镜架大小', targetId: 'acc-glasses-size', min: 0.82, max: 1.30, step: 0.01, val: 1, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '镜架上下', targetId: 'acc-glasses-height', min: -9, max: 9, step: 1, val: 0, fmt: 'mm' })}
             ${makeShortSliderRow({ label: '镜架前后', targetId: 'acc-glasses-depth', min: -9, max: 9, step: 1, val: 0, fmt: 'mm' })}
             ${makeShortSliderRow({ label: '镜架俯仰', targetId: 'acc-glasses-tilt', min: -12, max: 12, step: 1, val: 0, fmt: 'deg' })}
@@ -724,10 +731,10 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '眼球上翻', targetId: 'morph-eye-roll', min: -0.4, max: 1.0, step: 0.02, val: 0.22, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '舌头伸出', targetId: 'morph-tongue-out', min: 0, max: 1.0, step: 0.02, val: 0, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '下颌歪斜', targetId: 'morph-jaw-side', min: -0.8, max: 0.8, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '视线左右', targetId: 'morph-gaze-yaw', min: -0.6, max: 0.6, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '视线上下', targetId: 'morph-gaze-pitch', min: -0.5, max: 0.5, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '头宽比例', targetId: 'morph-head-width', min: -0.25, max: 0.25, step: 0.01, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '头长比例', targetId: 'morph-head-length', min: -0.25, max: 0.25, step: 0.01, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '视线左右', targetId: 'morph-gaze-yaw', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '视线上下', targetId: 'morph-gaze-pitch', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '头宽比例', targetId: 'morph-head-width', min: -0.27, max: 0.27, step: 0.01, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '头长比例', targetId: 'morph-head-length', min: -0.27, max: 0.27, step: 0.01, val: 0, fmt: 'signed' })}
           </div>
         </details>
       </div>
@@ -796,16 +803,16 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '杏眼圆长', targetId: 'vcd-eye-almond', fallbackId: 'morph-eye', min: -1.40, max: 1.40, step: 0.02, val: 0.08, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '眼睑开合', targetId: 'vcd-eye-aperture', fallbackId: 'morph-eyelid-open', min: -1.20, max: 1.20, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '眼尾弧度', targetId: 'vcd-eye-tilt', fallbackId: 'morph-eye-tilt', min: -1.20, max: 1.20, step: 0.02, val: -0.04, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '眼距宽窄', targetId: 'vcd-eye-spacing', fallbackId: 'morph-eye-spacing', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '内眦开合', targetId: 'vcd-eye-epicanthus', fallbackId: 'morph-eye-epicanthus', min: -1.20, max: 1.20, step: 0.02, val: 0.15, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '内眼角局部高', targetId: 'morph-eye-medial-canthus', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '上眼褶线高度', targetId: 'morph-eye-upper-fold-height', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '外侧眼裂开合', targetId: 'morph-eye-outer-opening', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '双眼皮深', targetId: 'vcd-eye-crease', fallbackId: 'morph-eye-crease', min: -1.20, max: 1.20, step: 0.02, val: 0.25, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '卧蚕饱满', targetId: 'vcd-eye-bag', fallbackId: 'morph-eye-bag', min: 0, max: 0.65, step: 0.02, val: 0.20, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '下眼缘平直', targetId: 'morph-lower-lid-flatness', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '眼窝深浅', targetId: 'morph-eye-depth', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '外眼角高低', targetId: 'morph-outer-canthus', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼距宽窄', targetId: 'vcd-eye-spacing', fallbackId: 'morph-eye-spacing', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '内眦开合', targetId: 'vcd-eye-epicanthus', fallbackId: 'morph-eye-epicanthus', min: -1.30, max: 1.30, step: 0.02, val: 0.15, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '内眼角局部高', targetId: 'morph-eye-medial-canthus', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '上眼褶线高度', targetId: 'morph-eye-upper-fold-height', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '外侧眼裂开合', targetId: 'morph-eye-outer-opening', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '双眼皮深', targetId: 'vcd-eye-crease', fallbackId: 'morph-eye-crease', min: -1.30, max: 1.30, step: 0.02, val: 0.25, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '卧蚕饱满', targetId: 'vcd-eye-bag', fallbackId: 'morph-eye-bag', min: 0, max: 1.30, step: 0.02, val: 0.20, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下眼缘平直', targetId: 'morph-lower-lid-flatness', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '眼窝深浅', targetId: 'morph-eye-depth', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '外眼角高低', targetId: 'morph-outer-canthus', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
             ${makeShortSliderRow({ label: '虹膜大小', targetId: 'vcd-iris-scale', fallbackId: 'morph-iris-scale', min: 0.78, max: 1.25, step: 0.01, val: 1.02, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '瞳孔缩放', targetId: 'vcd-pupil-size', fallbackId: 'morph-pupil-size', min: 0.55, max: 1.45, step: 0.02, val: 1.00, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '虹膜通透', targetId: 'vcd-iris-brightness', fallbackId: 'slider-iris-brightness', min: 0.60, max: 1.80, step: 0.02, val: 1.15, fmt: 'pct' })}
@@ -817,23 +824,31 @@ export function initObsidianProStudio() {
         <details class="obs-accordion">
           <summary>面部骨相与口唇精雕（含嘴角 / 上唇）</summary>
           <div class="obs-accordion-body">
-            ${makeShortSliderRow({ label: '下颌V线', targetId: 'morph-jaw', min: -0.50, max: 0.60, step: 0.02, val: -0.08, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '下巴长度', targetId: 'morph-chin', min: -0.45, max: 0.50, step: 0.02, val: -0.04, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '下巴宽窄', targetId: 'morph-chin-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '面颊胶原', targetId: 'morph-cheek', min: -0.45, max: 0.55, step: 0.02, val: 0.16, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '鼻梁高度', targetId: 'morph-nose', min: -0.45, max: 0.55, step: 0.02, val: 0.04, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '鼻翼宽窄', targetId: 'morph-nose-width', min: -0.45, max: 0.45, step: 0.02, val: 0.04, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '鼻头宽度', targetId: 'morph-nose-tip-width', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '鼻尖翘垂', targetId: 'morph-nose-tip', min: -0.70, max: 0.70, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '嘴唇丰满', targetId: 'morph-lip', min: -0.40, max: 0.55, step: 0.02, val: 0.08, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '嘴部宽度', targetId: 'morph-mouth-width', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '嘴角局部高低', targetId: 'morph-mouth-corner-lift', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '上唇中央提拉', targetId: 'morph-upper-lip-lift', min: -1, max: 1, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '口唇纵向比例', targetId: 'morph-mouth-height', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '唇峰弧度', targetId: 'morph-cupid-bow', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '下唇中央', targetId: 'morph-lower-lip', min: -1.00, max: 1.00, step: 0.02, val: 0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '嘴角笑意', targetId: 'morph-mouth-smile', min: -0.45, max: 0.45, step: 0.02, val: 0.06, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '额头高度', targetId: 'morph-forehead', min: -0.35, max: 0.45, step: 0.02, val: 0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下颌V线', targetId: 'morph-jaw', min: -1.30, max: 1.30, step: 0.02, val: -0.08, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下巴长度', targetId: 'morph-chin', min: -1.30, max: 1.30, step: 0.02, val: -0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下巴宽窄', targetId: 'morph-chin-width', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '面颊胶原', targetId: 'morph-cheek', min: -1.30, max: 1.30, step: 0.02, val: 0.16, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻梁高度', targetId: 'morph-nose', min: -1.30, max: 1.30, step: 0.02, val: 0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻翼宽窄', targetId: 'morph-nose-width', min: -1.30, max: 1.30, step: 0.02, val: 0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻头宽度', targetId: 'morph-nose-tip-width', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻尖翘垂', targetId: 'morph-nose-tip', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴唇丰满', targetId: 'morph-lip', min: -1.30, max: 1.30, step: 0.02, val: 0.08, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴部宽度', targetId: 'morph-mouth-width', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴角局部高低', targetId: 'morph-mouth-corner-lift', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '上唇中央提拉', targetId: 'morph-upper-lip-lift', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '口唇纵向比例', targetId: 'morph-mouth-height', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '唇峰弧度', targetId: 'morph-cupid-bow', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下唇中央', targetId: 'morph-lower-lip', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '嘴角笑意', targetId: 'morph-mouth-smile', min: -1.30, max: 1.30, step: 0.02, val: 0.06, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '额头高度', targetId: 'morph-forehead', min: -1.30, max: 1.30, step: 0.02, val: 0.04, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '面颊容量', targetId: 'morph-cheek-volume', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '苹果肌高度', targetId: 'morph-cheek-height', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '内侧面颊', targetId: 'morph-cheek-inner', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下巴前伸', targetId: 'morph-chin-projection', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '下巴沟深浅', targetId: 'morph-chin-cleft', min: 0, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '鼻孔宽窄', targetId: 'morph-nostril-width', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '人中立体', targetId: 'morph-philtrum-volume', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '额颞宽窄', targetId: 'morph-temple-fullness', min: -1.30, max: 1.30, step: 0.02, val: 0, fmt: 'signed' })}
           </div>
         </details>
       </div>
@@ -898,8 +913,8 @@ export function initObsidianProStudio() {
             ${makeShortSliderRow({ label: '血泪浓度', targetId: 'slider-tear-track', min: 0, max: 1.5, step: 0.02, val: 0.0, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '嘴角溢血', targetId: 'slider-mouth-blood', min: 0, max: 1.5, step: 0.02, val: 0.0, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '面部血溅', targetId: 'slider-face-splatter', min: 0, max: 1.5, step: 0.02, val: 0.22, fmt: 'pct' })}
-            ${makeShortSliderRow({ label: '切口高度', targetId: 'morph-cut-height', min: -1.2, max: 1.5, step: 0.05, val: 0.0, fmt: 'signed' })}
-            ${makeShortSliderRow({ label: '切面倾角', targetId: 'morph-cut-pitch', min: -18, max: 18, step: 0.5, val: 0.0, fmt: 'raw' })}
+            ${makeShortSliderRow({ label: '切口高度', targetId: 'morph-cut-height', min: -1.5, max: 1.5, step: 0.05, val: 0.0, fmt: 'signed' })}
+            ${makeShortSliderRow({ label: '切面倾角', targetId: 'morph-cut-pitch', min: -15, max: 15, step: 0.5, val: 0.0, fmt: 'raw' })}
             ${makeShortSliderRow({ label: '断面湿润', targetId: 'slider-anatomy-wetness', min: 0.1, max: 1.0, step: 0.02, val: 0.92, fmt: 'pct' })}
           </div>
         </details>
@@ -1502,6 +1517,29 @@ function wireObsidianStudioEvents(studio) {
   const btnOpen3D = document.getElementById('btn-obs-open-3d-workbench');
   const targetSelect = document.getElementById('obs-target-select');
 
+  const syncProxyRangesFromControls = () => {
+    studio.querySelectorAll('.obs-slider-row[data-sync-target]').forEach(row => {
+      const proxy = row.querySelector('.obs-proxy-range');
+      const actual = document.getElementById(row.dataset.syncTarget);
+      if (!proxy || !actual || actual.type !== 'range') return;
+      // An old compact range must never write an out-of-range value into a
+      // different main/VCD range, which otherwise appears to 'bounce'.
+      const linked = [actual, document.getElementById(row.dataset.syncFallback)].filter(x => x?.type === 'range');
+      const min = Math.max(Number(proxy.min), ...linked.map(x => Number(x.min)));
+      const max = Math.min(Number(proxy.max), ...linked.map(x => Number(x.max)));
+      if (min <= max) { proxy.min = String(min); proxy.max = String(max); }
+      const mainFallback = document.getElementById(row.dataset.syncFallback);
+      if (mainFallback?.type === 'range' && mainFallback.value !== actual.value) {
+        // The main workbench holds the persisted draft. A dormant quick-eye
+        // slider may still have the previous value from before editing.
+        actual.value = mainFallback.value;
+      }
+      proxy.value = actual.value;
+      const text = row.querySelector('.obs-proxy-val');
+      if (text) text.textContent = formatSliderDisplay(proxy.value, row.dataset.fmt || 'pct');
+    });
+  };
+
   const refreshTargetDropdown = () => {
     const vcdTarget = document.getElementById('vcd-target-pet-select');
     if (vcdTarget && targetSelect) {
@@ -1517,6 +1555,7 @@ function wireObsidianStudioEvents(studio) {
     btnOpen.addEventListener('click', () => {
       refreshTargetDropdown();
       syncObsidianCardsFromDOM(studio);
+      syncProxyRangesFromControls();
       const willOpen = studio.classList.contains('hidden');
       if (willOpen) {
         document.getElementById('visual-customizer-drawer')?.classList.add('hidden');
@@ -1561,19 +1600,39 @@ function wireObsidianStudioEvents(studio) {
     });
   });
 
-  // Hairstyle category filter (including ✨ 新增32款 'new32')
+  // Name/tag search narrows existing real GLB choices without claiming image
+  // recognition: the tiny SVG cards are a schematic, not true 3D snapshots.
+  const filterHairCards = () => {
+    const cat = studio.querySelector('#obs-hair-cat-strip .obs-filter-pill.active')?.dataset.hairCat || 'all';
+    const query = studio.querySelector('#obs-hair-search')?.value.trim().toLocaleLowerCase() || '';
+    let shown = 0;
+    studio.querySelectorAll('#obs-hair-card-grid .obs-visual-card').forEach(card => {
+      const inCat = cat === 'all' || (cat === 'new32' ? card.dataset.hairNew === '1' : card.dataset.hairCat === cat);
+      const text = `${card.dataset.hairId} ${card.querySelector('.obs-card-title')?.textContent || ''} ${card.querySelector('.obs-card-meta')?.textContent || ''}`.toLocaleLowerCase();
+      const show = inCat && (!query || text.includes(query));
+      card.style.display = show ? 'flex' : 'none';
+      if (show) shown++;
+    });
+    const count = studio.querySelector('#obs-hair-search-count');
+    if (count) count.textContent = shown
+      ? `已筛出 ${shown} 款 · 卡片仅示意，点选后在 3D 视窗实际比对。`
+      : '没有匹配发型；试试清除关键词或切换「全部」。';
+  };
+  studio.querySelector('#obs-hair-search')?.addEventListener('input', filterHairCards);
+  studio.querySelector('#obs-hair-search-clear')?.addEventListener('click', () => {
+    const input = studio.querySelector('#obs-hair-search');
+    if (input) input.value = '';
+    filterHairCards();
+  });
   studio.querySelectorAll('#obs-hair-cat-strip .obs-filter-pill').forEach((pill) => {
     pill.addEventListener('click', () => {
-      const cat = pill.dataset.hairCat;
       studio.querySelectorAll('#obs-hair-cat-strip .obs-filter-pill').forEach((p) => p.classList.toggle('active', p === pill));
-      studio.querySelectorAll('#obs-hair-card-grid .obs-visual-card').forEach((card) => {
-        const match = cat === 'all' || (cat === 'new32' ? card.dataset.hairNew === '1' : card.dataset.hairCat === cat);
-        card.style.display = match ? 'flex' : 'none';
-      });
+      filterHairCards();
     });
   });
+  filterHairCards();
 
-  // 29 Hairstyle visual cards click -> update BOTH desktop pet & studio head
+  // 61 Hairstyle visual cards click -> update BOTH desktop pet & studio head
   studio.querySelectorAll('#obs-hair-card-grid .obs-visual-card').forEach((card) => {
     card.addEventListener('click', () => {
       const hairId = card.dataset.hairId;
@@ -1874,8 +1933,16 @@ function wireObsidianStudioEvents(studio) {
     range.addEventListener('input', () => {
       const v = range.value;
       if (valSpan) valSpan.textContent = formatSliderDisplay(v, fmt);
-      if (targetId) setFormValueAndTrigger(targetId, v, 'input');
-      if (fallbackId) setFormValueAndTrigger(fallbackId, v, 'input');
+      // A drag generates many input events. Do not synthesize a 'change' at
+      // every pixel: some old change handlers commit/reload and snap sliders
+      // back to the previous stored appearance while the drag is in progress.
+      if (targetId) setFormValueAndTrigger(targetId, v, 'input', false);
+      if (fallbackId) setFormValueAndTrigger(fallbackId, v, 'input', false);
+    });
+    range.addEventListener('change', () => {
+      for (const id of [targetId, fallbackId]) {
+        if (id) document.getElementById(id)?.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     });
   });
 

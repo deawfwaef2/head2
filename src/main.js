@@ -1848,9 +1848,94 @@ function formatAssetQuality(stats) {
   return `用户 GLB · ${tris} 三角面 · 最大贴图 ${texture} · 保留原 PBR（${maps}）`;
 }
 
+function installStudioSculptToolbar() {
+  if (!studioEngine) return;
+  const status = document.getElementById('sculpt-status');
+  const tip = document.querySelector('.viewport-overlay-tip');
+  const radius = document.getElementById('sculpt-radius');
+  const strength = document.getElementById('sculpt-strength');
+  const symmetric = document.getElementById('sculpt-symmetric');
+  const toolbar = document.getElementById('sculpt-toolbar');
+  document.getElementById('sculpt-toolbar-toggle')?.addEventListener('click', () => {
+    toolbar?.classList.toggle('compact');
+  });
+  studioEngine.getSculptMorphs = () => state.studioDraft.morphs;
+  studioEngine.onSculptStatus = text => { if (status) status.textContent = text; };
+  studioEngine.onSculptCommit = morphs => {
+    // The studio draft is the single source of truth. It is archived by the
+    // existing Save & Summon path, not by storing transient GPU buffers.
+    if (morphs !== state.studioDraft.morphs) state.studioDraft.morphs = morphs;
+    if (status) status.textContent = `已完成 ${morphs?.sculptGestures?.length || 0} 笔；点击保存外观并召唤可写入角色档案（包括桌宠）。`;
+  };
+  document.querySelectorAll('[data-sculpt-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const oldMode = studioEngine.sculptTool;
+      if (studioEngine.sculptProfiles[oldMode]) {
+        studioEngine.sculptProfiles[oldMode] = {
+          radius: studioEngine.sculptRadius, strength: studioEngine.sculptStrength
+        };
+      }
+      studioEngine.setSculptTool(btn.dataset.sculptTool);
+      const profile = studioEngine.sculptProfiles[studioEngine.sculptTool];
+      if (profile) {
+        studioEngine.sculptRadius = profile.radius;
+        studioEngine.sculptStrength = profile.strength;
+        if (radius) radius.value = String(profile.radius * 100);
+        if (strength) strength.value = String(profile.strength);
+        document.getElementById('sculpt-radius-val').textContent = `${(profile.radius * 100).toFixed(1)}cm`;
+        document.getElementById('sculpt-strength-val').textContent = `${Math.round(profile.strength * 100)}%`;
+      }
+      toolbar?.classList.add('compact'); // uncover the model as soon as the tool is chosen
+      document.querySelectorAll('[data-sculpt-tool]').forEach(b => b.classList.toggle('active', b === btn));
+      if (tip) tip.textContent = btn.dataset.sculptTool === 'orbit'
+        ? '左键拖拽：旋转头雕 | 滚轮：缩放细节 | 右键：平移'
+        : btn.dataset.sculptTool === 'face'
+          ? '刷子模式：在脸部皮肤上左键拖动网格 | 滚轮缩放；切回旋转检视可转动模型'
+          : '刷子模式：在真实发束上左键梳理网格 | 滚轮缩放；换发保留该发型的笔画';
+      studioEngine.onSculptStatus?.(btn.dataset.sculptTool === 'orbit'
+        ? '已回到旋转检视；先前的网格笔画仍保留。'
+        : '请在 3D 模型的实际表面开始拖动；左侧镜像开关可随时更改。');
+    });
+  });
+  radius?.addEventListener('input', () => {
+    studioEngine.sculptRadius = Number(radius.value) / 100;
+    document.getElementById('sculpt-radius-val').textContent = `${Number(radius.value).toFixed(1)}cm`;
+  });
+  strength?.addEventListener('input', () => {
+    studioEngine.sculptStrength = Number(strength.value);
+    document.getElementById('sculpt-strength-val').textContent = `${Math.round(studioEngine.sculptStrength * 100)}%`;
+  });
+  symmetric?.addEventListener('change', () => {
+    studioEngine.sculptSymmetric = symmetric.checked;
+    studioEngine.onSculptStatus?.(symmetric.checked ? '左右镜像已开启；下一笔同时改变两侧。' : '左右镜像已关闭；下一笔只修改鼠标附近。');
+  });
+  document.getElementById('sculpt-undo')?.addEventListener('click', () => {
+    if (!studioEngine.undoSculpt()) studioEngine.onSculptStatus?.('当前角色尚无可撤销的刷子笔画。');
+  });
+  document.getElementById('sculpt-save')?.addEventListener('click', () => {
+    document.getElementById('btn-save-and-summon')?.click();
+  });
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z' || e.shiftKey ||
+      studioEngine.sculptTool === 'orbit' || !studioEngine.isCanvasVisible() ||
+      e.target?.closest?.('input, textarea, [contenteditable=true]')) return;
+    if (studioEngine.undoSculpt()) e.preventDefault();
+  });
+}
+
 async function refreshStudio3DModel() {
   if (!studioEngine) return;
   await studioEngine.loadOrRebuild(state.studioDraft);
+  syncStudio3DStatus();
+}
+
+async function refreshStudioHairOnly() {
+  if (!studioEngine) return;
+  await studioEngine.updateHairOnly(state.studioDraft);
+  syncStudio3DStatus();
+}
+
+function syncStudio3DStatus() {
   const node = studioEngine.headNode;
   const hStats = node?.userData?.hairStats;
   const error = node?.userData?.hairLoadError;
@@ -2890,6 +2975,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // 2. Initialize 3D Studio Preview Engine
   const studioCanvas = document.getElementById('studio-preview-canvas');
   studioEngine = new StudioPreviewEngine(studioCanvas);
+  installStudioSculptToolbar();
   const refPhotoCanvas = document.getElementById('ref-photo-canvas');
   drawPresetReferencePortrait(refPhotoCanvas, 'user_photo');
   await refreshStudio3DModel();
@@ -3215,8 +3301,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customHairUrl = null;
     state.studioDraft.hairStyle = picked.id;
     syncStudioHairUI(picked.id);
-    document.getElementById('custom-model-status').textContent = `内置高精头模 + ${picked.name}`;
-    await refreshStudio3DModel();
+    document.getElementById('custom-model-status').textContent = `切换发型中：${picked.name}`;
+    await refreshStudioHairOnly();
     soundEngine.playSummon(true);
     showToast(`💇‍♀️ 已切换大师级真发丝 3D 发型 (${hairCycleIdx + 1}/${REAL_HAIRS.length})：${picked.name}`);
   });
@@ -3338,6 +3424,14 @@ window.addEventListener('DOMContentLoaded', async () => {
       ['morph-forehead', 'val-morph-forehead', 'foreheadHeight', ''],
       ['morph-head-width', 'val-morph-head-width', 'headWidth', '%scale'],
       ['morph-head-length', 'val-morph-head-length', 'headLength', '%scale'],
+      ['morph-cheek-volume', 'val-morph-cheek-volume', 'cheekVolume', ''],
+      ['morph-cheek-height', 'val-morph-cheek-height', 'cheekHeight', ''],
+      ['morph-cheek-inner', 'val-morph-cheek-inner', 'cheekInner', ''],
+      ['morph-chin-projection', 'val-morph-chin-projection', 'chinProjection', ''],
+      ['morph-chin-cleft', 'val-morph-chin-cleft', 'chinCleft', ''],
+      ['morph-nostril-width', 'val-morph-nostril-width', 'nostrilWidth', ''],
+      ['morph-philtrum-volume', 'val-morph-philtrum-volume', 'philtrumVolume', ''],
+      ['morph-temple-fullness', 'val-morph-temple-fullness', 'templeFullness', ''],
     ]) {
       if (mObj[mKey] === undefined) continue;
       const val = Number(mObj[mKey]);
@@ -3349,12 +3443,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         else if (unit === '%scale') vEl.textContent = `${Math.round((1 + val) * 100)}%`;
         else vEl.textContent = `${val >= 0 ? '+' : ''}${val.toFixed(2)}`;
       }
-      const proxy = document.querySelector(`.obs-slider-row[data-sync-target="${sId}"]`);
-      if (proxy) {
+      for (const proxy of document.querySelectorAll(`.obs-slider-row[data-sync-target="${sId}"], .obs-slider-row[data-sync-fallback="${sId}"]`)) {
         const range = proxy.querySelector('.obs-proxy-range');
         const label = proxy.querySelector('.obs-proxy-val');
         if (range) range.value = String(val);
         if (label && vEl) label.textContent = vEl.textContent;
+        // A main-shape drag must also update the equivalent quick eye slider.
+        // Otherwise opening Obsidian later shows a stale VCD value and the
+        // next proxy move appears to snap the whole face back.
+        if (proxy.dataset.syncFallback === sId) {
+          const quick = document.getElementById(proxy.dataset.syncTarget);
+          if (quick?.type === 'range') quick.value = String(val);
+          const quickText = document.getElementById(`val-${proxy.dataset.syncTarget}`);
+          if (quickText && vEl) quickText.textContent = vEl.textContent;
+        }
       }
     }
   };
@@ -3703,7 +3805,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!el) return;
     el.addEventListener('input', (e) => {
       const v = parseFloat(e.target.value);
+      if (!Number.isFinite(v)) return;
       state.studioDraft.morphs[key] = v;
+      // The compact Obsidian slider and the full-size slider share one value.
+      // A later panel refresh must not restore the previous visual position.
+      syncStudioShapeUI({ [key]: v });
       const valEl = document.getElementById(valId);
       if (valEl) {
         if (unit === '%') {
@@ -3725,11 +3831,15 @@ window.addEventListener('DOMContentLoaded', async () => {
           applyHeadMorphsToGroup(headGroup, headGroup.userData.morphs);
           if (pet.collectible) {
             pet.collectible.morphs = { ...headGroup.userData.morphs };
+            const saved = state.collectibles.find(col => col.id === pet.id);
+            if (saved) saved.morphs = { ...(saved.morphs || {}), ...pet.collectible.morphs };
           }
         }
       }
       if (desktopEngine) desktopEngine.wakeRender(1.5, true);
     });
+    // Persist once when a drag finishes, not dozens of times per frame.
+    el.addEventListener('change', () => persistCollectibles());
   };
 
   bindMorphSlider('morph-jaw-open', 'val-morph-jaw-open', 'jawOpen');
@@ -3788,6 +3898,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     ['morph-ear', 'val-morph-ear', 'earSize', ''],
     ['morph-head-width', 'val-morph-head-width', 'headWidth', ''],
     ['morph-head-length', 'val-morph-head-length', 'headLength', ''],
+    ['morph-cheek-volume', 'val-morph-cheek-volume', 'cheekVolume', ''],
+    ['morph-cheek-height', 'val-morph-cheek-height', 'cheekHeight', ''],
+    ['morph-cheek-inner', 'val-morph-cheek-inner', 'cheekInner', ''],
+    ['morph-chin-projection', 'val-morph-chin-projection', 'chinProjection', ''],
+    ['morph-chin-cleft', 'val-morph-chin-cleft', 'chinCleft', ''],
+    ['morph-nostril-width', 'val-morph-nostril-width', 'nostrilWidth', ''],
+    ['morph-philtrum-volume', 'val-morph-philtrum-volume', 'philtrumVolume', ''],
+    ['morph-temple-fullness', 'val-morph-temple-fullness', 'templeFullness', ''],
     ['morph-gaze-yaw', 'val-morph-gaze-yaw', 'gazeYaw', ''],
     ['morph-gaze-pitch', 'val-morph-gaze-pitch', 'gazePitch', ''],
   ];
@@ -3862,8 +3980,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       if (pet.collectible) {
         Object.assign(pet.collectible.morphs, patch);
+        const saved = state.collectibles.find(col => col.id === pet.id);
+        if (saved) saved.morphs = { ...(saved.morphs || {}), ...patch };
       }
     }
+    persistCollectibles();
     if (desktopEngine) desktopEngine.wakeRender(1.5, true);
     showToast(`👁️ 已切换东亚3D眼型预设：${preset.label}`);
   });
@@ -3882,7 +4003,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     for (const pet of getTargetDesktopPetsList()) {
       const headGroup = pet?.node || pet?.headNode;
       if (headGroup) applyHeadMorphsToGroup(headGroup, state.studioDraft.morphs);
+      if (pet?.collectible) {
+        pet.collectible.morphs = { ...(pet.collectible.morphs || {}), ...state.studioDraft.morphs };
+        const saved = state.collectibles.find(col => col.id === pet.id);
+        if (saved) saved.morphs = { ...(saved.morphs || {}), ...state.studioDraft.morphs };
+      }
     }
+    persistCollectibles();
     if (desktopEngine) desktopEngine.wakeRender(1.5, true);
     showToast(`↺ 已将全部 ${SHAPE_MORPH_SLIDERS.length} 项眼睛与面部骨相滑杆归零`);
   });
@@ -4469,7 +4596,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     state.studioDraft.customHairUrl = null;
     state.studioDraft.hairStyle = e.target.value;
     syncStudioHairUI(state.studioDraft.hairStyle);
-    await refreshStudio3DModel();
+    await refreshStudioHairOnly();
   });
   document.querySelectorAll('[data-hair-preset]').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -4478,7 +4605,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       syncStudioHairUI(state.studioDraft.hairStyle);
       const item = REAL_HAIR_CATALOG.find(x => x.id === state.studioDraft.hairStyle);
       if (item) showToast(`💇‍♀️ 已切换中国女性高定发型：${item.label}`);
-      await refreshStudio3DModel();
+      await refreshStudioHairOnly();
     });
   });
 
@@ -5592,6 +5719,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Wire Quick Drawer Eye Color, Swatches & 10 Eye Size/Shape/Optics Sliders
   const applyEyePatchToTargetPets = (patch = {}) => {
+    if (patch.eyeAperture !== undefined && patch.eyelidOpen === undefined) {
+      patch = { ...patch, eyelidOpen: patch.eyeAperture };
+    } else if (patch.eyelidOpen !== undefined && patch.eyeAperture === undefined) {
+      patch = { ...patch, eyeAperture: patch.eyelidOpen };
+    }
     for (const pet of getTargetDesktopPetsList()) {
       const headGroup = pet.node || pet.headNode;
       if (!headGroup) continue;
@@ -5621,6 +5753,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (studioEngine) {
       Object.assign(state.studioDraft, patch);
       Object.assign(state.studioDraft.morphs, patch);
+      syncStudioShapeUI(state.studioDraft.morphs);
       studioEngine.updateMorphsFast(state.studioDraft.morphs);
       studioEngine.updateMaterialsFast(patch);
     }
@@ -5692,6 +5825,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       applyEyePatchToTargetPets({ [key]: v });
     });
+    document.getElementById(sId)?.addEventListener('change', persistCollectibles);
   }
 
   // Stage 56 · Master Card-to-Strand v2 Hair Mode & Density Controls
@@ -5754,14 +5888,14 @@ window.addEventListener('DOMContentLoaded', async () => {
         col.topCrown = 'default';
         col.backAttachment = 'none';
       }
-      const savedPos = pet.pos ? pet.pos.clone() : null;
-      await desktopEngine.summonCollectible(pet.collectible);
-      const updatedPet = desktopEngine.pets.get(pet.id);
-      if (updatedPet && savedPos) {
-        updatedPet.pos.copy(savedPos);
-        // DesktopBoxSpaceEngine pets use pos/vel; targetPos is not an entry field.
-        updatedPet.node.position.copy(savedPos);
-      }
+      // Keep the existing head, position, physics state and placard intact.
+      // Only the 3D hair group is rebuilt; the previous hair stays visible
+      // until the new asset is ready (latest request wins on rapid changes).
+      if (pet.node) await updateHairDesignOnGroup(pet.node, {
+        hairStyle: newHairStyle,
+        topCrown: 'default', frontBangs: 'default',
+        sideLocks: 'default', backAttachment: 'none',
+      });
     }
     persistCollectibles();
     desktopEngine.wakeRender(1.5, true);

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { applyStoredFaceSculpt, applyStoredHairSculpt } from './sculptStrokeLayer.js';
 import { injectArtistHairLighting, updateArtistHairFlow } from './artistHairLighting.js';
 import { refineArtistHairCards } from './hairCardSubdivision.js';
 import { fitArtistHairOutsideScalp } from './hairScalpFit.js';
@@ -909,6 +910,11 @@ export function applyArtistHairFineTuning(rootGroup, morphs = {}) {
       if (child.material?.userData?.builtInHair && !isStrandMesh && !child.material?.userData?.isMasterCardHair) {
         fitArtistHairOutsideScalp(geo, rootGroup.getObjectByName('HeadSkinMesh'));
       }
+    // A changed hair-shape signature has just rebuilt the unbrushed card from
+    // its cached artist positions. Re-add the cached user sculpt layer once;
+    // unchanged strand buffers never pay this per-slider cost.
+    if (geo.userData.sculptDelta) geo.userData.sculptOnPositions = false;
+    geo.userData.sculptBounds = null;
     posAttr.needsUpdate = true;
     // CRITICAL RULE: NEVER call raw geo.computeVertexNormals() on UV-split hair cards!
     // Raw computeVertexNormals() creates flat faceted triangles across UV seams (causing white triangle glare).
@@ -1103,13 +1109,13 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const eyeAlmondVal = clampHarmony((m.eyeAlmond ?? bias.eyeAlmond ?? 0.0) + extraEyeAlmond, 1.5);
   const eye = clampHarmony(eyeSizeVal * 1.15 + eyeAlmondVal * 0.65, 1.65);
   const eyeTilt = clampHarmony((m.eyeTilt ?? bias.eyeTilt) + extraEyeTilt, 1.5);
-  const eyeSpacingVal = clampHarmony((m.eyeSpacing ?? 0.0) + extraEyeSpacing, 1.2);
+  const eyeSpacingVal = clampHarmony((m.eyeSpacing ?? 0.0) + extraEyeSpacing, 1.3);
   const eyelidOpen = clampHarmony(m.eyelidOpen ?? 0, 1.5);
   const browH = clampHarmony(m.browHeight ?? 0);
-  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14 + extraLip, 0.95);
-  const mouthSmile = clampHarmony((m.mouthSmile ?? 0) + extraSmile, 0.95);
-  const forehead = clampHarmony((m.foreheadHeight ?? 0) + extraForehead, 0.95);
-  const ear = clampHarmony(m.earSize ?? 0, 0.95);
+  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14 + extraLip, 1.30);
+  const mouthSmile = clampHarmony((m.mouthSmile ?? 0) + extraSmile, 1.30);
+  const forehead = clampHarmony((m.foreheadHeight ?? 0) + extraForehead, 1.30);
+  const ear = clampHarmony(m.earSize ?? 0, 1.30);
   const headWidthRatio = clampHarmony(m.headWidthScale ?? m.headWidth ?? 0, 0.28);
   const headLengthRatio = clampHarmony(m.headLengthScale ?? m.headLength ?? 0, 0.28);
 
@@ -1228,6 +1234,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
 
   applyMpfbEastAsianTargetsToGroup(rootGroup, m, faceArchetype);
   applyArtistHairFineTuning(rootGroup, m);
+  applyStoredHairSculpt(rootGroup, m);
   syncFaceAccessories(rootGroup, m);
 
   const capMesh = rootGroup.getObjectByName('NeckCrossSectionCap');
@@ -1267,11 +1274,13 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
 
   const eyeTiltVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeTilt ?? 0)));
   const eyeHeightVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeHeight ?? m.eyeAperture ?? 0)));
-  const eyeSpacingVal = Math.max(-1.2, Math.min(1.2, Number(m.eyeSpacing ?? 0)));
+  const eyeSpacingVal = Math.max(-1.3, Math.min(1.3, Number(m.eyeSpacing ?? 0)));
   const eyeEpicanthusVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeEpicanthus ?? 0)));
   const eyeCreaseVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeCrease ?? 0)));
   const eyeBagVal = Math.max(0.0, Math.min(1.5, Number(m.eyeBag ?? m.aegyoSalStrength ?? 0)));
-  const fineValue = (key) => Math.max(-1.0, Math.min(1.0, Number(m[key]) || 0));
+  // Advanced edit range: signed MPFB sculpts really respond beyond the old
+  // [-1,+1] controls, but remain bounded before eyelids/lips can invert.
+  const fineValue = (key) => Math.max(-1.30, Math.min(1.30, Number(m[key]) || 0));
 
   const weights = { ...archRecipe };
   const addW = (k, v) => {
@@ -1401,6 +1410,22 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
   const noseTipWidth = fineValue('noseTipWidth');
   addW(noseTipWidth >= 0 ? 'nose_point_width_incr' : 'nose_point_width_decr', Math.abs(noseTipWidth) * 0.84);
 
+  // More independently weighted MPFB2 vertex targets (not cosmetic UI):
+  // balanced to at most ~5 mm at the advanced editor extrema.
+  for (const [key, positive, negative, gain] of [
+    ['cheekVolume', 'cheek_volume_incr', 'cheek_volume_decr', 0.35],
+    ['cheekHeight', 'cheek_trans_up', 'cheek_trans_down', 0.34],
+    ['cheekInner', 'cheek_inner_incr', 'cheek_inner_decr', 0.35],
+    ['chinProjection', 'chin_prognathism_incr', 'chin_prognathism_decr', 0.39],
+    ['nostrilWidth', 'nose_nostrils_width_incr', 'nose_nostrils_width_decr', 0.55],
+    ['templeFullness', 'forehead_temple_incr', 'forehead_temple_decr', 0.85],
+  ]) {
+    const val = fineValue(key);
+    addW(val >= 0 ? positive : negative, Math.abs(val) * gain);
+  }
+  addW('chin_cleft_incr', Math.min(1.30, Math.max(0, Number(m.chinCleft) || 0)) * 0.65);
+  addW('mouth_philtrum_volume_incr', fineValue('philtrumVolume') * 0.85);
+
   // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)
   if (!skinMesh.userData.hasMpfbClone) {
     skinMesh.geometry = createLightweightGeometryInstance(skinMesh.geometry);
@@ -1426,6 +1451,9 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
       skinArr[vi3 + 2] += flat[i + 3] * scale;
     }
   }
+  // The reusable user brush is applied AFTER MPFB rebuilds the skin from
+  // origSkinPos, otherwise the next slider input erases the user's sculpt.
+  if (applyStoredFaceSculpt(skinMesh, m, skinArr)) anyActive = true;
   skinPosAttr.needsUpdate = true;
 
   // Synchronize Eyelashes (250v) and Eyes (rigid horizontal socket shift) with HeadSkinMesh
@@ -1781,6 +1809,7 @@ export function resolveRealHairStyle(styleName = 'hair_bob01') {
 
 export function disposeHeadNode(node) {
   if (!node) return;
+  node.userData.disposed = true; // Cancel pending async accessories / hair loads.
   const geometries = new Set(), materials = new Set(), textures = new Set();
   node.traverse(child => {
     if (!child.isMesh) return;
@@ -2249,6 +2278,9 @@ async function loadModularDonorMeshes(donorSpec) {
 }
 
 export async function attachRealHairModel(rootGroup, config = {}) {
+  const startedAt = performance.now();
+  const marks = {};
+  const mark = stage => { marks[stage] = Math.round(performance.now() - startedAt); };
   const modelContainer = rootGroup.getObjectByName('RealDazHeadContainer');
   if (!modelContainer) return null;
 
@@ -2328,6 +2360,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       if (config.customHairUrl) fitImportedHairScene(loadedScene);
     }
 
+    mark('readAndParse');
     // The photo-style mesh already has overlapping authored cards; Loop subdivision
     // rounds their open boundaries into holes and creates faceted crown overlaps.
     if (!config.customHairUrl && !useStrandMode && resolvedStyle !== 'hair_user_photo') loadedScene.traverse(child => {
@@ -2383,6 +2416,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       return null;
     }
 
+    mark('modularParts');
     const hairGroup = new THREE.Group();
     hairGroup.name = 'HairGroup';
 
@@ -2400,6 +2434,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       }
     }
 
+    mark('scalpCap');
     const hairShaderParams = {
       hairWispyFeather,
       hairOmbreMix,
@@ -2513,6 +2548,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       child.renderOrder = 0;
     });
 
+    mark('materialsAndDistance');
     if (useStrandMode && (strandRes || (headSoup && strandEntries.length > 0))) {
       if (!strandRes) {
         const baseDensity = MASTER_HAIR_DENSITIES[strandDensity] || MASTER_HAIR_DENSITIES.mid;
@@ -2570,6 +2606,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       }
     }
 
+    mark('strandGeneration');
     hairGroup.add(loadedScene);
     disposeHeadNode(oldHair);
     modelContainer.add(hairGroup);
@@ -2600,6 +2637,7 @@ export async function attachRealHairModel(rootGroup, config = {}) {
     };
     applyHeadMorphsToGroup(rootGroup, mergedMorphs);
 
+    mark('morphs');
     // Update 3D Hairline Coverage (`aHairCov`, `aHairDir`), Root Pigment (`uHairRoot`), and Baby-Hair Wisps (`masterQuality/hairlineBlend.js`)
     try {
       let skinMeshForHairline = null;
@@ -2635,6 +2673,8 @@ export async function attachRealHairModel(rootGroup, config = {}) {
       }
     } catch (_) {}
 
+    mark('hairlineCoverage');
+    if (typeof window !== 'undefined' && window.__HAIR_TIMING__) console.info('HAIR_TIMING', selectedStyle, JSON.stringify(marks));
     return hairGroup;
   } catch (err) {
     if (rootGroup.userData.hairRequestSerial === request) rootGroup.userData.hairLoadError = String(err.message || err).slice(0, 180);
@@ -2765,6 +2805,7 @@ export async function updateHairDesignOnGroup(rootGroup, patch = {}) {
     });
   }
   applyArtistHairFineTuning(rootGroup, rootGroup.userData.currentMorphs);
+  applyStoredHairSculpt(rootGroup, rootGroup.userData.currentMorphs);
 }
 
 /**

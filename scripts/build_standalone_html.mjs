@@ -60,7 +60,8 @@ const glbFiles = [
   'daz_hair_rehman_bun.glb',
   'daz_hair_island_princess.glb',
   'daz_hair_ashley_wave.glb',
-  'daz_hair_bow_bun_braids.glb'
+  'daz_hair_bow_bun_braids.glb',
+  'polyhaven_round_spectacles.glb'
 ];
 
 const embeddedGlbs = {};

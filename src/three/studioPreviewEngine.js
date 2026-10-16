@@ -1,12 +1,17 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
+  SCULPT_MAX_GESTURES, SCULPT_MAX_SEGMENTS, getBrushableHairMeshes,
+  applyLiveSculptStroke, finalizeSculptStroke
+} from './sculptStrokeLayer.js';
+import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
   updateCollectibleMaterialsLive,
   updateHeadLifeAnimation,
   triggerCollectibleBlink,
   disposeHeadNode,
+  updateHairDesignOnGroup,
   updateMasterStrandHairPxScale
 } from './collectibleHeadAssembler.js';
 import {
@@ -30,6 +35,19 @@ export class StudioPreviewEngine {
     this.currentConfig = null;
     this.clock = new THREE.Clock();
     this.pointerNdc = { x: 0, y: 0 };
+    this.sculptTool = 'orbit';
+    this.sculptProfiles = {
+      face: { radius: 0.034, strength: 0.30 },
+      hair: { radius: 0.042, strength: 0.55 }
+    };
+    this.sculptRadius = this.sculptProfiles.face.radius; // artist model local metres
+    this.sculptStrength = this.sculptProfiles.face.strength;
+    this.sculptSymmetric = true;
+    this.sculptDrag = null;
+    this.sculptRaycaster = new THREE.Raycaster();
+    this.getSculptMorphs = null;
+    this.onSculptCommit = null;
+    this.onSculptStatus = null;
 
     this.lastFrameTime = performance.now();
     this.renderWakeUntil = performance.now() + 2500;
@@ -40,6 +58,9 @@ export class StudioPreviewEngine {
 
     this.initScene();
     this.bindPointerTracking();
+    // A locally embedded GLB can finish loading after the idle renderer has
+    // gone to sleep. Wake only when an accessory actually becomes ready.
+    window.addEventListener('cervix3d:asset-ready', () => this.wakeRender(0.3, true));
     this.animate = this.animate.bind(this);
     this.animId = requestAnimationFrame(this.animate);
   }
@@ -161,8 +182,142 @@ export class StudioPreviewEngine {
     this.scene.add(this.cutPlaneHelper);
   }
 
+  setSculptTool(mode) {
+    if (this.sculptDrag) this.finishSculptDrag();
+    this.sculptTool = ['orbit', 'face', 'hair'].includes(mode) ? mode : 'orbit';
+    this.controls.enabled = this.sculptTool === 'orbit';
+    this.autoRotate = false;
+    this.canvas.style.cursor = this.sculptTool === 'orbit' ? '' : 'crosshair';
+    this.canvas.style.touchAction = this.sculptTool === 'orbit' ? '' : 'none';
+    this.wakeRender(0.2);
+  }
+
+  sculptNdc(event) {
+    const rect = this.canvas.getBoundingClientRect();
+    return new THREE.Vector2(
+      ((event.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1,
+      -((event.clientY - rect.top) / Math.max(rect.height, 1)) * 2 + 1
+    );
+  }
+
+  startSculptDrag(event) {
+    if (this.sculptTool === 'orbit' || event.button !== 0 || !this.headNode) return;
+    const morphs = this.getSculptMorphs?.();
+    if (!morphs) return;
+    if (this.sculptTool === 'face' && this.currentConfig?.customModelUrl) {
+      this.onSculptStatus?.('外部头模不包含内置 MPFB 顶点结构；请先用内置头模雕塑。');
+      return;
+    }
+    const faceMesh = this.headNode.getObjectByName('HeadSkinMesh');
+    const hairGroup = this.headNode.getObjectByName('HairGroup');
+    const target = this.sculptTool === 'face' ? faceMesh : hairGroup;
+    const hitMeshes = this.sculptTool === 'face' ? [faceMesh].filter(Boolean) :
+      getBrushableHairMeshes(this.headNode, false).filter(mesh => mesh.visible);
+    if (!target || !hitMeshes.length) {
+      this.onSculptStatus?.('此模型没有可编辑的对应网格；等模型加载完成再试。');
+      return;
+    }
+    this.headNode.updateMatrixWorld(true);
+    this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
+    const hit = this.sculptRaycaster.intersectObjects(hitMeshes, false)[0];
+    if (!hit) {
+      this.onSculptStatus?.(this.sculptTool === 'face' ? '请从脸部皮肤表面开始拖动。' : '请从真实发片表面开始梳理。');
+      return;
+    }
+    const startWorld = hit.point.clone();
+    const startLocal = target.worldToLocal(startWorld.clone());
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      this.camera.getWorldDirection(new THREE.Vector3()), startWorld
+    );
+    const gestures = morphs.sculptGestures ||= [];
+    if (gestures.length >= SCULPT_MAX_GESTURES) gestures.shift();
+    const gesture = {
+      tool: this.sculptTool,
+      ...(this.sculptTool === 'hair' ? { hairStyle: this.headNode.userData.currentHairStyle || '' } : {}),
+      strokes: []
+    };
+    gestures.push(gesture);
+    morphs.sculptRevision = (Number(morphs.sculptRevision) || 0) + 1;
+    this.updateMorphsFast(morphs); // align runtime caches with this new undo step
+    this.sculptDrag = {
+      pointerId: event.pointerId, node: this.headNode, target, plane,
+      gesture, startLocal, lastLocal: startLocal.clone(), applied: new THREE.Vector3(),
+      lastFrame: 0
+    };
+    this.canvas.setPointerCapture(event.pointerId);
+    this.onSculptStatus?.(this.sculptTool === 'face' ? '正拉动面部网格；松开即完成一笔。' : '正沿发束梳理网格；松开即完成一笔。');
+    event.preventDefault();
+  }
+
+  moveSculptDrag(event) {
+    const drag = this.sculptDrag;
+    if (!drag || drag.pointerId !== event.pointerId || drag.node !== this.headNode) return;
+    if (event.timeStamp - drag.lastFrame < 12) return; // bounded CPU work while dragging
+    drag.lastFrame = event.timeStamp;
+    if (drag.gesture.strokes.length >= SCULPT_MAX_SEGMENTS) {
+      this.onSculptStatus?.('单笔已达到采样上限；请松开后继续梳理。');
+      return;
+    }
+    this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
+    const world = this.sculptRaycaster.ray.intersectPlane(drag.plane, new THREE.Vector3());
+    if (!world) return;
+    const local = drag.target.worldToLocal(world);
+    let center, delta;
+    if (drag.gesture.tool === 'face') {
+      const desired = local.clone().sub(drag.startLocal).clampLength(0, 0.040).multiplyScalar(this.sculptStrength);
+      delta = desired.sub(drag.applied).clampLength(0, 0.008);
+      center = drag.startLocal;
+      drag.applied.add(delta);
+    } else {
+      center = drag.lastLocal.clone().add(local).multiplyScalar(0.5);
+      delta = local.clone().sub(drag.lastLocal).multiplyScalar(this.sculptStrength).clampLength(0, 0.008);
+      drag.lastLocal.copy(local);
+    }
+    if (delta.lengthSq() < 1e-8) return;
+    const round = n => Math.round(n * 1e6) / 1e6;
+    const stroke = [center.x, center.y, center.z, delta.x, delta.y, delta.z,
+      Math.min(0.065, Math.max(0.010, this.sculptRadius)), this.sculptSymmetric ? 1 : 0].map(round);
+    const changed = applyLiveSculptStroke(this.headNode, drag.gesture.tool, stroke);
+    if (changed) {
+      drag.gesture.strokes.push(stroke);
+      this.wakeRender(0.25, true);
+    }
+    event.preventDefault();
+  }
+
+  finishSculptDrag(event) {
+    const drag = this.sculptDrag;
+    if (!drag || (event && event.pointerId !== drag.pointerId)) return;
+    this.sculptDrag = null;
+    if (this.canvas.hasPointerCapture(drag.pointerId)) this.canvas.releasePointerCapture(drag.pointerId);
+    const morphs = this.getSculptMorphs?.();
+    if (morphs && !drag.gesture.strokes.length) {
+      const i = morphs.sculptGestures?.indexOf(drag.gesture);
+      if (i >= 0) morphs.sculptGestures.splice(i, 1);
+    } else if (drag.node === this.headNode) {
+      finalizeSculptStroke(this.headNode, drag.gesture.tool);
+      this.onSculptCommit?.(morphs);
+      this.wakeRender(0.8, true);
+    }
+    this.onSculptStatus?.(drag.gesture.strokes.length ? '已完成一笔；可撤销、继续雕塑或保存到档案。' : '未击中网格；没有生成笔画。');
+  }
+
+  undoSculpt() {
+    if (this.sculptDrag) this.finishSculptDrag();
+    const morphs = this.getSculptMorphs?.();
+    if (!morphs?.sculptGestures?.length) return false;
+    const undone = morphs.sculptGestures.pop();
+    morphs.sculptRevision = (Number(morphs.sculptRevision) || 0) + 1;
+    this.updateMorphsFast(morphs);
+    finalizeSculptStroke(this.headNode, undone.tool);
+    this.onSculptCommit?.(morphs);
+    this.onSculptStatus?.('已撤销上一笔网格雕塑。');
+    return true;
+  }
+
   bindPointerTracking() {
     this.canvas.addEventListener('pointermove', (e) => {
+      if (this.sculptDrag) this.moveSculptDrag(e);
       const rect = this.canvas.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
         this.pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -170,10 +325,16 @@ export class StudioPreviewEngine {
       }
       this.wakeRender(1.2);
     });
-    this.canvas.addEventListener('pointerdown', () => {
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (this.sculptTool !== 'orbit') {
+        this.startSculptDrag(e);
+        return;
+      }
       this.wakeRender(2.0);
       if (this.headNode) triggerCollectibleBlink(this.headNode);
     });
+    this.canvas.addEventListener('pointerup', e => this.finishSculptDrag(e));
+    this.canvas.addEventListener('pointercancel', e => this.finishSculptDrag(e));
     this.canvas.addEventListener('wheel', () => {
       this.wakeRender(1.5);
     }, { passive: true });
@@ -247,6 +408,10 @@ export class StudioPreviewEngine {
     disposeHeadNode(this.headNode);
     this.headNode = newNode;
     this.scene.add(this.headNode);
+    // A user may move several live sliders while the GLB and hair are still
+    // loading. Keep the latest draft instead of replacing their edits with
+    // the snapshot captured when the asynchronous build started.
+    if (this.currentConfig?.morphs) applyHeadMorphsToGroup(newNode, this.currentConfig.morphs);
     if (this.visualConfig) {
       applyCustomVisualConfigToEngine(this, this.visualConfig);
     }
@@ -257,10 +422,40 @@ export class StudioPreviewEngine {
     return newNode;
   }
 
+  /** Replace only the hairstyle. Reuse the existing face, textures, geometry,
+   * viewer and head transform rather than loading the entire head GLB again. */
+  async updateHairOnly(config) {
+    if (!this.headNode || config.customModelUrl || config.customHairUrl || this.currentConfig?.customModelUrl) {
+      return this.loadOrRebuild(config);
+    }
+    const request = ++this.loadRequest;
+    const node = this.headNode;
+    const before = performance.now();
+    this.currentConfig = JSON.parse(JSON.stringify(config));
+    await updateHairDesignOnGroup(node, {
+      hairStyle: config.hairStyle,
+      hairColor: config.hairColor,
+      hairSheen: config.hairSheen,
+      neckClearance: config.neckClearance,
+      topCrown: config.topCrown ?? config.morphs?.topCrown,
+      frontBangs: config.frontBangs ?? config.morphs?.frontBangs,
+      sideLocks: config.sideLocks ?? config.morphs?.sideLocks,
+      backAttachment: config.backAttachment ?? config.morphs?.backAttachment,
+      hairRenderMode: config.morphs?.hairRenderMode,
+      strandDensity: config.morphs?.strandDensity,
+    });
+    if (this.headNode !== node || this.loadRequest !== request) return this.headNode;
+    this.lastHairSwitchMs = Math.round(performance.now() - before);
+    this.updateCutHelperPosition(config.morphs);
+    this.wakeRender(1.0, true);
+    return node;
+  }
+
   /**
    * Real-time 32-channel morph slider update on the GLB meshes
    */
   updateMorphsFast(morphs = {}) {
+    if (this.currentConfig) this.currentConfig.morphs = { ...(this.currentConfig.morphs || {}), ...morphs };
     if (!this.headNode) return;
     applyHeadMorphsToGroup(this.headNode, morphs);
     this.updateCutHelperPosition(morphs);
@@ -302,7 +497,7 @@ export class StudioPreviewEngine {
     } else if (preset === 'turntable') {
       this.camera.position.set(22, 1.5, 58);
       this.controls.target.set(0, 1.0, 0.5);
-      this.autoRotate = true;
+      this.autoRotate = this.sculptTool === 'orbit';
     }
     if (longHair && preset !== 'anatomy_bottom') {
       this.camera.position.multiplyScalar(1.35);

@@ -1,9 +1,12 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
-// Stage 69d: lightweight, actual 3D eyeglass and hat geometry, authored for
-// the built-in MakeHuman head's local metre coordinate system. No external
-// texture requests: both the offline HTML and desktop pets share these assets.
-const GLASSES = new Set(['none', 'wire_oval', 'acetate_square', 'aviator']);
+// Existing handmade frames remain available. The optional scanned-texture
+// metal frame is a separately licensed CC0 Poly Haven asset; offline HTML
+// embeds its GLB while the dev-server version fetches the same local file.
+const POLYHAVEN_URL = '/models/polyhaven_round_spectacles.glb';
+const GLASSES = new Set(['none', 'wire_oval', 'acetate_square', 'aviator', 'polyhaven_round', 'polyhaven_large_oval']);
+let polyhavenSourcePromise = null;
 const HATS = new Set(['none', 'beret', 'beanie', 'bucket']);
 const EYE_Y = 0.021;
 const FRAME_Z = 0.105;
@@ -277,13 +280,100 @@ function hatAsset(style) {
   return root;
 }
 
+async function polyhavenSource() {
+  if (!polyhavenSourcePromise) {
+    polyhavenSourcePromise = (async () => {
+      const base64 = typeof window !== 'undefined' && window.__EMBEDDED_GLBS__?.[POLYHAVEN_URL];
+      let buffer;
+      if (base64) {
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        buffer = bytes.buffer;
+      } else {
+        const response = await fetch(POLYHAVEN_URL);
+        if (!response.ok) throw new Error(`Eyeglasses GLB HTTP ${response.status}`);
+        buffer = await response.arrayBuffer();
+      }
+      const { scene } = await new GLTFLoader().parseAsync(buffer, '');
+      scene.traverse(obj => {
+        if (!obj.isMesh) return;
+        // This template is shared by all heads. A change of style frees its
+        // per-head materials, not the immutable geometry / atlas textures.
+        obj.geometry.userData.sharedBuiltinGeo = true;
+        for (const mat of (Array.isArray(obj.material) ? obj.material : [obj.material])) {
+          for (const value of Object.values(mat)) {
+            if (value?.isTexture) value.userData.sharedSkinMicro = true;
+          }
+        }
+      });
+      return scene;
+    })().catch(err => { polyhavenSourcePromise = null; throw err; });
+  }
+  return polyhavenSourcePromise;
+}
+
+function physicalGlassesAsset(rootGroup, glasses, morphs) {
+  polyhavenSource().then(source => {
+    // A head may have been rebuilt or the user may have switched style while
+    // the Promise was pending. Never resurrect an accessory on a stale head.
+    if (!glasses.parent || rootGroup.userData.disposed) return;
+    const holder = glasses.parent;
+    if (holder.userData.glassesStyle !== glasses.userData.physicalStyle) return;
+    const instance = source.clone(true);
+    instance.traverse(obj => {
+      if (!obj.isMesh) return;
+      const glass = obj.material?.name === 'round_spectacles_glass';
+      const mat = obj.material.clone();
+      if (glass) {
+        // glTF transmission requires an entire extra screen pass. The thin
+        // lens uses a real mesh with faint tint instead, even on software GL.
+        mat.transmission = 0;
+        mat.map = null;
+        mat.normalMap = null;
+        mat.metalnessMap = null;
+        mat.roughnessMap = null;
+        mat.metalness = 0;
+        mat.roughness = 0.19;
+        mat.transparent = true;
+        mat.opacity = 0.08;
+        mat.depthWrite = false;
+        mat.color.set('#eaf1ee');
+        obj.renderOrder = 4;
+        obj.castShadow = false;
+        glasses.userData.lensMaterial = mat;
+      } else {
+        mat.metalness = 0.86;
+        mat.roughness = 0.31;
+        mat.transparent = false;
+        obj.castShadow = false;
+        glasses.userData.frameMaterial = mat;
+      }
+      obj.material = mat;
+    });
+    glasses.add(instance);
+    glasses.userData.physicalLoaded = true;
+    syncFaceAccessories(rootGroup, rootGroup.userData.currentMorphs || morphs);
+    window.dispatchEvent(new Event('cervix3d:asset-ready'));
+  }).catch(err => {
+    if (!glasses.parent || rootGroup.userData.disposed) return;
+    console.warn('CC0 eyeglasses failed to load; showing a lightweight fallback:', err);
+    rootGroup.userData.accessoryLoadError = String(err.message || err);
+    const fallback = glassesAsset('wire_oval');
+    glasses.add(fallback);
+    glasses.userData.frameMaterial = fallback.userData.frameMaterial;
+    glasses.userData.lensMaterial = fallback.userData.lensMaterial;
+    glasses.userData.polyhavenFallback = true;
+    syncFaceAccessories(rootGroup, rootGroup.userData.currentMorphs || morphs);
+    window.dispatchEvent(new Event('cervix3d:asset-ready'));
+  });
+}
+
 function disposePart(part) {
   if (!part) return;
   part.parent?.remove(part);
   const materials = new Set(), geometries = new Set();
   part.traverse(obj => {
     if (!obj.isMesh) return;
-    geometries.add(obj.geometry);
+    if (!obj.geometry?.userData?.sharedBuiltinGeo) geometries.add(obj.geometry);
     for (const mat of (Array.isArray(obj.material) ? obj.material : [obj.material])) materials.add(mat);
   });
   geometries.forEach(g => g?.dispose());
@@ -328,7 +418,15 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
   }
   if (holder.userData.glassesStyle !== glassesStyle) {
     disposePart(holder.getObjectByName(`Glasses_${holder.userData.glassesStyle}`));
-    if (glassesStyle !== 'none') holder.add(glassesAsset(glassesStyle));
+    if (glassesStyle === 'polyhaven_round' || glassesStyle === 'polyhaven_large_oval') {
+      const glasses = new THREE.Group();
+      glasses.name = `Glasses_${glassesStyle}`;
+      glasses.userData.physicalStyle = glassesStyle;
+      holder.add(glasses);
+      physicalGlassesAsset(rootGroup, glasses, morphs);
+    } else if (glassesStyle !== 'none') {
+      holder.add(glassesAsset(glassesStyle));
+    }
     holder.userData.glassesStyle = glassesStyle;
   }
   if (holder.userData.hatStyle !== hatStyle) {
@@ -338,21 +436,37 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
   }
   const glasses = holder.getObjectByName(`Glasses_${glassesStyle}`);
   if (glasses) {
+    const physical = glassesStyle.startsWith('polyhaven_') && !glasses.userData.polyhavenFallback;
+    const dailyLarge = glassesStyle === 'polyhaven_large_oval';
     glasses.position.set(
       0,
-      FRAME_ANCHOR.y + limit(morphs.glassesOffsetY, 0, -9, 9) * 0.001,
+      (physical ? 0.013 : FRAME_ANCHOR.y) + limit(morphs.glassesOffsetY, 0, -9, 9) * 0.001,
       FRAME_ANCHOR.z + limit(morphs.glassesOffsetZ, 0, -9, 9) * 0.001,
     );
-    const s = limit(morphs.glassesSize, 1, 0.82, 1.18);
-    glasses.scale.set(s * (1 + limit(morphs.eyeSpacing, 0, -1.2, 1.2) * 0.035), s, s);
+    const s = limit(morphs.glassesSize, 1, 0.82, 1.30);
+    const eyeFit = 1 + limit(morphs.eyeSpacing, 0, -1.2, 1.2) * 0.035;
+    // Keep the optician's scanned frame, hinges, silicone pads and lenses.
+    // Only the alternate fit widens the round original into a gentle oval
+    // common in daily women's eyewear; it is NOT a photo-exact replica.
+    glasses.scale.set(
+      s * eyeFit * (dailyLarge ? 1.04 : physical ? 0.84 : 1),
+      s * (dailyLarge ? 0.91 : physical ? 0.78 : 1),
+      s * (dailyLarge ? 0.83 : physical ? 0.78 : 1)
+    );
     glasses.rotation.set(limit(morphs.glassesTilt, 0, -12, 12) * Math.PI / 180, 0, 0);
-    // Optical frames are dark polished acetate / brushed metal. Apply the
-    // editable tint as a pigment, not a fully saturated gold tube.
-    const frameTint = new THREE.Color(hex(morphs.glassesColor, '#a07857'));
-    glasses.userData.frameMaterial.color.copy(frameTint).multiplyScalar(glassesStyle === 'acetate_square' ? 0.17 : 0.35);
-    const tint = limit(morphs.glassesLensTint, 0, 0, 0.8);
-    glasses.userData.lensMaterial.color.set(tint > 0.12 ? '#536879' : '#e8f3fa');
-    glasses.userData.lensMaterial.opacity = 0.12 + tint * 0.55;
+    const frame = glasses.userData.frameMaterial;
+    const lens = glasses.userData.lensMaterial;
+    if (frame && lens) {
+      // Preserve the brushed metal's albedo rather than painting its real
+      // texture opaque gold. Other handmade styles keep their old pigments.
+      const chosenColor = hex(morphs.glassesColor, '#a07857');
+      const metalTint = chosenColor === '#a07857' ? (dailyLarge ? '#d6c3b6' : '#d8dcda') : chosenColor;
+      frame.color.set(physical ? metalTint : chosenColor);
+      frame.color.multiplyScalar(physical ? 0.93 : (glassesStyle === 'acetate_square' ? 0.17 : 0.35));
+      const tint = limit(morphs.glassesLensTint, 0, 0, 0.8);
+      lens.color.set(tint > 0.12 ? '#536879' : '#e8f3fa');
+      lens.opacity = (physical ? 0.07 : 0.12) + tint * (physical ? 0.31 : 0.55);
+    }
   }
   const hat = holder.getObjectByName(`Hat_${hatStyle}`);
   if (hat) {

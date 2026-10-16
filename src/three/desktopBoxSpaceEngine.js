@@ -106,6 +106,7 @@ export class DesktopBoxSpaceEngine {
     this.initScene();
     this.initBoxWireframe();
     this.bindEvents();
+    window.addEventListener('cervix3d:asset-ready', () => this.wakeRender(0.3, true));
     this.animate = this.animate.bind(this);
     this.animFrameId = requestAnimationFrame(this.animate);
   }

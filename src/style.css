@@ -2305,3 +2305,16 @@ body.pure-screen-mode #pet-hover-dossier {
 .placard-create-fields input,.placard-create-fields textarea { box-sizing:border-box; width:100%; padding:8px; border:1px solid #6b7280; border-radius:6px; background:#18202d; color:#f8fafc; font:inherit; }
 .placard-create-fields textarea { resize:vertical; min-height:86px; line-height:1.5; }
 .placard-create-fields input:disabled,.placard-create-fields textarea:disabled { opacity:.65; cursor:not-allowed; }
+
+/* Stage 75: small, explicit brush controls, separate from the WebGL hit area. */
+.sculpt-toolbar { position:absolute; z-index:6; top:7px; left:7px; right:7px; display:grid; gap:5px; padding:6px 8px; border:1px solid rgba(125,211,252,.55); border-radius:8px; background:rgba(10,29,47,.94); color:#dbeafe; box-shadow:0 3px 15px #0009; }
+.sculpt-toolbar.compact { background:rgba(10,29,47,.82); }
+.sculpt-toolbar.compact .sculpt-tool-row:nth-child(2), .sculpt-toolbar.compact #sculpt-status { display:none; }
+.sculpt-toolbar.compact .sculpt-tool-row strong { display:none; }
+.sculpt-tool-row { display:flex; flex-wrap:wrap; align-items:center; gap:7px 11px; }
+.sculpt-tool-row strong { color:#bae6fd; font-size:12px; margin-right:5px; }
+.sculpt-tool-row label { display:inline-flex; align-items:center; gap:5px; font-size:11px; white-space:nowrap; }
+.sculpt-tool-row input[type=range] { width:85px; accent-color:#38bdf8; }
+.sculpt-tool-row output { min-width:40px; color:#7dd3fc; font-variant-numeric:tabular-nums; }
+.sculpt-tool-row .chip-btn.active { background:#155e75; border-color:#38bdf8; color:#fff; }
+#sculpt-status { color:#b6cadc; font-size:11px; line-height:1.45; }

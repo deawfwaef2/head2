@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CERVIX-3D · 颅相典藏馆 — 3D解剖断面头部收藏品桌宠生成与管理系统</title>
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMxMDIzMzgiLz48cGF0aCBkPSJNMzIgNyA1NyAzMiAzMiA1NyA3IDMyWiIgZmlsbD0iIzM4YmRmOCIvPjxwYXRoIGQ9Ik0zMCAxOWMtNyA0LTEyIDEzLTExIDE5IDEgNyA3IDExIDEzIDExczEyLTQgMTMtMTFjMS02LTQtMTUtMTEtMTlsLTIgMTJaIiBmaWxsPSIjMGMyNjQyIi8+PC9zdmc+" />
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body class="bg-mode-os game-not-started">
@@ -798,22 +799,22 @@
             </div>
             <div class="slider-row">
               <span>📏 眼距宽窄微调 (Inter-Eye Spacing · 紧凑聚焦 ↔ 宽距幼态)</span>
-              <input type="range" id="vcd-eye-spacing" min="-1.00" max="1.00" step="0.04" value="0.00" />
+              <input type="range" id="vcd-eye-spacing" min="-1.30" max="1.30" step="0.04" value="0.00" />
               <span id="val-vcd-eye-spacing">+0.00</span>
             </div>
             <div class="slider-row">
               <span>🌙 东亚内眦赘皮/内眼角 (Epicanthus · 开内眼角(-) ↔ 原生蒙古褶(+))</span>
-              <input type="range" id="vcd-eye-epicanthus" min="-1.20" max="1.20" step="0.04" value="0.15" />
+              <input type="range" id="vcd-eye-epicanthus" min="-1.30" max="1.30" step="0.04" value="0.15" />
               <span id="val-vcd-eye-epicanthus">+0.15</span>
             </div>
             <div class="slider-row">
               <span>✨ 单眼皮/双眼皮深浅 (Eyelid Crease · 纯单眼皮(-) ↔ 平行大双(+))</span>
-              <input type="range" id="vcd-eye-crease" min="-1.20" max="1.20" step="0.04" value="0.25" />
+              <input type="range" id="vcd-eye-crease" min="-1.30" max="1.30" step="0.04" value="0.25" />
               <span id="val-vcd-eye-crease">+0.25</span>
             </div>
             <div class="slider-row">
               <span>🌸 3D卧蚕饱满隆起度 (3D Aegyo-Sal · 平直下睑 ↔ 饱满桃花卧蚕)</span>
-              <input type="range" id="vcd-eye-bag" min="0.00" max="1.20" step="0.04" value="0.20" />
+              <input type="range" id="vcd-eye-bag" min="0.00" max="1.30" step="0.04" value="0.20" />
               <span id="val-vcd-eye-bag">+0.20</span>
             </div>
             <div class="slider-row">
@@ -1691,14 +1692,34 @@
                 </div>
               </div>
 
+
               <div class="studio-canvas-wrap">
                 <canvas id="studio-preview-canvas"></canvas>
+              <div id="sculpt-toolbar" class="sculpt-toolbar compact" aria-label="3D 网格雕塑工具">
+                <div class="sculpt-tool-row">
+                  <strong>🖌️ 网格笔刷</strong>
+                  <button type="button" id="sculpt-toolbar-toggle" class="chip-btn" title="展开/收起刷子参数与保存键">≡ 参数</button>
+                  <button type="button" class="chip-btn active" data-sculpt-tool="orbit">旋转检视</button>
+                  <button type="button" class="chip-btn" data-sculpt-tool="face">直接拉动脸</button>
+                  <button type="button" class="chip-btn" data-sculpt-tool="hair">梳理真实发束</button>
+                  <label class="checkbox-inline" title="开启时对另一侧同步施加镜像笔画"><input type="checkbox" id="sculpt-symmetric" checked /> 左右对称</label>
+                  <button type="button" id="sculpt-undo" class="chip-btn" title="仅撤销上一笔刷子；Ctrl+Z 同样可用">↶ 撤销上一笔</button>
+                </div>
+                <div class="sculpt-tool-row">
+                  <label>刷子半径 <input id="sculpt-radius" type="range" min="1" max="6.5" value="3.4" step="0.1" /><output id="sculpt-radius-val">3.4cm</output></label>
+                  <label>拖动强度 <input id="sculpt-strength" type="range" min="0.15" max="1" value="0.30" step="0.05" /><output id="sculpt-strength-val">30%</output></label>
+                  <button type="button" id="sculpt-save" class="chip-btn" title="保存当前整个角色外观并召唤桌宠；已建档标牌不会被更改">💾 保存外观并召唤</button>
+                </div>
+                <small id="sculpt-status" role="status">选择直接拉脸或梳发，在 3D 网格上按住左键拖动；滑杆调整后笔画仍保留。外部头模不支持内置脸雕。</small>
+              </div>
+
                 <!-- 1:1 Semi-Transparent Photo Alignment Overlay -->
                 <canvas id="studio-photo-overlay" width="260" height="300" class="hidden"></canvas>
                 <div class="viewport-overlay-tip">
                   左键拖拽：360°旋转检视头雕与底部解剖切面 | 滚轮：缩放细节 | 右键：平移
                 </div>
               </div>
+
 
               <!-- 2D High-Res Medical Anatomical Neck Cross-Section Atlas Inspector -->
               <div class="anatomy-inspector-bar">
@@ -1990,52 +2011,52 @@
                 </div>
                 <div class="slider-row">
                   <span>↔️ 眼距宽窄微调 · 紧凑聚焦(-) ↔ 宽距幼态(+)</span>
-                  <input type="range" id="morph-eye-spacing" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-spacing" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-eye-spacing">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>🌙 东亚内眦赘皮/内眼角 · 开内眼角(-) ↔ 原生蒙古褶(+)</span>
-                  <input type="range" id="morph-eye-epicanthus" min="-1.20" max="1.20" step="0.02" value="0.15" />
+                  <input type="range" id="morph-eye-epicanthus" min="-1.30" max="1.30" step="0.02" value="0.15" />
                   <span id="val-morph-eye-epicanthus">+0.15</span>
                 </div>
                 <div class="slider-row">
                   <span>✨ 单眼皮/双眼皮3D褶皱 · 纯单眼皮(-) ↔ 平行大双(+)</span>
-                  <input type="range" id="morph-eye-crease" min="-1.20" max="1.20" step="0.02" value="0.25" />
+                  <input type="range" id="morph-eye-crease" min="-1.30" max="1.30" step="0.02" value="0.25" />
                   <span id="val-morph-eye-crease">+0.25</span>
                 </div>
                 <div class="slider-row">
                   <span>🌸 3D卧蚕饱满隆起度 · 轻薄(0) ↔ 饱满桃花卧蚕(+)</span>
-                  <input type="range" id="morph-eye-bag" min="0.00" max="1.20" step="0.02" value="0.20" />
+                  <input type="range" id="morph-eye-bag" min="0.00" max="1.30" step="0.02" value="0.20" />
                   <span id="val-morph-eye-bag">+0.20</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 下眼缘平直度 · 圆润弧线(-) ↔ 更平、减轻眼下隆起(+)</span>
-                  <input type="range" id="morph-lower-lid-flatness" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-lower-lid-flatness" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-lower-lid-flatness">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 眼窝深浅 · 浅眼窝(-) ↔ 深眼窝(+)</span>
-                  <input type="range" id="morph-eye-depth" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-depth" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-eye-depth">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 外眼角局部高度 · 下垂(-) ↔ 上扬(+)</span>
-                  <input type="range" id="morph-outer-canthus" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-outer-canthus" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-outer-canthus">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 内眼角局部高度 · 下倾(-) ↔ 上提(+)</span>
-                  <input type="range" id="morph-eye-medial-canthus" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-medial-canthus" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-eye-medial-canthus">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 上眼睑褶线高度 · 压低(-) ↔ 上抬(+)</span>
-                  <input type="range" id="morph-eye-upper-fold-height" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-upper-fold-height" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-eye-upper-fold-height">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👁️ 外侧眼裂开合 · 窄眯(-) ↔ 放大(+)</span>
-                  <input type="range" id="morph-eye-outer-opening" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-outer-opening" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-eye-outer-opening">+0.00</span>
                 </div>
                 <div class="slider-row">
@@ -2050,42 +2071,42 @@
                 </div>
                 <div class="slider-row">
                   <span>📐 下颌V脸收窄(+) ↔ 方颌骨感(-)</span>
-                  <input type="range" id="morph-jaw" min="-1.00" max="1.00" step="0.02" value="0.04" />
+                  <input type="range" id="morph-jaw" min="-1.30" max="1.30" step="0.02" value="0.04" />
                   <span id="val-morph-jaw">+0.04</span>
                 </div>
                 <div class="slider-row">
                   <span>📐 下巴修长尖翘(+) ↔ 短圆幼态(-)</span>
-                  <input type="range" id="morph-chin" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-chin" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-chin">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>📐 下巴横向宽窄 · 窄翘(-) ↔ 饱满宽(+)</span>
-                  <input type="range" id="morph-chin-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-chin-width" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-chin-width">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>📐 苹果肌胶原饱满(+) ↔ 清瘦高颧(-)</span>
-                  <input type="range" id="morph-cheek" min="-1.00" max="1.00" step="0.02" value="0.16" />
+                  <input type="range" id="morph-cheek" min="-1.30" max="1.30" step="0.02" value="0.16" />
                   <span id="val-morph-cheek">+0.16</span>
                 </div>
                 <div class="slider-row">
                   <span>👃 鼻梁高挺立体(+) ↔ 柔和低鼻梁(-)</span>
-                  <input type="range" id="morph-nose" min="-1.00" max="1.00" step="0.02" value="0.04" />
+                  <input type="range" id="morph-nose" min="-1.30" max="1.30" step="0.02" value="0.04" />
                   <span id="val-morph-nose">+0.04</span>
                 </div>
                 <div class="slider-row">
                   <span>👃 鼻翼宽窄微调 · 秀气收窄(-) ↔ 宽鼻翼(+)</span>
-                  <input type="range" id="morph-nose-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-nose-width" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-nose-width">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👃 鼻尖方向 · 微垂(-) ↔ 微翘(+)</span>
-                  <input type="range" id="morph-nose-tip" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-nose-tip" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-nose-tip">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👃 鼻头横向宽度 · 收窄(-) ↔ 饱满(+)</span>
-                  <input type="range" id="morph-nose-tip-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-nose-tip-width" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-nose-tip-width">+0.00</span>
                 </div>
                 <div class="slider-row">
@@ -2105,62 +2126,62 @@
                 </div>
                 <div class="slider-row">
                   <span>👄 唇部丰满欲感(+) ↔ 薄唇清冷(-)</span>
-                  <input type="range" id="morph-lip" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-lip" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-lip">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 真正调整嘴部几何宽度 · 窄(-) ↔ 宽(+)</span>
-                  <input type="range" id="morph-mouth-width" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-mouth-width" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-width">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 唇部纵向比例 · 扁薄(-) ↔ 饱满加高(+)</span>
-                  <input type="range" id="morph-mouth-height" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-mouth-height" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-height">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 唇峰弧度 · 圆润(-) ↔ 明显丘比特弓(+)</span>
-                  <input type="range" id="morph-cupid-bow" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-cupid-bow" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-cupid-bow">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 下唇中央弧度 · 内收(-) ↔ 外展(+)</span>
-                  <input type="range" id="morph-lower-lip" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-lower-lip" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-lower-lip">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 嘴角弧度 · 清冷微抿(-) ↔ 甜美浅笑(+)</span>
-                  <input type="range" id="morph-mouth-smile" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-mouth-smile" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-smile">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 嘴角局部真形变 · 下垂(-) ↔ 提拉(+)</span>
-                  <input type="range" id="morph-mouth-corner-lift" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-mouth-corner-lift" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-mouth-corner-lift">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👄 上唇中央高度 · 压低(-) ↔ 提起(+)</span>
-                  <input type="range" id="morph-upper-lip-lift" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-upper-lip-lift" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-upper-lip-lift">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>🧠 额头饱满度与发际高度</span>
-                  <input type="range" id="morph-forehead" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-forehead" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-forehead">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>👂 耳廓大小与精灵耳贴面度</span>
-                  <input type="range" id="morph-ear" min="-1.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-ear" min="-1.30" max="1.30" step="0.02" value="0.00" />
                   <span id="val-morph-ear">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>↔️ 头颅整体左右宽窄比例 (对位宽脸/窄脸照)</span>
-                  <input type="range" id="morph-head-width" min="-0.20" max="0.20" step="0.01" value="0.00" />
+                  <input type="range" id="morph-head-width" min="-0.27" max="0.27" step="0.01" value="0.00" />
                   <span id="val-morph-head-width">100%</span>
                 </div>
                 <div class="slider-row">
                   <span>↕️ 头颅整体上下长短比例 (对位长脸/短脸照)</span>
-                  <input type="range" id="morph-head-length" min="-0.20" max="0.20" step="0.01" value="0.00" />
+                  <input type="range" id="morph-head-length" min="-0.27" max="0.27" step="0.01" value="0.00" />
                   <span id="val-morph-head-length">100%</span>
                 </div>
                 <div class="slider-row">
@@ -2174,6 +2195,19 @@
                   <span id="val-morph-gaze-pitch">+0.00</span>
                 </div>
               </div>
+              <details style="margin-top:12px;border:1px solid rgba(125,211,252,.35);border-radius:9px;padding:9px;background:rgba(8,47,73,.25);" open>
+                <summary style="cursor:pointer;color:#bae6fd;font-weight:700;margin-bottom:9px;">进阶骨相 · 8 根真实 MPFB 局部网格滑杆（±1.30）</summary>
+                <div class="control-group compact">
+                  <div class="slider-row"><span>面颊容量 · 消瘦 ↔ 圆润</span><input type="range" id="morph-cheek-volume" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-cheek-volume">+0.00</span></div>
+                  <div class="slider-row"><span>苹果肌高度 · 下沉 ↔ 上提</span><input type="range" id="morph-cheek-height" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-cheek-height">+0.00</span></div>
+                  <div class="slider-row"><span>内侧面颊 · 凹陷 ↔ 饱满</span><input type="range" id="morph-cheek-inner" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-cheek-inner">+0.00</span></div>
+                  <div class="slider-row"><span>下巴前伸 · 内收 ↔ 外凸</span><input type="range" id="morph-chin-projection" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-chin-projection">+0.00</span></div>
+                  <div class="slider-row"><span>下巴沟深浅 · 平滑 ↔ 凹沟</span><input type="range" id="morph-chin-cleft" min="0" max="1.30" step="0.02" value="0"/><span id="val-morph-chin-cleft">0%</span></div>
+                  <div class="slider-row"><span>鼻孔宽窄 · 收窄 ↔ 开阔</span><input type="range" id="morph-nostril-width" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-nostril-width">+0.00</span></div>
+                  <div class="slider-row"><span>人中立体 · 平缓 ↔ 上提</span><input type="range" id="morph-philtrum-volume" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-philtrum-volume">+0.00</span></div>
+                  <div class="slider-row"><span>额颞宽窄 · 收紧 ↔ 扩张</span><input type="range" id="morph-temple-fullness" min="-1.30" max="1.30" step="0.02" value="0"/><span id="val-morph-temple-fullness">+0.00</span></div>
+                </div>
+              </details>
             </div>
 
             <!-- SUB-TAB 3: REAL-TIME COLOR & MAKEUP GRADING STUDIO -->
@@ -2778,12 +2812,14 @@
                   <select id="sel-glasses-style">
                     <option value="none">不戴眼镜</option>
                     <option value="wire_oval">轻金属椭圆细框</option>
+                    <option value="polyhaven_large_oval">宽版日常女式椭圆框 · 实物纹理（CC0）</option>
+                    <option value="polyhaven_round">实物纹理 · 金属圆框（Poly Haven CC0）</option>
                     <option value="acetate_square">琥珀板材方框</option>
                     <option value="aviator">复古飞行员双梁</option>
                   </select>
                 </div>
                 <label style="display:inline-flex;gap:9px;align-items:center;font-size:12px;">镜框颜色 <input type="color" id="col-glasses-frame" value="#a07857" /></label>
-                <div class="slider-row"><span>镜框整体大小</span><input type="range" id="acc-glasses-size" min="0.82" max="1.18" step="0.01" value="1" /><span id="val-acc-glasses-size">100%</span></div>
+                <div class="slider-row"><span>镜框整体大小</span><input type="range" id="acc-glasses-size" min="0.82" max="1.30" step="0.01" value="1" /><span id="val-acc-glasses-size">100%</span></div>
                 <div class="slider-row"><span>眼镜上下位置</span><input type="range" id="acc-glasses-height" min="-9" max="9" step="1" value="0" /><span id="val-acc-glasses-height">0 mm</span></div>
                 <div class="slider-row"><span>眼镜前后贴合</span><input type="range" id="acc-glasses-depth" min="-9" max="9" step="1" value="0" /><span id="val-acc-glasses-depth">0 mm</span></div>
                 <div class="slider-row"><span>镜架俯仰角度</span><input type="range" id="acc-glasses-tilt" min="-12" max="12" step="1" value="0" /><span id="val-acc-glasses-tilt">0°</span></div>
