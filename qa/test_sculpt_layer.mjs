@@ -95,6 +95,16 @@ assert(Array.from(original.mesh.geometry.attributes.position.array)
   'undo removes physical hair vertex displacement (float32 rounding allowed)');
 assert.equal(applyLiveSculptStroke(original.root, 'hair', hairStroke) > 0, true);
 finalizeSculptStroke(original.root, 'hair');
+// Long drags must bend the free tip without pulling its root off the scalp.
+const rootAndTip = Float32Array.from([0.02, 0.111, 0, 0.02, 0.010, 0]);
+const lockDelta = new Float32Array(rootAndTip.length);
+const dragLock = [0.02, 0.060, 0, 0.005, 0, 0, 0.087, 0];
+for (let n = 0; n < 20; n++) applySculptStrokeToBuffer(rootAndTip, lockDelta, dragLock, true);
+assert(Math.abs(lockDelta[0]) < Math.abs(lockDelta[3]) * 0.22,
+  'hair root must remain anchored while the free tip bends');
+for (let n = 0; n < 90; n++) applySculptStrokeToBuffer(rootAndTip, lockDelta, dragLock, true);
+assert(Math.hypot(...lockDelta.slice(3, 6)) <= 0.02301,
+  'long repeated dragging must cap the displacement per lock');
 const differentStyle = makeHairRoot('style_2');
 applyStoredHairSculpt(differentStyle.root, { sculptRevision: 1,
   sculptGestures: [{ tool: 'hair', hairStyle: 'style_1', strokes: [hairStroke] }] });

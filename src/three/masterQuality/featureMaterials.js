@@ -263,9 +263,14 @@ function patchHairShader(s, o, tipsPass, shared) {
        float rootLock = 0.5 + 0.5 * sin(crownPhi * 139.0 + vHairLocalPos.y * 74.0);
        float rootFiber = 0.5 + 0.5 * sin(crownPhi * 447.0 + vHairLocalPos.y * 128.0);
        diffuseColor.rgb *= 0.70 + 0.24 * rootLock + 0.16 * rootFiber;
-       // 内层发丝更暗（发量体积感），越靠近头皮越暗
-       gHairAO = mix(0.35, 1.0, smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
-       diffuseColor.rgb *= gHairAO;`,
+       // The card undercoat is not a black shadow decal. At the forehead a
+       // harsh 0.35 root multiplier used to expose a charcoal horizontal band
+       // behind the strands, particularly in the short bob. Lift only the
+       // *hair* undercoat here; this does not alter the skin material/gloss.
+       float foreheadCore = step(0.044, vHairLocalPos.z) * (1.0 - step(0.082, vHairLocalPos.y));
+       gHairAO = mix(mix(0.46, 0.79, foreheadCore), 1.0,
+         smoothstep(uScalpRadius, uScalpRadius + 0.022, vHairDepth));
+       diffuseColor.rgb *= gHairAO * mix(1.0, 1.22, foreheadCore);`,
     )
     .replace(
       '#include <normal_fragment_maps>',
@@ -286,8 +291,12 @@ function patchHairShader(s, o, tipsPass, shared) {
     `#include <alphatest_fragment>
      if (uScalpFade > 0.0) {
        float isForeheadBangs = step(0.044, vHairLocalPos.z) * (1.0 - step(0.082, vHairLocalPos.y));
-       float maxDepth = mix(uScalpFade, min(uScalpFade, 0.039), isForeheadBangs);
-       if (vScalpD > maxDepth) discard;
+       // Some authored fringe triangles interpolate the scalp-distance
+       // sentinel (1.0) at a free edge. Distance clipping *within the fringe*
+       // cuts a perfectly straight skin-coloured triangle into the bangs.
+       // Keep this small forehead-only card region; continue discarding
+       // floating/remote card undercoat everywhere else around the head.
+       if (vScalpD > uScalpFade && isForeheadBangs < 0.5) discard;
      }`,
   );
   if (tipsPass) {

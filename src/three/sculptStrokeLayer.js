@@ -75,13 +75,28 @@ export function applySculptStrokeToBuffer(pos, delta, stroke, hair = false, boun
       }
       const weight = Math.max(a, b);
       if (weight < 0.0001) continue;
-      // Keep the root of a lock close to its existing scalp placement. In
-      // particular, this does NOT move the anatomical cut or the head mesh.
-      const rootWeight = hair ? 0.20 + 0.80 * Math.min(1, Math.max(0, (0.112 - y) / 0.10)) : 1;
+      // A lock bends from its anchored root to its free tip. The previous
+      // constant 20% root motion stretched the whole card into a sharp rubber
+      // triangle after a longer drag. Keep the scalp anchor almost fixed and
+      // ease the displacement smoothly toward the ends instead.
+      const flex = Math.min(1, Math.max(0, (0.112 - y) / 0.105));
+      const rootWeight = hair ? 0.055 + 0.945 * flex * flex * (3 - 2 * flex) : 1;
       const wx = mirror && b > 0 ? (a - b) / (a + b + 1e-6) : 1;
-      const sx = dx * weight * wx * rootWeight;
-      const sy = dy * weight * rootWeight;
-      const sz = dz * weight * rootWeight;
+      let sx = dx * weight * wx * rootWeight;
+      let sy = dy * weight * rootWeight;
+      let sz = dz * weight * rootWeight;
+      if (hair) {
+        // Across many pointermove events the same card vertex must never be
+        // pulled through the scalp or stretched several centimetres away.
+        const nx = delta[i] + sx, ny = delta[i + 1] + sy, nz = delta[i + 2] + sz;
+        const len = Math.hypot(nx, ny, nz);
+        const limit = 0.023 * Math.sqrt(rootWeight);
+        if (len > limit) {
+          const f = limit / len;
+          sx = nx * f - delta[i]; sy = ny * f - delta[i + 1]; sz = nz * f - delta[i + 2];
+        }
+      }
+      if (Math.abs(sx) + Math.abs(sy) + Math.abs(sz) < 1e-9) continue;
       delta[i] += sx; delta[i + 1] += sy; delta[i + 2] += sz;
       pos[i] += sx; pos[i + 1] += sy; pos[i + 2] += sz;
       changed++;

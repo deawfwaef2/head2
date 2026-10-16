@@ -200,6 +200,39 @@ export class StudioPreviewEngine {
     );
   }
 
+  // The GPU expands glossy fibers into ribbons, but their two CPU vertices
+  // share a centerline position: Raycaster sees a zero-area triangle. On a
+  // missed card ray, pick a nearby *real strand centerline* in screen space.
+  pickStrandBrushStart(event, strandMesh) {
+    const positions = strandMesh?.geometry?.attributes?.position;
+    if (!positions || !strandMesh.visible) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return null;
+    const nx = (event.clientX - rect.left) / rect.width * 2 - 1;
+    const ny = 1 - (event.clientY - rect.top) / rect.height * 2;
+    strandMesh.updateMatrixWorld(true);
+    const clip = new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse)
+      .multiply(strandMesh.matrixWorld).elements;
+    const a = positions.array;
+    let nearestIndex = -1, best = 14 * 14;
+    // Four ribbon segments per sample; a click is accepted only within 14px.
+    for (let i = 0; i < positions.count; i += 8) {
+      const j = i * 3, x = a[j], y = a[j + 1], z = a[j + 2];
+      const w = clip[3] * x + clip[7] * y + clip[11] * z + clip[15];
+      if (w <= 0) continue;
+      const px = (clip[0] * x + clip[4] * y + clip[8] * z + clip[12]) / w;
+      const py = (clip[1] * x + clip[5] * y + clip[9] * z + clip[13]) / w;
+      const dx = (px - nx) * rect.width * 0.5;
+      const dy = (py - ny) * rect.height * 0.5;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < best) { best = d2; nearestIndex = j; }
+    }
+    if (nearestIndex < 0) return null;
+    return { object: strandMesh,
+      point: new THREE.Vector3(a[nearestIndex], a[nearestIndex + 1], a[nearestIndex + 2])
+        .applyMatrix4(strandMesh.matrixWorld) };
+  }
+
   startSculptDrag(event) {
     if (this.sculptTool === 'orbit' || event.button !== 0 || !this.headNode) return;
     const morphs = this.getSculptMorphs?.();
@@ -211,17 +244,23 @@ export class StudioPreviewEngine {
     const faceMesh = this.headNode.getObjectByName('HeadSkinMesh');
     const hairGroup = this.headNode.getObjectByName('HairGroup');
     const target = this.sculptTool === 'face' ? faceMesh : hairGroup;
+    // Intersect the authored opaque undercoat first. Strand ribbons have
+    // degenerate CPU triangles, so include them through the centerline picker
+    // below instead of raycasting 160k zero-area vertices on every click.
     const hitMeshes = this.sculptTool === 'face' ? [faceMesh].filter(Boolean) :
       getBrushableHairMeshes(this.headNode, false).filter(mesh => mesh.visible);
-    if (!target || !hitMeshes.length) {
+    const masterStrands = this.sculptTool === 'hair'
+      ? hairGroup?.getObjectByName('MasterStrandHairMesh') : null;
+    if (!target || (!hitMeshes.length && !masterStrands)) {
       this.onSculptStatus?.('此模型没有可编辑的对应网格；等模型加载完成再试。');
       return;
     }
     this.headNode.updateMatrixWorld(true);
     this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
-    const hit = this.sculptRaycaster.intersectObjects(hitMeshes, false)[0];
+    let hit = this.sculptRaycaster.intersectObjects(hitMeshes, false)[0];
+    if (!hit && masterStrands) hit = this.pickStrandBrushStart(event, masterStrands);
     if (!hit) {
-      this.onSculptStatus?.(this.sculptTool === 'face' ? '请从脸部皮肤表面开始拖动。' : '请从真实发片表面开始梳理。');
+      this.onSculptStatus?.(this.sculptTool === 'face' ? '请从脸部皮肤表面开始拖动。' : '请从发束或发梢开始梳理；固定发根不能拖拽。');
       return;
     }
     const startWorld = hit.point.clone();
