@@ -80,11 +80,15 @@ import {
 // ============================================================================
 const STORAGE_KEY = 'cervix3d-collectibles-stage69g-photostrand-v1';
 const ACCESSORY_DEFAULTS = Object.freeze({
-  glassesStyle: 'none', glassesColor: '#a07857', glassesSize: 1,
+  // Existing archived characters retain their saved choice (including none).
+  // A fresh studio draft starts with the requested wearable large squircle.
+  glassesStyle: 'squircle_large', glassesColor: '#a07857', glassesSize: 1,
+  glassesOutline: 'soft_square', glassesFrameMaterial: 'warm_acetate', glassesRimThickness: 1,
   glassesOffsetY: 0, glassesOffsetZ: 0, glassesTilt: 0, glassesLensTint: 0,
   hatStyle: 'none', hatColor: '#785670', hatSize: 1, hatOffsetY: 0, hatTilt: 0,
 });
 const ACCESSORY_SLIDERS = [
+  ['acc-glasses-rim-width', 'val-acc-glasses-rim-width', 'glassesRimThickness', 'pct'],
   ['acc-glasses-size', 'val-acc-glasses-size', 'glassesSize', 'pct'],
   ['acc-glasses-height', 'val-acc-glasses-height', 'glassesOffsetY', 'mm'],
   ['acc-glasses-depth', 'val-acc-glasses-depth', 'glassesOffsetZ', 'mm'],
@@ -103,6 +107,8 @@ function syncStudioAccessoryUI(morphs = {}) {
   const m = { ...ACCESSORY_DEFAULTS, ...morphs };
   for (const [id, key, obsId] of [
     ['sel-glasses-style', 'glassesStyle', 'obs-glasses-style'],
+    ['sel-glasses-outline', 'glassesOutline', 'obs-glasses-outline'],
+    ['sel-glasses-material', 'glassesFrameMaterial', 'obs-glasses-material'],
     ['sel-hat-style', 'hatStyle', 'obs-hat-style'],
     ['col-glasses-frame', 'glassesColor', 'obs-glasses-color'],
     ['col-hat-fabric', 'hatColor', 'obs-hat-color'],
@@ -125,6 +131,20 @@ function syncStudioAccessoryUI(morphs = {}) {
       if (proxyInput) proxyInput.value = String(val);
       if (proxyLabel) proxyLabel.textContent = accessoryDisplay(val, unit);
     }
+  }
+  // A scanned CC0 frame cannot be reshaped without invalidating its authored
+  // UVs/hinges. Do not present inert geometry/finish controls on those styles.
+  const canReshape = m.glassesStyle === 'squircle_large';
+  for (const [studioId, obsId] of [
+    ['sel-glasses-outline', 'obs-glasses-outline'],
+    ['sel-glasses-material', 'obs-glasses-material'],
+    ['acc-glasses-rim-width', null],
+  ]) {
+    const primary = document.getElementById(studioId);
+    if (primary) primary.disabled = !canReshape;
+    if (obsId) { const other = document.getElementById(obsId); if (other) other.disabled = !canReshape; }
+    const proxy = document.querySelector(`.obs-slider-row[data-sync-target="${studioId}"] .obs-proxy-range`);
+    if (proxy) proxy.disabled = !canReshape;
   }
 }
 let syncStudioShapeUI = () => {};
@@ -2601,9 +2621,37 @@ window.addEventListener('DOMContentLoaded', async () => {
       return col;
     },
     saveActiveCharacterDesign() {
-      const col = this.getActiveCollectible();
+      const editorId = document.getElementById('inp-col-id')?.value?.trim();
+      // Save the *loaded editor ID* when it exists; the active desktop pet
+      // may be another person. Never silently copy one person's appearance
+      // into a different locked archive slot.
+      const col = state.collectibles.find(c => c.id === editorId) || this.getActiveCollectible();
       if (!col) return null;
       this.syncLivePetToCollectible(col);
+      // The Obsidian «保存外观» button also needs to commit the open studio
+      // draft, not only copy a summoned pet. Guard by the actual editor ID so
+      // a stale draft cannot silently overwrite a *different* active slot.
+      if (editorId !== col.id && !desktopEngine?.pets?.has(col.id)) {
+        showToast('⚠️ 工坊编号与当前已建档角色不同；请先读取该角色，或使用「保存外观并召唤」新建编号。');
+        return null;
+      }
+      if (editorId === col.id && state.studioDraft?.morphs) {
+        const draft = state.studioDraft;
+        for (const key of [
+          'basePreset', 'skinVariant', 'faceArchetype', 'eyebrowStyle', 'deadExpression',
+          'skinTone', 'blushIntensity', 'lipColor', 'irisColor', 'hairStyle',
+          'hairColor', 'hairSheen', 'neckClearance',
+        ]) if (draft[key] !== undefined) col[key] = draft[key];
+        col.morphs = { ...(col.morphs || {}), ...JSON.parse(JSON.stringify(draft.morphs)) };
+        const pet = desktopEngine?.pets?.get(col.id);
+        if (pet?.collectible) pet.collectible.morphs = { ...col.morphs };
+        const node = pet?.node || pet?.headNode;
+        if (node) {
+          node.userData.currentMorphs = { ...(node.userData.currentMorphs || {}), ...col.morphs };
+          syncFaceAccessories(node, node.userData.currentMorphs);
+          desktopEngine.wakeRender(0.8, true);
+        }
+      }
       // Existing dossiers are read-only: saving a face/hair look cannot rewrite the placard.
       lockPlacardDossier(col);
       persistCollectibles();
@@ -3935,7 +3983,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     syncStudioAccessoryUI(state.studioDraft.morphs);
   };
   for (const [id, key] of [
-    ['sel-glasses-style', 'glassesStyle'], ['sel-hat-style', 'hatStyle'],
+    ['sel-glasses-style', 'glassesStyle'],
+    ['sel-glasses-outline', 'glassesOutline'],
+    ['sel-glasses-material', 'glassesFrameMaterial'],
+    ['sel-hat-style', 'hatStyle'],
     ['col-glasses-frame', 'glassesColor'], ['col-hat-fabric', 'hatColor'],
   ]) {
     const el = document.getElementById(id);

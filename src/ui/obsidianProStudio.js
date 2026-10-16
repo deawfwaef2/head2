@@ -527,6 +527,7 @@ export function initObsidianProStudio() {
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
             <label style="font-size:11px;color:#cbd5e1;">眼镜款式
               <select class="obs-select" id="obs-glasses-style" style="width:100%;margin-top:4px;">
+                <option value="squircle_large" selected>默认 · 大号方圆框</option>
                 <option value="none">不佩戴</option><option value="wire_oval">椭圆金属框</option>
                 <option value="polyhaven_large_oval">宽版女式椭圆框 · 实物 CC0</option>
                 <option value="polyhaven_round">实物纹理金属圆框 · CC0</option>
@@ -540,11 +541,21 @@ export function initObsidianProStudio() {
               </select>
             </label>
           </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <label style="font-size:11px;color:#cbd5e1;">方圆外形
+              <select id="obs-glasses-outline" class="obs-select"><option value="soft_square">柔方圆</option><option value="round">大号圆润</option><option value="cat_eye">上挑猫眼</option></select>
+            </label>
+            <label style="font-size:11px;color:#cbd5e1;">镜框材质
+              <select id="obs-glasses-material" class="obs-select"><option value="warm_acetate">亮面板材</option><option value="matte_black">哑黑板材</option><option value="brushed_titanium">拉丝钛金</option><option value="champagne_gold">香槟金属</option></select>
+            </label>
+          </div>
           <div style="display:flex;gap:16px;align-items:center;margin-bottom:8px;">
             <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;">镜框 <input type="color" id="obs-glasses-color" value="#a07857" /></label>
             <label style="font-size:11px;color:#cbd5e1;display:flex;align-items:center;gap:5px;">帽布 <input type="color" id="obs-hat-color" value="#785670" /></label>
           </div>
           <div class="obs-accordion-body">
+            <p class="obs-sec-sub">外形、边宽、材质是方圆框专属；切换扫描款会停用但保留存档。</p>
+            ${makeShortSliderRow({ label: '实体边宽', targetId: 'acc-glasses-rim-width', min: 0.55, max: 1.65, step: 0.05, val: 1, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '镜架大小', targetId: 'acc-glasses-size', min: 0.82, max: 1.30, step: 0.01, val: 1, fmt: 'pct' })}
             ${makeShortSliderRow({ label: '镜架上下', targetId: 'acc-glasses-height', min: -9, max: 9, step: 1, val: 0, fmt: 'mm' })}
             ${makeShortSliderRow({ label: '镜架前后', targetId: 'acc-glasses-depth', min: -9, max: 9, step: 1, val: 0, fmt: 'mm' })}
@@ -1906,6 +1917,8 @@ function wireObsidianStudioEvents(studio) {
   // full editor subtab; they are not decorative UI-only copies.
   for (const [obsId, studioId] of [
     ['obs-glasses-style', 'sel-glasses-style'],
+    ['obs-glasses-outline', 'sel-glasses-outline'],
+    ['obs-glasses-material', 'sel-glasses-material'],
     ['obs-hat-style', 'sel-hat-style'],
   ]) {
     document.getElementById(obsId)?.addEventListener('change', e => {

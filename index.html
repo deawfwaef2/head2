@@ -2810,6 +2810,7 @@
                 <div class="control-group compact">
                   <label for="sel-glasses-style">选择眼镜</label>
                   <select id="sel-glasses-style">
+                    <option value="squircle_large" selected>默认 · 大号方圆框（可调外形/材质）</option>
                     <option value="none">不戴眼镜</option>
                     <option value="wire_oval">轻金属椭圆细框</option>
                     <option value="polyhaven_large_oval">宽版日常女式椭圆框 · 实物纹理（CC0）</option>
@@ -2818,7 +2819,17 @@
                     <option value="aviator">复古飞行员双梁</option>
                   </select>
                 </div>
+                <div class="control-group compact" style="display:flex;gap:12px;flex-wrap:wrap;">
+                  <label for="sel-glasses-outline">方圆框外形
+                    <select id="sel-glasses-outline"><option value="soft_square">大号柔方圆 · 默认</option><option value="round">大号圆润</option><option value="cat_eye">上挑猫眼</option></select>
+                  </label>
+                  <label for="sel-glasses-material">方圆框材质
+                    <select id="sel-glasses-material"><option value="warm_acetate">琥珀板材 · 亮面</option><option value="matte_black">哑黑板材</option><option value="brushed_titanium">拉丝钛金属</option><option value="champagne_gold">香槟金属</option></select>
+                  </label>
+                </div>
+                <p style="font-size:11px;color:#a9bfce;">外形、边宽与材质用于「大号方圆框」；切换真实扫描款时会暂停这些专用控件，保存值不丢失。</p>
                 <label style="display:inline-flex;gap:9px;align-items:center;font-size:12px;">镜框颜色 <input type="color" id="col-glasses-frame" value="#a07857" /></label>
+                <div class="slider-row"><span>镜框实体边宽</span><input type="range" id="acc-glasses-rim-width" min="0.55" max="1.65" step="0.05" value="1" /><span id="val-acc-glasses-rim-width">100%</span></div>
                 <div class="slider-row"><span>镜框整体大小</span><input type="range" id="acc-glasses-size" min="0.82" max="1.30" step="0.01" value="1" /><span id="val-acc-glasses-size">100%</span></div>
                 <div class="slider-row"><span>眼镜上下位置</span><input type="range" id="acc-glasses-height" min="-9" max="9" step="1" value="0" /><span id="val-acc-glasses-height">0 mm</span></div>
                 <div class="slider-row"><span>眼镜前后贴合</span><input type="range" id="acc-glasses-depth" min="-9" max="9" step="1" value="0" /><span id="val-acc-glasses-depth">0 mm</span></div>

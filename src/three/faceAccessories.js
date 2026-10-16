@@ -5,7 +5,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 // metal frame is a separately licensed CC0 Poly Haven asset; offline HTML
 // embeds its GLB while the dev-server version fetches the same local file.
 const POLYHAVEN_URL = '/models/polyhaven_round_spectacles.glb';
-const GLASSES = new Set(['none', 'wire_oval', 'acetate_square', 'aviator', 'polyhaven_round', 'polyhaven_large_oval']);
+const GLASSES = new Set(['none', 'squircle_large', 'wire_oval', 'acetate_square', 'aviator', 'polyhaven_round', 'polyhaven_large_oval']);
+const FRAME_OUTLINES = new Set(['soft_square', 'round', 'cat_eye']);
+const FRAME_FINISHES = {
+  warm_acetate: { color: '#a07857', metalness: 0.025, roughness: 0.32, clearcoat: 0.78 },
+  matte_black: { color: '#333039', metalness: 0.0, roughness: 0.75, clearcoat: 0.08 },
+  brushed_titanium: { color: '#b5bfc3', metalness: 0.88, roughness: 0.37, clearcoat: 0.12 },
+  champagne_gold: { color: '#c49a61', metalness: 0.78, roughness: 0.22, clearcoat: 0.38 },
+};
 let polyhavenSourcePromise = null;
 const HATS = new Set(['none', 'beret', 'beanie', 'bucket']);
 const EYE_Y = 0.021;
@@ -17,6 +24,33 @@ const limit = (v, fallback, min, max) => {
   return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
 };
 const hex = (v, fallback) => /^#[\da-f]{6}$/i.test(v || '') ? v : fallback;
+
+// Subtle bounded acetate grain breaks up a flat plastic silhouette without
+// shipping an external file. The reusable atlas remains local and offline.
+let acetateGrain = null;
+function warmAcetateGrain() {
+  if (acetateGrain) return acetateGrain;
+  const w = 128, h = 64, bytes = new Uint8Array(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const wave = Math.sin(x * 0.19 + 1.8 * Math.sin(y * 0.21))
+      * Math.sin(y * 0.18 + Math.sin(x * 0.045));
+    const grain = (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+    const value = Math.max(0.78, Math.min(1.0, 0.93 + wave * 0.055 + grain * 0.016));
+    const i = (y * w + x) * 4;
+    bytes[i] = Math.round(255 * value);
+    bytes[i + 1] = Math.round(254 * value);
+    bytes[i + 2] = Math.round(248 * value);
+    bytes[i + 3] = 255;
+  }
+  acetateGrain = new THREE.DataTexture(bytes, w, h, THREE.RGBAFormat);
+  acetateGrain.colorSpace = THREE.SRGBColorSpace;
+  acetateGrain.wrapS = acetateGrain.wrapT = THREE.RepeatWrapping;
+  acetateGrain.minFilter = THREE.LinearMipmapLinearFilter;
+  acetateGrain.magFilter = THREE.LinearFilter;
+  acetateGrain.generateMipmaps = true;
+  acetateGrain.needsUpdate = true;
+  return acetateGrain;
+}
 
 function mesh(group, geometry, material, name, castShadow = true) {
   const part = new THREE.Mesh(geometry, material);
@@ -34,10 +68,13 @@ function wire(group, coordinates, radius, material, name, closed = false) {
   return mesh(group, new THREE.TubeGeometry(curve, Math.max(24, coordinates.length * 2), radius, 6, closed), material, name, false);
 }
 
-function glassesAsset(style) {
+function glassesAsset(style, morphs = {}) {
   const root = new THREE.Group();
   root.name = `Glasses_${style}`;
-  const acetate = style === 'acetate_square';
+  const largeSquircle = style === 'squircle_large';
+  const acetate = style === 'acetate_square' || largeSquircle;
+  const outlineStyle = FRAME_OUTLINES.has(morphs.glassesOutline) ? morphs.glassesOutline : 'soft_square';
+  const rimThickness = limit(morphs.glassesRimThickness, 1, 0.55, 1.65);
   const frameMat = new THREE.MeshPhysicalMaterial({
     color: acetate ? '#342523' : '#524740', metalness: acetate ? 0.035 : 0.82,
     roughness: acetate ? 0.32 : 0.29, clearcoat: acetate ? 0.78 : 0.22,
@@ -69,16 +106,24 @@ function glassesAsset(style) {
   root.userData.lensMaterial = lensMat;
 
   for (const side of [-1, 1]) {
-    const cx = side * 0.032;
-    const rx = style === 'aviator' ? 0.027 : style === 'wire_oval' ? 0.0253 : 0.0263;
-    const ry = style === 'aviator' ? 0.019 : style === 'wire_oval' ? 0.0164 : 0.0154;
+    const cx = side * (largeSquircle ? 0.0335 : 0.032);
+    const rx = largeSquircle ? 0.0292 : style === 'aviator' ? 0.027 : style === 'wire_oval' ? 0.0253 : 0.0263;
+    const ry = largeSquircle ? (outlineStyle === 'round' ? 0.0210 : 0.0191)
+      : style === 'aviator' ? 0.019 : style === 'wire_oval' ? 0.0164 : 0.0154;
     const cy = style === 'aviator' ? 0.0205 : 0.020;
     const steps = 64;
+    // Alter actual aperture vertices, not just a 2D menu label. A squared
+    // superellipse retains rounded optician-style corners; an outward lift
+    // shifts the cat-eye edge and its matching glass lens together.
     const xy = (t, inset = 0) => {
       const c = Math.cos(t), s = Math.sin(t);
-      const ex = acetate ? Math.sign(c) * Math.pow(Math.abs(c), 0.67) : c;
-      const ey = acetate ? Math.sign(s) * Math.pow(Math.abs(s), 0.75) : s;
-      return [cx + (rx - inset) * ex, cy - EYE_Y + (ry - inset) * ey];
+      const exPow = largeSquircle ? (outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.78 : 0.62) : 0.67;
+      const eyPow = largeSquircle ? (outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.80 : 0.66) : 0.75;
+      const ex = acetate ? Math.sign(c) * Math.pow(Math.abs(c), exPow) : c;
+      const ey = acetate ? Math.sign(s) * Math.pow(Math.abs(s), eyPow) : s;
+      const catLift = largeSquircle && outlineStyle === 'cat_eye'
+        ? 0.0070 * Math.max(0, side * ex) ** 2 : 0;
+      return [cx + (rx - inset) * ex, cy - EYE_Y + (ry - inset) * ey + catLift];
     };
     const rim = [];
     for (let i = 0; i < steps; i++) {
@@ -93,15 +138,16 @@ function glassesAsset(style) {
         if (i === 0) outline.moveTo(x, y); else outline.lineTo(x, y);
       }
       outline.closePath();
+      const rimWidth = largeSquircle ? 0.00215 * rimThickness : 0.00205;
       const aperture = new THREE.Path();
       for (let i = steps - 1; i >= 0; i--) {
-        const [x, y] = xy(i * Math.PI * 2 / steps, 0.00205);
+        const [x, y] = xy(i * Math.PI * 2 / steps, rimWidth);
         if (i === steps - 1) aperture.moveTo(x, y); else aperture.lineTo(x, y);
       }
       aperture.closePath();
       outline.holes.push(aperture);
       const ring = mesh(root, new THREE.ExtrudeGeometry(outline, {
-        depth: 0.0017, steps: 1, bevelEnabled: true,
+        depth: largeSquircle ? 0.0017 * rimThickness : 0.0017, steps: 1, bevelEnabled: true,
         bevelThickness: 0.00034, bevelSize: 0.00026, bevelSegments: 2,
       }), frameMat, `AcetateBevel_${side}`, false);
       ring.position.z = -0.0014;
@@ -118,7 +164,8 @@ function glassesAsset(style) {
     const lensVerts = [cx, cy - EYE_Y, -0.00115];
     const lensIdx = [];
     for (let i = 0; i <= steps; i++) {
-      const [x, y] = xy(i * Math.PI * 2 / steps, acetate ? 0.00225 : 0.00075);
+      const [x, y] = xy(i * Math.PI * 2 / steps,
+        acetate ? (largeSquircle ? 0.00215 * rimThickness + 0.0002 : 0.00225) : 0.00075);
       lensVerts.push(x, y, -0.0021 - 0.00045 * ((x - cx) / rx) ** 2);
       if (i < steps) lensIdx.push(0, i + 1, i + 2);
     }
@@ -137,9 +184,10 @@ function glassesAsset(style) {
 
     // Mechanical endpieces, real receding temples and two tiny hinge screws.
     const templeStart = side * (Math.abs(cx) + rx);
+    const hingeLift = largeSquircle && outlineStyle === 'cat_eye' ? 0.0070 : 0;
     const arm = [
-      [templeStart, 0.0222 - EYE_Y, -0.0014],
-      [side * 0.065, 0.0220 - EYE_Y, 0.091 - FRAME_Z],
+      [templeStart, 0.0222 - EYE_Y + hingeLift, -0.0014],
+      [side * 0.065, 0.0220 - EYE_Y + hingeLift * 0.65, 0.091 - FRAME_Z],
       [side * 0.071, 0.0200 - EYE_Y, 0.048 - FRAME_Z],
       [side * 0.074, 0.0160 - EYE_Y, 0.005 - FRAME_Z],
       [side * 0.073, 0.0090 - EYE_Y, -0.020 - FRAME_Z],
@@ -153,7 +201,7 @@ function glassesAsset(style) {
         hardwareMat, `HingePin_${side}_${h}`, false);
       screw.position.set(templeStart + side * 0.0003, arm[0][1] + h * 0.0007, 0.0007);
     }
-    if (!acetate) {
+    if (!acetate || largeSquircle) {
       const pad = mesh(root, new THREE.SphereGeometry(0.0025, 12, 10),
         padMat, `SiliconeNosePad_${side}`, false);
       pad.position.set(side * 0.0094, 0.010 - EYE_Y, 0.098 - FRAME_Z);
@@ -173,7 +221,8 @@ function glassesAsset(style) {
     [0, 0.0309 - EYE_Y, 0.0017],
     [0.0049, 0.0300 - EYE_Y, 0.0010],
     [0.0079, 0.0275 - EYE_Y, -0.0014],
-  ], acetate ? 0.00110 : 0.00074, frameMat, 'NasalSaddleBridge');
+  ], acetate ? (largeSquircle ? 0.0012 * Math.sqrt(rimThickness) : 0.00110) : 0.00074,
+  frameMat, 'NasalSaddleBridge');
   if (style === 'aviator') {
     wire(root, [
       [-0.012, 0.039 - EYE_Y, -0.0020], [-0.006, 0.041 - EYE_Y, -0.0010],
@@ -416,7 +465,11 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
     holder.name = 'FaceAccessories';
     modelContainer.add(holder);
   }
-  if (holder.userData.glassesStyle !== glassesStyle) {
+  const outline = FRAME_OUTLINES.has(morphs.glassesOutline) ? morphs.glassesOutline : 'soft_square';
+  const rimThickness = limit(morphs.glassesRimThickness, 1, 0.55, 1.65);
+  const constructionKey = glassesStyle === 'squircle_large'
+    ? `${glassesStyle}|${outline}|${rimThickness.toFixed(2)}` : glassesStyle;
+  if (holder.userData.glassesConstructionKey !== constructionKey) {
     disposePart(holder.getObjectByName(`Glasses_${holder.userData.glassesStyle}`));
     if (glassesStyle === 'polyhaven_round' || glassesStyle === 'polyhaven_large_oval') {
       const glasses = new THREE.Group();
@@ -425,9 +478,10 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
       holder.add(glasses);
       physicalGlassesAsset(rootGroup, glasses, morphs);
     } else if (glassesStyle !== 'none') {
-      holder.add(glassesAsset(glassesStyle));
+      holder.add(glassesAsset(glassesStyle, morphs));
     }
     holder.userData.glassesStyle = glassesStyle;
+    holder.userData.glassesConstructionKey = constructionKey;
   }
   if (holder.userData.hatStyle !== hatStyle) {
     disposePart(holder.getObjectByName(`Hat_${holder.userData.hatStyle}`));
@@ -457,12 +511,25 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
     const frame = glasses.userData.frameMaterial;
     const lens = glasses.userData.lensMaterial;
     if (frame && lens) {
-      // Preserve the brushed metal's albedo rather than painting its real
-      // texture opaque gold. Other handmade styles keep their old pigments.
+      // For the new large squircle, selected finishes change the real
+      // MeshPhysicalMaterial BRDF (metal/roughness/clearcoat), not just an
+      // unlit colour swatch. Older scanned CC0 frames retain their maps.
       const chosenColor = hex(morphs.glassesColor, '#a07857');
-      const metalTint = chosenColor === '#a07857' ? (dailyLarge ? '#d6c3b6' : '#d8dcda') : chosenColor;
-      frame.color.set(physical ? metalTint : chosenColor);
-      frame.color.multiplyScalar(physical ? 0.93 : (glassesStyle === 'acetate_square' ? 0.17 : 0.35));
+      if (glassesStyle === 'squircle_large') {
+        const finish = FRAME_FINISHES[morphs.glassesFrameMaterial] || FRAME_FINISHES.warm_acetate;
+        frame.color.set(chosenColor.toLowerCase() === '#a07857' ? finish.color : chosenColor);
+        frame.metalness = finish.metalness;
+        frame.roughness = finish.roughness;
+        frame.clearcoat = finish.clearcoat;
+        frame.envMapIntensity = finish.metalness > 0.5 ? 1.15 : 0.68;
+        const grainMap = morphs.glassesFrameMaterial === 'warm_acetate' || !FRAME_FINISHES[morphs.glassesFrameMaterial]
+          ? warmAcetateGrain() : null;
+        if (frame.map !== grainMap) { frame.map = grainMap; frame.needsUpdate = true; }
+      } else {
+        const metalTint = chosenColor === '#a07857' ? (dailyLarge ? '#d6c3b6' : '#d8dcda') : chosenColor;
+        frame.color.set(physical ? metalTint : chosenColor);
+        frame.color.multiplyScalar(physical ? 0.93 : (glassesStyle === 'acetate_square' ? 0.17 : 0.35));
+      }
       const tint = limit(morphs.glassesLensTint, 0, 0, 0.8);
       lens.color.set(tint > 0.12 ? '#536879' : '#e8f3fa');
       lens.opacity = (physical ? 0.07 : 0.12) + tint * (physical ? 0.31 : 0.55);
