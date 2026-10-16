@@ -1321,6 +1321,10 @@ export class DesktopBoxSpaceEngine {
         ? `🙇‍♀️ 低眉顺眼俯首态 (低头 ${pitchDeg}°)`
         : (pitchDeg <= -6 ? `🥺 抬颏仰视伴读态 (仰头 ${Math.abs(pitchDeg)}°)` : `😐 正视伴读态 (${pitchDeg}°)`));
 
+    if (isInitialClick || Math.abs(dy) + Math.abs(dx) > 2) {
+      const bounds = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+      soundEngine.playNod(Math.min(0.68, 0.26 + Math.abs(dy) * 0.014), pet.pos.x / Math.max(1, bounds.maxX));
+    }
     this.wakeRender(1.5, true);
     this.onTactileManipulate({
       pet,
@@ -1330,6 +1334,26 @@ export class DesktopBoxSpaceEngine {
       clientX,
       clientY,
     });
+  }
+
+  /** Brief forehead recoil; the saved custom rotation remains unchanged. */
+  applyTactileForeheadFlick(pet, zone = 'brow', clientX = 0, clientY = 0) {
+    if (!pet?.node) return false;
+    if (zone !== 'brow') {
+      this.onTactileManipulate({ pet, mode: 'flick_forehead', zone,
+        partLabel: '☝️ 请轻点额头上半部，脸颊和眼睛不会触发弹额反馈。', clientX, clientY });
+      return false;
+    }
+    const bounds = this.getBoxBoundsAtZ(pet.pos.z, pet.targetScale);
+    const pan = pet.pos.x / Math.max(1, bounds.maxX);
+    soundEngine.playForeheadFlick(0.54, pan);
+    pet.flickSpring = { age: 0, amplitude: 0.19 };
+    triggerCollectibleBlink(pet.node);
+    this.interactionHighlightTimer = 0.45;
+    this.wakeRender(0.85, true);
+    this.onTactileManipulate({ pet, mode: 'flick_forehead', zone: 'brow',
+      partLabel: '☝️ 指尖轻弹额头 · 头颅短促回弹后复位', clientX, clientY });
+    return true;
   }
 
   /**
@@ -1420,10 +1444,10 @@ export class DesktopBoxSpaceEngine {
 
   /**
    * Stage 55/57/58: Switch direct 3D desktop tactile play mode
-   * ('move' | 'pinch_face' | 'paint_fluid' | 'bow_gaze' | 'roll_eyeball' | 'groom_hair')
+   * ('move' | 'pinch_face' | 'paint_fluid' | 'bow_gaze' | 'flick_forehead' | 'roll_eyeball' | 'groom_hair')
    */
   setTactilePlayMode(mode = 'move') {
-    const valid = ['move', 'pinch_face', 'paint_fluid', 'bow_gaze', 'roll_eyeball', 'groom_hair'];
+    const valid = ['move', 'pinch_face', 'paint_fluid', 'bow_gaze', 'flick_forehead', 'roll_eyeball', 'groom_hair'];
     this.tactilePlayMode = valid.includes(mode) ? mode : 'move';
     this.wakeRender(1.2, false);
     return this.tactilePlayMode;
@@ -1544,7 +1568,11 @@ export class DesktopBoxSpaceEngine {
       updateCollectibleMaterialsLive(pet.node, col);
       idx++;
     }
-    soundEngine.playPickup(0);
+    if (['bow_all', 'tri_bow_court', 'pat_crown', 'paperweight_tilt'].includes(actionType)) {
+      soundEngine.playNod(0.62, 0);
+    } else {
+      soundEngine.playPickup(0);
+    }
     this.interactionHighlightTimer = this.softwareRenderer ? 0 : 1.4;
     this.wakeRender(1.8, true);
     this.onPetStateUpdate(this.getSummonedList());
@@ -1608,7 +1636,7 @@ export class DesktopBoxSpaceEngine {
       }
     }
     this.updateCameraProjection();
-    soundEngine.playPickup(0);
+    soundEngine.playNod(0.55, 0);
     this.wakeRender(2.0, true);
     this.onPetStateUpdate(this.getSummonedList());
     this.onPlacardsUpdate(this.getPlacardsScreenData());
@@ -1900,6 +1928,7 @@ export class DesktopBoxSpaceEngine {
           this.tactilePlayMode === 'pinch_face' ||
           this.tactilePlayMode === 'paint_fluid' ||
           this.tactilePlayMode === 'bow_gaze' ||
+          this.tactilePlayMode === 'flick_forehead' ||
           this.tactilePlayMode === 'roll_eyeball' ||
           this.tactilePlayMode === 'groom_hair' ||
           e.shiftKey
@@ -1927,6 +1956,8 @@ export class DesktopBoxSpaceEngine {
           this.applyTactileFluidStroke(hitPet, hitDetail.zone, 0.28, e.clientX, e.clientY);
         } else if (mode === 'bow_gaze') {
           this.applyTactileBowGazeDelta(hitPet, 0, 0, true, e.clientX, e.clientY);
+        } else if (mode === 'flick_forehead') {
+          this.applyTactileForeheadFlick(hitPet, hitDetail.zone, e.clientX, e.clientY);
         } else if (mode === 'roll_eyeball') {
           this.applyTactileEyeballDelta(hitPet, 0, 0, true, e.clientX, e.clientY);
         } else if (mode === 'groom_hair') {
@@ -2366,7 +2397,8 @@ export class DesktopBoxSpaceEngine {
     this.lastFrameTime = now;
 
     const petArray = Array.from(this.pets.values());
-    let anyActiveAnimation = this.interactionHighlightTimer > 0.001 || Boolean(this.pointerDownInfo);
+    let anyActiveAnimation = this.interactionHighlightTimer > 0.001 || Boolean(this.pointerDownInfo)
+      || petArray.some(pet => Boolean(pet.flickSpring));
 
     if (!anyActiveAnimation && now > this.renderWakeUntil) {
       for (const pet of petArray) {
@@ -2533,7 +2565,11 @@ export class DesktopBoxSpaceEngine {
             if (!pet.isGrounded && (pet.dropDistance || 0) > 3.0 && Math.abs(pet.vel.y) > 1.2) {
               if (now - (pet.lastLandSoundAt || 0) > 400) {
                 pet.lastLandSoundAt = now;
-                soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.18), 'side', panX);
+                const landingForce = Math.min(1, Math.abs(pet.vel.y) * 0.18);
+                soundEngine.playLanding(landingForce, panX);
+                // A small damped contact bounce makes the desk impact visible
+                // without turning a heavy head into an elastic ball.
+                pet.flickSpring = { age: 0, amplitude: Math.min(0.075, landingForce * 0.075) };
                 this.onBoxCollisionVisual('bottom');
               }
             }
@@ -2575,7 +2611,7 @@ export class DesktopBoxSpaceEngine {
       if (pet.pos.y < bz.minY) {
         pet.pos.y = bz.minY;
         if (!this.settings.enableGravity && Math.abs(pet.vel.y) > 0.25) {
-          soundEngine.playBoxWallCollision(Math.min(1, Math.abs(pet.vel.y) * 0.5), 'side', panX);
+          soundEngine.playLanding(Math.min(1, Math.abs(pet.vel.y) * 0.5), panX);
           this.onBoxCollisionVisual('bottom');
         }
         pet.vel.y = Math.max(0, pet.vel.y);
@@ -2599,6 +2635,10 @@ export class DesktopBoxSpaceEngine {
       const follow = this.settings.followIntensity;
 
       updateHeadLifeAnimation(pet.node, dt, 0, 0);
+      // Remove the prior purely visual impulse before smoothing toward the
+      // user's saved posture; otherwise each frame accumulates extra recoil.
+      pet.node.rotation.x -= pet.lastFlickRecoil || 0;
+      pet.lastFlickRecoil = 0;
 
       if (pet.isRotationMode) {
         pet.node.rotation.x += (pet.customRot.x - pet.node.rotation.x) * 0.22;
@@ -2631,6 +2671,14 @@ export class DesktopBoxSpaceEngine {
         pet.node.rotation.y += (targetYaw - pet.node.rotation.y) * 0.14;
         pet.node.rotation.z += (velocityRoll - pet.node.rotation.z) * 0.14;
       }
+      if (pet.flickSpring) {
+        const spring = pet.flickSpring;
+        spring.age += dt;
+        const recoil = -spring.amplitude * Math.exp(-spring.age * 8.0) * Math.sin(spring.age * 29.0);
+        pet.node.rotation.x += recoil;
+        pet.lastFlickRecoil = recoil;
+        if (spring.age > 0.60) pet.flickSpring = null;
+      }
     }
 
     if (this.atmosphere && this.atmosphere.group.visible) {
@@ -2649,7 +2697,10 @@ export class DesktopBoxSpaceEngine {
     }
 
     if (this.softwareRenderer) {
-      if (anyActiveAnimation && now - (this._lastSoftRenderAt || 0) < 900) {
+      // Six brief frames make the forehead recoil visible even under software
+      // WebGL; leave the old 900ms throttle for unrelated continuous motion.
+      const minFrameMs = petArray.some(p => p.flickSpring) ? 85 : 900;
+      if (anyActiveAnimation && now - (this._lastSoftRenderAt || 0) < minFrameMs) {
         return;
       }
       this._lastSoftRenderAt = now;

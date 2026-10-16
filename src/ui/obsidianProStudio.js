@@ -1372,6 +1372,7 @@ function transformTopOverlayBar() {
     roll_eyeball: '瞳孔',
     groom_hair: '拨发',
     bow_gaze: '姿态',
+    flick_forehead: '弹额',
     paint_fluid: '流体',
   };
   Object.entries(tactileModes).forEach(([mode, text]) => {

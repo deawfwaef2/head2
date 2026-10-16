@@ -2576,6 +2576,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.__cervixQA = {
     get desktop() { return desktopEngine; },
     get studio() { return studioEngine; },
+    get sound() { return soundEngine; },
     state,
     persistCollectibles,
     resolveCollectibleLifePhotoSrc,
@@ -6975,7 +6976,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         spawnDopaminePopup(`⚡ ${partLabel.split(' ')[0]} +${pts} PTS ✨`, clientX, clientY);
       }
       const silentNote = getNextSilentPlayObservation(zone);
-      const modeIcon = mode === 'paint_fluid' ? '🩸' : (mode === 'roll_eyeball' ? '👁️' : (mode === 'groom_hair' ? '🪮' : (mode === 'bow_gaze' ? '🙇‍♀️' : '🤏')));
+      const modeIcon = mode === 'paint_fluid' ? '🩸' : (mode === 'roll_eyeball' ? '👁️' : (mode === 'groom_hair' ? '🪮' : (mode === 'bow_gaze' ? '🙇‍♀️' : (mode === 'flick_forehead' ? '☝️' : '🤏'))));
       showTactileToast(
         `${modeIcon} 正在把玩【${shortName}】：${partLabel}`,
         silentNote,

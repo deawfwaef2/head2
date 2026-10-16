@@ -347,6 +347,12 @@ export const DESKTOP_TACTILE_PLAY_MODES = [
     desc: '鼠标直接在桌面 3D 头颅上上下推拉或左右按压：将其按成【低眉顺眼俯首态】、【抬颏仰视伴读态】或【歪头贴桌充当错题本镇纸】！',
   },
   {
+    id: 'flick_forehead',
+    label: '☝️ 弹脑门 · 指尖触感',
+    shortLabel: '☝️ 轻弹额头',
+    desc: '选中该模式后轻点桌宠额头：真实指尖短音、头部小幅回弹和短促眨眼。不会改变存档的头颅姿态。',
+  },
+  {
     id: 'roll_eyeball',
     label: '👁️ 拨弄眼球 / 翻白眼 / 扩缩瞳孔',
     shortLabel: '👁️ 拨弄眼球瞳孔',
