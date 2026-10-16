@@ -2402,6 +2402,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       chromatic: Number(m.chromatic ?? basePreset.chromatic ?? 0.08),
       filmGrain: Number(m.filmGrain ?? basePreset.filmGrain ?? 0.05),
       tyndall: tyndallVal,
+      occludedShafts: Number(m.occludedShafts ?? 0),
       vintagePhoto: vintagePhotoVal,
       irisSparkle: Number(m.irisSparkle ?? basePreset.irisSparkle ?? 0.10),
       halation: Number(m.halation ?? basePreset.halation ?? 0.28),

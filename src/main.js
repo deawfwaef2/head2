@@ -259,6 +259,7 @@ const state = {
     dynamicLightAmp: 1.0,
     chiaroscuro: 0.34,
     tyndall: 0.22,
+    occludedShafts: 0,
     vintagePhoto: 0.0,
     softFocus: 0.04,
     depthBlur: 0.0,
@@ -5070,6 +5071,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const softwarePostDisabled = !!(desktopEngine?.softwareRenderer || studioEngine?.softwareRenderer);
     const compatNote = document.getElementById('vcd-renderer-compat');
     if (compatNote) compatNote.style.display = softwarePostDisabled ? 'block' : 'none';
+    const shaftsSlider = document.getElementById('vc-occluded-shafts');
+    if (shaftsSlider) {
+      shaftsSlider.disabled = softwarePostDisabled;
+      if (softwarePostDisabled) shaftsSlider.title = '当前软件 WebGL 禁用多重阴影采样；请在硬件 GPU 浏览器验收。';
+    }
     postChk.checked = savedPost && !softwarePostDisabled;
     postChk.disabled = softwarePostDisabled;
     if (softwarePostDisabled) postChk.title = '软件WebGL已关闭HDR后期以保证可玩性；请开启浏览器硬件加速。';
@@ -5293,6 +5299,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     syncSlider('vc-chromatic', 'val-vc-chromatic', vc.chromatic, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-env-intensity', 'val-vc-env-intensity', vc.envIntensity, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-tyndall', 'val-vc-tyndall', vc.tyndall, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-occluded-shafts', 'val-vc-occluded-shafts', vc.occludedShafts ?? 0, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-vintage-photo', 'val-vc-vintage-photo', vc.vintagePhoto, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-chiaroscuro', 'val-vc-chiaroscuro', vc.chiaroscuro, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-window-gobo-strength', 'val-vc-window-gobo-strength', vc.windowGoboStrength, v => `${Math.round(v * 100)}%`);
@@ -5618,6 +5625,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-chromatic', 'val-vc-chromatic', 'chromatic', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-env-intensity', 'val-vc-env-intensity', 'envIntensity', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-tyndall', 'val-vc-tyndall', 'tyndall', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-occluded-shafts', 'val-vc-occluded-shafts', 'occludedShafts', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-vintage-photo', 'val-vc-vintage-photo', 'vintagePhoto', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-sss-blur', 'val-vc-sss-blur', 'sssBlur', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-micro-contrast', 'val-vc-micro-contrast', 'microContrast', v => `${Math.round(v * 100)}%`);

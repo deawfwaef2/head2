@@ -1738,3 +1738,12 @@
 - 浏览器真实离线单桌宠 SwiftShader 交互复验：`vc-fill-intensity` 0→1.5 时实际 fill.intensity 0→1.2945；灯位 -38°→+90° 实际 fill.position[-55,18,72]→[90.6,18,0]；可选皮肤光泽打开 100% 时皮肤 roughness .54→.30、clearcoat .1168→.2768、specularIntensity .576→.836，关后**精确恢复** .54/.1168/.576；虹膜 glint uniform 0.24→1.6，软件环境滑杆 .10→1.40 天光亮度 .321→.783。多个画面差分实测含对侧补光 10,440/21,250 头部 ROI 像素变化 >10、灯位 11,027/21,250；页面错误 0。新增 `qa/test_portrait_light_tuning.mjs` 验证默认材质恒等与环境范围单调。
 - 人工目视发现旧标牌引线即使避开牌体仍横穿眼睛；已把牌在面部上方时的引线缩成卡片侧短导线，复验截图不再横穿面部。此次没有修复原始发型资产的全部缺陷，不能宣称已达到照片级。
 - 下一步：**可选 GPU 真实几何遮挡/散射光束**尚未实现；需以场景深度/灯光阴影推导，不得透明平面冒充。完整光学链在此沙箱自动软件直渲关闭；若未取得硬件 GPU 实拍，应如实说明。阶段构建、单测、HTML/docs 字节一致验证后正常推送，不得强推。
+
+## [2026-10-16 Stage 76e1-push] 摄影有效性修复阶段普通快进核验（仅追加）
+- Stage 76e1 本地 `4210ed9a8af1d08fce24a7a012b0479073e14050`，远端 `main` 经普通快进推送后 `git ls-remote` 与本地一致，当时工作树干净。未强推。
+
+## [2026-10-16 Stage 76e2] 可选的真实几何遮挡散射实验，不把旧径向眩光冒充体积光（仅追加）
+- 修正摄影 UI 用词：旧 `tyndall` 仅按屏幕亮度径向叠加眩光，**没有物体遮挡**，故在 UI 明示「旧式屏幕径向暖光」。增加独立的「真实遮挡散射光束（实验·GPU）」滑杆，默认 **0%**。实现 `src/three/occludedLightScattering.js`：12 个世界空间射线积分采样，通过**同帧场景深度**终止于可见面，通过方向主灯的**真实 shadow.map 深度贴图**判断每个空气样本是否被照亮；另用 4 个真实 `BoxGeometry` 遮光板投射暗条（camera color/depth 不绘制），不是贴图光束或透明 plane。阴影随主灯更新，可控强度，关后遮光板不可见。只在 GPU 且启用后懒分配独立深度纹理，软件 WebGL 自动直渲时控制禁用并展示明确提示，不影响默认场景材质/几何。
+- Debugged a real WebGL framebuffer feedback loop: `RenderTarget.clone()` clones `DepthTexture` but shares `Texture.source`; rendered read depth sampled while write target attached同源 depth 导致 GL_INVALID_OPERATION。现只在 opt-in 时给 composer 两个 buffer 分别创建完全独立的 depth texture/source，并重建 FBO。启用/关闭前后 `gl.getError()` 均为 0。
+- **离线浏览器有限验证而非硬件验收**：沙箱仅 SwiftShader，常规桌宠软件自动关闭重后期。因此在 800×580 沙箱场景中**仅用于诊断**临时打开 shadowMap 并手动调用 composer，冻结桌宠动画，分别比较相同遮光板 0%/100% 散射：背景 ROI RGB 平均差约 15.7、头部 ROI 约 13.7；0%→0% 回程背景差仅约 0.19；关闭/开启实体遮光板的可视性调试图背景区域平均差 5.55、可见条带随之变化，证明光束依赖实体阴影；没有 GLSL 页面错误和 WebGL 错误。软件强行开启 GPU 路线画面较暗、有阶梯条带，**不能声称硬件或 Windows 真实桌宠上已达到摄影级质量**。自然软件默认路径另测：新光束值0、通道off、4个遮光板hidden、深度纹理未分配、UI 禁用、皮肤微光泽未勾选、桌宠和标牌正常展示、页面错误0。
+- `qa/test_occluded_scattering.mjs` 检查默认关闭、实体挡板 castShadow、无透明光束 plane、软件禁用和释放；`qa/test_portrait_light_tuning.mjs`、标牌/眼镜/触感/雕塑单测均通过。重建的根目录双击 HTML 与 docs/index.html 字节一致，除大包体积告警外构建通过。Windows Electron 的真实跨窗口置顶/鼠标穿透/硬件摄影帧率仍等待 Windows 真机验收；不要把本段实验称为该项通过。

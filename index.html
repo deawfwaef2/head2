@@ -1147,9 +1147,14 @@
             <span id="val-vc-film-lut-strength">48%</span>
           </div>
           <div class="slider-row">
-            <span>✨ 窗畔丁达尔斜射体积光束 (Crepuscular God-Rays)</span>
+            <span>✨ 旧式屏幕径向暖光（基于亮度，不含几何遮挡；真遮挡请用下方选项）</span>
             <input type="range" id="vc-tyndall" min="0.0" max="1.5" step="0.05" value="0.48" />
             <span id="val-vc-tyndall">48%</span>
+          </div>
+          <div class="slider-row" title="GPU硬件选项：沿相机射线采样真实场景深度与主灯阴影贴图；窗格由仅投影、不在镜头前绘制的实体遮光板形成。与旧屏幕径向眩光不同；软件 WebGL 不自动执行。">
+            <span>🌤️ 真实遮挡散射光束（实验·GPU：场景深度 + 阴影贴图 + 窗格遮光板，默认0%）</span>
+            <input type="range" id="vc-occluded-shafts" min="0" max="1" step="0.05" value="0" />
+            <span id="val-vc-occluded-shafts">0%</span>
           </div>
           <div class="slider-row">
             <span>🌸 胶片卤化银红橙高光晕染 (Silver-Halide Halation)</span>

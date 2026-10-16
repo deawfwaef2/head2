@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { createOccludedLightScatteringPass } from './occludedLightScattering.js';
 
 /**
  * Stage 40 · 全栈电影光学与胶片后处理自由定制矩阵 (27+ Real-Time Photoreal Post-Processing Controls)
@@ -897,6 +898,20 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
     samples: software ? 0 : Math.min(4, renderer.capabilities.maxSamples || 0),
   });
   const composer = new EffectComposer(renderer, hdrTarget);
+  // Do not pay for scene depth attachments when the optional rays are OFF.
+  // Allocate independent textures to both composer buffers only on opt-in;
+  // RenderTarget.clone() shares DepthTexture.source and causes a GL feedback
+  // loop if the depth attachment is sampled in the second framebuffer.
+  const ensureOcclusionDepthTargets = () => {
+    for (const target of [composer.renderTarget1, composer.renderTarget2]) {
+      if (target.depthTexture) continue;
+      target.depthTexture = new THREE.DepthTexture(target.width, target.height, THREE.UnsignedIntType);
+      target.depthTexture.format = THREE.DepthFormat;
+      target.depthTexture.minFilter = THREE.NearestFilter;
+      target.depthTexture.magFilter = THREE.NearestFilter;
+      target.dispose(); // Recreate the FBO with its newly attached depth texture.
+    }
+  };
   composer.setPixelRatio(pixelRatio);
   composer.setSize(width, height);
 
@@ -952,8 +967,12 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
   resizeAlpha();
 
   const outputPass = new OutputPass();
+  const keyShadowLight = scene.children.find(obj => obj.isDirectionalLight && obj.castShadow);
+  const occludedShaftPass = keyShadowLight
+    ? createOccludedLightScatteringPass(scene, camera, keyShadowLight) : null;
 
   composer.addPass(renderPass);
+  if (occludedShaftPass) composer.addPass(occludedShaftPass);
   composer.addPass(alphaPass);
   composer.addPass(bloomPass);
   composer.addPass(gradePass);
@@ -965,6 +984,8 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
     composer,
     bloomPass,
     gradePass,
+    occludedShaftPass,
+    ensureOcclusionDepthTargets,
     enabled: true,
     setSize(w, h) {
       const ww = Math.max(2, Math.floor(w));
@@ -993,6 +1014,11 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       }
       if (params.bloomRadius !== undefined) bloomPass.radius = Number(params.bloomRadius);
       if (params.bloomThreshold !== undefined) bloomPass.threshold = Number(params.bloomThreshold);
+      if (params.occludedShafts !== undefined && occludedShaftPass) {
+        const gpuReady = !software && renderer.shadowMap.enabled;
+        if (gpuReady && Number(params.occludedShafts) > 0.001) ensureOcclusionDepthTargets();
+        occludedShaftPass.setScatteringStrength(params.occludedShafts, gpuReady);
+      }
       const u = gradePass.uniforms;
       if (params.vignette !== undefined) u.uVignette.value = Number(params.vignette);
       if (params.saturation !== undefined) u.uSaturation.value = Number(params.saturation);
@@ -1098,9 +1124,13 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
     },
     render() {
       gradePass.uniforms.uTime.value = (performance.now() - startMs) * 0.001;
+      // Sync shadow-casting flags BEFORE the scene/shadow RenderPass, not in a
+      // later postprocess pass where they would be one frame out of date.
+      occludedShaftPass?.updateBaffles();
       composer.render();
     },
     dispose() {
+      occludedShaftPass?.dispose();
       alphaTarget.dispose();
       alphaMaterial.dispose();
       alphaQuad.dispose();
