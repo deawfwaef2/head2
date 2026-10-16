@@ -1813,3 +1813,7 @@
 - 本阶段源码、11 项 Node QA、浏览器专项、根与 docs 同字节离线 HTML 已提交为本地 `6b39757247a3133d765560967c2242c7ea188b1c`；提交前 `git fetch origin main` 核验远端仍为 `e03aa4530e64d440a5cbf69e9212e8f18969fb7b`，可正常快进。随后尝试普通 `git push origin HEAD:main`，因当前沙箱没有 GitHub 用户名/认证机制而退出 128，独立 `git ls-remote` 显示远端仍为 `e03aa4530e64d440a5cbf69e9212e8f18969fb7b`。**Stage79 尚未推送；绝不可将本地提交或之前阶段的成功推送写成这次推送成功。未强推、未写入任何凭据。**
 - 最终文件 `/home/user/Stage79_双击离线试玩_CERVIX3D.html` 与根入口和 docs SHA-256 同为 `93cc6b65b10275c304f7ec38848c7e77a2a54cd8d927da2ae3be7a63923a98fb`；对此交付文件直接运行 `qa/test_hair_switch_race_browser.cjs` 通过。旧 Stage78b 本地试玩文件已被新的 Stage79 版本替代以遵守快照容量，旧版仍在已推送的 Stage78b Git 历史可重建。
 - 本阶段追加的 HANDOFF 状态说明需要再次本地提交，然后保存一个只含远端 `e03aa45` 之后增量提交的可恢复 Git bundle 到 `/home/user/`。下次取得用户明确推送授权后从 bundle/工作树正常快进推送并独立核验；不要推送整个旧 `/home/user/head2/`（它有另一份未提交的旧改动且没有可用 remote）。
+
+## [2026-10-16 Stage 79 授权后远端核验]（仅追加；更新前段“未推送”的历史状态）
+- 用户随后提供临时 GitHub 写入授权，本轮仅在 `git push` 子进程内存环境中使用，未写入仓库、HANDOFF、工作区文件或输出，也未强推。先 `git fetch origin main` 检查远端仍为 `e03aa4530e64d440a5cbf69e9212e8f18969fb7b` 且是本地 Stage79 `cfbf7c2d45c6e3cab4a952bfd2030386f27daee2` 的祖先；普通 `git push origin HEAD:main` 成功，输出 `e03aa45..cfbf7c2 HEAD -> main`。随后**独立** `git ls-remote --heads origin main` 和 `git fetch` 均确认为 `cfbf7c2d45c6e3cab4a952bfd2030386f27daee2`，工作树干净。前一段“推送阻断”仅是当时真实状态，现被本条核验更新，不删除旧记录。
+- 此条 HANDOFF 追加本身在已核验的 `cfbf7c2` 之后，应另行正常提交/快进推送并独立复核；后续报告的最终远端 SHA 以核验结果为准。已交付的离线 HTML 及其 SHA-256 不因交接文字变化而改变。
