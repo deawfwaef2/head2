@@ -941,7 +941,7 @@
       <!-- 1. Art Style, HDR Environment, Optical Blur/DOF & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
         <div class="vcd-sec-title">🎬 1. 摄影布光与画面效果 · 实体灯位 / 可选微光泽 / GPU 光学后期</div>
-        <div id="vcd-renderer-compat" style="display:none;margin:6px 0;padding:7px;border:1px solid #66552c;border-radius:6px;color:#fde68a;font-size:11px;line-height:1.5;">当前为软件 WebGL：实体主/辅/轮廓光与曝光仍直接改变 3D 画面；对比度、色彩、柔焦与可选柔雾仅以 CSS 屏幕预览近似（不进入原始 WebGL 像素），不是 HDR 胶片后期。禁用项在软件预览或关闭 GPU 后期时<strong>不会作用于画面</strong>；请在硬件 GPU/Windows 真机验证其完整效果。数值框允许在安全边界内超出原滑杆，超界会拒绝；音量、模型和超采样另有物理上限。</div>
+        <div id="vcd-renderer-compat" style="display:none;margin:6px 0;padding:7px;border:1px solid #66552c;border-radius:6px;color:#fde68a;font-size:11px;line-height:1.5;">当前为软件 WebGL：实体主/辅/轮廓光与曝光仍直接改变 3D 画面；对比度、色彩、柔焦与可选柔雾仅以 CSS 屏幕预览近似（不进入原始 WebGL 像素），不是 HDR 胶片后期。GPU 后期配方按钮和无效滑杆在软件预览或关闭后期时置灰，<strong>不会冒充画面已经生效</strong>；请在硬件 GPU/Windows 真机验证其完整效果。数值框允许在安全边界内超出原滑杆，超界会拒绝；音量、模型和超采样另有物理上限。</div>
         <div style="color:#bfe7f5;font-size:11px;line-height:1.55;margin:5px 0 8px;">🔢 每条滑杆旁可键入原范围外的数值；金框提示超出原滑杆，悬停查看透明安全区间。请勿把高于材质/音量/GPU物理限幅的数字当成额外效果。</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
           <button class="vcd-preset-btn active" data-style-preset="dlss5_neural_photoreal">🧠 DLSS-5 神经渲染微距真皮(Stage43首推)</button>

@@ -30,3 +30,21 @@ export function effectiveEnvironmentIntensity(env, chiaroscuro) {
 export function softwareSkyFillFactor(env) {
   return clamp(1 + (clamp(Number(env), 0.05, 2.2) - 0.56) * 0.75, 0.6, 2.3);
 }
+
+// An active film filter supplies the HDRI's starting intensity, not a ceiling.
+// The former hard clamp at 0.85 made much of the extended slider 1.4–2.2
+// change only its number when a bright filter was selected. Preserve the
+// shipped value at env=.56 and smoothly compress *only* the bright tail.
+export function effectiveFilterEnvironmentIntensity(env, recipeIntensity) {
+  const raw = Math.max(0.05, Number(recipeIntensity) || 0.38)
+    * clamp(Number(env), 0.05, 2.2) / 0.56;
+  return raw <= 0.85 ? raw : 0.85 + 0.95 * (1 - Math.exp(-(raw - 0.85) * 0.9));
+}
+
+// Skin micro-relief shader supports up to 1.5. The old CPU clamp at 1
+// plateaued long before the advanced global slider's end for some faces.
+// Compress its high end smoothly instead of silently accepting dead values.
+export function effectivePoreRelief(basePore, globalFactor) {
+  const raw = Math.max(0, Number(basePore) || 0) * Math.max(0, Number(globalFactor) || 0);
+  return raw <= 1 ? raw : 1 + 0.5 * (1 - Math.exp(-(raw - 1) * 1.2));
+}

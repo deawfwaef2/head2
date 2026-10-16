@@ -9,6 +9,7 @@ import { createAnatomyTextures } from '../textures/anatomyTextureGenerator.js';
 import { createSkinMicroMaps } from '../textures/skinTextureGenerator.js';
 import { resolvePrivateModelUrl } from '../data/privateModelStore.js';
 import { injectAestheticSubsurfaceScattering, injectForensicCrossSectionShader } from './photorealLighting.js';
+import { effectivePoreRelief } from './portraitLightTuning.js';
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import {
   MPFB_SPARSE_HEAD_TARGETS,
@@ -3970,7 +3971,7 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
         const basePore = Number(m.poreRelief);
         mat.userData.baseVisualPoreRelief = basePore;
         const factor = mat.userData.visualPoreFactor;
-        u.uPoreRelief.value = factor !== undefined ? Math.min(1, basePore * factor) : basePore;
+        u.uPoreRelief.value = factor !== undefined ? effectivePoreRelief(basePore, factor) : basePore;
       }
       if (m.tZoneOiliness !== undefined && u.uTZoneOiliness) u.uTZoneOiliness.value = Number(m.tZoneOiliness);
       if (m.specularLobe !== undefined && u.uSpecularLobe) u.uSpecularLobe.value = Number(m.specularLobe);

@@ -8,7 +8,7 @@
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
 import { VISUAL_STYLE_PRESETS } from '../three/photorealLighting.js';
-import { extendRangeForValue } from './rangeNumericInput.js';
+import { extendRangeForValue, syncRangeNumericEditor } from './rangeNumericInput.js';
 import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
 
 const escapeMarkup = value => String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -1582,8 +1582,7 @@ function wireObsidianStudioEvents(studio) {
         for (const range of linked) {
           extendRangeForValue(range, source.value);
           range.value = source.value;
-          const number = range.nextElementSibling;
-          if (number?.classList.contains('range-number-editor')) number.value = range.value;
+          syncRangeNumericEditor(range);
         }
       }
       for (const range of [proxy, ...linked]) extendRangeForValue(range, actual.value);
@@ -1591,8 +1590,7 @@ function wireObsidianStudioEvents(studio) {
       const max = Math.min(Number(proxy.max), ...linked.map(x => Number(x.max)));
       if (min <= max) { proxy.min = String(min); proxy.max = String(max); }
       proxy.value = actual.value;
-      const number = proxy.nextElementSibling;
-      if (number?.classList.contains('range-number-editor')) number.value = proxy.value;
+      syncRangeNumericEditor(proxy);
       const text = row.querySelector('.obs-proxy-val');
       if (text) text.textContent = formatSliderDisplay(proxy.value, row.dataset.fmt || 'pct');
     });
@@ -1620,8 +1618,7 @@ function wireObsidianStudioEvents(studio) {
       if (!Number.isFinite(v) || !extendRangeForValue(inp, v)) continue;
       inp.value = String(v);
       if (v > 0.01) inp.dataset.lastWeight = inp.value;
-      const number = inp.nextElementSibling;
-      if (number?.classList.contains('range-number-editor')) number.value = inp.value;
+      syncRangeNumericEditor(inp);
       const chk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
       const sourceChk = document.querySelector(isWorkbench
         ? `[data-studio-head-blend-on="${k}"]` : `[data-head-blend-on="${k}"]`);
@@ -2247,7 +2244,9 @@ function wireObsidianStudioEvents(studio) {
     const bm = blurMode ?? document.getElementById('top-pet-blur-select')?.value ?? 'none';
     const bp = Number(blurPower ?? document.getElementById('obs-pet-blur-power')?.value ?? 0.65);
     const fy = Number(focusCenterY ?? document.getElementById('obs-pet-blur-focus-y')?.value ?? 0.52);
-    const effectivePower = bm === 'none' ? 0.0 : Math.max(0.25, bp);
+    // Zero must mean genuinely off; the old 0.25 floor made the first
+    // quarter of the strength slider a no-op in every active blur mode.
+    const effectivePower = bm === 'none' ? 0.0 : Math.max(0, Math.min(1.5, bp));
 
     if (qa?.state?.visualCustomConfig) {
       qa.state.visualCustomConfig.blurMode = bm;
@@ -2273,6 +2272,15 @@ function wireObsidianStudioEvents(studio) {
 
     const topSel = document.getElementById('top-pet-blur-select');
     if (topSel && topSel.value !== bm) topSel.value = bm;
+    const focusSlider = document.getElementById('obs-pet-blur-focus-y');
+    if (focusSlider) {
+      focusSlider.disabled = !(effectivePower > 0.005 &&
+        ['portrait_dof', 'tilt_shift', 'radial_zoom'].includes(bm));
+      focusSlider.title = focusSlider.disabled
+        ? '仅主体对焦、移轴、径向虚化且强度大于 0 时焦点位置改变画面。'
+        : '改变镜头的真实对焦带位置。';
+      syncRangeNumericEditor(focusSlider);
+    }
     studio.querySelectorAll('#obs-pet-blur-pills .obs-choice-pill').forEach((p) => {
       const match = p.dataset.petBlur === bm;
       p.classList.toggle('active', match);
@@ -2299,7 +2307,7 @@ function wireObsidianStudioEvents(studio) {
     const txt = document.getElementById('obs-pet-blur-power-val');
     if (txt) txt.textContent = `${Math.round(v * 100)}%`;
     const curMode = document.getElementById('top-pet-blur-select')?.value || 'portrait_dof';
-    const activeMode = curMode === 'none' && v > 0.02 ? 'portrait_dof' : curMode;
+    const activeMode = curMode === 'none' && v > 0 ? 'portrait_dof' : curMode;
     applyPetBlurState(activeMode, v);
   });
 
@@ -2310,6 +2318,13 @@ function wireObsidianStudioEvents(studio) {
     if (txt) txt.textContent = `${Math.round(v * 100)}%`;
     applyPetBlurState(undefined, undefined, v);
   });
+  // Initial 'none' and the two full-frame modes do not use a focal position.
+  // Keep its numeric companion disabled until selecting a focus-capable mode.
+  const initialBlurMode = document.getElementById('top-pet-blur-select')?.value || 'none';
+  if (blurFocusSlider) {
+    blurFocusSlider.disabled = !['portrait_dof', 'tilt_shift', 'radial_zoom'].includes(initialBlurMode);
+    syncRangeNumericEditor(blurFocusSlider);
+  }
 
   // 5. Desktop Pet Lighting & Film Filter Presets + Bokeh Backdrops
   const physicalLightKeys = [
@@ -2401,10 +2416,9 @@ function wireObsidianStudioEvents(studio) {
       const k = inp.dataset.visGrade;
       const v = vc[k];
       if (v === undefined) return;
-      extendRangeForValue(inp, v);
+      if (!extendRangeForValue(inp, v)) return;
       inp.value = String(v);
-      const number = inp.nextElementSibling;
-      if (number?.classList.contains('range-number-editor')) number.value = inp.value;
+      syncRangeNumericEditor(inp);
       const span = studio.querySelector(`#obs-visual-fine-sliders [data-vis-val="${k}"]`);
       if (span) {
         if (k === 'warmth') span.textContent = (v >= 0 ? '+' : '') + Number(v).toFixed(2);

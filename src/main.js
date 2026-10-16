@@ -2,7 +2,7 @@ import { createVisualRepair } from './ui/visualRepair.js';
 import { createPlacardDossier, getPlacardDossier, getPlacardPhotoSrc, lockPlacardDossier } from './data/placardDossier.js';
 import { normalizePlacardLayout, restorePlacardLayouts, savePlacardLayouts, placardVisualDimensions } from './data/placardLayout.js';
 import { initObsidianProStudio } from './ui/obsidianProStudio.js';
-import { extendRangeForValue, installRangeNumericEditors } from './ui/rangeNumericInput.js';
+import { extendRangeForValue, installRangeNumericEditors, numericSafetyBounds, syncRangeNumericEditor } from './ui/rangeNumericInput.js';
 import { initMorbidStudyToolkit } from './ui/morbidStudyToolkit.js';
 import './ui/obsidianProStudio.css';
 import {
@@ -103,12 +103,9 @@ const ACCESSORY_SLIDERS = [
 ];
 function syncRangeWithNumber(input, value) {
   if (input?.type !== 'range') return;
-  extendRangeForValue(input, value);
+  if (!extendRangeForValue(input, value)) return;
   input.value = String(value);
-  const number = input.nextElementSibling;
-  if (number?.classList.contains('range-number-editor') && document.activeElement !== number) {
-    number.value = input.value;
-  }
+  syncRangeNumericEditor(input);
 }
 function accessoryDisplay(value, unit) {
   const n = Number(value) || 0;
@@ -3041,19 +3038,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       // Re-apply exact fine-tuned grade values on top of the filter preset
       if (state.visualCustomConfig && Object.keys(vc).length > 0) {
         Object.assign(state.visualCustomConfig, vc);
-        // Use the engines' public setters: they retain the config as well as
-        // updating lights/postprocessing. The low-level helper is not imported
-        // into this module and calling it here broke visual-preset loading.
-        desktopEngine?.applyVisualCustomConfig?.(state.visualCustomConfig);
-        studioEngine?.applyVisualCustomConfig?.(state.visualCustomConfig);
-        desktopEngine?.beautyPost?.setGradeParams?.(state.visualCustomConfig);
-        studioEngine?.beautyPost?.setGradeParams?.(state.visualCustomConfig);
+        // Normalize archived values and refresh every connected numeric box
+        // before applying them to both engines; filter defaults cannot win.
+        this.syncVisualControls?.();
       }
       if (snap.blurMode !== undefined) {
         const bpEl = document.getElementById('obs-pet-blur-power');
         const fyEl = document.getElementById('obs-pet-blur-focus-y');
-        if (bpEl && snap.blurPower !== undefined) bpEl.value = String(snap.blurPower);
-        if (fyEl && snap.focusCenterY !== undefined) fyEl.value = String(snap.focusCenterY);
+        for (const [el, value] of [[bpEl, snap.blurPower], [fyEl, snap.focusCenterY]]) {
+          if (!el || value === undefined) continue;
+          const [lo, hi] = numericSafetyBounds(el);
+          const n = Number(value);
+          if (!Number.isFinite(n)) continue;
+          const bounded = Math.max(lo, Math.min(hi, n));
+          if (extendRangeForValue(el, bounded)) {
+            el.value = String(bounded);
+            syncRangeNumericEditor(el);
+          }
+        }
         const topBlur = document.getElementById('top-pet-blur-select');
         if (topBlur) {
           topBlur.value = snap.blurMode;
@@ -3596,8 +3598,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (sEl) {
         extendRangeForValue(sEl, val);
         sEl.value = String(val);
-        const edit = sEl.nextElementSibling;
-        if (edit?.classList.contains('range-number-editor') && document.activeElement !== edit) edit.value = sEl.value;
+        syncRangeNumericEditor(sEl);
       }
       if (vEl) {
         if (unit === '%') vEl.textContent = `${Math.round(val * 100)}%`;
@@ -3610,8 +3611,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (range) {
           extendRangeForValue(range, val);
           range.value = String(val);
-          const edit = range.nextElementSibling;
-          if (edit?.classList.contains('range-number-editor') && document.activeElement !== edit) edit.value = range.value;
+          syncRangeNumericEditor(range);
         }
         if (label && vEl) label.textContent = vEl.textContent;
         // A main-shape drag must also update the equivalent quick eye slider.
@@ -3622,8 +3622,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           if (quick?.type === 'range') {
             extendRangeForValue(quick, val);
             quick.value = String(val);
-            const edit = quick.nextElementSibling;
-            if (edit?.classList.contains('range-number-editor') && document.activeElement !== edit) edit.value = quick.value;
+            syncRangeNumericEditor(quick);
           }
           const quickText = document.getElementById(`val-${proxy.dataset.syncTarget}`);
           if (quickText && vEl) quickText.textContent = vEl.textContent;
@@ -5091,6 +5090,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     qualitySel.value = applySavedQuality(savedQuality);
     qualitySel.addEventListener('change', (e) => {
       const lvl = applySavedQuality(e.target.value);
+      // The quality preset sets pixel ratio/environment internally. Reapply
+      // the person's current photography rig so changing quality does not
+      // silently replace a hand-tuned HDRI/exposure/supersample setting.
+      desktopEngine?.applyVisualCustomConfig?.(state.visualCustomConfig);
+      studioEngine?.applyVisualCustomConfig?.(state.visualCustomConfig);
       try { localStorage.setItem(QUALITY_KEY, lvl); } catch (_) {}
       const label = lvl === 'rtx2070' ? '🟢 RTX 2070S 专属最佳画质（原生+MSAA+自适应）' : lvl === 'ultra' ? '🎬 电影 Ultra 画质（最高）' : lvl === 'high' ? '✨ 极致画质' : lvl === 'medium' ? '⚖️ 标准画质' : '🚀 流畅画质';
       showToast(`${label}已生效（工坊预览 + 屏幕桌宠同步切换）`);
@@ -5156,9 +5160,20 @@ window.addEventListener('DOMContentLoaded', async () => {
         sample.closest('.slider-row')?.classList.toggle('gpu-post-unavailable', softwarePostDisabled);
         if (softwarePostDisabled) sample.title = '软件 WebGL 不执行超采样；硬件工坊上限1.50x，多桌宠上限1.25x。';
       }
-      const lut = document.getElementById('sel-film-lut-mode');
-      if (lut) lut.disabled = softwarePostDisabled || !postChk.checked
+      const postUnavailable = softwarePostDisabled || !postChk.checked
         || !(desktopEngine?.beautyPost?.enabled || studioEngine?.beautyPost?.enabled);
+      const lut = document.getElementById('sel-film-lut-mode');
+      if (lut) lut.disabled = postUnavailable;
+      // A one-click GPU film recipe must not claim to add CAS/film LUT/4K
+      // while this renderer deliberately skips the entire post chain.
+      document.querySelectorAll('[data-postfx-combo], #btn-reset-postfx, #btn-quick-postfx, #btn-quick-ultra-crisp').forEach(btn => {
+        btn.disabled = postUnavailable;
+        btn.title = postUnavailable
+          ? '完整胶片/GPU 锐化后期未运行：请开启硬件 WebGL 与 GPU 后期；实体灯光、曝光、对比度及柔雾仍可单独调节。'
+          : '启用完整的 GPU 摄影后处理配方';
+        btn.classList.toggle('gpu-post-unavailable', postUnavailable);
+        if (postUnavailable) btn.classList.remove('active-top');
+      });
       document.querySelectorAll('#obs-visual-fine-sliders [data-vis-grade]').forEach(inp => {
         const id = 'vc-' + inp.dataset.visGrade.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
         const linked = document.getElementById(id);
@@ -5381,10 +5396,31 @@ window.addEventListener('DOMContentLoaded', async () => {
         shadowTint: p.shadowTint,
       });
     }
+    // Older preset slots can contain values from a former wider track (e.g.
+    // 1.75x supersampling when the real GPU renderer caps at 1.50x).
+    // Keep config, track, number and shader inside the SAME explicit bounds.
+    for (const el of document.querySelectorAll('#visual-customizer-drawer input[data-visual-config-key]')) {
+      const key = el.dataset.visualConfigKey;
+      const v = state.visualCustomConfig[key];
+      if (v === undefined) continue;
+      const [lo, hi] = numericSafetyBounds(el);
+      const n = Number(v);
+      state.visualCustomConfig[key] = Number.isFinite(n)
+        ? Math.max(lo, Math.min(hi, n)) : Number(el.value);
+    }
     const syncSlider = (id, valId, val, fmt) => {
       const el = document.getElementById(id);
       const vEl = document.getElementById(valId);
-      if (el && val !== undefined) { extendRangeForValue(el, val); el.value = String(val); }
+      if (el && val !== undefined) {
+        // A rejected preset/archive value must not be shown as if the track
+        // accepted it. Never silently clamp HTMLInputElement.value.
+        if (!extendRangeForValue(el, val)) {
+          if (vEl) vEl.textContent = '超出安全范围';
+          return;
+        }
+        el.value = String(val);
+        syncRangeNumericEditor(el);
+      }
       if (vEl && val !== undefined) vEl.textContent = fmt(val);
     };
     const vc = state.visualCustomConfig;
@@ -5474,8 +5510,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     const btnUltraTop = document.getElementById('btn-quick-ultra-crisp');
     if (btnUltraTop) {
       const isUltra = (vc.depthBlur ?? 0.04) <= 0.06 && (vc.casSharpen ?? 0.68) >= 0.60;
-      btnUltraTop.textContent = isUltra ? '🔪 4K超清: 全屏零模糊' : '🌫️ 画质: 电影柔雾感';
-      btnUltraTop.classList.toggle('active-top', isUltra);
+      btnUltraTop.textContent = isUltra ? '🔪 GPU锐利: 柔焦关闭' : '🌫️ 画质: 电影柔雾感';
+      btnUltraTop.classList.toggle('active-top', isUltra && !btnUltraTop.disabled);
     }
     const btnChiaroTop = document.getElementById('btn-quick-chiaroscuro');
     if (btnChiaroTop) {
@@ -5495,7 +5531,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (btnPostFxTop) {
       const cId = vc.postfxCombo || 'sunlit_portra_bokeh';
       const postfxTopLabels = {
-        ultra_4k_zero_blur: '🔪 后处理: 4K全屏零模糊',
+        ultra_4k_zero_blur: '🔪 后处理: 锐利低柔焦',
         sunlit_portra_bokeh: '🎞️ 后处理: Portra超清写真',
         kodak_2383_anamorphic: '🎬 后处理: 2383变形拉丝',
         cinestill_800t_halation: '🌃 后处理: 800T朱红旋焦',
@@ -5504,7 +5540,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         rainy_dew_promist: '💧 后处理: 雨窗水雾柔焦',
       };
       btnPostFxTop.textContent = postfxTopLabels[cId] || '🎞️ 后处理: 自定义';
-      btnPostFxTop.classList.toggle('active-top', true);
+      btnPostFxTop.classList.toggle('active-top', !btnPostFxTop.disabled);
     }
     const btnDynTop = document.getElementById('btn-quick-dyn-light');
     if (btnDynTop) {
@@ -5528,9 +5564,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const POSTFX_MASTER_COMBOS = {
     ultra_4k_zero_blur: {
       postfxCombo: 'ultra_4k_zero_blur',
-      label: '🔪 4K 超清锐利零模糊 · 全屏两侧头模100%锐利 + AMD CAS 自适应锐化 + 暗部提亮',
+      label: '🔪 GPU 工坊最多 1.50x／桌宠最多 1.25x · 关闭柔焦 + CAS 自适应锐化 + 暗部提亮',
       filmLutMode: 'portra_160_sun', filmLutStrength: 0.36,
-      supersample: 1.75, casSharpen: 0.92, exposure: 1.12, shadowLift: 0.34, specularClarity: 0.95, eyeClarity: 1.08, poreReliefGlobal: 1.30,
+      supersample: 1.50, casSharpen: 0.92, exposure: 1.12, shadowLift: 0.34, specularClarity: 0.95, eyeClarity: 1.08, poreReliefGlobal: 1.30,
       sssBlur: 0.08, microContrast: 0.56, highlightRoll: 0.44, shadowCrush: 0.08,
       sunFlareVeil: 0.08, dappledBokeh: 0.0, softFocus: 0.0, depthBlur: 0.0,
       swirlyBokeh: 0.0, anamorphicFlare: 0.08, lightLeak: 0.0, wetLensDrop: 0.0,
@@ -5714,6 +5750,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const bindVcSlider = (id, valId, key, fmt) => {
     const el = document.getElementById(id);
     if (!el) return;
+    el.dataset.visualConfigKey = key;
     el.addEventListener('input', (e) => {
       const v = parseFloat(e.target.value);
       const vEl = document.getElementById(valId);

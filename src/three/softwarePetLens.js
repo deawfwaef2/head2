@@ -19,15 +19,21 @@ export function updateSoftwarePhotoGrade(engine, config = {}) {
   const warm = clamp(config.warmth ?? 0.06, -1, 1);
   const cssContrast = clamp((preset ? contrast : 1 + (contrast - 1.14) * .82)
     + (shadowCrush - 0.16) * .16 - haze * .13, 0.62, 1.9);
-  const cssSaturation = clamp(preset ? saturation : 1 + (saturation - 0.96), .05, 2);
+  const cssSaturation = clamp(preset ? saturation
+    : saturation <= 0.96 ? saturation / 0.96 : 1 + (saturation - 0.96) / 1.04, 0, 2);
   const brightness = preset ? clamp(config.exposure ?? 1, .72, 1.4) : 1 + haze * .025;
   const bw = clamp(config.bw ?? 0, 0, 1);
   const sepia = clamp((preset ? Math.max(0, warm) : Math.max(0, warm - 0.06)) * .22 + haze * .025, 0, .3);
+  // Negative warmth used to be a completely inert software slider: sepia
+  // cannot make cool colors. A small CSS hue shift is an *approximation* of
+  // cooling, not the hardware shader's calibrated color temperature.
+  const coolShiftDeg = Math.min(0, warm) * 32;
   const blur = clamp(Math.max(0, soft - 0.04) * 1.4 + haze * .80, 0, 2.6);
   const changed = preset || Math.abs(cssContrast - 1) > .002 || Math.abs(cssSaturation - 1) > .002
-    || Math.abs(brightness - 1) > .002 || bw > .005 || sepia > .005 || blur > .015;
+    || Math.abs(brightness - 1) > .002 || bw > .005 || sepia > .005
+    || Math.abs(coolShiftDeg) > .1 || blur > .015;
   canvas.style.filter = changed
-    ? `brightness(${brightness.toFixed(3)}) contrast(${cssContrast.toFixed(3)}) saturate(${cssSaturation.toFixed(3)}) grayscale(${bw.toFixed(3)}) sepia(${sepia.toFixed(3)}) blur(${blur.toFixed(2)}px)`
+    ? `brightness(${brightness.toFixed(3)}) contrast(${cssContrast.toFixed(3)}) saturate(${cssSaturation.toFixed(3)}) grayscale(${bw.toFixed(3)}) sepia(${sepia.toFixed(3)}) hue-rotate(${coolShiftDeg.toFixed(1)}deg) blur(${blur.toFixed(2)}px)`
     : '';
 }
 

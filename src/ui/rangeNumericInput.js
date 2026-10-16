@@ -11,6 +11,9 @@ const HARD_LIMITS = Object.freeze({
   'vc-env-intensity': [0.05, 2.2], 'vc-atmosphere-haze': [0, 1.4],
   'vc-chiaroscuro': [0, 1.6], 'vc-window-gobo-strength': [0, 1.05],
   'vc-film-lut-strength': [0, 1], 'vc-vintage-photo': [0, 1],
+  'vc-iris-sparkle': [0, 1.6], 'vc-eye-clarity': [0, 1.6],
+  'vc-shadow-lift': [0, 1.5], 'vc-highlight-roll': [0, 1.5],
+  'vc-shadow-crush': [0, 1.6],
   'vc-specular-clarity': [0, 1.6], 'vc-skin-lumen': [0, 1.2],
   'vc-depth-blur': [0, 1], 'vc-cas-sharpen': [0, 1.5],
   'vc-swirly-bokeh': [0, 1.5], 'vc-dappled-bokeh': [0, 1.5],
@@ -18,6 +21,7 @@ const HARD_LIMITS = Object.freeze({
   'vc-supersample': [0.85, 1.5], // studio 1.5x; multi-head desktop remains 1.25x
   'vc-occluded-shafts': [0, 1], // GPU ray samples must remain bounded
   'vc-skin-sheen-boost': [0, 1],
+  'obs-pet-blur-power': [0, 1.5], 'obs-pet-blur-focus-y': [0, 1],
   'acc-glasses-size': [0.65, 1.55],
   'acc-glasses-rim-width': [0.42, 1.9],
   'acc-glasses-height': [-12, 12], 'acc-glasses-depth': [-12, 12],
@@ -68,6 +72,12 @@ function limitsFor(input) {
   return [min - span * .25, max + span * .25];
 }
 
+// Shared with trusted presets/archive restoring: a displayed value and the
+// actual engine config must be normalized by the same published safe limits.
+export function numericSafetyBounds(input) {
+  return limitsFor(input);
+}
+
 function rememberOriginal(input) {
   if (input.dataset.numberOriginalMin === undefined) input.dataset.numberOriginalMin = input.min;
   if (input.dataset.numberOriginalMax === undefined) input.dataset.numberOriginalMax = input.max;
@@ -95,8 +105,28 @@ function describe(input) {
   return `原滑杆 ${originLo}～${originHi}；数值安全范围 ${lo}～${hi}。超界会拒绝，部分参数仍受模型/音频/GPU物理限幅。`;
 }
 
+// Presets, archive loading and cross-panel synchronization often assign
+// range.value directly (which does not fire an input event). Refresh the
+// adjacent number explicitly; otherwise it can show a stale, false value.
+export function syncRangeNumericEditor(input) {
+  if (!input || input.type !== 'range') return false;
+  const editor = input.nextElementSibling;
+  if (!editor?.classList.contains('range-number-editor')) return false;
+  if (document.activeElement !== editor) editor.value = input.value;
+  editor.disabled = input.disabled;
+  const n = Number(input.value);
+  const out = n < Number(input.dataset.numberOriginalMin) - 1e-8
+    || n > Number(input.dataset.numberOriginalMax) + 1e-8;
+  editor.classList.toggle('range-number-advanced', out);
+  return true;
+}
+
 function install(input) {
-  if (input.dataset.numberEditor === 'yes') return;
+  if (input.dataset.numberEditor === 'yes' &&
+      input.nextElementSibling?.classList.contains('range-number-editor')) return;
+  // A rebuilt/clone-only slider can carry the marker without its editor.
+  // Installing its new editor must not silently leave a dead control behind.
+  if (input.dataset.numberEditor === 'yes') input.dataset.numberEditor = 'no';
   rememberOriginal(input);
   input.dataset.numberEditor = 'yes';
   const editor = document.createElement('input');
@@ -109,15 +139,7 @@ function install(input) {
   editor.title = describe(input);
   input.after(editor);
 
-  const updateFromRange = () => {
-    // Don't overwrite a number currently being edited by a render/preset sync.
-    if (document.activeElement !== editor) editor.value = input.value;
-    editor.disabled = input.disabled;
-    const n = Number(input.value);
-    const out = n < Number(input.dataset.numberOriginalMin) - 1e-8
-      || n > Number(input.dataset.numberOriginalMax) + 1e-8;
-    editor.classList.toggle('range-number-advanced', out);
-  };
+  const updateFromRange = () => syncRangeNumericEditor(input);
   input.addEventListener('input', updateFromRange);
   input.addEventListener('change', updateFromRange);
   editor.addEventListener('focus', () => { editor.value = input.value; updateFromRange(); });
@@ -150,9 +172,7 @@ export function installRangeNumericEditors() {
   new MutationObserver(records => {
     for (const record of records) {
       if (record.type === 'attributes') {
-        const range = record.target;
-        const peer = range.nextElementSibling;
-        if (peer?.classList.contains('range-number-editor')) peer.disabled = range.disabled;
+        syncRangeNumericEditor(record.target);
         continue;
       }
       for (const node of record.addedNodes) {

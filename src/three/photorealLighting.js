@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildStudioEnvironment, LIGHT_PRESETS } from './masterQuality/studioLighting.js';
 import { DESKTOP_PET_FILTER_PRESETS } from './beautyPostChain.js';
-import { skinFinishParameters, effectiveEnvironmentIntensity, softwareSkyFillFactor } from './portraitLightTuning.js';
+import { skinFinishParameters, effectiveEnvironmentIntensity, effectiveFilterEnvironmentIntensity, effectivePoreRelief, softwareSkyFillFactor } from './portraitLightTuning.js';
 
 /**
  * Stage 23 · 大师级实时光影·画风色调·材质微距定制管线
@@ -2280,7 +2280,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     // Undefined preserves the previous light position in old archives/presets.
     if (m.fillAzimuthDeg !== undefined) {
       const r = Math.hypot(rig.fill.position.x, rig.fill.position.z) || (isStudio ? 64 : 116);
-      const az = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(Number(m.fillAzimuthDeg), -120, 120));
+      const az = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(Number(m.fillAzimuthDeg), -180, 180));
       rig.fill.position.set(r * Math.sin(az), rig.fill.position.y, r * Math.cos(az));
     }
   }
@@ -2325,7 +2325,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     Number(cfg.exposure ?? (studioLP ? Math.min(1.08, studioLP.exposure * 1.12) : m.exposure ?? 1.06)),
     0.3, 2.4);
   const effectiveEnv = studioLP
-    ? THREE.MathUtils.clamp(studioLP.envIntensity * baseEnv / 0.56, 0.08, 0.85)
+    ? effectiveFilterEnvironmentIntensity(baseEnv, studioLP.envIntensity)
     : effectiveEnvironmentIntensity(baseEnv, chiaroscuro);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
@@ -2391,7 +2391,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
         const basePore = obj.material.userData.baseVisualPoreRelief;
         obj.material.userData.visualPoreFactor = poreReliefGlobalVal !== undefined ? poreReliefGlobalVal / 0.56 : undefined;
         poreUniform.value = poreReliefGlobalVal !== undefined
-          ? Math.min(1.0, basePore * (poreReliefGlobalVal / 0.56))
+          ? effectivePoreRelief(basePore, poreReliefGlobalVal / 0.56)
           : basePore;
       }
     }

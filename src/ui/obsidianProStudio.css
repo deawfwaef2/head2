@@ -1227,6 +1227,7 @@ input.range-number-editor:disabled { opacity: .45; cursor: not-allowed; }
   }
   input.range-number-editor { width: 62px; padding: 2px; }
 }
+button.gpu-post-unavailable:disabled { opacity: .46; cursor: not-allowed; filter: grayscale(.45); }
 .slider-row.gpu-post-unavailable { opacity: .53; }
 .slider-row.gpu-post-unavailable input[type="range"] { cursor: not-allowed; }
 
