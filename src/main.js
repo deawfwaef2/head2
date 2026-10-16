@@ -2,6 +2,7 @@ import { createVisualRepair } from './ui/visualRepair.js';
 import { createPlacardDossier, getPlacardDossier, getPlacardPhotoSrc, lockPlacardDossier } from './data/placardDossier.js';
 import { normalizePlacardLayout, restorePlacardLayouts, savePlacardLayouts, placardVisualDimensions } from './data/placardLayout.js';
 import { initObsidianProStudio } from './ui/obsidianProStudio.js';
+import { extendRangeForValue, installRangeNumericEditors } from './ui/rangeNumericInput.js';
 import { initMorbidStudyToolkit } from './ui/morbidStudyToolkit.js';
 import './ui/obsidianProStudio.css';
 import {
@@ -100,6 +101,15 @@ const ACCESSORY_SLIDERS = [
   ['acc-hat-height', 'val-acc-hat-height', 'hatOffsetY', 'mm'],
   ['acc-hat-tilt', 'val-acc-hat-tilt', 'hatTilt', 'deg'],
 ];
+function syncRangeWithNumber(input, value) {
+  if (input?.type !== 'range') return;
+  extendRangeForValue(input, value);
+  input.value = String(value);
+  const number = input.nextElementSibling;
+  if (number?.classList.contains('range-number-editor') && document.activeElement !== number) {
+    number.value = input.value;
+  }
+}
 function accessoryDisplay(value, unit) {
   const n = Number(value) || 0;
   if (unit === 'pct') return `${Math.round(n * 100)}%`;
@@ -124,13 +134,13 @@ function syncStudioAccessoryUI(morphs = {}) {
     const val = Number(m[key]);
     const inp = document.getElementById(id);
     const label = document.getElementById(valueId);
-    if (inp) inp.value = String(val);
+    syncRangeWithNumber(inp, val);
     if (label) label.textContent = accessoryDisplay(val, unit);
     const proxy = document.querySelector(`.obs-slider-row[data-sync-target="${id}"]`);
     if (proxy) {
       const proxyInput = proxy.querySelector('.obs-proxy-range');
       const proxyLabel = proxy.querySelector('.obs-proxy-val');
-      if (proxyInput) proxyInput.value = String(val);
+      syncRangeWithNumber(proxyInput, val);
       if (proxyLabel) proxyLabel.textContent = accessoryDisplay(val, unit);
     }
   }
@@ -150,6 +160,7 @@ function syncStudioAccessoryUI(morphs = {}) {
   }
 }
 let syncStudioShapeUI = () => {};
+let syncStudioHeadBlendUI = () => {};
 function restoreCollectibles() {
   const defaults = JSON.parse(JSON.stringify(DEFAULT_COLLECTIBLES));
   try {
@@ -266,6 +277,7 @@ const state = {
     occludedShafts: 0,
     vintagePhoto: 0.0,
     softFocus: 0.04,
+    atmosphereHaze: 0.0, // optional depth-dependent mist; keep original portrait unchanged
     depthBlur: 0.0,
     chromatic: 0.03,
     keyColor: '#fff6ee',
@@ -2171,6 +2183,7 @@ function loadCollectibleIntoStudio(col) {
   document.getElementById('sel-base-preset').value = state.studioDraft.basePreset;
   syncStudioHairUI(state.studioDraft.hairStyle);
   syncStudioShapeUI(state.studioDraft.morphs);
+  syncStudioHeadBlendUI(state.studioDraft.morphs);
   syncStudioAccessoryUI(state.studioDraft.morphs);
   const selGroom = document.getElementById('sel-groom-density');
   if (selGroom) selGroom.value = String(state.studioDraft.groomDensity || 6000);
@@ -2654,6 +2667,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     get studio() { return studioEngine; },
     get sound() { return soundEngine; },
     state,
+    // Keep the main photographic sliders, value captions and expanded numeric
+    // tracks aligned after an Obsidian filter or a saved visual slot is loaded.
+    syncVisualControls: () => applyVisualConfigAndSyncUI({}, false),
     persistCollectibles,
     resolveCollectibleLifePhotoSrc,
     getPlacardDossier,
@@ -3470,24 +3486,28 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('[data-studio-head-blend]').forEach(inp => {
       const k = inp.dataset.studioHeadBlend;
       const v = Number(blendState[k] ?? 0);
-      inp.value = String(v);
+      const isOn = blendState['on_' + k] !== false && v > 0.005;
+      syncRangeWithNumber(inp, v);
       const chk = document.querySelector(`[data-studio-head-blend-on="${k}"]`);
-      if (chk) chk.checked = v > 0.005;
+      if (chk) chk.checked = isOn;
       const valSpan = document.querySelector(`[data-studio-head-blend-val="${k}"]`);
       if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
       state.studioDraft.morphs[k] = v;
-      state.studioDraft.morphs['on_' + k] = v > 0.005;
+      state.studioDraft.morphs['on_' + k] = isOn;
     });
     document.querySelectorAll('[data-obs-blend-val]').forEach(inp => {
       const k = inp.dataset.obsBlendVal;
       const v = Number(blendState[k] ?? 0);
-      inp.value = String(v);
+      syncRangeWithNumber(inp, v);
       const chk = document.querySelector(`[data-obs-blend-on="${k}"]`);
-      if (chk) chk.checked = v > 0.005;
+      if (chk) chk.checked = blendState['on_' + k] !== false && v > 0.005;
       const txt = document.querySelector(`[data-obs-blend-txt="${k}"]`);
       if (txt) txt.textContent = `${Math.round(v * 100)}%`;
     });
   };
+  // Loading a character after a full page reload must restore the UI track
+  // as well as the real mesh, including safe beyond-track blend values.
+  syncStudioHeadBlendUI = syncStudioHeadBlendSliders;
 
   const syncStudioFaceArchetypeUI = (archId) => {
     const sel = document.getElementById('sel-face-archetype');
@@ -3573,7 +3593,12 @@ window.addEventListener('DOMContentLoaded', async () => {
       const val = Number(mObj[mKey]);
       const sEl = document.getElementById(sId);
       const vEl = document.getElementById(vId);
-      if (sEl) sEl.value = String(val);
+      if (sEl) {
+        extendRangeForValue(sEl, val);
+        sEl.value = String(val);
+        const edit = sEl.nextElementSibling;
+        if (edit?.classList.contains('range-number-editor') && document.activeElement !== edit) edit.value = sEl.value;
+      }
       if (vEl) {
         if (unit === '%') vEl.textContent = `${Math.round(val * 100)}%`;
         else if (unit === '%scale') vEl.textContent = `${Math.round((1 + val) * 100)}%`;
@@ -3582,14 +3607,24 @@ window.addEventListener('DOMContentLoaded', async () => {
       for (const proxy of document.querySelectorAll(`.obs-slider-row[data-sync-target="${sId}"], .obs-slider-row[data-sync-fallback="${sId}"]`)) {
         const range = proxy.querySelector('.obs-proxy-range');
         const label = proxy.querySelector('.obs-proxy-val');
-        if (range) range.value = String(val);
+        if (range) {
+          extendRangeForValue(range, val);
+          range.value = String(val);
+          const edit = range.nextElementSibling;
+          if (edit?.classList.contains('range-number-editor') && document.activeElement !== edit) edit.value = range.value;
+        }
         if (label && vEl) label.textContent = vEl.textContent;
         // A main-shape drag must also update the equivalent quick eye slider.
         // Otherwise opening Obsidian later shows a stale VCD value and the
         // next proxy move appears to snap the whole face back.
         if (proxy.dataset.syncFallback === sId) {
           const quick = document.getElementById(proxy.dataset.syncTarget);
-          if (quick?.type === 'range') quick.value = String(val);
+          if (quick?.type === 'range') {
+            extendRangeForValue(quick, val);
+            quick.value = String(val);
+            const edit = quick.nextElementSibling;
+            if (edit?.classList.contains('range-number-editor') && document.activeElement !== edit) edit.value = quick.value;
+          }
           const quickText = document.getElementById(`val-${proxy.dataset.syncTarget}`);
           if (quickText && vEl) quickText.textContent = vEl.textContent;
         }
@@ -5085,17 +5120,65 @@ window.addEventListener('DOMContentLoaded', async () => {
     const softwarePostDisabled = !!(desktopEngine?.softwareRenderer || studioEngine?.softwareRenderer);
     const compatNote = document.getElementById('vcd-renderer-compat');
     if (compatNote) compatNote.style.display = softwarePostDisabled ? 'block' : 'none';
-    const shaftsSlider = document.getElementById('vc-occluded-shafts');
-    if (shaftsSlider) {
-      shaftsSlider.disabled = softwarePostDisabled;
-      if (softwarePostDisabled) shaftsSlider.title = '当前软件 WebGL 禁用多重阴影采样；请在硬件 GPU 浏览器验收。';
-    }
+    // A uniform changing in a skipped composer is NOT an effective slider.
+    // Gray out those controls when the full GPU chain cannot render. Software
+    // only keeps five clearly-labelled CSS approximations, plus real 3D light,
+    // material and the opt-in scene-distance fog.
+    const gpuOnlyIds = [
+      'vc-cas-sharpen', 'vc-shadow-lift', 'vc-specular-clarity', 'vc-sss-blur',
+      'vc-micro-contrast', 'vc-highlight-roll', 'vc-shadow-crush',
+      'vc-sun-flare-veil', 'vc-dappled-bokeh', 'vc-soft-focus', 'vc-depth-blur',
+      'vc-swirly-bokeh', 'vc-anamorphic-flare', 'vc-light-leak', 'vc-wet-lens-drop',
+      'vc-film-lut-strength', 'vc-tyndall', 'vc-occluded-shafts', 'vc-halation',
+      'vc-vintage-photo', 'vc-film-grain', 'vc-vignette', 'vc-chromatic',
+      'vc-lens-distortion', 'vc-skin-lumen', 'vc-sharpen', 'vc-contrast',
+      'vc-saturation', 'vc-warmth', 'vc-bloom',
+    ];
+    const softwareApproxIds = new Set([
+      'vc-shadow-crush', 'vc-soft-focus', 'vc-contrast', 'vc-saturation', 'vc-warmth',
+    ]);
+    const syncGpuControls = () => {
+      for (const id of gpuOnlyIds) {
+        const slider = document.getElementById(id);
+        if (!slider) continue;
+        const unavailable = softwarePostDisabled ? !softwareApproxIds.has(id)
+          : !postChk.checked || !(desktopEngine?.beautyPost?.enabled || studioEngine?.beautyPost?.enabled);
+        slider.disabled = unavailable;
+        slider.closest('.slider-row')?.classList.toggle('gpu-post-unavailable', unavailable);
+        slider.title = unavailable
+          ? (softwarePostDisabled ? '软件 WebGL 未执行此 GPU 后期；调数值不会改变画面。'
+            : 'GPU 后期开关当前关闭；启用后此滑杆才改变画面。')
+          : (softwarePostDisabled ? '软件 WebGL 仅显示 CSS 屏幕近似，非 HDR 原始画面。' : 'GPU 后期生效');
+      }
+      const sample = document.getElementById('vc-supersample');
+      if (sample) {
+        sample.disabled = softwarePostDisabled;
+        sample.closest('.slider-row')?.classList.toggle('gpu-post-unavailable', softwarePostDisabled);
+        if (softwarePostDisabled) sample.title = '软件 WebGL 不执行超采样；硬件工坊上限1.50x，多桌宠上限1.25x。';
+      }
+      const lut = document.getElementById('sel-film-lut-mode');
+      if (lut) lut.disabled = softwarePostDisabled || !postChk.checked
+        || !(desktopEngine?.beautyPost?.enabled || studioEngine?.beautyPost?.enabled);
+      document.querySelectorAll('#obs-visual-fine-sliders [data-vis-grade]').forEach(inp => {
+        const id = 'vc-' + inp.dataset.visGrade.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+        const linked = document.getElementById(id);
+        if (linked) {
+          inp.disabled = linked.disabled;
+          inp.title = linked.title;
+          inp.closest('.obs-slider-row')?.classList.toggle('gpu-post-unavailable', inp.disabled);
+        }
+      });
+    };
+    window.__syncVisualControlAvailability = syncGpuControls;
+    qualitySel?.addEventListener('change', syncGpuControls);
     postChk.checked = savedPost && !softwarePostDisabled;
     postChk.disabled = softwarePostDisabled;
     if (softwarePostDisabled) postChk.title = '软件WebGL已关闭HDR后期以保证可玩性；请开启浏览器硬件加速。';
-    applyPostToggle(savedPost && !softwarePostDisabled);
+    applyPostToggle(postChk.checked);
+    syncGpuControls();
     postChk.addEventListener('change', (e) => {
       applyPostToggle(e.target.checked);
+      syncGpuControls();
       try { localStorage.setItem(POST_KEY, e.target.checked ? 'on' : 'off'); } catch (_) {}
       showToast(e.target.checked ? '✨ 辉光后期已开启' : '🌙 辉光后期已关闭（直渲模式）');
     });
@@ -5267,6 +5350,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         tyndall: p.tyndall ?? 0.74,
         vintagePhoto: p.vintagePhoto ?? 0.34,
         softFocus: p.softFocus ?? 0.58,
+        atmosphereHaze: p.atmosphereHaze ?? 0,
         depthBlur: p.depthBlur ?? 0.48,
         chromatic: p.chromatic ?? 0.16,
         keyColor: p.keyColor || '#ffe8c4',
@@ -5300,15 +5384,31 @@ window.addEventListener('DOMContentLoaded', async () => {
     const syncSlider = (id, valId, val, fmt) => {
       const el = document.getElementById(id);
       const vEl = document.getElementById(valId);
-      if (el && val !== undefined) el.value = String(val);
+      if (el && val !== undefined) { extendRangeForValue(el, val); el.value = String(val); }
       if (vEl && val !== undefined) vEl.textContent = fmt(val);
     };
     const vc = state.visualCustomConfig;
+    const goboSlider = document.getElementById('vc-window-gobo-strength');
+    if (goboSlider) {
+      goboSlider.disabled = (vc.windowGobo || 'none') === 'none';
+      goboSlider.title = goboSlider.disabled ? '已选择无窗格；先选择有纹样的实体切光模式。' : '改变真实窗格切光浓度。';
+    }
+    const speedSlider = document.getElementById('vc-dyn-speed');
+    const ampSlider = document.getElementById('vc-dyn-amp');
+    for (const slider of [speedSlider, ampSlider]) {
+      if (!slider) continue;
+      const staticLight = vc.dynamicLightMode === 'static_locked';
+      slider.disabled = staticLight;
+      slider.closest('.slider-row')?.classList.toggle('gpu-post-unavailable', staticLight);
+      slider.title = staticLight
+        ? '静止布光不执行光源动画；先选慢速变换模式，速度/振幅才改变画面。' : '';
+    }
     syncSlider('vc-cursor-torch', 'val-vc-cursor-torch', vc.cursorTorch, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-iris-sparkle', 'val-vc-iris-sparkle', vc.irisSparkle, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-halation', 'val-vc-halation', vc.halation, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-skin-lumen', 'val-vc-skin-lumen', vc.skinLumen, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-soft-focus', 'val-vc-soft-focus', vc.softFocus, v => `${Math.round(v * 100)}%`);
+    syncSlider('vc-atmosphere-haze', 'val-vc-atmosphere-haze', vc.atmosphereHaze ?? 0, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-depth-blur', 'val-vc-depth-blur', vc.depthBlur, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-chromatic', 'val-vc-chromatic', vc.chromatic, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-env-intensity', 'val-vc-env-intensity', vc.envIntensity, v => `${Math.round(v * 100)}%`);
@@ -5635,6 +5735,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-halation', 'val-vc-halation', 'halation', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-skin-lumen', 'val-vc-skin-lumen', 'skinLumen', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-soft-focus', 'val-vc-soft-focus', 'softFocus', v => `${Math.round(v * 100)}%`);
+  bindVcSlider('vc-atmosphere-haze', 'val-vc-atmosphere-haze', 'atmosphereHaze', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-depth-blur', 'val-vc-depth-blur', 'depthBlur', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-chromatic', 'val-vc-chromatic', 'chromatic', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-env-intensity', 'val-vc-env-intensity', 'envIntensity', v => `${Math.round(v * 100)}%`);
@@ -6071,7 +6172,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('[data-head-blend]').forEach(inp => {
       const k = inp.dataset.headBlend;
       const v = Number(blendState[k] ?? 0);
-      inp.value = String(v);
+      syncRangeWithNumber(inp, v);
       const valSpan = document.querySelector(`[data-head-blend-val="${k}"]`);
       if (valSpan) valSpan.textContent = `${Math.round(v * 100)}%`;
     });
@@ -7582,11 +7683,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     window.__cervixQA.updateMaterialsLive = updateCollectibleMaterialsLive;
   }
   initObsidianProStudio();
+  window.__syncVisualControlAvailability?.();
   // The top popover is created only now; restore the persisted display theme.
   window.__cervixQA?.setPlacardTheme(state.placardTheme);
   // Obsidian's mode selector is created after the first desktop-pet sync.
   syncVcdSelectedPetUI();
   initMorbidStudyToolkit();
+  installRangeNumericEditors();
 
   if (bootStatus) bootStatus.remove();
   if (window.__cervixQA) window.__cervixQA.ready = true;

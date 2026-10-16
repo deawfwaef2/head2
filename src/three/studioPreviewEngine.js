@@ -26,6 +26,7 @@ import {
   requestShadowUpdate
 } from './photorealLighting.js';
 import { createBeautyPostChain } from './beautyPostChain.js';
+import { updateSoftwarePhotoGrade } from './softwarePetLens.js';
 import { createBokehDust, createStudioBackdrop } from './atmosphere.js';
 
 export class StudioPreviewEngine {
@@ -150,6 +151,7 @@ export class StudioPreviewEngine {
       chiaroscuro: 0.94,
     };
     applyCustomVisualConfigToEngine(this, this.visualConfig);
+    updateSoftwarePhotoGrade(this, this.visualConfig);
 
     // Stage 13b 唯美氛围：背幕光晕 + 少量呼吸尘埃（加色混合，永不遮挡头模）
     this.atmosphere = null;
@@ -510,6 +512,7 @@ export class StudioPreviewEngine {
   applyVisualCustomConfig(cfg = {}) {
     this.visualConfig = { ...(this.visualConfig || {}), ...cfg };
     applyCustomVisualConfigToEngine(this, this.visualConfig);
+    updateSoftwarePhotoGrade(this, this.visualConfig);
   }
 
   /** Stage 13b：用户可随时开关氛围（尘埃 + 背幕光晕，设置页持久化） */

@@ -1194,3 +1194,116 @@ input[type="range"]::-webkit-slider-thumb {
 #obsidian-char-hair-studio label:has(#obs-placard-photo-upload:disabled) { opacity:.48; cursor:not-allowed!important; }
 #obsidian-char-hair-studio #obs-btn-clone-char-slot:disabled,
 #obsidian-char-hair-studio #obs-placard-photo-reset:disabled { opacity:.48; cursor:not-allowed!important; }
+
+/* Stage 77b: direct numeric input alongside every real slider, including
+   dynamically inserted Obsidian controls. Gold means beyond the old track. */
+.obs-slider-row:has(> .range-number-editor),
+.slider-row:has(> .range-number-editor) {
+  grid-template-columns: 112px minmax(65px, 1fr) 68px 48px !important;
+}
+input.range-number-editor {
+  box-sizing: border-box;
+  width: 68px;
+  min-width: 0;
+  height: 26px;
+  padding: 2px 5px;
+  border: 1px solid rgba(125, 211, 252, .46);
+  border-radius: 6px;
+  background: rgba(12, 20, 34, .92);
+  color: #e0f2fe;
+  font: 11px/1.25 var(--font-mono, monospace);
+  text-align: center;
+  color-scheme: dark;
+}
+input.range-number-editor:focus { outline: 1px solid #38bdf8; }
+input.range-number-editor.range-number-advanced { border-color: #fbbf24; color: #fef3c7; }
+input.range-number-editor:disabled { opacity: .45; cursor: not-allowed; }
+/* Narrow popovers keep their slider usable without overlapping the label. */
+@media (max-width: 680px) {
+  .obs-slider-row:has(> .range-number-editor),
+  .slider-row:has(> .range-number-editor) {
+    grid-template-columns: 88px minmax(36px, 1fr) 62px 42px !important;
+    gap: 5px !important;
+  }
+  input.range-number-editor { width: 62px; padding: 2px; }
+}
+.slider-row.gpu-post-unavailable { opacity: .53; }
+.slider-row.gpu-post-unavailable input[type="range"] { cursor: not-allowed; }
+
+/* The photography drawer is only 410px wide: put full control names on their
+   own line, rather than making 4 columns truncate Chinese labels to 5 chars. */
+#visual-customizer-drawer .slider-row:has(> .range-number-editor) {
+  grid-template-columns: minmax(60px, 1fr) 68px 48px !important;
+  row-gap: 2px !important;
+  min-height: 45px !important;
+}
+#visual-customizer-drawer .slider-row:has(> .range-number-editor) > span:first-child {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  white-space: normal !important;
+  overflow: visible !important;
+  line-height: 1.35;
+}
+#visual-customizer-drawer .slider-row:has(> .range-number-editor) > input[type="range"] { grid-column: 1; grid-row: 2; }
+#visual-customizer-drawer .slider-row:has(> .range-number-editor) > .range-number-editor { grid-column: 2; grid-row: 2; }
+#visual-customizer-drawer .slider-row:has(> .range-number-editor) > span:last-child { grid-column: 3; grid-row: 2; }
+
+/* The top command dock is 9500 and ~150px tall. Previously it covered the
+   lighting drawer's title and its first controls; keep both independently
+   clickable instead of leaving a hidden, apparently broken panel header. */
+body:not(.real-desktop-manager) #visual-customizer-drawer {
+  top: 168px !important;
+  max-height: calc(100vh - 184px) !important;
+  z-index: 9520 !important;
+}
+body.real-desktop-manager #visual-customizer-drawer {
+  top: 60px !important;
+  max-height: calc(100vh - 90px) !important;
+  z-index: 9520 !important;
+}
+
+/* Narrow previews previously wrapped the floating dock to 200–380px high,
+   covering both the lighting panel and its close button. Preserve every
+   command with an explicitly scrollable toolbar, not hidden clipped rows. */
+@media (max-width: 800px) {
+  #desktop-overlay-bar {
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 2px !important;
+    max-height: 98px !important;
+    overflow: hidden !important;
+    padding: 5px 9px !important;
+  }
+  #desktop-overlay-bar .overlay-brand {
+    justify-content: center !important;
+    border-right: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+  }
+  #desktop-overlay-bar .overlay-brand::after {
+    content: '⇆ 左右滑动工具';
+    color: #b6c9d4;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  #desktop-overlay-bar .overlay-actions {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 1px 5px !important;
+    scrollbar-color: #eab856 #22304c;
+    scrollbar-width: thin;
+  }
+  #desktop-overlay-bar .overlay-actions > * { flex-shrink: 0 !important; }
+  body:not(.real-desktop-manager) #visual-customizer-drawer {
+    top: 116px !important;
+    max-height: calc(100vh - 132px) !important;
+  }
+}

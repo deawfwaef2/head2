@@ -810,7 +810,7 @@ export const BeautyGradeShader = {
       if (uFade > 0.001 && srcAlpha > 0.005) {
         col = mix(col, col * 0.86 + vec3(0.065), clamp(uFade, 0.0, 0.75));
       }
-      float contrastPower = clamp(uContrast, 0.80, 1.65);
+      float contrastPower = clamp(uContrast, 0.65, 1.90);
       vec3 filmicS = pow(max(col, vec3(0.0001)), vec3(contrastPower)) * pow(0.34, 1.0 - contrastPower);
       float crushAmt = clamp(uShadowCrush * 0.45 + max(0.0, contrastPower - 1.0) * 0.45, 0.0, 0.75);
       float deepShadowToe = smoothstep(0.0, 0.36, lumaPre);
@@ -1020,6 +1020,44 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
         occludedShaftPass.setScatteringStrength(params.occludedShafts, gpuReady);
       }
       const u = gradePass.uniforms;
+      // Filter recipe first; manual sliders, including film LUT, override below.
+      if (params.filterPreset !== undefined) {
+        const fp = DESKTOP_PET_FILTER_PRESETS.find(p => p.id === params.filterPreset);
+        if (fp) {
+          const g = fp.grade || fp;
+          if (g.warmth !== undefined) u.uWarmth.value = Number(g.warmth);
+          if (g.tintShift !== undefined && u.uTintShift) u.uTintShift.value = Number(g.tintShift);
+          if (g.contrast !== undefined) u.uContrast.value = Number(g.contrast);
+          if (g.saturation !== undefined) u.uSaturation.value = Number(g.saturation);
+          if (g.vignette !== undefined) u.uVignette.value = Number(g.vignette);
+          if (g.lift !== undefined && u.uLift) u.uLift.value = Number(g.lift);
+          if (g.fade !== undefined && u.uFade) u.uFade.value = Number(g.fade);
+          if (g.toe !== undefined && u.uToe) u.uToe.value = Number(g.toe);
+          if (g.shoulder !== undefined && u.uShoulder) u.uShoulder.value = Number(g.shoulder);
+          if (g.halation !== undefined) u.uHalation.value = Number(g.halation);
+          if (g.diffusion !== undefined && u.uDiffusion) u.uDiffusion.value = Number(g.diffusion);
+          if (g.bw !== undefined && u.uBW) u.uBW.value = Number(g.bw);
+          if (g.softFocus !== undefined) u.uSoftFocus.value = Number(g.softFocus);
+          if (g.shadowLift !== undefined && u.uShadowLift) u.uShadowLift.value = Number(g.shadowLift);
+          if (g.shadowCrush !== undefined && u.uShadowCrush) u.uShadowCrush.value = Number(g.shadowCrush);
+          if (g.filmGrain !== undefined) u.uFilmGrain.value = Number(g.filmGrain);
+          if (g.tyndall !== undefined) u.uTyndall.value = Number(g.tyndall);
+          if (g.sunFlareVeil !== undefined) u.uSunFlareVeil.value = Number(g.sunFlareVeil);
+          if (g.dappledBokeh !== undefined) u.uDappledBokeh.value = Number(g.dappledBokeh);
+          if (g.anamorphicFlare !== undefined) u.uAnamorphicFlare.value = Number(g.anamorphicFlare);
+          if (g.lightLeak !== undefined) u.uLightLeak.value = Number(g.lightLeak);
+          if (g.vintagePhoto !== undefined) u.uVintagePhoto.value = Number(g.vintagePhoto);
+          if (g.filmLutMode !== undefined) u.uFilmLutMode.value = Number(g.filmLutMode);
+          if (g.filmLutStrength !== undefined) u.uFilmLutStrength.value = Number(g.filmLutStrength);
+          if (g.splitAmount !== undefined && u.uSplitAmount) u.uSplitAmount.value = Number(g.splitAmount);
+          if (Array.isArray(g.splitShadow) && u.uSplitShadow) {
+            u.uSplitShadow.value.set(g.splitShadow[0], g.splitShadow[1], g.splitShadow[2]);
+          }
+          if (Array.isArray(g.splitHighlight) && u.uSplitHighlight) {
+            u.uSplitHighlight.value.set(g.splitHighlight[0], g.splitHighlight[1], g.splitHighlight[2]);
+          }
+        }
+      }
       if (params.vignette !== undefined) u.uVignette.value = Number(params.vignette);
       if (params.saturation !== undefined) u.uSaturation.value = Number(params.saturation);
       if (params.contrast !== undefined) u.uContrast.value = Number(params.contrast);
@@ -1083,43 +1121,6 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       }
       if (Array.isArray(params.shadowTint)) {
         u.uShadowTint.value.set(params.shadowTint[0], params.shadowTint[1], params.shadowTint[2]);
-      }
-      if (params.filterPreset !== undefined) {
-        const fp = DESKTOP_PET_FILTER_PRESETS.find(p => p.id === params.filterPreset);
-        if (fp) {
-          const g = fp.grade || fp;
-          if (g.warmth !== undefined) u.uWarmth.value = Number(g.warmth);
-          if (g.tintShift !== undefined && u.uTintShift) u.uTintShift.value = Number(g.tintShift);
-          if (g.contrast !== undefined) u.uContrast.value = Number(g.contrast);
-          if (g.saturation !== undefined) u.uSaturation.value = Number(g.saturation);
-          if (g.vignette !== undefined) u.uVignette.value = Number(g.vignette);
-          if (g.lift !== undefined && u.uLift) u.uLift.value = Number(g.lift);
-          if (g.fade !== undefined && u.uFade) u.uFade.value = Number(g.fade);
-          if (g.toe !== undefined && u.uToe) u.uToe.value = Number(g.toe);
-          if (g.shoulder !== undefined && u.uShoulder) u.uShoulder.value = Number(g.shoulder);
-          if (g.halation !== undefined) u.uHalation.value = Number(g.halation);
-          if (g.diffusion !== undefined && u.uDiffusion) u.uDiffusion.value = Number(g.diffusion);
-          if (g.bw !== undefined && u.uBW) u.uBW.value = Number(g.bw);
-          if (g.softFocus !== undefined) u.uSoftFocus.value = Number(g.softFocus);
-          if (g.shadowLift !== undefined && u.uShadowLift) u.uShadowLift.value = Number(g.shadowLift);
-          if (g.shadowCrush !== undefined && u.uShadowCrush) u.uShadowCrush.value = Number(g.shadowCrush);
-          if (g.filmGrain !== undefined) u.uFilmGrain.value = Number(g.filmGrain);
-          if (g.tyndall !== undefined) u.uTyndall.value = Number(g.tyndall);
-          if (g.sunFlareVeil !== undefined) u.uSunFlareVeil.value = Number(g.sunFlareVeil);
-          if (g.dappledBokeh !== undefined) u.uDappledBokeh.value = Number(g.dappledBokeh);
-          if (g.anamorphicFlare !== undefined) u.uAnamorphicFlare.value = Number(g.anamorphicFlare);
-          if (g.lightLeak !== undefined) u.uLightLeak.value = Number(g.lightLeak);
-          if (g.vintagePhoto !== undefined) u.uVintagePhoto.value = Number(g.vintagePhoto);
-          if (g.filmLutMode !== undefined) u.uFilmLutMode.value = Number(g.filmLutMode);
-          if (g.filmLutStrength !== undefined) u.uFilmLutStrength.value = Number(g.filmLutStrength);
-          if (g.splitAmount !== undefined && u.uSplitAmount) u.uSplitAmount.value = Number(g.splitAmount);
-          if (Array.isArray(g.splitShadow) && u.uSplitShadow) {
-            u.uSplitShadow.value.set(g.splitShadow[0], g.splitShadow[1], g.splitShadow[2]);
-          }
-          if (Array.isArray(g.splitHighlight) && u.uSplitHighlight) {
-            u.uSplitHighlight.value.set(g.splitHighlight[0], g.splitHighlight[1], g.splitHighlight[2]);
-          }
-        }
       }
     },
     render() {

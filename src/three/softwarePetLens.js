@@ -4,9 +4,37 @@
 // Hardware-accelerated WebGL continues to use the full optical shader unchanged.
 const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, Number(value) || 0));
 
+// Explicitly approximate CSS-only grade. Unlike the full GPU post chain, this
+// works on both the desktop and studio canvases on SwiftShader/llvmpipe. It is
+// *not* exported into the WebGL canvas pixels or equivalent to a HDR film LUT.
+export function updateSoftwarePhotoGrade(engine, config = {}) {
+  if (!engine?.softwareRenderer || !engine.canvas) return;
+  const canvas = engine.canvas;
+  const preset = Boolean(config.filterPreset);
+  const contrast = clamp(config.contrast ?? 1.14, 0.65, 1.9);
+  const saturation = clamp(config.saturation ?? 0.96, 0, 2);
+  const shadowCrush = clamp(config.shadowCrush ?? 0.16, 0, 1.6);
+  const soft = clamp(config.softFocus ?? 0.04, 0, 1.5);
+  const haze = clamp(config.atmosphereHaze ?? 0, 0, 1.4);
+  const warm = clamp(config.warmth ?? 0.06, -1, 1);
+  const cssContrast = clamp((preset ? contrast : 1 + (contrast - 1.14) * .82)
+    + (shadowCrush - 0.16) * .16 - haze * .13, 0.62, 1.9);
+  const cssSaturation = clamp(preset ? saturation : 1 + (saturation - 0.96), .05, 2);
+  const brightness = preset ? clamp(config.exposure ?? 1, .72, 1.4) : 1 + haze * .025;
+  const bw = clamp(config.bw ?? 0, 0, 1);
+  const sepia = clamp((preset ? Math.max(0, warm) : Math.max(0, warm - 0.06)) * .22 + haze * .025, 0, .3);
+  const blur = clamp(Math.max(0, soft - 0.04) * 1.4 + haze * .80, 0, 2.6);
+  const changed = preset || Math.abs(cssContrast - 1) > .002 || Math.abs(cssSaturation - 1) > .002
+    || Math.abs(brightness - 1) > .002 || bw > .005 || sepia > .005 || blur > .015;
+  canvas.style.filter = changed
+    ? `brightness(${brightness.toFixed(3)}) contrast(${cssContrast.toFixed(3)}) saturate(${cssSaturation.toFixed(3)}) grayscale(${bw.toFixed(3)}) sepia(${sepia.toFixed(3)}) blur(${blur.toFixed(2)}px)`
+    : '';
+}
+
 export function updateSoftwarePetLens(engine, config = {}) {
   if (!engine?.softwareRenderer || !engine.canvas) return;
   const canvas = engine.canvas;
+  updateSoftwarePhotoGrade(engine, config);
   let lens = document.getElementById('desktop-software-lens');
   if (!lens) {
     lens = document.createElement('div');
@@ -14,21 +42,8 @@ export function updateSoftwarePetLens(engine, config = {}) {
     lens.setAttribute('aria-hidden', 'true');
     canvas.after(lens);
   }
-  // The HDR/Bloom toggle is forcibly off on software WebGL for performance.
-  // Explicitly chosen blur/film controls still need this independent preview.
-  // CSS grading is a lightweight approximation of the chosen film grade, not
-  // a claim to reproduce the HDR LUT, iris mask, bokeh taps or skin response.
-  const hasGrade = Boolean(config.filterPreset);
-  if (hasGrade) {
-    const contrast = clamp(config.contrast ?? 1, .70, 1.4);
-    const saturation = clamp(config.saturation ?? 1, .10, 1.7);
-    const exposure = clamp(config.exposure ?? 1, .72, 1.4);
-    const bw = clamp(config.bw ?? 0, 0, 1);
-    const warm = Math.max(0, clamp(config.warmth ?? 0, -1, 1));
-    canvas.style.filter = `brightness(${exposure.toFixed(2)}) contrast(${contrast.toFixed(2)}) saturate(${saturation.toFixed(2)}) grayscale(${bw.toFixed(2)}) sepia(${(warm * .22).toFixed(2)})`;
-  } else {
-    canvas.style.filter = '';
-  }
+  // The HDR/Bloom toggle is forcibly off on software WebGL; the separate
+  // optical blur overlay remains an approximation, not a GPU bokeh simulation.
 
   const mode = config.blurMode || 'none';
   const power = clamp(config.blurPower ?? 0, 0, 1.5);

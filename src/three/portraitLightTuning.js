@@ -18,14 +18,15 @@ export function skinFinishParameters(baseRoughness, skinGloss, matte, enabled = 
 
 // Old HDR slider clamped everything above ~0.50 to 0.45: most of its travel
 // changed only the number in the UI. Retain the shipped default of 0.45 at
-// env=0.56/chiaroscuro=0.34, but map the entire 0.10–1.40 input monotonically.
+// env=0.56/chiaroscuro=0.34; advanced direct input extends to 2.20 without
+// hitting the previous 1.40 clamp. Safety ceiling prevents a burned-out IBL.
 export function effectiveEnvironmentIntensity(env, chiaroscuro) {
-  const raw = clamp(Number(env), 0.10, 1.40) * (1.02 - clamp(Number(chiaroscuro), 0, 1.5) * 0.45);
-  return clamp(raw * (0.45 / (0.56 * (1.02 - 0.34 * 0.45))), 0.08, 0.85);
+  const raw = clamp(Number(env), 0.05, 2.20) * (1.02 - clamp(Number(chiaroscuro), 0, 1.6) * 0.45);
+  return clamp(raw * (0.45 / (0.56 * (1.02 - 0.34 * 0.45))), 0.05, 1.80);
 }
 
 // PMREM has no software-WebGL fallback. In that mode, use existing *physical*
 // sky/floor illumination instead; do not leave the environment slider a no-op.
 export function softwareSkyFillFactor(env) {
-  return clamp(1 + (clamp(Number(env), 0.1, 1.4) - 0.56) * 0.75, 0.6, 1.6);
+  return clamp(1 + (clamp(Number(env), 0.05, 2.2) - 0.56) * 0.75, 0.6, 2.3);
 }

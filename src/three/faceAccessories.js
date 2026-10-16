@@ -75,7 +75,7 @@ function glassesAsset(style, morphs = {}) {
   const largeSquircle = style === 'squircle_large';
   const acetate = style === 'acetate_square' || largeSquircle;
   const outlineStyle = FRAME_OUTLINES.has(morphs.glassesOutline) ? morphs.glassesOutline : 'soft_square';
-  const rimThickness = limit(morphs.glassesRimThickness, 1, 0.55, 1.65);
+  const rimThickness = limit(morphs.glassesRimThickness, 1, 0.42, 1.90);
   const frameMat = new THREE.MeshPhysicalMaterial({
     color: acetate ? '#342523' : '#524740', metalness: acetate ? 0.035 : 0.82,
     roughness: acetate ? 0.32 : 0.29, clearcoat: acetate ? 0.78 : 0.22,
@@ -527,7 +527,7 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
     modelContainer.add(holder);
   }
   const outline = FRAME_OUTLINES.has(morphs.glassesOutline) ? morphs.glassesOutline : 'soft_square';
-  const rimThickness = limit(morphs.glassesRimThickness, 1, 0.55, 1.65);
+  const rimThickness = limit(morphs.glassesRimThickness, 1, 0.42, 1.90);
   // Procedural styles rebuild real rim/lens vertices; the scanned CC0 style
   // keeps its own geometry and is reshaped in place below (no GLB re-fetch).
   const physicalStyle = glassesStyle.startsWith('polyhaven_');
@@ -558,10 +558,10 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
     const dailyLarge = glassesStyle === 'polyhaven_large_oval';
     glasses.position.set(
       0,
-      (physical ? 0.013 : FRAME_ANCHOR.y) + limit(morphs.glassesOffsetY, 0, -9, 9) * 0.001,
-      FRAME_ANCHOR.z + limit(morphs.glassesOffsetZ, 0, -9, 9) * 0.001,
+      (physical ? 0.013 : FRAME_ANCHOR.y) + limit(morphs.glassesOffsetY, 0, -12, 12) * 0.001,
+      FRAME_ANCHOR.z + limit(morphs.glassesOffsetZ, 0, -12, 12) * 0.001,
     );
-    const s = limit(morphs.glassesSize, 1, 0.82, 1.30);
+    const s = limit(morphs.glassesSize, 1, 0.65, 1.55);
     // Independent real geometry axes are also controlled by dragging the
     // frame/lens directly in the studio; unlike 'size', they change SHAPE.
     const frameWidth = limit(morphs.glassesWidth, 1, 0.68, 1.65);
@@ -575,7 +575,7 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
       s * frameHeight * (dailyLarge ? 0.91 : physical ? 0.78 : 1),
       s * (dailyLarge ? 0.83 : physical ? 0.78 : 1)
     );
-    glasses.rotation.set(limit(morphs.glassesTilt, 0, -12, 12) * Math.PI / 180, 0, 0);
+    glasses.rotation.set(limit(morphs.glassesTilt, 0, -18, 18) * Math.PI / 180, 0, 0);
     if (physical && glasses.userData.physicalLoaded) reshapeScannedGlasses(glasses, outline, rimThickness);
     const frame = glasses.userData.frameMaterial;
     const lens = glasses.userData.lensMaterial;
@@ -608,16 +608,16 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
     }
     const baseY = rootGroup.userData.accessoryHairBaseY;
     hat.position.set(0,
-      baseY + limit(morphs.hatOffsetY, 0, -14, 14) * 0.001,
+      baseY + limit(morphs.hatOffsetY, 0, -18, 18) * 0.001,
       0.004,
     );
-    const hatSize = limit(morphs.hatSize, 1, 0.86, 1.19);
+    const hatSize = limit(morphs.hatSize, 1, 0.78, 1.30);
     const capHeight = hatStyle === 'beanie' ? 0.065 : 0.057;
     const rise = Math.max(1, Math.min(1.46, (rootGroup.userData.accessoryHairTopY + 0.012 - baseY) / capHeight));
     // The forehead hair reaches z=0.082 m at band height. Bring the front brim
     // around it and lower the cuff to the scalp, instead of making a floating lid.
     hat.scale.set(hatSize * (rootGroup.userData.accessoryBareHead ? 0.89 : 1), hatSize * rise, hatSize * 1.50);
-    hat.rotation.z = limit(morphs.hatTilt, 0, -14, 14) * Math.PI / 180;
+    hat.rotation.z = limit(morphs.hatTilt, 0, -18, 18) * Math.PI / 180;
     const color = hex(morphs.hatColor, '#785670');
     hat.userData.fabricMaterial.color.set(color);
     hat.userData.trimMaterial.color.set(color).multiplyScalar(0.70);

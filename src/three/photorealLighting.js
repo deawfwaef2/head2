@@ -1165,21 +1165,32 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
         if (uWindowGoboMode < 1.5) {
           float mx = smoothstep(-0.55, 0.35, cos((wp.x + sin(ph * 0.6) * 0.8) * 0.68));
           float my = smoothstep(-0.55, 0.35, cos((wp.y + cos(ph * 0.5) * 0.6) * 0.68));
-          pattern = 0.58 + 0.42 * mx * my;
+          pattern = 0.30 + 0.70 * mx * my;
         } else if (uWindowGoboMode < 2.5) {
           float slat = smoothstep(-0.32, 0.36, cos((wp.y * 1.65 + wp.x * 0.35) + sin(ph * 0.6) * 1.1));
-          pattern = 0.54 + 0.46 * slat;
+          pattern = 0.28 + 0.72 * slat;
         } else if (uWindowGoboMode < 3.5) {
           float d1 = smoothstep(-0.45, 0.38, cos((wp.x + wp.y) * 0.72 + sin(ph * 0.5) * 0.7));
           float d2 = smoothstep(-0.45, 0.38, cos((wp.x - wp.y) * 0.72 - cos(ph * 0.5) * 0.7));
-          pattern = 0.56 + 0.44 * d1 * d2;
-        } else {
+          pattern = 0.30 + 0.70 * d1 * d2;
+        } else if (uWindowGoboMode < 4.5) {
           float leaf1 = sin(wp.x * 0.78 + ph * 0.7) * cos(wp.y * 0.84 - ph * 0.6);
           float leaf2 = sin((wp.x - wp.y) * 0.58 - ph * 0.5) * cos((wp.x + wp.y) * 0.52 + ph * 0.8);
           float dappled = smoothstep(-0.28, 0.36, 0.55 * leaf1 + 0.45 * leaf2);
-          pattern = 0.58 + 0.42 * dappled;
+          pattern = 0.32 + 0.68 * dappled;
+        } else {
+          // The golden-hair slit used to take the same branch as leafy tree
+          // dapples: switching those two modes left the face almost unchanged.
+          // A broad diagonal window beam, interrupted by fine hair shadows,
+          // gives mode 5 a distinct spatial pattern without darkening mode 4.
+          float beamLine = wp.x * 0.78 + wp.y * 0.38 + sin(ph * 0.32) * 0.20;
+          float sunSlit = smoothstep(-1.08, -0.22, beamLine)
+                        * (1.0 - smoothstep(0.36, 1.22, beamLine));
+          float hairLines = smoothstep(-0.12, 0.35,
+            sin(wp.x * 3.3 + wp.y * 2.1 + ph * 0.42));
+          pattern = 0.27 + 0.73 * sunSlit * mix(0.72, 1.0, hairLines);
         }
-        return mix(1.0, pattern, clamp(uWindowGoboStrength * 0.72, 0.0, 0.82));
+        return mix(1.0, pattern, clamp(uWindowGoboStrength * 0.95, 0.0, 1.0));
       }
 
       // Stage 46 · Energy-Conserving Separable Subsurface Scattering (prevents orange-brick shadow/terminator burn!)
@@ -1881,15 +1892,20 @@ export function injectAestheticSubsurfaceScattering(material, initialSss = 0.92,
       // Stage 56 · Photographic Studio Softbox Shading & Neutral-Cool Venous Shadow Balance
       float litNdl = smoothstep(-0.42, 0.54, fragNdl);
       float sunMask = clamp(litNdl * winEnv, 0.0, 1.0);
-      float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.0);
-      float shadowContrast = clamp(chiaroscuroStrength * 0.24 + uWindowGoboStrength * 0.14, 0.0, 0.44);
+      float chiaroscuroStrength = clamp(uChiaroscuro, 0.0, 1.6);
+      float windowActive = step(0.5, uWindowGoboMode);
+      float shadowContrast = clamp(chiaroscuroStrength * 0.24 + windowActive * uWindowGoboStrength * 0.14, 0.0, 0.44);
+      // The architectural stencil must attenuate ACTUAL key-lit skin, not
+      // merely nudge a scalar used for a subtle color-balance grade.
+      float windowLightMask = mix(1.0, winEnv, 0.72);
 
       float directScale = mix(1.0, mix(0.76, 1.04, pow(sunMask, 0.85)), shadowContrast);
       float indirectScale = mix(1.0, mix(0.84, 1.02, smoothstep(0.0, 0.85, sunMask)), shadowContrast * 0.48);
 
       // In shadow zones, real human skin desaturates slightly toward neutral-cool taupe/olive
       vec3 shadowChromaBalance = mix(vec3(0.95, 0.96, 0.99), vec3(1.00, 1.00, 0.99), sunMask);
-      reflectedLight.directDiffuse *= directScale * shadowChromaBalance;
+      reflectedLight.directDiffuse *= directScale * shadowChromaBalance * windowLightMask;
+      reflectedLight.directSpecular *= windowLightMask;
       reflectedLight.indirectDiffuse *= indirectScale * shadowChromaBalance;
 
       // Dual-Lobe Skin Specular + Sebum Clearcoat Preservation (matching masterQuality/skinMaterial.js)
@@ -2207,12 +2223,14 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
 
   const chiaroscuro = Number(m.chiaroscuro ?? basePreset.chiaroscuro ?? 0.58);
   const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.38);
-  const effectiveGoboId = activeFilter?.gobo || m.windowGobo || basePreset.windowGobo || 'none';
+  // Filter buttons write their starting values into cfg; subsequent manual
+  // edits must win. The old filter-first branches silently ignored gobo and
+  // strength sliders while the filter dropdown was selected.
+  const effectiveGoboId = m.windowGobo || activeFilter?.gobo || basePreset.windowGobo || 'none';
   const goboItem = WINDOW_GOBO_CATALOG.find(g => g.id === effectiveGoboId) || WINDOW_GOBO_CATALOG[0];
-  const goboStrength = activeFilter?.gobo
-    ? (activeFilter.gobo === 'none' ? 0.0 : 0.62)
-    : Number(m.windowGoboStrength ?? basePreset.windowGoboStrength ?? 0.18);
-  const hdrMode = activeFilter?.lightPreset || m.hdrMode || basePreset.hdrMode || 'softbox_portrait';
+  const goboStrength = Number(m.windowGoboStrength ?? (activeFilter?.gobo
+    ? (activeFilter.gobo === 'none' ? 0 : 0.62) : (basePreset.windowGoboStrength ?? 0.18)));
+  const hdrMode = m.hdrMode || activeFilter?.lightPreset || basePreset.hdrMode || 'softbox_portrait';
   const hdrSig = HDR_MODE_LIGHT_SIGNATURES[hdrMode] || HDR_MODE_LIGHT_SIGNATURES.softbox_portrait;
 
   GLOBAL_CHIAROSCURO_UNIFORMS.uChiaroscuro.value = chiaroscuro;
@@ -2220,7 +2238,8 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   GLOBAL_CHIAROSCURO_UNIFORMS.uWindowGoboStrength.value = goboStrength;
 
   if (rig.key) {
-    if (studioLP?.key && cfg.keyColor === undefined) {
+    if (studioLP?.key && cfg.keyColor === undefined && cfg.keyIntensity === undefined
+      && cfg.keyAzimuthDeg === undefined && cfg.keyElevationDeg === undefined) {
       rig.key.color.setHex(studioLP.key.color);
       rig.key.intensity = studioLP.key.intensity * 0.68;
       const scalePos = isStudio ? 64 : 116;
@@ -2244,7 +2263,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     GLOBAL_CHIAROSCURO_UNIFORMS.uWindowLightDir.value.copy(rig.key.position).normalize();
   }
   if (rig.fill) {
-    if (studioLP?.fill && cfg.fillColor === undefined) {
+    if (studioLP?.fill && cfg.fillColor === undefined && cfg.fillIntensity === undefined) {
       rig.fill.color.setHex(studioLP.fill.color);
       rig.fill.intensity = studioLP.fill.intensity * 0.85;
       const scalePos = isStudio ? 64 : 116;
@@ -2267,7 +2286,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   }
   if (rig.rim) {
     const rim0 = Array.isArray(studioLP?.rim) ? studioLP.rim[0] : studioLP?.rim;
-    if (rim0 && cfg.rimColor === undefined) {
+    if (rim0 && cfg.rimColor === undefined && cfg.rimIntensity === undefined) {
       rig.rim.color.setHex(rim0.color);
       rig.rim.intensity = rim0.intensity * 0.72;
       const scalePos = isStudio ? 64 : 116;
@@ -2300,13 +2319,28 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
 
   // Prevent bright overcast/butterfly light recipes from stacking on post-grade
   // lift/fade and clipping skin to white. Preserve every darker recipe intact.
-  engine.renderer.toneMappingExposure = studioLP
-    ? Math.min(1.08, studioLP.exposure * 1.12)
-    : Number(m.exposure ?? basePreset.exposure ?? 1.06);
+  // Filter exposure supplies a default, never a permanent override of the
+  // actual exposure slider (including when a film filter is active).
+  engine.renderer.toneMappingExposure = THREE.MathUtils.clamp(
+    Number(cfg.exposure ?? (studioLP ? Math.min(1.08, studioLP.exposure * 1.12) : m.exposure ?? 1.06)),
+    0.3, 2.4);
   const effectiveEnv = studioLP
     ? THREE.MathUtils.clamp(studioLP.envIntensity * baseEnv / 0.56, 0.08, 0.85)
     : effectiveEnvironmentIntensity(baseEnv, chiaroscuro);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
+
+  // Optional volumetric-distance atmospheric veil: actual depth-dependent fog
+  // on scene geometry (not a fake transparent light-shaft plane). Zero is the
+  // prior scene with no fog; studio/desktop camera distances are normalized.
+  const haze = THREE.MathUtils.clamp(Number(m.atmosphereHaze) || 0, 0, 1.4);
+  if (haze > 0.001) {
+    const distance = Math.max(45, Math.abs(engine.camera?.position.z || 115));
+    const density = 0.0032 * (115 / distance) * haze;
+    if (!engine.scene.fog?.isFogExp2) engine.scene.fog = new THREE.FogExp2('#9e9086', density);
+    engine.scene.fog.density = density;
+  } else if (engine.scene.fog?.isFogExp2) {
+    engine.scene.fog = null;
+  }
 
   // Stage 41 Dynamic Supersampling DSR (capped at native 1.0x–1.25x on multi-head desktop to prevent 4K+ MSAA GPU fan roar)
   if (m.supersample !== undefined && !engine.softwareRenderer) {
@@ -2387,7 +2421,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
 
   if (engine.beautyPost && typeof engine.beautyPost.setGradeParams === 'function') {
     engine.beautyPost.setGradeParams({
-      bloomStrength: Number(m.bloomStrength ?? basePreset.bloomStrength ?? 0.10),
+      bloomStrength: Number(m.bloomStrength ?? basePreset.bloomStrength ?? 0.10) + haze * 0.12,
       vignette: Number(m.vignette ?? basePreset.vignette ?? 0.26),
       saturation: Number(m.saturation ?? basePreset.saturation ?? 0.96),
       contrast: Number(m.contrast ?? basePreset.contrast ?? 1.14),
@@ -2397,7 +2431,8 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       exposure: Number(m.postExposure ?? m.exposure ?? basePreset.exposure ?? 1.08),
       shadowLift: Number(m.shadowLift ?? basePreset.shadowLift ?? 0.28),
       specularClarity: Number(m.specularClarity ?? basePreset.specularClarity ?? 0.75),
-      softFocus: Number(m.softFocus ?? basePreset.softFocus ?? 0.16),
+      softFocus: Number(m.softFocus ?? basePreset.softFocus ?? 0.16) + haze * 0.28,
+      diffusion: Number(m.diffusion ?? 0) + haze * 0.22,
       depthBlur: Number(m.depthBlur ?? basePreset.depthBlur ?? 0.04),
       chromatic: Number(m.chromatic ?? basePreset.chromatic ?? 0.08),
       filmGrain: Number(m.filmGrain ?? basePreset.filmGrain ?? 0.05),
@@ -2411,7 +2446,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       microContrast: Number(m.microContrast ?? basePreset.microContrast ?? 0.48),
       highlightRoll: Number(m.highlightRoll ?? basePreset.highlightRoll ?? 0.42),
       shadowCrush: Number(m.shadowCrush ?? basePreset.shadowCrush ?? 0.16),
-      sunFlareVeil: Number(m.sunFlareVeil ?? basePreset.sunFlareVeil ?? 0.22),
+      sunFlareVeil: Number(m.sunFlareVeil ?? basePreset.sunFlareVeil ?? 0.22) + haze * 0.12,
       dappledBokeh: Number(m.dappledBokeh ?? basePreset.dappledBokeh ?? 0.0),
       anamorphicFlare: Number(m.anamorphicFlare ?? basePreset.anamorphicFlare ?? 0.16),
       lightLeak: Number(m.lightLeak ?? basePreset.lightLeak ?? 0.06),
@@ -2473,24 +2508,17 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
   const activeFilter = m.filterPreset ? DESKTOP_PET_FILTER_PRESETS.find(p => p.id === m.filterPreset) : null;
   const studioLP = activeFilter?.lightPreset ? LIGHT_PRESETS[activeFilter.lightPreset] : null;
   const basePreset = VISUAL_STYLE_PRESETS[m.presetId || activeFilter?.visualPreset] || VISUAL_STYLE_PRESETS.cinema_85mm_portrait;
-  const hdrMode = activeFilter?.lightPreset || m.hdrMode || basePreset.hdrMode || 'golden_hour';
+  const hdrMode = m.hdrMode || activeFilter?.lightPreset || basePreset.hdrMode || 'golden_hour';
   const hdrSig = HDR_MODE_LIGHT_SIGNATURES[hdrMode] || HDR_MODE_LIGHT_SIGNATURES.golden_hour;
 
-  let studioAz = null;
-  let studioEl = null;
-  if (studioLP?.key?.dir) {
-    const [kx, ky, kz] = studioLP.key.dir;
-    const len = Math.hypot(kx, ky, kz) || 1.0;
-    studioAz = THREE.MathUtils.radToDeg(Math.atan2(kx, kz));
-    studioEl = THREE.MathUtils.radToDeg(Math.asin(Math.max(-1, Math.min(1, ky / len))));
-  }
-
   const rim0 = Array.isArray(studioLP?.rim) ? studioLP.rim[0] : studioLP?.rim;
-  const baseAz = studioAz !== null ? studioAz : Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg ?? 38);
-  const baseEl = studioEl !== null ? studioEl : Number(m.keyElevationDeg ?? basePreset.keyElevationDeg ?? 28);
-  const baseKeyInt = studioLP?.key ? studioLP.key.intensity * 0.68 : Number(m.keyIntensity ?? basePreset.keyIntensity ?? 1.36) * hdrSig.keyScale;
-  const baseRimInt = rim0 ? rim0.intensity * 0.72 : Number(m.rimIntensity ?? basePreset.rimIntensity ?? 0.78) * hdrSig.rimScale;
-  const baseTyndall = activeFilter?.tyndall !== undefined ? Number(activeFilter.tyndall) : Number(m.tyndall ?? basePreset.tyndall ?? 0.58);
+  // Same precedence as the static rig: filter recipes are defaults, not a
+  // per-frame command to undo what the person just did with a slider.
+  const baseAz = Number(m.keyAzimuthDeg ?? basePreset.keyAzimuthDeg ?? 38);
+  const baseEl = Number(m.keyElevationDeg ?? basePreset.keyElevationDeg ?? 28);
+  const baseKeyInt = Number(m.keyIntensity ?? basePreset.keyIntensity ?? 1.36) * hdrSig.keyScale;
+  const baseRimInt = Number(m.rimIntensity ?? basePreset.rimIntensity ?? 0.78) * hdrSig.rimScale;
+  const baseTyndall = Number(m.tyndall ?? activeFilter?.tyndall ?? basePreset.tyndall ?? 0.58);
 
   let azOffset = 0;
   let elOffset = 0;
@@ -2537,7 +2565,7 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
   }
 
   const curAzDeg = baseAz + azOffset;
-  const curElDeg = Math.max(4, Math.min(72, baseEl + elOffset));
+  const curElDeg = THREE.MathUtils.clamp(baseEl + elOffset, -15, 89);
   const radius = isStudio ? 64 : 116;
   const azRad = THREE.MathUtils.degToRad(curAzDeg);
   const elRad = THREE.MathUtils.degToRad(curElDeg);
@@ -2548,10 +2576,10 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
     radius * Math.sin(elRad),
     radius * cosEl * Math.cos(azRad)
   );
-  rig.key.intensity = Math.max(0.35, baseKeyInt * intFactor);
+  rig.key.intensity = Math.max(0, baseKeyInt * intFactor);
 
   // Subtle color temperature breathing on key & rim lights
-  const baseKeyCol = studioLP?.key
+  const baseKeyCol = !m.keyColor && studioLP?.key
     ? new THREE.Color(studioLP.key.color)
     : new THREE.Color(m.keyColor || basePreset.keyColor || '#ffeed6').lerp(new THREE.Color(hdrSig.keyTint), 0.52);
   if (warmthShift >= 0) {
@@ -2562,7 +2590,7 @@ export function updateDynamicLightingOnEngine(engine, elapsed = 0) {
   rig.key.color.copy(baseKeyCol);
 
   if (rig.rim) {
-    rig.rim.intensity = Math.max(0.2, baseRimInt * (1.0 - (intFactor - 1.0) * 0.5));
+    rig.rim.intensity = Math.max(0, baseRimInt * (1.0 - (intFactor - 1.0) * 0.5));
     const rimAz = azRad + Math.PI * 0.82;
     rig.rim.position.set(
       radius * 0.72 * Math.sin(rimAz),

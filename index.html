@@ -941,7 +941,8 @@
       <!-- 1. Art Style, HDR Environment, Optical Blur/DOF & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
         <div class="vcd-sec-title">🎬 1. 摄影布光与画面效果 · 实体灯位 / 可选微光泽 / GPU 光学后期</div>
-        <div id="vcd-renderer-compat" style="display:none;margin:6px 0;padding:7px;border:1px solid #66552c;border-radius:6px;color:#fde68a;font-size:11px;line-height:1.5;">当前为软件 WebGL：为避免严重卡顿，景深、胶片、光束和超采样后期不在自动渲染中执行；真实主光、补光、虹膜高光及可选皮肤材质仍生效。请在有显卡的浏览器/Windows 上验收 GPU 后期，勿将软件预览误认为后期已生效。</div>
+        <div id="vcd-renderer-compat" style="display:none;margin:6px 0;padding:7px;border:1px solid #66552c;border-radius:6px;color:#fde68a;font-size:11px;line-height:1.5;">当前为软件 WebGL：实体主/辅/轮廓光与曝光仍直接改变 3D 画面；对比度、色彩、柔焦与可选柔雾仅以 CSS 屏幕预览近似（不进入原始 WebGL 像素），不是 HDR 胶片后期。禁用项在软件预览或关闭 GPU 后期时<strong>不会作用于画面</strong>；请在硬件 GPU/Windows 真机验证其完整效果。数值框允许在安全边界内超出原滑杆，超界会拒绝；音量、模型和超采样另有物理上限。</div>
+        <div style="color:#bfe7f5;font-size:11px;line-height:1.55;margin:5px 0 8px;">🔢 每条滑杆旁可键入原范围外的数值；金框提示超出原滑杆，悬停查看透明安全区间。请勿把高于材质/音量/GPU物理限幅的数字当成额外效果。</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
           <button class="vcd-preset-btn active" data-style-preset="dlss5_neural_photoreal">🧠 DLSS-5 神经渲染微距真皮(Stage43首推)</button>
           <button class="vcd-preset-btn" data-style-preset="ultra_4k_crystal_clear">🔪 4K超清零模糊光学大师</button>
@@ -1037,8 +1038,8 @@
 
         <div class="vcd-sliders">
           <div class="slider-row">
-            <span>🚀 超采样渲染倍率 (Supersampling DSR · 1.0x–2.5x 4K级抗锯齿)</span>
-            <input type="range" id="vc-supersample" min="1.0" max="2.5" step="0.05" value="1.50" />
+            <span>🚀 超采样像素倍率（硬件GPU：工坊至1.50x／多桌宠至1.25x；软件禁用）</span>
+            <input type="range" id="vc-supersample" min="1.0" max="1.5" step="0.05" value="1.50" />
             <span id="val-vc-supersample">1.50x</span>
           </div>
           <div class="slider-row">
@@ -1116,6 +1117,11 @@
             <input type="range" id="vc-soft-focus" min="0.0" max="1.0" step="0.04" value="0.16" />
             <span id="val-vc-soft-focus">16%</span>
           </div>
+          <div class="slider-row" title="默认 0：改变真实场景物体的随距离衰减雾化；硬件 HDR 开启时叠加柔和高光扩散。软件预览使用轻量 CSS 模糊/对比近似，不是体积散射光束。">
+            <span>🌫️ 可选空气柔雾（0=无；随距离的真实3D雾 + GPU柔光 / 软件近似）</span>
+            <input type="range" id="vc-atmosphere-haze" min="0" max="1" step="0.04" value="0" />
+            <span id="val-vc-atmosphere-haze">0%</span>
+          </div>
           <div class="slider-row">
             <span>📷 背景边缘散景模糊 (Subject-Protected DOF · 保护两侧头模100%清晰)</span>
             <input type="range" id="vc-depth-blur" min="0.0" max="1.0" step="0.04" value="0.04" />
@@ -1163,7 +1169,7 @@
           </div>
           <div class="slider-row">
             <span>🕰️ 怀旧银盐老照片褪色乳剂感 (Vintage Sepia Emulsion)</span>
-            <input type="range" id="vc-vintage-photo" min="0.0" max="1.35" step="0.05" value="0.06" />
+            <input type="range" id="vc-vintage-photo" min="0.0" max="1.0" step="0.05" value="0.06" />
             <span id="val-vc-vintage-photo">6%</span>
           </div>
           <div class="slider-row">
@@ -1909,22 +1915,22 @@
 
                 <div class="slider-row">
                   <span>💀 下颌张口露齿度 (Jaw Open)</span>
-                  <input type="range" id="morph-jaw-open" min="0.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-jaw-open" min="0.00" max="0.85" step="0.02" value="0.00" />
                   <span id="val-morph-jaw-open">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>💀 眼球上翻翻白度 (Eye Roll Up)</span>
-                  <input type="range" id="morph-eye-roll" min="0.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-eye-roll" min="0.00" max="0.85" step="0.02" value="0.00" />
                   <span id="val-morph-eye-roll">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>💀 舌头吐出度 (Tongue Out)</span>
-                  <input type="range" id="morph-tongue-out" min="0.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-tongue-out" min="0.00" max="0.85" step="0.02" value="0.00" />
                   <span id="val-morph-tongue-out">+0.00</span>
                 </div>
                 <div class="slider-row">
                   <span>💀 下颌脱臼偏歪度 (Jaw Side)</span>
-                  <input type="range" id="morph-jaw-side" min="0.00" max="1.00" step="0.02" value="0.00" />
+                  <input type="range" id="morph-jaw-side" min="0.00" max="0.85" step="0.02" value="0.00" />
                   <span id="val-morph-jaw-side">+0.00</span>
                 </div>
 

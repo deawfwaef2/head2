@@ -1096,7 +1096,7 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   applyRealEyebrowAssetToGroup(rootGroup, eyebrowStyle, m);
 
   // Stage 43 + Stage 65: Full-range [-1.5, +1.5] facial, cranial & 14-parameter eye shape/optics fine-tuning
-  const clampHarmony = (val, maxAbs = 1.35) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
+  const clampHarmony = (val, maxAbs = 1.45) => Math.max(-maxAbs, Math.min(maxAbs, Number(val) || 0));
 
   const jawV = clampHarmony((m.jawVLine ?? -(m.jawWidth ?? bias.jawVLine)) + 0.24 + extraJawV);
   const chin = clampHarmony((m.chinLength ?? bias.chinLength) - 0.08 + extraChin);
@@ -1109,13 +1109,13 @@ export function applyHeadMorphsToGroup(rootGroup, morphs = {}) {
   const eyeAlmondVal = clampHarmony((m.eyeAlmond ?? bias.eyeAlmond ?? 0.0) + extraEyeAlmond, 1.5);
   const eye = clampHarmony(eyeSizeVal * 1.15 + eyeAlmondVal * 0.65, 1.65);
   const eyeTilt = clampHarmony((m.eyeTilt ?? bias.eyeTilt) + extraEyeTilt, 1.5);
-  const eyeSpacingVal = clampHarmony((m.eyeSpacing ?? 0.0) + extraEyeSpacing, 1.3);
+  const eyeSpacingVal = clampHarmony((m.eyeSpacing ?? 0.0) + extraEyeSpacing, 1.45);
   const eyelidOpen = clampHarmony(m.eyelidOpen ?? 0, 1.5);
   const browH = clampHarmony(m.browHeight ?? 0);
-  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14 + extraLip, 1.30);
-  const mouthSmile = clampHarmony((m.mouthSmile ?? 0) + extraSmile, 1.30);
-  const forehead = clampHarmony((m.foreheadHeight ?? 0) + extraForehead, 1.30);
-  const ear = clampHarmony(m.earSize ?? 0, 1.30);
+  const lip = clampHarmony((m.lipFullness ?? bias.lipFullness) - 0.14 + extraLip, 1.45);
+  const mouthSmile = clampHarmony((m.mouthSmile ?? 0) + extraSmile, 1.45);
+  const forehead = clampHarmony((m.foreheadHeight ?? 0) + extraForehead, 1.45);
+  const ear = clampHarmony(m.earSize ?? 0, 1.45);
   const headWidthRatio = clampHarmony(m.headWidthScale ?? m.headWidth ?? 0, 0.28);
   const headLengthRatio = clampHarmony(m.headLengthScale ?? m.headLength ?? 0, 0.28);
 
@@ -1274,13 +1274,13 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
 
   const eyeTiltVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeTilt ?? 0)));
   const eyeHeightVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeHeight ?? m.eyeAperture ?? 0)));
-  const eyeSpacingVal = Math.max(-1.3, Math.min(1.3, Number(m.eyeSpacing ?? 0)));
+  const eyeSpacingVal = Math.max(-1.45, Math.min(1.45, Number(m.eyeSpacing ?? 0)));
   const eyeEpicanthusVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeEpicanthus ?? 0)));
   const eyeCreaseVal = Math.max(-1.5, Math.min(1.5, Number(m.eyeCrease ?? 0)));
   const eyeBagVal = Math.max(0.0, Math.min(1.5, Number(m.eyeBag ?? m.aegyoSalStrength ?? 0)));
   // Advanced edit range: signed MPFB sculpts really respond beyond the old
   // [-1,+1] controls, but remain bounded before eyelids/lips can invert.
-  const fineValue = (key) => Math.max(-1.30, Math.min(1.30, Number(m[key]) || 0));
+  const fineValue = (key) => Math.max(-1.45, Math.min(1.45, Number(m[key]) || 0));
 
   const weights = { ...archRecipe };
   const addW = (k, v) => {
@@ -1423,7 +1423,7 @@ function applyMpfbEastAsianTargetsToGroup(rootGroup, m = {}, faceArchetype = 'cn
     const val = fineValue(key);
     addW(val >= 0 ? positive : negative, Math.abs(val) * gain);
   }
-  addW('chin_cleft_incr', Math.min(1.30, Math.max(0, Number(m.chinCleft) || 0)) * 0.65);
+  addW('chin_cleft_incr', Math.min(1.45, Math.max(0, Number(m.chinCleft) || 0)) * 0.65);
   addW('mouth_philtrum_volume_incr', fineValue('philtrumVolume') * 0.85);
 
   // Ensure lightweight per-instance position buffer on HeadSkinMesh, Eyelashes, and Eyes (never clone 42 morphAttributes!)

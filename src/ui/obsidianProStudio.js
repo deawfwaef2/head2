@@ -8,6 +8,7 @@
 import { REAL_HAIR_CATALOG, FACE_ARCHETYPE_CATALOG, HEAD_BLEND_CHANNELS } from '../data/defaultCollectibles.js';
 import { DESKTOP_PET_BLUR_MODES, DESKTOP_PET_FILTER_PRESETS } from '../three/beautyPostChain.js';
 import { VISUAL_STYLE_PRESETS } from '../three/photorealLighting.js';
+import { extendRangeForValue } from './rangeNumericInput.js';
 import { BACKGROUNDS_LIST } from '../three/masterQuality/backgrounds.js';
 
 const escapeMarkup = value => String(value ?? '').replace(/[&<>"']/g, c => ({
@@ -250,6 +251,7 @@ function setFormValueAndTrigger(id, value, eventType = 'input', emitChange = tru
       el.appendChild(opt);
     }
   }
+  if (el.type === 'range') extendRangeForValue(el, value);
   el.value = value;
   el.dispatchEvent(new Event(eventType, { bubbles: true }));
   if (eventType !== 'change' && emitChange) {
@@ -1568,19 +1570,29 @@ function wireObsidianStudioEvents(studio) {
       const proxy = row.querySelector('.obs-proxy-range');
       const actual = document.getElementById(row.dataset.syncTarget);
       if (!proxy || !actual || actual.type !== 'range') return;
-      // An old compact range must never write an out-of-range value into a
-      // different main/VCD range, which otherwise appears to 'bounce'.
-      const linked = [actual, document.getElementById(row.dataset.syncFallback)].filter(x => x?.type === 'range');
+      // The main workbench is usually authoritative. If the advanced editor
+      // moved the VCD target outside a dormant fallback's old track, preserve
+      // that newer value instead of clamping/bouncing it on panel reopen.
+      const mainFallback = document.getElementById(row.dataset.syncFallback);
+      const linked = [actual, mainFallback].filter(x => x?.type === 'range');
+      if (mainFallback?.type === 'range' && mainFallback.value !== actual.value) {
+        const n = Number(actual.value);
+        const advancedTarget = n < Number(mainFallback.min) || n > Number(mainFallback.max);
+        const source = advancedTarget ? actual : mainFallback;
+        for (const range of linked) {
+          extendRangeForValue(range, source.value);
+          range.value = source.value;
+          const number = range.nextElementSibling;
+          if (number?.classList.contains('range-number-editor')) number.value = range.value;
+        }
+      }
+      for (const range of [proxy, ...linked]) extendRangeForValue(range, actual.value);
       const min = Math.max(Number(proxy.min), ...linked.map(x => Number(x.min)));
       const max = Math.min(Number(proxy.max), ...linked.map(x => Number(x.max)));
       if (min <= max) { proxy.min = String(min); proxy.max = String(max); }
-      const mainFallback = document.getElementById(row.dataset.syncFallback);
-      if (mainFallback?.type === 'range' && mainFallback.value !== actual.value) {
-        // The main workbench holds the persisted draft. A dormant quick-eye
-        // slider may still have the previous value from before editing.
-        actual.value = mainFallback.value;
-      }
       proxy.value = actual.value;
+      const number = proxy.nextElementSibling;
+      if (number?.classList.contains('range-number-editor')) number.value = proxy.value;
       const text = row.querySelector('.obs-proxy-val');
       if (text) text.textContent = formatSliderDisplay(proxy.value, row.dataset.fmt || 'pct');
     });
@@ -1597,11 +1609,35 @@ function wireObsidianStudioEvents(studio) {
     }
   };
 
+  const syncObsHeadBlendsOnOpen = () => {
+    const isWorkbench = document.body.classList.contains('studio-preview-mode');
+    for (const inp of studio.querySelectorAll('[data-obs-blend-val]')) {
+      const k = inp.dataset.obsBlendVal;
+      const source = document.querySelector(isWorkbench
+        ? `[data-studio-head-blend="${k}"]` : `[data-head-blend="${k}"]`);
+      if (!source) continue;
+      const v = Number(source.value);
+      if (!Number.isFinite(v) || !extendRangeForValue(inp, v)) continue;
+      inp.value = String(v);
+      if (v > 0.01) inp.dataset.lastWeight = inp.value;
+      const number = inp.nextElementSibling;
+      if (number?.classList.contains('range-number-editor')) number.value = inp.value;
+      const chk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
+      const sourceChk = document.querySelector(isWorkbench
+        ? `[data-studio-head-blend-on="${k}"]` : `[data-head-blend-on="${k}"]`);
+      if (chk) chk.checked = v > 0.005 && sourceChk?.checked !== false;
+      const text = studio.querySelector(`[data-obs-blend-txt="${k}"]`);
+      if (text) text.textContent = `${Math.round(v * 100)}%`;
+    }
+    updateObsBlendActiveBadge();
+  };
+
   if (btnOpen) {
     btnOpen.addEventListener('click', () => {
       refreshTargetDropdown();
       syncObsidianCardsFromDOM(studio);
       syncProxyRangesFromControls();
+      syncObsHeadBlendsOnOpen();
       const willOpen = studio.classList.contains('hidden');
       if (willOpen) {
         document.getElementById('visual-customizer-drawer')?.classList.add('hidden');
@@ -1800,7 +1836,7 @@ function wireObsidianStudioEvents(studio) {
     studio.querySelectorAll('[data-obs-blend-val]').forEach((inp) => {
       const k = inp.dataset.obsBlendVal;
       const v = parseFloat(inp.value) || 0;
-      const isOn = v > 0.005;
+      const isOn = v > 0.005 && studio.querySelector(`[data-obs-blend-on="${k}"]`)?.checked !== false;
       if (isOn) activeCount++;
       const row = studio.querySelector(`[data-obs-blend-row="${k}"]`);
       if (row) {
@@ -1813,11 +1849,14 @@ function wireObsidianStudioEvents(studio) {
   };
 
   const applyObsBlendChannelValue = (k, v) => {
-    const numV = Math.max(0, Math.min(1, parseFloat(v) || 0));
+    // The numeric editor offers a documented 140% safe envelope. Never
+    // silently re-clamp its value to the old slider's 100% ceiling here.
+    const numV = Math.max(0, Math.min(1.4, parseFloat(v) || 0));
     const isOn = numV > 0.005;
     const obsInp = studio.querySelector(`[data-obs-blend-val="${k}"]`);
     if (obsInp) {
       if (numV > 0.01) obsInp.dataset.lastWeight = String(numV);
+      extendRangeForValue(obsInp, numV);
       obsInp.value = String(numV);
     }
     const obsChk = studio.querySelector(`[data-obs-blend-on="${k}"]`);
@@ -1827,11 +1866,13 @@ function wireObsidianStudioEvents(studio) {
 
     const vcdInp = document.querySelector(`[data-head-blend="${k}"]`);
     if (vcdInp) {
+      extendRangeForValue(vcdInp, numV);
       vcdInp.value = String(numV);
       vcdInp.dispatchEvent(new Event('input', { bubbles: true }));
     }
     const stuInp = document.querySelector(`[data-studio-head-blend="${k}"]`);
     if (stuInp) {
+      extendRangeForValue(stuInp, numV);
       stuInp.value = String(numV);
       stuInp.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -2306,6 +2347,7 @@ function wireObsidianStudioEvents(studio) {
         filterPreset: fp.id,
         presetId: fp.visualPreset || 'dlss5_neural_photoreal',
         windowGobo: fp.gobo || 'none',
+        windowGoboStrength: fp.gobo && fp.gobo !== 'none' ? 0.62 : 0,
         hdrMode: fp.lightPreset || 'softbox',
       });
       qa.desktop?.applyVisualCustomConfig?.(qa.state.visualCustomConfig);
@@ -2313,6 +2355,7 @@ function wireObsidianStudioEvents(studio) {
     }
     qa?.desktop?.beautyPost?.setGradeParams?.({ ...g, filterPreset: fp.id });
     qa?.studio?.beautyPost?.setGradeParams?.({ ...g, filterPreset: fp.id });
+    qa?.syncVisualControls?.();
     qa?.desktop?.wakeRender?.(2.5, true);
     qa?.studio?.wakeRender?.(2.5, true);
 
@@ -2358,7 +2401,10 @@ function wireObsidianStudioEvents(studio) {
       const k = inp.dataset.visGrade;
       const v = vc[k];
       if (v === undefined) return;
+      extendRangeForValue(inp, v);
       inp.value = String(v);
+      const number = inp.nextElementSibling;
+      if (number?.classList.contains('range-number-editor')) number.value = inp.value;
       const span = studio.querySelector(`#obs-visual-fine-sliders [data-vis-val="${k}"]`);
       if (span) {
         if (k === 'warmth') span.textContent = (v >= 0 ? '+' : '') + Number(v).toFixed(2);
