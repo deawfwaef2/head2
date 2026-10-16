@@ -587,6 +587,21 @@ export function initObsidianProStudio() {
               <option value="gallery">画廊 · 雾绿</option>
             </select>
           </label>
+          <div class="obs-placard-layout-controls" style="border:1px solid rgba(251,191,36,.28);border-radius:8px;padding:8px;margin-bottom:9px;">
+            <div id="obs-placard-layout-target" style="color:#fef08a;font-size:11px;margin-bottom:6px;">🏷️ 当前角色标牌展示（文字/照片保持封存）</div>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;">整体尺寸
+              <input id="obs-placard-size" type="range" min="0.65" max="1.55" step="0.05" value="1" style="flex:1;accent-color:#fbbf24;" />
+              <output id="obs-placard-size-value" style="min-width:42px;text-align:right;">100%</output>
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;margin-top:4px;">横向长宽比
+              <input id="obs-placard-aspect" type="range" min="0.70" max="1.65" step="0.05" value="1" style="flex:1;accent-color:#fbbf24;" />
+              <output id="obs-placard-aspect-value" style="min-width:42px;text-align:right;">100%</output>
+            </label>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;">
+              <span style="font-size:10px;color:#b6c9d4;">长故事仍按段落增高；也可拖动桌面标牌右下角 ⤡。</span>
+              <button type="button" id="obs-placard-layout-reset" class="obs-icon-btn">复位展示</button>
+            </div>
+          </div>
           <p id="obs-placard-editor-status" class="obs-placard-editor-status">🔒 当前角色档案已锁定。若要写新标牌，请先创建新档案草稿。</p>
           <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px;">
             <button type="button" id="obs-btn-new-placard-draft" class="obs-footer-btn primary-cyan">➕ 创建新档案草稿</button>
@@ -1984,6 +1999,36 @@ function wireObsidianStudioEvents(studio) {
     const topTheme = document.getElementById('top-placard-theme-select');
     if (topTheme) topTheme.value = savedTheme;
   }
+
+  // Character-specific display dimensions are stored under an independent
+  // localStorage key. Never unlock or rewrite placardDossier for a size edit.
+  const placardSizeInput = document.getElementById('obs-placard-size');
+  const placardAspectInput = document.getElementById('obs-placard-aspect');
+  const syncPlacardLayoutControls = petId => {
+    const qa = window.__cervixQA;
+    const col = qa?.state?.collectibles?.find(c => c.id === petId);
+    const layout = qa?.state?.placardLayouts?.[petId] || { size: 1, aspect: 1 };
+    if (placardSizeInput) placardSizeInput.value = String(layout.size);
+    if (placardAspectInput) placardAspectInput.value = String(layout.aspect);
+    const sv = document.getElementById('obs-placard-size-value');
+    const av = document.getElementById('obs-placard-aspect-value');
+    if (sv) sv.textContent = `${Math.round(layout.size * 100)}%`;
+    if (av) av.textContent = `${Math.round(layout.aspect * 100)}%`;
+    const target = document.getElementById('obs-placard-layout-target');
+    if (target) target.textContent = `🏷️ ${col?.customDisplayName || col?.name || '当前角色'} · 仅调整展示，档案正文/照片封存`;
+  };
+  window.__syncPlacardLayoutControls = syncPlacardLayoutControls;
+  syncPlacardLayoutControls(window.__cervixQA?.state?.activeStripPetId);
+  for (const [input, key] of [[placardSizeInput, 'size'], [placardAspectInput, 'aspect']]) {
+    input?.addEventListener('input', () => {
+      const qa = window.__cervixQA;
+      qa?.setPlacardLayout?.(qa?.state?.activeStripPetId, { [key]: Number(input.value) });
+    });
+  }
+  document.getElementById('obs-placard-layout-reset')?.addEventListener('click', () => {
+    const qa = window.__cervixQA;
+    qa?.setPlacardLayout?.(qa?.state?.activeStripPetId, { size: 1, aspect: 1 });
+  });
 
   const placardChk = document.getElementById('obs-chk-placards-visible');
   placardChk?.addEventListener('change', () => {

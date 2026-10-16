@@ -1,5 +1,6 @@
 import { createVisualRepair } from './ui/visualRepair.js';
 import { createPlacardDossier, getPlacardDossier, getPlacardPhotoSrc, lockPlacardDossier } from './data/placardDossier.js';
+import { normalizePlacardLayout, restorePlacardLayouts, savePlacardLayouts, placardVisualDimensions } from './data/placardLayout.js';
 import { initObsidianProStudio } from './ui/obsidianProStudio.js';
 import { initMorbidStudyToolkit } from './ui/morbidStudyToolkit.js';
 import './ui/obsidianProStudio.css';
@@ -241,6 +242,7 @@ const state = {
   })(),
   desktopPetMode: false,
   placardOffsets: {},
+  placardLayouts: restorePlacardLayouts(),
   vcdTargetPetId: 'selected',
   pinnedDossierPetId: null,
   pureScreenMode: false,
@@ -809,6 +811,10 @@ function renderSpecimenPlacards(placardsList = []) {
   }
   layer.classList.remove('hidden');
   if (layer.dataset.placardTheme !== state.placardTheme) layer.dataset.placardTheme = state.placardTheme;
+  if (layer.dataset.layoutSelection !== state.activeStripPetId) {
+    layer.dataset.layoutSelection = state.activeStripPetId;
+    window.__syncPlacardLayoutControls?.(state.activeStripPetId);
+  }
 
   const winW = window.innerWidth;
   const winH = window.innerHeight;
@@ -859,7 +865,10 @@ function renderSpecimenPlacards(placardsList = []) {
         <div class="placard-footer">
           <span>档案已封存 · 标牌不可改写</span>
           <button type="button" class="placard-read-more" data-placard-dossier>读完整故事 ↗</button>
-        </div>`;
+        </div>
+        <button type="button" class="placard-resize-handle" data-placard-resize
+          title="拖动：左右调横向比例、上下调整体尺寸（只改展示，不改正文和照片）"
+          aria-label="拖动调整标牌展示尺寸与横向比例">⤡</button>`;
       cardEl.querySelectorAll('[data-placard-dossier]').forEach(btn => {
         btn.addEventListener('pointerdown', ev => ev.stopPropagation());
         btn.addEventListener('click', ev => {
@@ -869,6 +878,34 @@ function renderSpecimenPlacards(placardsList = []) {
           window.__syncVcdSelectedPetUI?.(item.id);
           togglePinnedDossierForPet(item.id);
         });
+      });
+      const resizeHandle = cardEl.querySelector('[data-placard-resize]');
+      resizeHandle.addEventListener('pointerdown', ev => {
+        if (ev.button !== 0) return;
+        ev.stopPropagation(); ev.preventDefault();
+        state.activeStripPetId = item.id;
+        window.__syncVcdSelectedPetUI?.(item.id);
+        const start = normalizePlacardLayout(state.placardLayouts[item.id]);
+        const x0 = ev.clientX, y0 = ev.clientY;
+        resizeHandle.setPointerCapture(ev.pointerId);
+        const move = mev => {
+          mev.stopPropagation(); mev.preventDefault();
+          window.__cervixQA?.setPlacardLayout(item.id, {
+            aspect: start.aspect + (mev.clientX - x0) / 320,
+            size: start.size + (mev.clientY - y0) / 420,
+          }, false);
+        };
+        const up = uev => {
+          uev.stopPropagation();
+          if (resizeHandle.hasPointerCapture(uev.pointerId)) resizeHandle.releasePointerCapture(uev.pointerId);
+          resizeHandle.removeEventListener('pointermove', move);
+          resizeHandle.removeEventListener('pointerup', up);
+          resizeHandle.removeEventListener('pointercancel', up);
+          savePlacardLayouts(state.placardLayouts);
+        };
+        resizeHandle.addEventListener('pointermove', move);
+        resizeHandle.addEventListener('pointerup', up);
+        resizeHandle.addEventListener('pointercancel', up);
       });
       cardEl.addEventListener('pointerdown', ev => {
         if (ev.button !== 0 || ev.target.closest('button, [data-placard-dossier]')) return;
@@ -929,10 +966,27 @@ function renderSpecimenPlacards(placardsList = []) {
       }
     }
 
-    // Cache stable card dimensions during animation. offsetHeight after every
-    // moved card used to force a full layout on every 3D frame, even at rest.
+    // Display-only per-character shape. Scale the entire plaque including
+    // type/photo/line weight; horizontal aspect changes its *real* layout
+    // width. Height still grows with every locked paragraph rather than
+    // cutting off an archive merely to enforce a cosmetic fixed ratio.
+    const visual = placardVisualDimensions(state.placardLayouts[item.id], winW, winH);
+    const layoutKey = `${visual.size}|${visual.aspect}|${winW}|${winH}`;
+    if (cardEl._layoutKey !== layoutKey) {
+      cardEl.style.setProperty('--placard-size', String(visual.size));
+      cardEl.style.setProperty('--placard-base-width', `${visual.cssWidth.toFixed(2)}px`);
+      cardEl.style.setProperty('--placard-max-height', `${visual.cssMaxHeight.toFixed(2)}px`);
+      cardEl._layoutKey = layoutKey;
+      cardContentChanged = true;
+    }
+    // Cache dimensions during 3D animation to avoid layout on every frame.
+    // CSS transforms do not change offsetWidth/Height: account for scale in
+    // placement, face avoidance, and the live SVG connector endpoints.
     if (cardContentChanged || cardEl._placardSize?.viewportH !== winH || cardEl._placardSize?.viewportW !== winW) {
-      cardEl._placardSize = { w: cardEl.offsetWidth, h: cardEl.offsetHeight, viewportH: winH, viewportW: winW };
+      cardEl._placardSize = {
+        w: cardEl.offsetWidth * visual.size, h: cardEl.offsetHeight * visual.size,
+        viewportH: winH, viewportW: winW
+      };
     }
     const halfW = (cardEl._placardSize.w || 350) * .5;
     const halfH = (cardEl._placardSize.h || 190) * .5;
@@ -2596,6 +2650,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
       if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
       return true;
+    },
+    setPlacardLayout(petId, patch = {}, shouldPersist = true) {
+      if (['__proto__', 'prototype', 'constructor'].includes(petId) ||
+        !state.collectibles.some(col => col.id === petId)) return null;
+      const next = normalizePlacardLayout({ ...(state.placardLayouts[petId] || {}), ...patch });
+      if (next.size === 1 && next.aspect === 1) delete state.placardLayouts[petId];
+      else state.placardLayouts[petId] = next;
+      if (shouldPersist) savePlacardLayouts(state.placardLayouts);
+      if (desktopEngine) renderSpecimenPlacards(desktopEngine.getPlacardsScreenData());
+      window.__syncPlacardLayoutControls?.(petId);
+      return next;
     },
     getActiveCollectible() {
       const targetId = state.activeStripPetId || 'SPEC-2026-FYP';

@@ -916,9 +916,11 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 13px 28px var(--pc-shadow), inset 0 0 0 3px var(--pc-chip) !important;
   padding: 12px 14px 10px !important;
   box-sizing: border-box !important;
-  width: min(336px, calc(100vw - 20px)) !important;
+  width: var(--placard-base-width, min(336px, calc(100vw - 20px))) !important;
   min-width: 0 !important;
-  max-height: calc(100dvh - 112px) !important;
+  max-height: var(--placard-max-height, calc(100dvh - 112px)) !important;
+  transform-origin: top left !important;
+  transform: scale(var(--placard-size, 1)) translate(-50%, -50%) !important;
   overflow-y: auto !important;
   display: flex !important;
   flex-direction: column !important;
@@ -1008,6 +1010,20 @@ input[type="range"]::-webkit-slider-thumb {
 .specimen-placard-card .placard-read-more:focus-visible {
   text-decoration: underline; outline-color: var(--pc-accent);
 }
+/* Pointer resize edits DISPLAY ONLY. The dossier photo/text remain locked. */
+.specimen-placard-card .placard-footer { padding-right: 20px; }
+.specimen-placard-card .placard-resize-handle {
+  position: absolute; bottom: 3px; right: 3px; width: 21px; height: 21px;
+  padding: 0; border: 1px solid var(--pc-border); border-radius: 3px;
+  background: var(--pc-chip); color: var(--pc-accent); font: 700 15px/19px sans-serif;
+  text-align: center; cursor: nwse-resize; touch-action: none; opacity: .78;
+  user-select: none;
+}
+.specimen-placard-card .placard-resize-handle:hover,
+.specimen-placard-card .placard-resize-handle:focus-visible {
+  opacity: 1; outline-color: var(--pc-accent);
+}
+
 #obs-more-popover .obs-placard-theme-row {
   grid-column: 1 / -1; color: var(--obs-gold-bright); font-size: 12px;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
