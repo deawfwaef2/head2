@@ -3926,29 +3926,47 @@ function loadCustomCharacterTexture(url, isColor = true, onLoaded) {
  */
 export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
   if (!rootGroup) return;
-  rootGroup.userData.liveMaterials = {
+  const liveMaterials = {
     ...(rootGroup.userData.liveMaterials || {}),
     ...patch,
   };
-  const m = rootGroup.userData.liveMaterials;
+  // A material cache is not the hairstyle's source of truth. A full character
+  // snapshot is passed during initial load, but these shape keys must never
+  // survive into an unrelated skin/eye/color callback as a stale command.
+  for (const key of [
+    'hairStyle', 'topCrown', 'topCrownStyle', 'frontBangs', 'frontBangsStyle',
+    'sideLocks', 'sideLocksStyle', 'backAttachment', 'backAttachmentStyle',
+    'hairRenderMode', 'strandDensity', 'sculptGestures', 'sculptRevision',
+  ]) delete liveMaterials[key];
+  rootGroup.userData.liveMaterials = liveMaterials;
+  const m = liveMaterials;
 
   if (patch.browColor !== undefined) rootGroup.userData.browColor = patch.browColor;
   if (patch.browOpacity !== undefined) rootGroup.userData.browOpacity = Number(patch.browOpacity);
 
-  // If hair color / ombre / highlight / feather keys are in patch, update HairGroup live in 0ms!
-  if (
-    patch.hairColor !== undefined ||
-    patch.hairTipColor !== undefined ||
-    patch.hairHighlightColor !== undefined ||
-    patch.hairHighlightStrength !== undefined ||
-    patch.hairOmbreMix !== undefined ||
-    patch.hairWispyFeather !== undefined
-  ) {
+  // Only the hair fields changed by THIS action may touch HairGroup. Earlier
+  // versions replayed a cached original hairstyle on every color/eye edit,
+  // silently discarding the new haircut (and its visible sculpt).
+  const hairKeys = [
+    'hairColor', 'hairTipColor', 'hairHighlightColor', 'hairHighlightStrength',
+    'hairOmbreMix', 'hairWispyFeather', 'hairSheen',
+  ];
+  const hairPatch = {};
+  for (const key of hairKeys) {
+    if (patch[key] !== undefined) hairPatch[key] = patch[key];
+  }
+  if (Object.keys(hairPatch).length) {
     rootGroup.userData.currentMorphs = {
       ...(rootGroup.userData.currentMorphs || {}),
-      ...patch,
+      ...hairPatch,
     };
-    updateHairDesignOnGroup(rootGroup, patch);
+    // Align an unset tip color to a new base dye; an explicitly edited ombre
+    // keeps its own color. Never pass the cached initial style / modular parts.
+    if (hairPatch.hairColor && !rootGroup.userData.hairTipColor) {
+      rootGroup.userData.hairTipColor = hairPatch.hairColor;
+      rootGroup.userData.currentMorphs.hairTipColor = hairPatch.hairColor;
+    }
+    updateHairDesignOnGroup(rootGroup, hairPatch);
   }
 
   rootGroup.traverse((child) => {
@@ -4152,25 +4170,10 @@ export function updateCollectibleMaterialsLive(rootGroup, patch = {}) {
     }
   });
 
-  // 5. HairGroup: Live 0ms Hair Color, Tip Ombre Color, Ombre Mix & Sheen Update
-  if (
-    m.hairColor !== undefined ||
-    m.hairTipColor !== undefined ||
-    m.hairOmbreMix !== undefined ||
-    m.hairHighlightColor !== undefined ||
-    m.hairHighlightStrength !== undefined ||
-    m.hairSheen !== undefined
-  ) {
-    // When user explicitly picks a new base hairColor without specifying a new tip color,
-    // also align tip color if it was still on a default preset so the whole hair visibly changes color
-    if (m.hairColor && !m.hairTipColor) {
-      rootGroup.userData.hairTipColor = m.hairColor;
-      if (rootGroup.userData.currentMorphs) {
-        rootGroup.userData.currentMorphs.hairTipColor = m.hairColor;
-      }
-    }
-    updateHairDesignOnGroup(rootGroup, m);
-  }
+  // Do not replay `m` into the hair assembler here. `m` is a history of all
+  // previous material patches (including the ORIGINAL hairStyle), not the
+  // delta for the current operation. Hair-specific fields are applied once
+  // above; eye/skin/texture edits must never rebuild or restyle the hair.
 }
 
 export function attachSpecimenContainerAndDecor(rootGroup, config = {}) {

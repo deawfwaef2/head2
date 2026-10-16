@@ -1,5 +1,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {
+  glassesContourKey, readGlassesContour, sampleGlassesContour,
+  sampleGlassesContourPoints,
+} from './glassesContour.js';
 
 // Existing handmade frames remain available. The optional scanned-texture
 // metal frame is a separately licensed CC0 Poly Haven asset; offline HTML
@@ -69,6 +73,58 @@ function wire(group, coordinates, radius, material, name, closed = false) {
   return mesh(group, new THREE.TubeGeometry(curve, Math.max(24, coordinates.length * 2), radius, 6, closed), material, name, false);
 }
 
+function proceduralOutlineSpec(style, outline) {
+  const large = style === 'squircle_large';
+  const acetate = style === 'acetate_square' || large;
+  return {
+    large, acetate,
+    cx: large ? 0.0335 : 0.032,
+    rx: large ? 0.0292 : style === 'aviator' ? 0.027 : style === 'wire_oval' ? 0.0253 : 0.0263,
+    ry: large ? (outline === 'round' ? 0.0210 : 0.0191)
+      : style === 'aviator' ? 0.019 : style === 'wire_oval' ? 0.0164 : 0.0154,
+    cy: style === 'aviator' ? 0.0205 : 0.020,
+    exPow: outline === 'round' ? 1 : outline === 'cat_eye' ? 0.78
+      : large ? 0.62 : acetate ? 0.67 : 0.78,
+    eyPow: outline === 'round' ? 1 : outline === 'cat_eye' ? 0.80
+      : large ? 0.66 : acetate ? 0.75 : 0.85,
+  };
+}
+
+function proceduralContourXY(style, morphs, side, angle, inset = 0) {
+  const outline = FRAME_OUTLINES.has(morphs.glassesOutline) ? morphs.glassesOutline : 'soft_square';
+  const s = proceduralOutlineSpec(style, outline);
+  const c = side * Math.cos(angle), sin = Math.sin(angle);
+  const ex = Math.sign(c) * Math.pow(Math.abs(c), s.exPow);
+  const ey = Math.sign(sin) * Math.pow(Math.abs(sin), s.eyPow);
+  const catLift = outline === 'cat_eye' ? 0.007 * Math.max(0, side * ex) ** 2 : 0;
+  const [outward, up] = sampleGlassesContour(morphs.glassesContours, style, side, angle);
+  return [
+    side * s.cx + (s.rx - inset) * ex + side * s.rx * outward,
+    s.cy - EYE_Y + (s.ry - inset) * ey + catLift + s.ry * up,
+  ];
+}
+
+// Shared by the renderer and the on-canvas shape editor. Returns a real
+// frame-local position, not a 2D approximation detached from the 3D lenses.
+export function glassesContourFrameSize(style, morphs = {}) {
+  if (style.startsWith('polyhaven_')) return { cx: 0.029, rx: 0.026, ry: 0.022 };
+  return proceduralOutlineSpec(style, morphs.glassesOutline || 'soft_square');
+}
+
+export function glassesContourHandleLocal(style, morphs, side, index) {
+  const angle = index * Math.PI / 4;
+  if (style.startsWith('polyhaven_')) {
+    const [outward, up] = sampleGlassesContour(morphs.glassesContours, style, side, angle);
+    return new THREE.Vector3(
+      side * (0.029 + 0.026 * (Math.cos(angle) + outward)),
+      0.022 * (Math.sin(angle) + up),
+      -0.010,
+    );
+  }
+  const [x, y] = proceduralContourXY(style, morphs, side, angle);
+  return new THREE.Vector3(x, y, -0.001);
+}
+
 function glassesAsset(style, morphs = {}) {
   const root = new THREE.Group();
   root.name = `Glasses_${style}`;
@@ -107,30 +163,16 @@ function glassesAsset(style, morphs = {}) {
   root.userData.lensMaterial = lensMat;
 
   for (const side of [-1, 1]) {
-    const cx = side * (largeSquircle ? 0.0335 : 0.032);
-    const rx = largeSquircle ? 0.0292 : style === 'aviator' ? 0.027 : style === 'wire_oval' ? 0.0253 : 0.0263;
-    const ry = largeSquircle ? (outlineStyle === 'round' ? 0.0210 : 0.0191)
-      : style === 'aviator' ? 0.019 : style === 'wire_oval' ? 0.0164 : 0.0154;
-    const cy = style === 'aviator' ? 0.0205 : 0.020;
+    const spec = proceduralOutlineSpec(style, outlineStyle);
+    const cx = side * spec.cx, rx = spec.rx, ry = spec.ry, cy = spec.cy;
     const steps = 64;
-    // Alter actual aperture vertices, not just a 2D menu label. A squared
-    // superellipse retains rounded optician-style corners; an outward lift
-    // shifts the cat-eye edge and its matching glass lens together.
-    const xy = (t, inset = 0) => {
-      const c = Math.cos(t), s = Math.sin(t);
-      // Every procedural frame responds to the outline selector. Keep the
-      // signature oval/aviator silhouette when untouched, but let round /
-      // squared / cat-eye reshape the real bezel AND the matching lens.
-      const exPow = outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.78
-        : largeSquircle ? 0.62 : acetate ? 0.67 : 0.78;
-      const eyPow = outlineStyle === 'round' ? 1 : outlineStyle === 'cat_eye' ? 0.80
-        : largeSquircle ? 0.66 : acetate ? 0.75 : 0.85;
-      const ex = Math.sign(c) * Math.pow(Math.abs(c), exPow);
-      const ey = Math.sign(s) * Math.pow(Math.abs(s), eyPow);
-      const catLift = outlineStyle === 'cat_eye'
-        ? 0.0070 * Math.max(0, side * ex) ** 2 : 0;
-      return [cx + (rx - inset) * ex, cy - EYE_Y + (ry - inset) * ey + catLift];
-    };
+    // A separate editable contour changes each rim vertex, its actual lens
+    // aperture and the optician hardware, not the overall frame scale.
+    // For the left lens the parameter is mirrored so 'outer' means outward
+    // on both eyes; zero offsets reproduce the untouched artist silhouette.
+    const xy = (t, inset = 0) => proceduralContourXY(
+      style, morphs, side, side < 0 ? Math.PI - t : t, inset
+    );
     const rim = [];
     for (let i = 0; i < steps; i++) {
       const [x, y] = xy(i * Math.PI * 2 / steps);
@@ -189,10 +231,12 @@ function glassesAsset(style, morphs = {}) {
     ], 0.00028, reflexMat, `AntiReflectGlint_${side}`);
 
     // Mechanical endpieces, real receding temples and two tiny hinge screws.
-    const templeStart = side * (Math.abs(cx) + rx);
-    const hingeLift = largeSquircle && outlineStyle === 'cat_eye' ? 0.0070 : 0;
+    const outer = proceduralContourXY(style, morphs, side, 0);
+    const templeStart = outer[0];
+    const hingeY = outer[1] + 0.0022;
+    const hingeLift = hingeY - (0.0222 - EYE_Y);
     const arm = [
-      [templeStart, 0.0222 - EYE_Y + hingeLift, -0.0014],
+      [templeStart, hingeY, -0.0014],
       [side * 0.065, 0.0220 - EYE_Y + hingeLift * 0.65, 0.091 - FRAME_Z],
       [side * 0.071, 0.0200 - EYE_Y, 0.048 - FRAME_Z],
       [side * 0.074, 0.0160 - EYE_Y, 0.005 - FRAME_Z],
@@ -219,14 +263,18 @@ function glassesAsset(style, morphs = {}) {
       ], 0.00032, hardwareMat, `PadArm_${side}`);
     }
   }
-  // The former high round loop hovered in the fringe; eyewear has a low,
-  // nose-following saddle bridge, not a cartoon arch between the lenses.
+  // The bridge ends follow both inner contour landmarks; widening one nose
+  // corner no longer leaves a disconnected metal stub beside the new lens.
+  const innerL = proceduralContourXY(style, morphs, -1, Math.PI);
+  const innerR = proceduralContourXY(style, morphs, 1, Math.PI);
+  const bridgeL = Math.min(-0.003, innerL[0] - 0.0035);
+  const bridgeR = Math.max(0.003, innerR[0] + 0.0035);
   wire(root, [
-    [-0.0079, 0.0275 - EYE_Y, -0.0014],
-    [-0.0049, 0.0300 - EYE_Y, 0.0010],
-    [0, 0.0309 - EYE_Y, 0.0017],
-    [0.0049, 0.0300 - EYE_Y, 0.0010],
-    [0.0079, 0.0275 - EYE_Y, -0.0014],
+    [bridgeL, innerL[1] + 0.0075, -0.0014],
+    [bridgeL * 0.62, innerL[1] + 0.0100, 0.0010],
+    [0, (innerL[1] + innerR[1]) * 0.5 + 0.0109, 0.0017],
+    [bridgeR * 0.62, innerR[1] + 0.0100, 0.0010],
+    [bridgeR, innerR[1] + 0.0075, -0.0014],
   ], acetate ? (largeSquircle ? 0.0012 * Math.sqrt(rimThickness) : 0.00110) : 0.00074,
   frameMat, 'NasalSaddleBridge');
   if (style === 'aviator') {
@@ -366,13 +414,18 @@ async function polyhavenSource() {
   return polyhavenSourcePromise;
 }
 
-function reshapeScannedGlasses(glasses, outline, rimThickness) {
-  const key = `${outline}|${rimThickness.toFixed(2)}`;
+function reshapeScannedGlasses(glasses, outline, rimThickness, morphs, style) {
+  const contour = glassesContourKey(morphs.glassesContours, style);
+  const key = `${outline}|${rimThickness.toFixed(2)}|${contour}`;
   if (!glasses.userData.physicalLoaded || glasses.userData.scannedShapeKey === key) return;
-  if (outline === 'round' && Math.abs(rimThickness - 1) < 0.005 && !glasses.userData.scannedShapeKey) {
+  if (outline === 'round' && Math.abs(rimThickness - 1) < 0.005 && !contour && !glasses.userData.scannedShapeKey) {
     glasses.userData.scannedShapeKey = key; // preserve authored scan normals at its untouched baseline
     return;
   }
+  const points = {
+    '-1': readGlassesContour(morphs.glassesContours, style, -1),
+    '1': readGlassesContour(morphs.glassesContours, style, 1),
+  };
   glasses.updateWorldMatrix(true, true);
   const fromWorld = glasses.matrixWorld.clone().invert();
   const p = new THREE.Vector3();
@@ -402,6 +455,23 @@ function reshapeScannedGlasses(glasses, outline, rimThickness) {
           const thick = (rimThickness - 1) * 0.0024 * (r >= 1 ? 1 : -1) * forward;
           p.x += side * (dx / 0.026) / r * thick;
           p.y += (p.y / 0.022) / r * thick;
+        }
+      }
+      if (contour && forward > 0) {
+        // Warp the actual CC0 scan in frame coordinates. Preserve hinges and
+        // temples by fading away from the optical rims AND behind their front
+        // plane; the clear lenses follow the exact same contour landmarks.
+        const side = p.x < 0 ? -1 : 1;
+        const nx = (Math.abs(p.x) - 0.029) / 0.026;
+        const ny = p.y / 0.022;
+        const r = Math.hypot(nx, ny);
+        const inside = Math.max(0, Math.min(1, (r - 0.32) / 0.50));
+        const outside = Math.max(0, Math.min(1, (1.67 - r) / 0.47));
+        const mask = inside * outside * forward;
+        if (mask > 0) {
+          const [outward, up] = sampleGlassesContourPoints(points[String(side)], Math.atan2(ny, nx));
+          p.x += side * 0.026 * outward * mask;
+          p.y += 0.022 * up * mask;
         }
       }
       p.applyMatrix4(toMesh).toArray(attr.array, i * 3);
@@ -531,8 +601,9 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
   // Procedural styles rebuild real rim/lens vertices; the scanned CC0 style
   // keeps its own geometry and is reshaped in place below (no GLB re-fetch).
   const physicalStyle = glassesStyle.startsWith('polyhaven_');
+  const contourSignature = glassesContourKey(morphs.glassesContours, glassesStyle);
   const constructionKey = physicalStyle || glassesStyle === 'none'
-    ? glassesStyle : `${glassesStyle}|${outline}|${rimThickness.toFixed(2)}`;
+    ? glassesStyle : `${glassesStyle}|${outline}|${rimThickness.toFixed(2)}|${contourSignature}`;
   if (holder.userData.glassesConstructionKey !== constructionKey) {
     disposePart(holder.getObjectByName(`Glasses_${holder.userData.glassesStyle}`));
     if (glassesStyle === 'polyhaven_round' || glassesStyle === 'polyhaven_large_oval') {
@@ -576,7 +647,7 @@ export function syncFaceAccessories(rootGroup, morphs = {}) {
       s * (dailyLarge ? 0.83 : physical ? 0.78 : 1)
     );
     glasses.rotation.set(limit(morphs.glassesTilt, 0, -18, 18) * Math.PI / 180, 0, 0);
-    if (physical && glasses.userData.physicalLoaded) reshapeScannedGlasses(glasses, outline, rimThickness);
+    if (physical && glasses.userData.physicalLoaded) reshapeScannedGlasses(glasses, outline, rimThickness, morphs, glassesStyle);
     const frame = glasses.userData.frameMaterial;
     const lens = glasses.userData.lensMaterial;
     if (frame && lens) {

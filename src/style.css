@@ -1058,8 +1058,41 @@ select.pill-mini-btn:hover {
   display: block;
 }
 
+#glasses-contour-handles {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+#glasses-contour-handles[hidden], #glasses-contour-handles .glasses-contour-point[hidden] { display: none; }
+.glasses-contour-point {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid #fef3c7;
+  border-radius: 50%;
+  background: #0d99b5;
+  box-shadow: 0 0 0 2px #071b29bb, 0 0 9px #38bdf8;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+}
+.glasses-contour-point[data-contour-knot="0"],
+.glasses-contour-point[data-contour-knot="2"],
+.glasses-contour-point[data-contour-knot="4"],
+.glasses-contour-point[data-contour-knot="6"] { width: 16px; height: 16px; background: #f59e0b; }
+.glasses-contour-point:hover, .glasses-contour-point:focus-visible {
+  background: #e879f9;
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  cursor: grabbing;
+}
+
 #studio-photo-overlay {
   position: absolute;
+  z-index: 3;
   left: 50%;
   top: 48%;
   transform: translate(-50%, -50%);
@@ -1070,9 +1103,31 @@ select.pill-mini-btn:hover {
   border: 1px dashed rgba(56, 189, 248, 0.65);
   border-radius: 8px;
 }
-
-#studio-photo-overlay.hidden {
-  display: none;
+#studio-photo-overlay.hidden { display: none; }
+#photo-align-drag-handle {
+  position: absolute;
+  z-index: 5;
+  left: 12px;
+  bottom: 36px;
+  padding: 3px 9px;
+  border: 1px solid #67e8f9;
+  border-radius: 5px;
+  background: #102f3ef0;
+  color: #fff;
+  font-size: 11px;
+  cursor: grab;
+  touch-action: none;
+}
+#photo-align-drag-handle[hidden], #sculpt-brush-cursor[hidden] { display: none; }
+#photo-align-drag-handle:active { cursor: grabbing; }
+#sculpt-brush-cursor {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid rgba(254, 240, 138, 0.95);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #0f172a, inset 0 0 10px #22d3ee38;
+  pointer-events: none;
 }
 
 .viewport-overlay-tip {

@@ -4,7 +4,13 @@ import {
   SCULPT_MAX_GESTURES, SCULPT_MAX_SEGMENTS, getBrushableHairMeshes,
   applyLiveSculptStroke, finalizeSculptStroke
 } from './sculptStrokeLayer.js';
-import { syncFaceAccessories } from './faceAccessories.js';
+import {
+  syncFaceAccessories, glassesContourFrameSize, glassesContourHandleLocal,
+} from './faceAccessories.js';
+import {
+  GLASSES_CONTOUR_LABELS, glassesContourKey, readGlassesContour,
+  withGlassesContourNode,
+} from './glassesContour.js';
 import {
   buildCollectibleHeadNode,
   applyHeadMorphsToGroup,
@@ -39,7 +45,7 @@ export class StudioPreviewEngine {
     this.pointerNdc = { x: 0, y: 0 };
     this.sculptTool = 'orbit';
     this.sculptProfiles = {
-      face: { radius: 0.034, strength: 0.30 },
+      face: { radius: 0.018, strength: 0.20 },
       hair: { radius: 0.042, strength: 0.55 }
     };
     this.sculptRadius = this.sculptProfiles.face.radius; // artist model local metres
@@ -193,6 +199,10 @@ export class StudioPreviewEngine {
     this.autoRotate = false;
     this.canvas.style.cursor = this.sculptTool === 'orbit' ? '' : 'crosshair';
     this.canvas.style.touchAction = this.sculptTool === 'orbit' ? '' : 'none';
+    if (this.sculptTool === 'glasses') this.setCameraPreset('front');
+    const brush = document.getElementById('sculpt-brush-cursor');
+    if (brush) brush.hidden = true;
+    this.updateGlassesContourHUD();
     this.wakeRender(0.2);
   }
 
@@ -202,6 +212,77 @@ export class StudioPreviewEngine {
       ((event.clientX - rect.left) / Math.max(rect.width, 1)) * 2 - 1,
       -((event.clientY - rect.top) / Math.max(rect.height, 1)) * 2 + 1
     );
+  }
+
+  updateBrushCursor(event) {
+    const brush = document.getElementById('sculpt-brush-cursor');
+    if (!brush) return;
+    const mode = this.sculptTool;
+    const target = this.headNode?.getObjectByName(mode === 'face' ? 'HeadSkinMesh' : 'HairGroup');
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left, y = event.clientY - rect.top;
+    if (!['face','hair'].includes(mode) || !target ||
+        x < 0 || y < 0 || x > rect.width || y > rect.height) {
+      brush.hidden = true;
+      return;
+    }
+    this.headNode.updateWorldMatrix(true, true);
+    const worldScale = target.getWorldScale(new THREE.Vector3());
+    const focus = target.getWorldPosition(new THREE.Vector3());
+    const distance = Math.max(2, this.camera.position.distanceTo(focus));
+    const radiusWorld = Math.max(0.001, this.sculptRadius * Math.abs(worldScale.x));
+    const diameter = Math.min(220, Math.max(12,
+      radiusWorld * rect.height / (distance * Math.tan(this.camera.fov * Math.PI / 360))
+    ));
+    brush.style.left = `${x}px`;
+    brush.style.top = `${y}px`;
+    brush.style.width = brush.style.height = `${diameter.toFixed(1)}px`;
+    brush.hidden = false;
+  }
+
+  updateGlassesContourHUD() {
+    const hud = document.getElementById('glasses-contour-handles');
+    if (!hud) return;
+    const morphs = this.getSculptMorphs?.() || this.headNode?.userData?.currentMorphs || {};
+    const style = morphs.glassesStyle || 'none';
+    const frame = this.sculptTool === 'glasses' && this.headNode?.getObjectByName(`Glasses_${style}`);
+    if (!frame || style === 'none' ||
+        (style.startsWith('polyhaven_') && !frame.userData.physicalLoaded && !frame.userData.polyhavenFallback)) {
+      hud.hidden = true;
+      return;
+    }
+    if (hud.dataset.style !== style || hud.querySelectorAll('[data-contour-knot]').length !== 16) {
+      hud.replaceChildren();
+      for (const side of [-1, 1]) for (let i = 0; i < GLASSES_CONTOUR_LABELS.length; i++) {
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'glasses-contour-point';
+        dot.dataset.contourSide = String(side);
+        dot.dataset.contourKnot = String(i);
+        dot.title = `${side < 0 ? '左' : '右'}镜片 · ${GLASSES_CONTOUR_LABELS[i]}：拖动调整局部轮廓`;
+        dot.setAttribute('aria-label', dot.title);
+        dot.addEventListener('pointerdown', e => this.startGlassesContourDrag(e, side, i));
+        hud.appendChild(dot);
+      }
+      hud.dataset.style = style;
+    }
+    hud.hidden = false;
+    this.headNode.updateWorldMatrix(true, true);
+    this.camera.updateMatrixWorld();
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    for (const dot of hud.querySelectorAll('[data-contour-knot]')) {
+      const side = Number(dot.dataset.contourSide);
+      const knot = Number(dot.dataset.contourKnot);
+      const projected = frame.localToWorld(glassesContourHandleLocal(style, morphs, side, knot))
+        .project(this.camera);
+      const visible = projected.z < 1 && projected.z > -1 &&
+        projected.x >= -0.96 && projected.x <= 0.96 && projected.y >= -0.94 && projected.y <= 0.94;
+      dot.hidden = !visible;
+      if (visible) {
+        dot.style.left = `${(projected.x + 1) * w * 0.5}px`;
+        dot.style.top = `${(1 - projected.y) * h * 0.5}px`;
+      }
+    }
   }
 
   // The GPU expands glossy fibers into ribbons, but their two CPU vertices
@@ -241,17 +322,93 @@ export class StudioPreviewEngine {
     const style = morphs.glassesStyle || 'none';
     const frame = this.headNode.getObjectByName(`Glasses_${style}`);
     if (!frame || style === 'none') {
-      this.onSculptStatus?.('请先在眼镜款式中选一副，再选择「直接拉眼镜」。');
+      this.onSculptStatus?.('请先选一副眼镜，再拖动镜片周围的轮廓圆点。');
       return;
     }
     this.headNode.updateMatrixWorld(true);
     this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
     const hit = this.sculptRaycaster.intersectObject(frame, true)[0];
     if (!hit) {
-      this.onSculptStatus?.('请在镜框或镜片表面按住左键：左右拉框宽，上下拉框高。');
+      this.onSculptStatus?.('请拖动镜片周围的彩色圆点；按 Alt 拖镜框才是整体宽高。');
       return;
     }
+    if (event.altKey) return this.startGlassesFitDrag(event, morphs, frame, hit.point);
     const local = frame.worldToLocal(hit.point.clone());
+    const side = local.x < 0 ? -1 : 1;
+    const spec = glassesContourFrameSize(style, morphs);
+    const angle = Math.atan2(local.y / spec.ry,
+      (Math.abs(local.x) - spec.cx) / spec.rx);
+    const knot = (Math.round(angle * 4 / Math.PI) + 8) % 8;
+    this.startGlassesContourDrag(event, side, knot, hit.point);
+  }
+
+  startGlassesContourDrag(event, side, knot, hitWorld = null) {
+    if (event.button !== 0 || this.sculptTool !== 'glasses' || this.sculptDrag) return;
+    const morphs = this.getSculptMorphs?.();
+    const style = morphs?.glassesStyle || 'none';
+    const frame = this.headNode?.getObjectByName(`Glasses_${style}`);
+    if (!frame || style === 'none') return;
+    frame.updateWorldMatrix(true, true);
+    const target = hitWorld?.clone() || frame.localToWorld(glassesContourHandleLocal(style, morphs, side, knot));
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+      this.camera.getWorldDirection(new THREE.Vector3()), target
+    );
+    this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
+    const startWorld = this.sculptRaycaster.ray.intersectPlane(plane, new THREE.Vector3()) || target;
+    const before = JSON.parse(JSON.stringify(morphs.glassesContours || {}));
+    const gestures = morphs.sculptGestures ||= [];
+    if (gestures.length >= SCULPT_MAX_GESTURES) gestures.shift();
+    const gesture = { tool: 'glassesContour', contourBefore: before, contourStyle: style, strokes: [] };
+    gestures.push(gesture);
+    this.sculptDrag = {
+      tool: 'glassesContour', pointerId: event.pointerId, node: this.headNode,
+      gesture, frame, plane, startLocal: frame.worldToLocal(startWorld),
+      style, side, knot, beforeKey: glassesContourKey(before, style),
+      previous: readGlassesContour(before, style, side)[knot],
+      symmetric: this.sculptSymmetric,
+    };
+    this.canvas.setPointerCapture(event.pointerId);
+    this.onSculptStatus?.(`正在调整${side < 0 ? '左' : '右'}镜片${GLASSES_CONTOUR_LABELS[knot]}：只移动该轮廓点${this.sculptSymmetric ? '并镜像到另一侧' : ''}。`);
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  moveGlassesContourDrag(event, drag) {
+    const morphs = this.getSculptMorphs?.();
+    if (!morphs || morphs.glassesStyle !== drag.style) return;
+    this.sculptRaycaster.setFromCamera(this.sculptNdc(event), this.camera);
+    const hit = this.sculptRaycaster.ray.intersectPlane(drag.plane, new THREE.Vector3());
+    if (!hit) return;
+    const local = drag.frame.worldToLocal(hit);
+    const spec = glassesContourFrameSize(drag.style, morphs);
+    const desired = [
+      drag.previous[0] + (local.x - drag.startLocal.x) * drag.side / spec.rx,
+      drag.previous[1] + (local.y - drag.startLocal.y) / spec.ry,
+    ];
+    const next = withGlassesContourNode(
+      morphs.glassesContours, drag.style, drag.side, drag.knot, desired, drag.symmetric
+    );
+    const beforeKey = glassesContourKey(morphs.glassesContours, drag.style);
+    const afterKey = glassesContourKey(next, drag.style);
+    if (beforeKey === afterKey) return;
+    morphs.glassesContours = next;
+    if (this.currentConfig) this.currentConfig.morphs = { ...(this.currentConfig.morphs || {}), glassesContours: next };
+    this.headNode.userData.currentMorphs = { ...(this.headNode.userData.currentMorphs || {}), glassesContours: next };
+    syncFaceAccessories(this.headNode, this.headNode.userData.currentMorphs);
+    // Procedural rims are rebuilt to keep bevels/lenses watertight. The
+    // previous frame is now detached; transform the next pointer sample in
+    // the NEW frame's coordinate system or later moves jump across the face.
+    drag.frame = this.headNode.getObjectByName(`Glasses_${drag.style}`) || drag.frame;
+    this.updateGlassesContourHUD();
+    this.wakeRender(0.35, true);
+    this.onSculptStatus?.(`${GLASSES_CONTOUR_LABELS[drag.knot]}：向外 ${Math.round(next[drag.style][drag.side < 0 ? 'left' : 'right'][drag.knot][0] * 100)}% / 向上 ${Math.round(next[drag.style][drag.side < 0 ? 'left' : 'right'][drag.knot][1] * 100)}%（只变镜片局部轮廓）`);
+    event.preventDefault();
+  }
+
+  // Alt + drag retains the legacy fitting gesture for old projects, but it is
+  // explicitly labelled FIT. The default drag above edits a contour vertex.
+  startGlassesFitDrag(event, morphs, frame, point) {
+    const local = frame.worldToLocal(point.clone());
     const before = {
       width: Number(morphs.glassesWidth) || 1,
       height: Number(morphs.glassesHeight) || 1,
@@ -266,7 +423,7 @@ export class StudioPreviewEngine {
       side: local.x < 0 ? -1 : 1, vertical: local.y < 0 ? -1 : 1,
     };
     this.canvas.setPointerCapture(event.pointerId);
-    this.onSculptStatus?.('正在直接塑形眼镜网格：左右拖动改变框宽，上下拖动改变框高，松开保存。');
+    this.onSculptStatus?.('Alt + 拖动仅调眼镜佩戴宽高，不是轮廓塑形。');
     event.preventDefault();
   }
 
@@ -348,6 +505,7 @@ export class StudioPreviewEngine {
     const drag = this.sculptDrag;
     if (!drag || drag.pointerId !== event.pointerId || drag.node !== this.headNode) return;
     if (drag.tool === 'glasses') return this.moveGlassesDrag(event, drag);
+    if (drag.tool === 'glassesContour') return this.moveGlassesContourDrag(event, drag);
     if (event.timeStamp - drag.lastFrame < 12) return; // bounded CPU work while dragging
     drag.lastFrame = event.timeStamp;
     if (drag.gesture.strokes.length >= SCULPT_MAX_SEGMENTS) {
@@ -399,6 +557,18 @@ export class StudioPreviewEngine {
     this.sculptDrag = null;
     if (this.canvas.hasPointerCapture(drag.pointerId)) this.canvas.releasePointerCapture(drag.pointerId);
     const morphs = this.getSculptMorphs?.();
+    if (drag.tool === 'glassesContour') {
+      const changed = morphs && glassesContourKey(morphs.glassesContours, drag.style) !== drag.beforeKey;
+      if (!changed) {
+        const i = morphs?.sculptGestures?.indexOf(drag.gesture) ?? -1;
+        if (i >= 0) morphs.sculptGestures.splice(i, 1);
+      } else {
+        this.updateMorphsFast(morphs);
+        this.onSculptCommit?.(morphs);
+      }
+      this.onSculptStatus?.(changed ? '镜片及镜框的局部轮廓已保留；可撤销或保存外观。' : '轮廓未变化。');
+      return;
+    }
     if (drag.tool === 'glasses') {
       const changed = morphs && (
         Math.abs((morphs.glassesWidth ?? 1) - drag.before.width) > 0.002 ||
@@ -432,6 +602,14 @@ export class StudioPreviewEngine {
     const morphs = this.getSculptMorphs?.();
     if (!morphs?.sculptGestures?.length) return false;
     const undone = morphs.sculptGestures.pop();
+    if (undone.tool === 'glassesContour') {
+      morphs.glassesContours = undone.contourBefore || {};
+      this.updateMorphsFast(morphs);
+      this.updateGlassesContourHUD();
+      this.onSculptCommit?.(morphs);
+      this.onSculptStatus?.('已撤销上一次镜片轮廓拖点，镜框及镜片均已恢复。');
+      return true;
+    }
     if (undone.tool === 'glasses') {
       morphs.glassesWidth = undone.glassesBefore?.width ?? 1;
       morphs.glassesHeight = undone.glassesBefore?.height ?? 1;
@@ -454,6 +632,7 @@ export class StudioPreviewEngine {
   bindPointerTracking() {
     this.canvas.addEventListener('pointermove', (e) => {
       if (this.sculptDrag) this.moveSculptDrag(e);
+      this.updateBrushCursor(e);
       const rect = this.canvas.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
         this.pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -471,6 +650,10 @@ export class StudioPreviewEngine {
     });
     this.canvas.addEventListener('pointerup', e => this.finishSculptDrag(e));
     this.canvas.addEventListener('pointercancel', e => this.finishSculptDrag(e));
+    this.canvas.addEventListener('pointerleave', () => {
+      const brush = document.getElementById('sculpt-brush-cursor');
+      if (brush && !this.sculptDrag) brush.hidden = true;
+    });
     this.canvas.addEventListener('wheel', () => {
       this.wakeRender(1.5);
     }, { passive: true });
@@ -548,7 +731,13 @@ export class StudioPreviewEngine {
     // A user may move several live sliders while the GLB and hair are still
     // loading. Keep the latest draft instead of replacing their edits with
     // the snapshot captured when the asynchronous build started.
-    if (this.currentConfig?.morphs) applyHeadMorphsToGroup(newNode, this.currentConfig.morphs);
+    if (this.currentConfig?.morphs) {
+      applyHeadMorphsToGroup(newNode, this.currentConfig.morphs);
+      // A dye or texture can change while the asynchronous GLB is loading.
+      // Morph replay alone does not update its PBR materials; apply the latest
+      // draft color/material snapshot after the new head has been attached.
+      updateCollectibleMaterialsLive(newNode, this.currentConfig.morphs);
+    }
     if (this.visualConfig) {
       applyCustomVisualConfigToEngine(this, this.visualConfig);
     }
@@ -569,6 +758,13 @@ export class StudioPreviewEngine {
     const node = this.headNode;
     const before = performance.now();
     this.currentConfig = JSON.parse(JSON.stringify(config));
+    const requestedHairMaterials = {
+      hairColor: config.hairColor,
+      hairSheen: config.hairSheen,
+      hairTipColor: config.morphs?.hairTipColor,
+      hairOmbreMix: config.morphs?.hairOmbreMix,
+      hairWispyFeather: config.morphs?.hairWispyFeather,
+    };
     // A style-only swap must still honor live accessory choices. An earlier
     // asynchronous head build can leave currentMorphs with the old glasses;
     // copying the authoritative draft prevents the next hair rebuild from
@@ -588,8 +784,23 @@ export class StudioPreviewEngine {
       strandDensity: config.morphs?.strandDensity,
     });
     if (this.headNode !== node || this.loadRequest !== request) return this.headNode;
+    // File loading may finish after an eye/skin edit or a new hair-color
+    // input. Reapply only the colors actually changed while it was loading;
+    // never pass hairStyle here or replace the artist's finished hair mesh.
+    const latest = this.currentConfig || {};
+    const liveHairMaterials = {
+      hairColor: latest.hairColor,
+      hairSheen: latest.hairSheen,
+      hairTipColor: latest.morphs?.hairTipColor,
+      hairOmbreMix: latest.morphs?.hairOmbreMix,
+      hairWispyFeather: latest.morphs?.hairWispyFeather,
+    };
+    const newerHairPatch = Object.fromEntries(Object.entries(liveHairMaterials).filter(
+      ([key, value]) => value !== undefined && value !== requestedHairMaterials[key]
+    ));
+    if (Object.keys(newerHairPatch).length) await updateHairDesignOnGroup(node, newerHairPatch);
     this.lastHairSwitchMs = Math.round(performance.now() - before);
-    this.updateCutHelperPosition(config.morphs);
+    this.updateCutHelperPosition(latest.morphs || config.morphs);
     this.wakeRender(1.0, true);
     return node;
   }
@@ -609,6 +820,14 @@ export class StudioPreviewEngine {
    * Stage 36: Zero-latency live GPU material/color/makeup/pore/eye/photo-projection update
    */
   updateMaterialsFast(patch = {}) {
+    // Keep in-flight model swaps aligned with the most recent live edits.
+    // DOM photoElement is deliberately not copied into the serializable
+    // rebuild snapshot; the in-memory lifePhotoUrl / photoBlend are enough.
+    if (this.currentConfig) {
+      const serializable = Object.fromEntries(Object.entries(patch).filter(([key]) => key !== 'photoElement'));
+      Object.assign(this.currentConfig, serializable);
+      this.currentConfig.morphs = { ...(this.currentConfig.morphs || {}), ...serializable };
+    }
     if (!this.headNode) return;
     updateCollectibleMaterialsLive(this.headNode, patch);
     this.wakeRender(1.4, false);
@@ -685,6 +904,7 @@ export class StudioPreviewEngine {
       updateHeadLifeAnimation(this.headNode, dt, this.pointerNdc.x * 0.65, this.pointerNdc.y * 0.55);
     }
     this.controls.update();
+    if (this.sculptTool === 'glasses') this.updateGlassesContourHUD();
     if (this.atmosphere && this.atmosphere.group.visible) {
       this.atmosphere.update(dt, elapsed);
     }

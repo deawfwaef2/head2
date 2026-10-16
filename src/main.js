@@ -487,16 +487,19 @@ function downloadBlob(blob, filename) {
 // ============================================================================
 // BUILT-IN REFERENCE PORTRAIT ILLUSTRATION GENERATOR (For Instant Semi-Auto Workflow)
 // ============================================================================
+let referencePortraitRequest = 0;
 function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
+  const request = ++referencePortraitRequest;
   const ctx = canvas.getContext('2d');
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  if (preset === 'user_photo' || preset === 'fangyaoping') {
+  if (preset === 'user_photo' || preset === 'fangyaoping' || preset === 'linxi') {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      if (request !== referencePortraitRequest) return;
       ctx.clearRect(0, 0, w, h);
       const scale = Math.max(w / img.width, h / img.height);
       const dw = img.width * scale;
@@ -661,6 +664,21 @@ function drawPresetReferencePortrait(canvas, preset = 'user_photo') {
     const octx = overlayCanvas.getContext('2d');
     octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
     octx.drawImage(canvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
+  }
+  if (preset === 'suwan' || preset === 'qianxue') {
+    // These two presets are drawn schematic portraits, not photographs. Do
+    // not silently project a previously uploaded PERSON's photo onto a new
+    // illustration or archive that old photo as this new reference.
+    state.studioDraft.photoElement = canvas;
+    state.studioDraft.lifePhotoDataUrl = null;
+    state.studioDraft.photoBlend = 0;
+    const slider = document.getElementById('slider-photo-proj');
+    if (slider) setRangeValueAndSync(slider, 0);
+    const value = document.getElementById('val-photo-proj');
+    if (value) value.textContent = '0%';
+    if (studioEngine?.headNode) studioEngine.updateMaterialsFast({
+      photoElement: canvas, lifePhotoUrl: '', photoBlend: 0,
+    });
   }
 }
 
@@ -1979,8 +1997,8 @@ function installStudioSculptToolbar() {
         document.getElementById('sculpt-radius-val').textContent = `${(profile.radius * 100).toFixed(1)}cm`;
         document.getElementById('sculpt-strength-val').textContent = `${Math.round(profile.strength * 100)}%`;
       }
-      // Glasses are pulled by their actual rim/lens geometry, not the hair
-      // brush: don't present an inert radius/strength control in this mode.
+      // Eyewear contour handles deform the real rim and lens mesh instead of
+      // using the face brush. The brush radius/strength don't apply here.
       if (radius) radius.disabled = studioEngine.sculptTool === 'glasses';
       if (strength) strength.disabled = studioEngine.sculptTool === 'glasses';
       toolbar?.classList.add('compact'); // uncover the model as soon as the tool is chosen
@@ -1991,13 +2009,36 @@ function installStudioSculptToolbar() {
           ? '刷子模式：在脸部皮肤上左键拖动网格 | 滚轮缩放；切回旋转检视可转动模型'
           : btn.dataset.sculptTool === 'hair'
             ? '刷子模式：在真实发束上左键梳理网格 | 滚轮缩放；换发保留该发型的笔画'
-            : '眼镜塑形：在镜框/镜片按住拖动 | 左右改框宽、上下改框高；所有已选款式有效';
+            : '眼镜轮廓：拖动镜片四周八个圆点 | 橙色四向、蓝色四角；镜像可关，Alt + 拖仅调佩戴宽高';
       studioEngine.onSculptStatus?.(btn.dataset.sculptTool === 'orbit'
         ? '已回到旋转检视；先前的网格笔画仍保留。'
         : btn.dataset.sculptTool === 'glasses'
-          ? '请先选择一副眼镜，再在镜框/镜片表面按住左键拖拽；可以撤销。'
+          ? '先选一副眼镜，再拖动镜片四周的圆点改局部弧线；镜片与实体镜圈会一同改变。'
           : '请在 3D 模型的实际表面开始拖动；左侧镜像开关可随时更改。');
     });
+  });
+  document.getElementById('sculpt-face-detail')?.addEventListener('click', () => {
+    if (studioEngine.sculptTool !== 'face') document.querySelector('[data-sculpt-tool="face"]')?.click();
+    studioEngine.setCameraPreset('front');
+    studioEngine.sculptRadius = 0.012;
+    studioEngine.sculptStrength = 0.15;
+    studioEngine.sculptProfiles.face = { radius: 0.012, strength: 0.15 };
+    if (radius) setRangeValueAndSync(radius, 1.2);
+    if (strength) setRangeValueAndSync(strength, 0.15);
+    document.getElementById('sculpt-radius-val').textContent = '1.2cm';
+    document.getElementById('sculpt-strength-val').textContent = '15%';
+    studioEngine.onSculptStatus?.('细节对位：已切正面，面部笔刷半径 1.2cm / 强度 15%；鼠标上的圆圈是作用范围。可随时撤销上一笔。');
+  });
+  document.getElementById('sculpt-hair-detail')?.addEventListener('click', () => {
+    if (studioEngine.sculptTool !== 'hair') document.querySelector('[data-sculpt-tool="hair"]')?.click();
+    studioEngine.sculptRadius = 0.018;
+    studioEngine.sculptStrength = 0.30;
+    studioEngine.sculptProfiles.hair = { radius: 0.018, strength: 0.30 };
+    if (radius) setRangeValueAndSync(radius, 1.8);
+    if (strength) setRangeValueAndSync(strength, 0.30);
+    document.getElementById('sculpt-radius-val').textContent = '1.8cm';
+    document.getElementById('sculpt-strength-val').textContent = '30%';
+    studioEngine.onSculptStatus?.('局部梳发：发刷半径 1.8cm / 强度 30%；适合刘海与鬓角，不会重选发型。');
   });
   radius?.addEventListener('input', () => {
     studioEngine.sculptRadius = Number(radius.value) / 100;
@@ -3210,22 +3251,28 @@ window.addEventListener('DOMContentLoaded', async () => {
       const preset = btn.dataset.refPhoto;
       drawPresetReferencePortrait(refPhotoCanvas, preset);
       state.studioDraft.photoElement = refPhotoCanvas;
-      document.getElementById('photo-status-badge').textContent = `内置参考照：${btn.textContent}`;
+      document.getElementById('photo-status-badge').textContent = `${['suwan','qianxue'].includes(preset) ? '示意画像' : '内置参考照'}：${btn.textContent}`;
     });
   });
 
   document.getElementById('input-photo-upload').addEventListener('change', (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const request = ++referencePortraitRequest;
     const reader = new FileReader();
     reader.onload = (ev) => {
       const img = new Image();
       img.onload = () => {
+        if (request !== referencePortraitRequest) return;
         const ctx = refPhotoCanvas.getContext('2d');
         ctx.clearRect(0, 0, refPhotoCanvas.width, refPhotoCanvas.height);
-        ctx.drawImage(img, 0, 0, refPhotoCanvas.width, refPhotoCanvas.height);
+        const fit = Math.min(refPhotoCanvas.width / img.width, refPhotoCanvas.height / img.height);
+        const dw = img.width * fit, dh = img.height * fit;
+        ctx.drawImage(img, (refPhotoCanvas.width - dw) / 2, (refPhotoCanvas.height - dh) / 2, dw, dh);
         const overlayCanvas = document.getElementById('studio-photo-overlay');
-        overlayCanvas.getContext('2d').drawImage(img, 0, 0, overlayCanvas.width, overlayCanvas.height);
+        const octx = overlayCanvas.getContext('2d');
+        octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        octx.drawImage(refPhotoCanvas, 0, 0, overlayCanvas.width, overlayCanvas.height);
         state.studioDraft.photoElement = img;
         state.studioDraft.lifePhotoDataUrl = ev.target.result;
         document.getElementById('photo-status-badge').textContent = `已载入生前照片：${file.name}`;
@@ -3271,18 +3318,81 @@ window.addEventListener('DOMContentLoaded', async () => {
     showToast(`✨ 已从参考照片智能提取肤色 (${sampled.skinTone})、唇色 (${sampled.lipColor}) 与发色 (${sampled.hairColor}) 并对齐正面机位！`);
   });
 
-  document.getElementById('chk-photo-overlay').addEventListener('change', (e) => {
-    const overlay = document.getElementById('studio-photo-overlay');
-    overlay.classList.toggle('hidden', !e.target.checked);
-    if (e.target.checked) {
-      studioEngine.setCameraPreset('front');
+  // The reference photograph is a separate movable comparison layer, NEVER
+  // a face morph. Fit its size and location before making small artist-target
+  // edits; don't force users to drag the 3D head to match an immovable photo.
+  const PHOTO_ALIGN_KEY = 'cervix3d-photo-align-v1';
+  const photoAlign = { x: 0, y: 0, zoom: 1, opacity: 0.42 };
+  try {
+    const saved = JSON.parse(localStorage.getItem(PHOTO_ALIGN_KEY) || '{}');
+    for (const [key, lo, hi] of [['x', -360, 360], ['y', -360, 360], ['zoom', 0.55, 3.0], ['opacity', 0.1, 0.85]]) {
+      if (Number.isFinite(Number(saved[key]))) photoAlign[key] = Math.max(lo, Math.min(hi, Number(saved[key])));
     }
+  } catch (_) { /* file:// private contexts may disable storage */ }
+  const applyPhotoAlign = (persist = false) => {
+    const overlay = document.getElementById('studio-photo-overlay');
+    overlay.style.left = `calc(50% + ${photoAlign.x}px)`;
+    overlay.style.top = `calc(48% + ${photoAlign.y}px)`;
+    overlay.style.height = `${(82 * photoAlign.zoom).toFixed(2)}%`;
+    overlay.style.opacity = String(photoAlign.opacity);
+    // The grip stays below the face even if a large photo is panned up into
+    // the toolbar; it always remains reachable for the next correction.
+    for (const [id, label, value, display] of [
+      ['slider-overlay-opacity', 'val-overlay-opacity', photoAlign.opacity, `${Math.round(photoAlign.opacity * 100)}%`],
+      ['photo-align-zoom', 'val-photo-align-zoom', photoAlign.zoom, `${Math.round(photoAlign.zoom * 100)}%`],
+      ['photo-align-x', 'val-photo-align-x', photoAlign.x, `${Math.round(photoAlign.x)} px`],
+      ['photo-align-y', 'val-photo-align-y', photoAlign.y, `${Math.round(photoAlign.y)} px`],
+    ]) {
+      const slider = document.getElementById(id), out = document.getElementById(label);
+      if (slider) setRangeValueAndSync(slider, value);
+      if (out) out.textContent = display;
+    }
+    if (persist) try { localStorage.setItem(PHOTO_ALIGN_KEY, JSON.stringify(photoAlign)); } catch (_) {}
+  };
+  applyPhotoAlign();
+  document.getElementById('chk-photo-overlay').addEventListener('change', (e) => {
+    document.getElementById('studio-photo-overlay').classList.toggle('hidden', !e.target.checked);
+    document.getElementById('photo-align-drag-handle').hidden = !e.target.checked;
+    if (e.target.checked) studioEngine.setCameraPreset('front');
   });
-
-  document.getElementById('slider-overlay-opacity').addEventListener('input', (e) => {
-    const v = parseFloat(e.target.value);
-    document.getElementById('val-overlay-opacity').textContent = `${Math.round(v * 100)}%`;
-    document.getElementById('studio-photo-overlay').style.opacity = String(v);
+  for (const [id, key] of [
+    ['slider-overlay-opacity', 'opacity'], ['photo-align-zoom', 'zoom'],
+    ['photo-align-x', 'x'], ['photo-align-y', 'y'],
+  ]) {
+    document.getElementById(id)?.addEventListener('input', e => {
+      const n = Number(e.target.value);
+      if (!Number.isFinite(n)) return;
+      photoAlign[key] = n;
+      applyPhotoAlign();
+    });
+    document.getElementById(id)?.addEventListener('change', () => applyPhotoAlign(true));
+  }
+  const photoHandle = document.getElementById('photo-align-drag-handle');
+  let movingPhoto = null;
+  photoHandle.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    movingPhoto = { id: e.pointerId, x: e.clientX, y: e.clientY, fromX: photoAlign.x, fromY: photoAlign.y };
+    photoHandle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  photoHandle.addEventListener('pointermove', e => {
+    if (!movingPhoto || movingPhoto.id !== e.pointerId) return;
+    photoAlign.x = Math.max(-360, Math.min(360, Math.round(movingPhoto.fromX + e.clientX - movingPhoto.x)));
+    photoAlign.y = Math.max(-360, Math.min(360, Math.round(movingPhoto.fromY + e.clientY - movingPhoto.y)));
+    applyPhotoAlign();
+    e.preventDefault();
+  });
+  const finishPhotoDrag = e => {
+    if (!movingPhoto || movingPhoto.id !== e.pointerId) return;
+    movingPhoto = null;
+    applyPhotoAlign(true);
+  };
+  photoHandle.addEventListener('pointerup', finishPhotoDrag);
+  photoHandle.addEventListener('pointercancel', finishPhotoDrag);
+  document.getElementById('photo-align-reset')?.addEventListener('click', () => {
+    Object.assign(photoAlign, { x: 0, y: 0, zoom: 1, opacity: 0.42 });
+    applyPhotoAlign(true);
+    showToast('参考照片的平移/缩放已重置；角色脸、头发和眼镜没有改动。');
   });
 
   // 8. External Daz GLB/OBJ Import & Test Scan GLB Button

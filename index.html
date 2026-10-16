@@ -1675,23 +1675,28 @@
               </div>
 
               <div class="preset-photo-row">
-                <span>快速切换示例照:</span>
+                <span>快速切换参考图（含示意画像）:</span>
                 <button class="chip-btn active" data-ref-photo="user_photo">本人照片</button>
                 <button class="chip-btn" data-ref-photo="linxi">林汐照</button>
-                <button class="chip-btn" data-ref-photo="suwan">苏晚照</button>
-                <button class="chip-btn" data-ref-photo="qianxue">千雪照</button>
+                <button class="chip-btn" data-ref-photo="suwan">苏晚示意画像</button>
+                <button class="chip-btn" data-ref-photo="qianxue">千雪示意画像</button>
               </div>
 
               <div class="control-group compact">
                 <label class="checkbox-row">
                   <input type="checkbox" id="chk-photo-overlay" />
-                  <span>在3D预览窗开启 <strong>1:1 照片半透明叠图对位</strong></span>
+                  <span>在3D预览窗开启 <strong>照片半透明对位</strong></span>
                 </label>
+                <small class="hint-text">先切正面相机；拖动预览左下角的「⠿ 拖照片」对齐双眼、鼻尖与嘴，再调局部 MPFB 网格或细节笔刷。叠图不等于自动复原照片中的骨相。</small>
                 <div class="slider-row">
                   <span>叠图透明度</span>
                   <input type="range" id="slider-overlay-opacity" min="0.1" max="0.85" step="0.05" value="0.42" />
                   <span id="val-overlay-opacity">42%</span>
                 </div>
+                <div class="slider-row"><span>叠图尺寸（不改模型）</span><input type="range" id="photo-align-zoom" min="0.55" max="3.00" step="0.01" value="1" /><span id="val-photo-align-zoom">100%</span></div>
+                <div class="slider-row"><span>叠图水平位移</span><input type="range" id="photo-align-x" min="-360" max="360" step="1" value="0" /><span id="val-photo-align-x">0 px</span></div>
+                <div class="slider-row"><span>叠图垂直位移</span><input type="range" id="photo-align-y" min="-360" max="360" step="1" value="0" /><span id="val-photo-align-y">0 px</span></div>
+                <button type="button" id="photo-align-reset" class="chip-btn">↺ 重置照片对位（不重置捏脸）</button>
               </div>
             </div>
 
@@ -1729,27 +1734,32 @@
 
               <div class="studio-canvas-wrap">
                 <canvas id="studio-preview-canvas"></canvas>
+                <div id="glasses-contour-handles" hidden aria-label="眼镜局部轮廓控制点"></div>
               <div id="sculpt-toolbar" class="sculpt-toolbar compact" aria-label="3D 网格雕塑工具">
                 <div class="sculpt-tool-row">
                   <strong>🖌️ 网格笔刷</strong>
                   <button type="button" id="sculpt-toolbar-toggle" class="chip-btn" title="展开/收起刷子参数与保存键">≡ 参数</button>
                   <button type="button" class="chip-btn active" data-sculpt-tool="orbit">旋转检视</button>
                   <button type="button" class="chip-btn" data-sculpt-tool="face">直接拉动脸</button>
+                  <button type="button" class="chip-btn" id="sculpt-face-detail" title="正面对位细节：开启面部笔刷，并将半径设为 1.2cm、强度 15%；拖动皮肤时显示笔刷作用圈">🎯 精细对位</button>
                   <button type="button" class="chip-btn" data-sculpt-tool="hair">梳理真实发束</button>
-                  <button type="button" class="chip-btn" data-sculpt-tool="glasses" title="直接在已选眼镜的镜框/镜片上按住拖动：左右改框宽，上下改框高；适用于全部内置与扫描款式">直接拉眼镜</button>
+                  <button type="button" class="chip-btn" id="sculpt-hair-detail" title="刘海、鬓角局部梳发：切换发刷半径 1.8cm、强度 30%，避免一笔拉动整片刘海">✂️ 局部梳发</button>
+                  <button type="button" class="chip-btn" data-sculpt-tool="glasses" title="点选镜片四周的彩色圆点，自由拖动局部轮廓；左右镜像可切换，适用于所有内置与扫描眼镜">拖点改镜框轮廓</button>
                   <label class="checkbox-inline" title="开启时对另一侧同步施加镜像笔画"><input type="checkbox" id="sculpt-symmetric" checked /> 左右对称</label>
                   <button type="button" id="sculpt-undo" class="chip-btn" title="仅撤销上一笔刷子；Ctrl+Z 同样可用">↶ 撤销上一笔</button>
                 </div>
                 <div class="sculpt-tool-row">
-                  <label>刷子半径 <input id="sculpt-radius" type="range" min="1" max="6.5" value="3.4" step="0.1" /><output id="sculpt-radius-val">3.4cm</output></label>
-                  <label>拖动强度 <input id="sculpt-strength" type="range" min="0.15" max="1" value="0.30" step="0.05" /><output id="sculpt-strength-val">30%</output></label>
+                  <label>刷子半径 <input id="sculpt-radius" type="range" min="1" max="6.5" value="1.8" step="0.1" /><output id="sculpt-radius-val">1.8cm</output></label>
+                  <label>拖动强度 <input id="sculpt-strength" type="range" min="0.15" max="1" value="0.20" step="0.05" /><output id="sculpt-strength-val">20%</output></label>
                   <button type="button" id="sculpt-save" class="chip-btn" title="保存当前整个角色外观并召唤桌宠；已建档标牌不会被更改">💾 保存外观并召唤</button>
                 </div>
-                <small id="sculpt-status" role="status">选直接拉脸 / 梳发 / 拉眼镜，在 3D 模型上按住拖动；眼镜左右拖框宽、上下拖框高，各款都有外形与材质控制。外部头模不支持内置脸雕。</small>
+                <small id="sculpt-status" role="status">选直接拉脸 / 梳发 / 拖点改镜框轮廓。眼镜每侧八个局部轮廓点可独立或镜像调节，真实镜片与镜圈一起变形；Alt + 拖镜框只调整整体佩戴宽高。外部头模不支持内置脸雕。</small>
               </div>
 
-                <!-- 1:1 Semi-Transparent Photo Alignment Overlay -->
+                <!-- Reference alignment is movable/scalable without altering any face mesh. -->
                 <canvas id="studio-photo-overlay" width="260" height="300" class="hidden"></canvas>
+                <button type="button" id="photo-align-drag-handle" hidden title="拖动参考照片叠图；关闭叠图后仍可正常捏脸">⠿ 拖照片</button>
+                <div id="sculpt-brush-cursor" hidden aria-hidden="true"></div>
                 <div class="viewport-overlay-tip">
                   左键拖拽：360°旋转检视头雕与底部解剖切面 | 滚轮：缩放细节 | 右键：平移
                 </div>
@@ -2862,7 +2872,7 @@
                     <select id="sel-glasses-material"><option value="warm_acetate">琥珀板材 · 亮面</option><option value="matte_black">哑黑板材</option><option value="brushed_titanium">拉丝钛金属</option><option value="champagne_gold">香槟金属</option></select>
                   </label>
                 </div>
-                <p style="font-size:11px;color:#a9bfce;">所有已选款式都可调整真实镜框外形、边宽和材质；若想直接拖出宽窄/高低，请在上方 3D 工坊点「直接拉眼镜」，按住镜框或镜片拖动，支持撤销与保存。</p>
+                <p style="font-size:11px;color:#a9bfce;">六款眼镜各自保存镜片轮廓：点上方预览的「拖点改镜框轮廓」，拖动每侧八个圆点可改上缘、鼻侧、外角、下缘及四个转角；可关左右镜像单独修一侧。镜片与实体镜圈一起变形，撤销/保存均有效。整体尺寸与边宽仍可另调，不能替代轮廓塑形。</p>
                 <label style="display:inline-flex;gap:9px;align-items:center;font-size:12px;">镜框颜色 <input type="color" id="col-glasses-frame" value="#a07857" /></label>
                 <div class="slider-row"><span>镜框实体边宽</span><input type="range" id="acc-glasses-rim-width" min="0.55" max="1.65" step="0.05" value="1" /><span id="val-acc-glasses-rim-width">100%</span></div>
                 <div class="slider-row"><span>镜框整体大小</span><input type="range" id="acc-glasses-size" min="0.82" max="1.30" step="0.01" value="1" /><span id="val-acc-glasses-size">100%</span></div>
