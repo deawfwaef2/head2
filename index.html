@@ -940,7 +940,8 @@
 
       <!-- 1. Art Style, HDR Environment, Optical Blur/DOF & Chiaroscuro Lighting Customizer -->
       <div class="vcd-section">
-        <div class="vcd-sec-title">🎬 1. 17套电影色调 · DLSS-5神经微距真皮重构 · 35项光学与画质精调</div>
+        <div class="vcd-sec-title">🎬 1. 摄影布光与画面效果 · 实体灯位 / 可选微光泽 / GPU 光学后期</div>
+        <div id="vcd-renderer-compat" style="display:none;margin:6px 0;padding:7px;border:1px solid #66552c;border-radius:6px;color:#fde68a;font-size:11px;line-height:1.5;">当前为软件 WebGL：为避免严重卡顿，景深、胶片、光束和超采样后期不在自动渲染中执行；真实主光、补光、虹膜高光及可选皮肤材质仍生效。请在有显卡的浏览器/Windows 上验收 GPU 后期，勿将软件预览误认为后期已生效。</div>
         <div class="vcd-preset-grid" id="vcd-style-presets">
           <button class="vcd-preset-btn active" data-style-preset="dlss5_neural_photoreal">🧠 DLSS-5 神经渲染微距真皮(Stage43首推)</button>
           <button class="vcd-preset-btn" data-style-preset="ultra_4k_crystal_clear">🔪 4K超清零模糊光学大师</button>
@@ -1201,7 +1202,7 @@
             <span id="val-vc-iris-sparkle">5%</span>
           </div>
           <div class="slider-row">
-            <span>💧 额外冷白提亮滤镜 (Skin Lumen · 建议0%防过曝)</span>
+            <span>💧 暖色中间调冷白提亮（屏幕调色，可选；默认0%）</span>
             <input type="range" id="vc-skin-lumen" min="0.0" max="1.2" step="0.05" value="0.0" />
             <span id="val-vc-skin-lumen">0%</span>
           </div>
@@ -1226,6 +1227,16 @@
             <span id="val-vc-key-intensity">2.18</span>
           </div>
           <div class="slider-row">
+            <span>🕯️ 对侧真实补光亮度（0=负补光暗部；非屏幕调色）</span>
+            <input type="range" id="vc-fill-intensity" min="0.0" max="1.5" step="0.05" value="0.64" />
+            <span id="val-vc-fill-intensity">0.64</span>
+          </div>
+          <div class="slider-row">
+            <span>📐 对侧真实补光水平角（改变面部另一侧实际明暗）</span>
+            <input type="range" id="vc-fill-azimuth" min="-120" max="120" step="3" value="-38" />
+            <span id="val-vc-fill-azimuth">-38°</span>
+          </div>
+          <div class="slider-row">
             <span>🌙 背部发丝轮廓光 (Rim Intensity)</span>
             <input type="range" id="vc-rim-intensity" min="0.0" max="2.6" step="0.05" value="1.16" />
             <span id="val-vc-rim-intensity">1.16</span>
@@ -1239,6 +1250,15 @@
             <span>🧴 自然哑光丝绒肌 ↔ 柔润光泽度 (防硅胶感)</span>
             <input type="range" id="vc-wet-gloss" min="0.0" max="1.0" step="0.04" value="0.16" />
             <span id="val-vc-wet-gloss">16%</span>
+          </div>
+          <label class="checkbox-row" style="margin:10px 0 4px;">
+            <input type="checkbox" id="vc-skin-sheen-enabled" />
+            <span>✨ <strong>可选皮肤微光泽</strong>（仅光影效果中开启；默认关闭，原哑光/存档不变）</span>
+          </label>
+          <div class="slider-row">
+            <span>✨ 皮肤微表面光泽增量（只影响头皮肤材质，不影响头发/照片）</span>
+            <input type="range" id="vc-skin-sheen-boost" min="0" max="1" step="0.05" value="0.50" disabled />
+            <span id="val-vc-skin-sheen-boost">关闭</span>
           </div>
           <div class="slider-row">
             <span>🔪 微距细节锐化 (瞳孔虹膜与发丝纹理)</span>

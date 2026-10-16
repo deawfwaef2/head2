@@ -315,7 +315,6 @@ export const BeautyGradeShader = {
     uFilmGrain: { value: 0.07 },
     uTyndall: { value: 0.74 },
     uVintagePhoto: { value: 0.08 },
-    uIrisSparkle: { value: 0.05 },
     uHalation: { value: 0.32 },
     uSkinLumen: { value: 0.0 },
     uSssBlur: { value: 0.24 },
@@ -376,7 +375,6 @@ export const BeautyGradeShader = {
     uniform float uFilmGrain;
     uniform float uTyndall;
     uniform float uVintagePhoto;
-    uniform float uIrisSparkle;
     uniform float uHalation;
     uniform float uSkinLumen;
     uniform float uSssBlur;
@@ -556,6 +554,15 @@ export const BeautyGradeShader = {
         col.b = mix(col.b, sssDiff.b * 0.99, sssAmt * 0.06);
         float lumAfterSss = max(0.0001, dot(col, vec3(0.2126, 0.7152, 0.0722)));
         col *= mix(1.0, lumBeforeSss / lumAfterSss, 0.65);
+      }
+
+      // 2B. Cool-white middle-tone lift. Previously uSkinLumen was declared
+      // but never sampled: its slider moved numerically without any image change.
+      // This is a color-selective screen effect, NOT a new skin gloss material.
+      if (uSkinLumen > 0.005 && srcAlpha > 0.01) {
+        float midtone = 1.0 - smoothstep(0.36, 0.89, dot(col, vec3(0.2126, 0.7152, 0.0722)));
+        col += vec3(0.105, 0.129, 0.16) * clamp(uSkinLumen, 0.0, 1.2)
+             * skinWarmMask * midtone * srcAlpha;
       }
 
       // 3. Local Micro-Contrast & Screen-Space Sculptural Clarity (uMicroContrast)
@@ -998,7 +1005,6 @@ export function createBeautyPostChain(renderer, scene, camera, options = {}) {
       if (params.filmGrain !== undefined) u.uFilmGrain.value = Number(params.filmGrain);
       if (params.tyndall !== undefined) u.uTyndall.value = Number(params.tyndall);
       if (params.vintagePhoto !== undefined) u.uVintagePhoto.value = Number(params.vintagePhoto);
-      if (params.irisSparkle !== undefined) u.uIrisSparkle.value = Number(params.irisSparkle);
       if (params.halation !== undefined) u.uHalation.value = Number(params.halation);
       if (params.skinLumen !== undefined) u.uSkinLumen.value = Number(params.skinLumen);
       if (params.sssBlur !== undefined) u.uSssBlur.value = Number(params.sssBlur);

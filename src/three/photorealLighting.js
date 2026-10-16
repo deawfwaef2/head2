@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { buildStudioEnvironment, LIGHT_PRESETS } from './masterQuality/studioLighting.js';
 import { DESKTOP_PET_FILTER_PRESETS } from './beautyPostChain.js';
+import { skinFinishParameters, effectiveEnvironmentIntensity, softwareSkyFillFactor } from './portraitLightTuning.js';
 
 /**
  * Stage 23 · 大师级实时光影·画风色调·材质微距定制管线
@@ -2205,6 +2206,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   };
 
   const chiaroscuro = Number(m.chiaroscuro ?? basePreset.chiaroscuro ?? 0.58);
+  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.38);
   const effectiveGoboId = activeFilter?.gobo || m.windowGobo || basePreset.windowGobo || 'none';
   const goboItem = WINDOW_GOBO_CATALOG.find(g => g.id === effectiveGoboId) || WINDOW_GOBO_CATALOG[0];
   const goboStrength = activeFilter?.gobo
@@ -2255,6 +2257,13 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       const baseFill = Number(m.fillIntensity ?? basePreset.fillIntensity) * hdrSig.fillScale;
       rig.fill.intensity = baseFill * Math.max(0.08, 1.05 - chiaroscuro * 0.85);
     }
+    // A separate *physical* cross-light direction, not another screen tint.
+    // Undefined preserves the previous light position in old archives/presets.
+    if (m.fillAzimuthDeg !== undefined) {
+      const r = Math.hypot(rig.fill.position.x, rig.fill.position.z) || (isStudio ? 64 : 116);
+      const az = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(Number(m.fillAzimuthDeg), -120, 120));
+      rig.fill.position.set(r * Math.sin(az), rig.fill.position.y, r * Math.cos(az));
+    }
   }
   if (rig.rim) {
     const rim0 = Array.isArray(studioLP?.rim) ? studioLP.rim[0] : studioLP?.rim;
@@ -2277,7 +2286,8 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
     rig.hemi.color.copy(baseSkyCol);
     rig.hemi.groundColor.set(m.hemiGround || basePreset.hemiGround);
     const baseHemi = Number(m.hemiIntensity ?? basePreset.hemiIntensity);
-    rig.hemi.intensity = baseHemi * Math.max(0.10, 1.05 - chiaroscuro * 0.80);
+    rig.hemi.intensity = baseHemi * Math.max(0.10, 1.05 - chiaroscuro * 0.80)
+      * (engine.softwareRenderer ? softwareSkyFillFactor(baseEnv) : 1);
   }
   if (rig.up) {
     if (studioLP?.floor) {
@@ -2293,10 +2303,9 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
   engine.renderer.toneMappingExposure = studioLP
     ? Math.min(1.08, studioLP.exposure * 1.12)
     : Number(m.exposure ?? basePreset.exposure ?? 1.06);
-  const baseEnv = Number(m.envIntensity ?? basePreset.envIntensity ?? 0.38);
   const effectiveEnv = studioLP
-    ? studioLP.envIntensity
-    : Math.max(0.24, Math.min(0.45, baseEnv * (1.02 - chiaroscuro * 0.45)));
+    ? THREE.MathUtils.clamp(studioLP.envIntensity * baseEnv / 0.56, 0.08, 0.85)
+    : effectiveEnvironmentIntensity(baseEnv, chiaroscuro);
   ensureSceneEnvironment(engine.renderer, engine.scene, effectiveEnv, hdrMode);
 
   // Stage 41 Dynamic Supersampling DSR (capped at native 1.0x–1.25x on multi-head desktop to prevent 4K+ MSAA GPU fan roar)
@@ -2335,11 +2344,11 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       // No edits to customSkinRoughness, archives or imported materials; zero/off restores exactly.
       const matteAmount = Math.max(0, Math.min(1, Number(m.repairSkinMatteAmount) || 0));
       obj.material.userData.visualMatteAmount = matteAmount;
-      obj.material.roughness = THREE.MathUtils.lerp(baseRoughness, Math.max(baseRoughness, 0.54), matteAmount);
-      obj.material.clearcoat = 0.10 + skinGloss * 0.14;
-      obj.material.clearcoatRoughness = 0.36;
-      obj.material.specularIntensity = 0.54 + skinGloss * 0.30;
-      obj.material.envMapIntensity = 0.68 + skinGloss * 0.28;
+      const finish = skinFinishParameters(baseRoughness, skinGloss, matteAmount,
+        m.skinSheenEnabled === true, Number(m.skinSheenBoost) || 0);
+      Object.assign(obj.material, finish);
+      // Off uses precisely the old roughness/clearcoat/specular/env settings.
+      // No archive/body edits and no change to face detail or hair materials.
       const poreUniform = obj.material.userData?.skinGradingUniforms?.uPoreRelief;
       if (poreUniform) {
         // An optional visual override must not stick after its config is removed,
@@ -2358,6 +2367,7 @@ export function applyCustomVisualConfigToEngine(engine, cfg = {}) {
       if (eu.uWindowGoboStrength) eu.uWindowGoboStrength.value = goboStrength;
       if (eu.uChiaroscuro) eu.uChiaroscuro.value = chiaroscuro;
       if (eu.uEyeClarity) eu.uEyeClarity.value = eyeClarityVal;
+      if (eu.uIrisSparkle) eu.uIrisSparkle.value = Number(m.irisSparkle ?? 0);
     }
   });
 

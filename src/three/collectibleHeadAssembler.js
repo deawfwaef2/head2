@@ -2825,6 +2825,7 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
     uLimbalRing: { value: Number(initialEye.limbalRing ?? 0.68) },
     uEyeSpacing: { value: Number(initialEye.eyeSpacing ?? 0.0) },
     uCatchlightStrength: { value: Number(initialEye.eyeCatchlight ?? 0.85) },
+    uIrisSparkle: { value: 0 },
     uScleraBrightness: { value: Number(initialEye.scleraBrightness ?? 0.96) },
     uEyeClarity: { value: Number(initialEye.eyeClarity ?? 0.85) },
     uCorneaWetness: { value: Number(initialEye.corneaWetness ?? 0.92) },
@@ -2872,6 +2873,7 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       uniform float uLimbalRing;
       uniform float uEyeSpacing;
       uniform float uCatchlightStrength;
+      uniform float uIrisSparkle;
       uniform float uScleraBrightness;
       uniform float uEyeClarity;
       uniform float uCorneaWetness;
@@ -3005,6 +3007,11 @@ function injectLifelikeEyeShader(material, initialEye = {}) {
       float softbox2 = exp(-(pow((relXY.x - 0.28) / 0.045, 2.0) + pow((relXY.y + 0.24) / 0.042, 2.0))) * 0.42;
       vec3 wetCatchlight = (vec3(2.25, 2.22, 2.18) * softbox1 + vec3(1.15, 1.18, 1.24) * softbox2)
                          * inIris * clamp(uCatchlightStrength, 0.0, 1.6) * wetFactor * (0.55 + 0.45 * eyeGoboAtten);
+      // Independent point-source catchlight actually confined to each iris.
+      // The old photography slider only updated an unused post shader uniform.
+      float pointGlint = exp(-pow((relXY.x - 0.16) / 0.075, 2.0) - pow((relXY.y - 0.32) / 0.064, 2.0));
+      wetCatchlight += vec3(1.52, 1.58, 1.72) * pointGlint * inIris
+                     * clamp(uIrisSparkle, 0.0, 1.6) * wetFactor * orbitalAO * eyeGoboAtten;
       float specKeep = mix(0.65, 0.95, inIris) * orbitalAO * eyeGoboAtten * wetFactor;
       reflectedLight.directSpecular = reflectedLight.directSpecular * specKeep + wetCatchlight;
       reflectedLight.indirectSpecular *= specKeep;

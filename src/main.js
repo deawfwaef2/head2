@@ -269,6 +269,11 @@ const state = {
     keyElevationDeg: 26,
     keyIntensity: 1.84,
     fillIntensity: 0.64,
+    // Stage 76: optional physical cross-light & skin finish; off preserves
+    // the existing base portrait material, including earlier skinGloss values.
+    skinSheenEnabled: false,
+    skinSheenBoost: 0.50,
+    irisSparkle: 0,
     rimIntensity: 1.32,
     hemiIntensity: 0.46,
     upIntensity: 0.24,
@@ -1066,9 +1071,10 @@ function renderSpecimenPlacards(placardsList = []) {
 
     const dx = cx - item.anchorX, dy = cy - item.anchorY;
     let ax, ay, ex, ey, points;
-    if (!manuallyPlaced && cy + halfH < item.anchorY - 85 && winW > 800) {
-      // A straight neck-to-placard wire used to bisect the portrait's eyes.
-      // Lead out *below* the neck first, then rise beyond the silhouette.
+    const cardAboveFace = !manuallyPlaced && cy + halfH < item.anchorY - 85 && winW > 800;
+    if (cardAboveFace) {
+      // An old elbow route still ran horizontally THROUGH the eyes on its
+      // final segment. Draw only a short card-side leader in this case.
       const sideX = clamp(item.anchorX + (item.anchorX < winW * .5 ? -110 : 110), 18, winW - 18);
       ax = clamp(sideX, cx - halfW + 24, cx + halfW - 24);
       ay = cy + halfH - 3;
@@ -1089,13 +1095,14 @@ function renderSpecimenPlacards(placardsList = []) {
     const wireLength = Math.hypot(ax - item.anchorX, ay - item.anchorY);
     // Long tethers used to bisect other portraits. Beyond the local lane show
     // only a short card-side leader, leaving the 3D scene unobstructed.
-    const leader = wireLength > 245
-      ? `${(ax + (item.anchorX - ax) * Math.min(70 / wireLength, .3)).toFixed(1)},${(ay + (item.anchorY - ay) * Math.min(70 / wireLength, .3)).toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`
+    const shortLeader = cardAboveFace || wireLength > 245;
+    const leader = shortLeader
+      ? `${(ax + (item.anchorX - ax) * Math.min(70 / Math.max(1, wireLength), .3)).toFixed(1)},${(ay + (item.anchorY - ay) * Math.min(70 / Math.max(1, wireLength), .3)).toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`
       : points;
     lines.push(`<g>
       <polyline points="${leader}" fill="none" stroke="${selected ? 'rgba(139,103,50,.78)' : 'rgba(92,73,47,.58)'}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
       <polyline points="${leader}" fill="none" stroke="${selected ? 'rgba(251,191,36,.94)' : 'rgba(218,186,132,.76)'}" stroke-width="1.2" stroke-dasharray="${selected ? 'none' : '3 3'}" stroke-linecap="round" stroke-linejoin="round"/>
-      ${wireLength <= 245 ? `<circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="2.7" fill="#efcb8e" stroke="#451a03" stroke-width=".8"/>` : ''}
+      ${!shortLeader ? `<circle cx="${item.anchorX.toFixed(1)}" cy="${item.anchorY.toFixed(1)}" r="2.7" fill="#efcb8e" stroke="#451a03" stroke-width=".8"/>` : ''}
       <circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="2.5" fill="#d9b382"/>
     </g>`);
   }
@@ -5061,6 +5068,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     let savedPost = true;
     try { savedPost = localStorage.getItem(POST_KEY) !== 'off'; } catch (_) {}
     const softwarePostDisabled = !!(desktopEngine?.softwareRenderer || studioEngine?.softwareRenderer);
+    const compatNote = document.getElementById('vcd-renderer-compat');
+    if (compatNote) compatNote.style.display = softwarePostDisabled ? 'block' : 'none';
     postChk.checked = savedPost && !softwarePostDisabled;
     postChk.disabled = softwarePostDisabled;
     if (softwarePostDisabled) postChk.title = '软件WebGL已关闭HDR后期以保证可玩性；请开启浏览器硬件加速。';
@@ -5290,9 +5299,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     syncSlider('vc-key-azimuth', 'val-vc-key-azimuth', vc.keyAzimuthDeg, v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
     syncSlider('vc-key-elevation', 'val-vc-key-elevation', vc.keyElevationDeg, v => `${Math.round(v)}°`);
     syncSlider('vc-key-intensity', 'val-vc-key-intensity', vc.keyIntensity, v => Number(v).toFixed(2));
+    syncSlider('vc-fill-intensity', 'val-vc-fill-intensity', vc.fillIntensity, v => Number(v).toFixed(2));
+    syncSlider('vc-fill-azimuth', 'val-vc-fill-azimuth', vc.fillAzimuthDeg ?? -38, v => `${Math.round(v)}°`);
     syncSlider('vc-rim-intensity', 'val-vc-rim-intensity', vc.rimIntensity, v => Number(v).toFixed(2));
     syncSlider('vc-sss', 'val-vc-sss', vc.sssIntensity, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-wet-gloss', 'val-vc-wet-gloss', vc.skinGloss, v => `${Math.round(v * 100)}%`);
+    const sheenToggle = document.getElementById('vc-skin-sheen-enabled');
+    const sheenSlider = document.getElementById('vc-skin-sheen-boost');
+    if (sheenToggle) sheenToggle.checked = vc.skinSheenEnabled === true;
+    if (sheenSlider) sheenSlider.disabled = vc.skinSheenEnabled !== true;
+    syncSlider('vc-skin-sheen-boost', 'val-vc-skin-sheen-boost', vc.skinSheenBoost ?? 0.50,
+      v => vc.skinSheenEnabled ? `${Math.round(v * 100)}%` : '关闭');
     syncSlider('vc-sharpen', 'val-vc-sharpen', vc.sharpen, v => `${Math.round(v * 100)}%`);
     syncSlider('vc-contrast', 'val-vc-contrast', vc.contrast, v => Number(v).toFixed(2));
     syncSlider('vc-saturation', 'val-vc-saturation', vc.saturation, v => `${Math.round(v * 100)}%`);
@@ -5622,9 +5639,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   bindVcSlider('vc-key-azimuth', 'val-vc-key-azimuth', 'keyAzimuthDeg', v => `${v >= 0 ? '+' : ''}${Math.round(v)}°`);
   bindVcSlider('vc-key-elevation', 'val-vc-key-elevation', 'keyElevationDeg', v => `${Math.round(v)}°`);
   bindVcSlider('vc-key-intensity', 'val-vc-key-intensity', 'keyIntensity', v => v.toFixed(2));
+  bindVcSlider('vc-fill-intensity', 'val-vc-fill-intensity', 'fillIntensity', v => v.toFixed(2));
+  bindVcSlider('vc-fill-azimuth', 'val-vc-fill-azimuth', 'fillAzimuthDeg', v => `${Math.round(v)}°`);
   bindVcSlider('vc-rim-intensity', 'val-vc-rim-intensity', 'rimIntensity', v => v.toFixed(2));
   bindVcSlider('vc-sss', 'val-vc-sss', 'sssIntensity', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-wet-gloss', 'val-vc-wet-gloss', 'wetGloss', v => `${Math.round(v * 100)}%`);
+  document.getElementById('vc-skin-sheen-enabled')?.addEventListener('change', ev => {
+    applyVisualConfigAndSyncUI({ skinSheenEnabled: ev.target.checked }, false);
+  });
+  bindVcSlider('vc-skin-sheen-boost', 'val-vc-skin-sheen-boost', 'skinSheenBoost', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-sharpen', 'val-vc-sharpen', 'sharpen', v => `${Math.round(v * 100)}%`);
   bindVcSlider('vc-contrast', 'val-vc-contrast', 'contrast', v => v.toFixed(2));
   bindVcSlider('vc-warmth', 'val-vc-warmth', 'warmth', v => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`);
